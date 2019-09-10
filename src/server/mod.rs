@@ -61,16 +61,6 @@ fn process_request(req: Request<Body>, request_handler: &RequestHandler) -> BoxF
     Box::new(future::ok(server_response))
 }
 
-fn to_headers(headers: &HashMap<String, String>) -> HeaderMap<HeaderValue> {
-    let mut header_map = HeaderMap::with_capacity(headers.capacity());
-    for (k, v) in headers {
-        let hv = HeaderValue::from_str(v).expect(&format!("Cannot create header value from {}", v));
-        let hn = HeaderName::from_str(k).expect(&format!("Cannot create header name from {}", k));;
-        header_map.insert(hn, hv);
-    }
-    return header_map;
-}
-
 fn to_handler_request(req: &Request<Body>) -> HttpMockHandlerRequest {
     let req_path = req.uri().path().to_string();
     let req_method = req.method().as_str().to_string();
@@ -93,4 +83,14 @@ fn to_response(handler_response: HttpMockHandlerResponse) -> Response<Body> {
         .expect("Cannot parse status code from handler");
     *response.headers_mut() = to_headers(&handler_response.headers);
     response
+}
+
+fn to_headers(headers: &HashMap<String, String>) -> HeaderMap<HeaderValue> {
+    let mut header_map = HeaderMap::with_capacity(headers.capacity());
+    for (k, v) in headers {
+        let hv = HeaderValue::from_str(v).expect(&format!("Cannot create header value from {}", v));
+        let hn = HeaderName::from_str(k).expect(&format!("Cannot create header name from {}", k));
+        header_map.insert(hn, hv);
+    }
+    return header_map;
 }
