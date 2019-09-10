@@ -44,10 +44,7 @@ impl HttpMockServer {
             .serve(move || {
                 let server_config = server_config.clone();
                 service_fn(move |req: Request<Body>| {
-                    let handler_request = to_handler_request(&req);
-                    let handler_response = server_config.request_handler.handle(handler_request);
-                    let server_response = to_response(handler_response);
-                    return Box::new(future::ok(server_response)) as BoxFut;
+                    process_request(req, &server_config.request_handler)
                 })
             })
             .map_err(|e| eprintln!("server error: {}", e));
@@ -55,6 +52,13 @@ impl HttpMockServer {
         info!("Listening on {}", socket_address);
         hyper::rt::run(server);
     }
+}
+
+fn process_request(req: Request<Body>, request_handler: &RequestHandler) -> BoxFut {
+    let handler_request = to_handler_request(&req);
+    let handler_response = request_handler.handle(handler_request);
+    let server_response = to_response(handler_response);
+    Box::new(future::ok(server_response))
 }
 
 fn to_headers(headers: &HashMap<String, String>) -> HeaderMap<HeaderValue> {
