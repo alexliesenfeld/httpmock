@@ -22,26 +22,39 @@ type BoxFut = Box<dyn Future<Item = Response<Body>, Error = hyper::Error> + Send
 #[derive(TypedBuilder, Debug)]
 pub struct ServerConfig {
     pub port: u16,
+    pub request_handler: RequestHandler,
 }
 
-pub fn start_http_server(server_config: ServerConfig, request_handler: RequestHandler) {
-    let socket_address = ([127, 0, 0, 1], server_config.port).into();
-    let request_handler = Arc::new(request_handler);
+pub struct HttpMockServer {
+    server_config: Arc<ServerConfig>,
+}
 
-    let server = Server::bind(&socket_address)
-        .serve(move || {
-            let request_handler = request_handler.clone();
-            service_fn(move |req: Request<Body>| {
-                let handler_request = to_handler_request(&req);
-                let handler_response = request_handler.handle(handler_request);
-                let server_response = to_response(handler_response);
-                return Box::new(future::ok(server_response)) as BoxFut;
+impl HttpMockServer {
+    pub fn from_config(config: ServerConfig) -> HttpMockServer {
+        HttpMockServer {
+            server_config: Arc::new(config),
+        }
+    }
+
+    pub fn start(&self) {
+        let socket_address = ([127, 0, 0, 1], self.server_config.port).into();
+        let server_config = self.server_config.clone();
+
+        let server = Server::bind(&socket_address)
+            .serve(move || {
+                let server_config = server_config.clone();
+                service_fn(move |req: Request<Body>| {
+                    let handler_request = to_handler_request(&req);
+                    let handler_response = server_config.request_handler.handle(handler_request);
+                    let server_response = to_response(handler_response);
+                    return Box::new(future::ok(server_response)) as BoxFut;
+                })
             })
-        })
-        .map_err(|e| eprintln!("server error: {}", e));
+            .map_err(|e| eprintln!("server error: {}", e));
 
-    info!("Listening on {}", socket_address);
-    hyper::rt::run(server);
+        info!("Listening on {}", socket_address);
+        hyper::rt::run(server);
+    }
 }
 
 fn to_headers(headers: &HashMap<String, String>) -> HeaderMap<HeaderValue> {

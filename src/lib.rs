@@ -2,6 +2,7 @@
 extern crate typed_builder;
 
 use crate::server::handler::{HandlerConfig, RequestHandler};
+use crate::server::HttpMockServer;
 
 mod server;
 
@@ -16,7 +17,9 @@ pub fn start(http_mock_config: HttpMockConfig) {
 
     let http_server_config = server::ServerConfig::builder()
         .port(http_mock_config.port)
+        .request_handler(request_handler)
         .build();
+    let server = HttpMockServer::from_config(http_server_config);
 
-    server::start_http_server(http_server_config, request_handler);
+    server.start();
 }
