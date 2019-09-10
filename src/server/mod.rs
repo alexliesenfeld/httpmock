@@ -1,18 +1,17 @@
 extern crate futures;
 extern crate hyper;
 
-pub mod handler;
+mod routes;
 
 use self::hyper::header::HeaderValue;
 use self::hyper::http::header::HeaderName;
 use self::hyper::service::service_fn;
 use self::hyper::{HeaderMap, Request, StatusCode};
-use crate::server::handler::RequestHandler;
 use futures::future;
-use handler::{HttpMockHandlerRequest, HttpMockHandlerResponse};
 use hyper::rt::Future;
 use hyper::{Body, Response, Server};
 use log::info;
+use routes::{HandlerConfig, HttpMockHandlerRequest, HttpMockHandlerResponse};
 use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -22,46 +21,45 @@ type BoxFut = Box<dyn Future<Item = Response<Body>, Error = hyper::Error> + Send
 #[derive(TypedBuilder, Debug)]
 pub struct ServerConfig {
     pub port: u16,
-    pub request_handler: RequestHandler,
 }
 
-pub struct HttpMockServer {
-    server_config: Arc<ServerConfig>,
-}
+pub fn start_server(server_config: ServerConfig) {
+    let socket_address = ([127, 0, 0, 1], server_config.port).into();
+    let handler_config = Arc::new(
+        HandlerConfig::builder()
+            .routes(routes::create_routes())
+            .build(),
+    );
 
-impl HttpMockServer {
-    pub fn from_config(config: ServerConfig) -> HttpMockServer {
-        HttpMockServer {
-            server_config: Arc::new(config),
-        }
-    }
-
-    pub fn start(&self) {
-        let socket_address = ([127, 0, 0, 1], self.server_config.port).into();
-        let server_config = self.server_config.clone();
-
-        let server = Server::bind(&socket_address)
-            .serve(move || {
-                let server_config = server_config.clone();
-                service_fn(move |req: Request<Body>| {
-                    process_request(req, &server_config.request_handler)
-                })
+    let server = Server::bind(&socket_address)
+        .serve(move || {
+            let handler_config = handler_config.clone();
+            service_fn(move |native_request: Request<Body>| {
+                handle_native_request(&handler_config, native_request)
             })
-            .map_err(|e| eprintln!("server error: {}", e));
+        })
+        .map_err(|e| eprintln!("server error: {}", e));
 
-        info!("Listening on {}", socket_address);
-        hyper::rt::run(server);
-    }
+    info!("Listening on {}", socket_address);
+    hyper::rt::run(server);
 }
 
-fn process_request(req: Request<Body>, request_handler: &RequestHandler) -> BoxFut {
-    let handler_request = to_handler_request(&req);
-    let handler_response = request_handler.handle(handler_request);
-    let server_response = to_response(handler_response);
-    Box::new(future::ok(server_response))
+fn handle_native_request(handler_config: &HandlerConfig, native_request: Request<Body>) -> BoxFut {
+    let framework_request = to_framework_request(&native_request);
+    let framework_response = handle_framework_request(handler_config, framework_request);
+    let native_response = to_native_response(framework_response);
+
+    info!(
+        "{} {} {}",
+        native_request.method(),
+        native_request.uri(),
+        native_response.status()
+    );
+
+    Box::new(future::ok(native_response))
 }
 
-fn to_handler_request(req: &Request<Body>) -> HttpMockHandlerRequest {
+fn to_framework_request(req: &Request<Body>) -> HttpMockHandlerRequest {
     let req_path = req.uri().path().to_string();
     let req_method = req.method().as_str().to_string();
     let req_headers = HashMap::new();
@@ -77,10 +75,10 @@ fn to_handler_request(req: &Request<Body>) -> HttpMockHandlerRequest {
     handler_request
 }
 
-fn to_response(handler_response: HttpMockHandlerResponse) -> Response<Body> {
+fn to_native_response(handler_response: HttpMockHandlerResponse) -> Response<Body> {
     let mut response = Response::new(Body::from(handler_response.body));
     *response.status_mut() = StatusCode::from_u16(handler_response.status_code)
-        .expect("Cannot parse status code from handler");
+        .expect("Cannot parse status code from routes");
     *response.headers_mut() = to_headers(&handler_response.headers);
     response
 }
@@ -93,4 +91,24 @@ fn to_headers(headers: &HashMap<String, String>) -> HeaderMap<HeaderValue> {
         header_map.insert(hn, hv);
     }
     return header_map;
+}
+
+pub fn handle_framework_request(
+    handler_config: &HandlerConfig,
+    request: HttpMockHandlerRequest,
+) -> HttpMockHandlerResponse {
+    let handler = handler_config
+        .routes
+        .iter()
+        .find(|&rh| rh.path_regex.is_match(&request.path));
+
+    if let Some(rh) = handler {
+        return (rh.handler)(handler_config, request);
+    }
+
+    HttpMockHandlerResponse::builder()
+        .status_code(404 as u16)
+        .headers(HashMap::new())
+        .body(String::new())
+        .build()
 }
