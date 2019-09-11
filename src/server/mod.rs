@@ -9,9 +9,8 @@ use self::hyper::http::header::HeaderName;
 use self::hyper::service::service_fn;
 use self::hyper::{HeaderMap, Request, StatusCode};
 use crate::server::io::response_with_status;
-use crate::server::router::Method::POST;
-use crate::server::router::{handle_route, HttpMockRouter, Route};
-use crate::server::router::{Method, RouterFunction};
+use crate::server::router::{handle_route, HttpMockRouter, HttpStatusCode, HttpMethod};
+use crate::server::router::{RouterFunction};
 use futures::future;
 use hyper::rt::Future;
 use hyper::{Body, Response, Server};
@@ -63,7 +62,7 @@ fn handle_native_request(handler_config: &HandlerConfig, native_request: Request
 
 fn to_framework_request(req: &Request<Body>) -> HttpMockRequest {
     let req_path = req.uri().path().to_string();
-    let req_method = req.method().as_str().to_string();
+    let req_method = req.method();
     let req_headers = HashMap::new();
     let _req_body = req.body();
 
@@ -87,7 +86,7 @@ fn to_native_response(handler_response: HttpMockResponse) -> Response<Body> {
         *response.headers_mut() = to_headers(&headers);
     }
 
-    *response.status_mut() = StatusCode::from_u16(handler_response.status_code)
+    *response.status_mut() = StatusCode::from_u16(handler_response.status_code.as_u16())
         .expect("Cannot parse status code from router");
 
     response
@@ -111,5 +110,5 @@ pub fn handle_framework_request(
         return result;
     }
 
-    response_with_status(404)
+    response_with_status(HttpStatusCode::NOT_FOUND)
 }

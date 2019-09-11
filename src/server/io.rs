@@ -1,5 +1,4 @@
-use crate::server::router::HttpMockResponse;
-use crate::server::router::Method::OPTIONS;
+use crate::server::router::{HttpMockResponse, HttpStatusCode};
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::io::Error;
@@ -21,7 +20,7 @@ where
     };
 }
 
-pub fn response_with_status(status: u16) -> HttpMockResponse {
+pub fn response_with_status(status: HttpStatusCode) -> HttpMockResponse {
     HttpMockResponse::builder()
         .status_code(status)
         .headers(Option::None)
@@ -29,7 +28,7 @@ pub fn response_with_status(status: u16) -> HttpMockResponse {
         .build()
 }
 
-pub fn response_with_status_and_body(status: u16, body: String) -> HttpMockResponse {
+pub fn response_with_status_and_body(status: HttpStatusCode, body: String) -> HttpMockResponse {
     HttpMockResponse::builder()
         .status_code(status)
         .headers(Option::None)
@@ -38,7 +37,7 @@ pub fn response_with_status_and_body(status: u16, body: String) -> HttpMockRespo
 }
 
 pub fn response_with_status_and_body_and_headers(
-    status: u16,
+    status: HttpStatusCode,
     body: String,
     headers: HashMap<String, String>,
 ) -> HttpMockResponse {
@@ -48,3 +47,5 @@ pub fn response_with_status_and_body_and_headers(
         .body(Option::Some(body))
         .build()
 }
+
+
