@@ -1,21 +1,27 @@
 #[macro_use]
 extern crate typed_builder;
 
-use crate::server::router::{HttpMockRouter};
-use crate::server::{start_server, ServerConfig};
-use crate::routes::create_router;
-
+use actix_web::{middleware, App, HttpServer, web};
+use log::info;
 mod routes;
-mod server;
 
 #[derive(TypedBuilder, Debug)]
 pub struct HttpMockConfig {
     pub port: u16,
+    pub workers: usize,
 }
 
 pub fn start(http_mock_config: HttpMockConfig) {
-    let http_server_config = ServerConfig::builder().port(http_mock_config.port).build();
-    let router = create_router();
-
-    start_server(http_server_config, router);
+    HttpServer::new(|| {
+        App::new()
+            .wrap(middleware::DefaultHeaders::new().header("X-Version", "0.2"))
+            .wrap(middleware::Compress::default())
+            .wrap(middleware::Logger::default())
+            .service(routes::index)
+            .default_service( web::route().to(routes::catch_all))
+    })
+    .bind(format!("127.0.0.1:{}", http_mock_config.port))
+    .unwrap()
+    .workers(http_mock_config.workers)
+    .run();
 }

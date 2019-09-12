@@ -7,6 +7,8 @@ use structopt::StructOpt;
 pub struct CommandLineParameters {
     #[structopt(short, long, default_value = "5000")]
     pub port: u16,
+    #[structopt(short, long, default_value = "3")]
+    pub workers: usize,
     #[structopt(short, long, default_value = "Info")]
     pub log_level: log::Level,
 }
@@ -19,6 +21,7 @@ fn main() {
 
     let config = httpmock::HttpMockConfig::builder()
         .port(params.port)
+        .workers(params.workers)
         .build();
 
     httpmock::start(config);
