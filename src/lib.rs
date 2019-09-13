@@ -1,9 +1,13 @@
 #[macro_use]
 extern crate typed_builder;
 
-use actix_web::{middleware, App, HttpServer, web};
-use log::info;
+use actix_web::{middleware, web, App, HttpServer};
+
+mod handlers;
 mod routes;
+
+const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+const MOCK_PATH: &str = "/__mocks";
 
 #[derive(TypedBuilder, Debug)]
 pub struct HttpMockConfig {
@@ -14,14 +18,18 @@ pub struct HttpMockConfig {
 pub fn start(http_mock_config: HttpMockConfig) {
     HttpServer::new(|| {
         App::new()
-            .wrap(middleware::DefaultHeaders::new().header("X-Version", "0.2"))
+            .register_data(web::Data::new(handlers::HttpMockState::new()))
+            .wrap(middleware::DefaultHeaders::new().header("X-Version", VERSION))
             .wrap(middleware::Compress::default())
             .wrap(middleware::Logger::default())
-            .service(routes::index)
-            .default_service( web::route().to(routes::catch_all))
+            .route(MOCK_PATH, web::post().to(routes::mocks::add))
+            .route(MOCK_PATH, web::get().to(routes::mocks::list))
+            .route(MOCK_PATH, web::delete().to(routes::mocks::clear))
+            .default_service(web::route().to_async(routes::mocks::serve))
     })
     .bind(format!("127.0.0.1:{}", http_mock_config.port))
-    .unwrap()
+    .expect("Cannot bind to port")
     .workers(http_mock_config.workers)
-    .run();
+    .run()
+    .expect("Cannot start server");
 }
