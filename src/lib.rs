@@ -5,6 +5,7 @@ use actix_web::{middleware, web, App, HttpServer};
 
 mod handlers;
 mod routes;
+mod util;
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 const MOCK_PATH: &str = "/__mocks";
