@@ -6,7 +6,7 @@ use actix_web::http::StatusCode;
 use actix_web::web::{Bytes, BytesMut, Data, Json, Payload};
 use actix_web::{error, Error, HttpRequest, HttpResponse, Result};
 use futures::{Future, Stream};
-use serde::{Deserialize, Serialize};
+
 use std::collections::BTreeMap;
 
 /// This route is responsible for listing all currently stored mocks

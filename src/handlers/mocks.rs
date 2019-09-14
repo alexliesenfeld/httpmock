@@ -1,8 +1,6 @@
 use crate::handlers::{HttpMockRequest, HttpMockResponse, HttpMockState};
 use crate::util::std::{EqNoneAsEmpty, TreeMapOptExtension};
 use serde::{Deserialize, Serialize};
-use std::cmp::Ordering;
-use std::collections::BTreeMap;
 
 /// Adds a new mock to the internal state.
 pub fn add_new_mock(state: &HttpMockState, req: SetMockRequest) -> Result<(), &'static str> {
@@ -73,7 +71,7 @@ fn request_matches(req: &HttpMockRequest, mock: &HttpMockRequest) -> bool {
 #[cfg(test)]
 mod test {
     use crate::handlers::mocks::request_matches;
-    use crate::handlers::{HttpMockRequest, SetMockRequest};
+    use crate::handlers::HttpMockRequest;
     use std::collections::BTreeMap;
 
     /// This test makes sure that a request is considered "matched" if the paths of the
@@ -158,7 +156,7 @@ mod test {
             .build();
 
         // Act
-        let does_match = request_matches(&req1, &req2);
+        let _does_match = request_matches(&req1, &req2);
 
         // Assert
         let does_match_1 = request_matches(&req1, &req2);
