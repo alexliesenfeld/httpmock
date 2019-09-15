@@ -22,10 +22,10 @@ impl HttpMockState {
 #[derive(Serialize, Deserialize, TypedBuilder, Debug)]
 pub struct HttpMockRequest {
     #[builder(default=Option::None)]
-    pub method: Option<String>,
+    pub path: Option<String>,
 
     #[builder(default=Option::None)]
-    pub path: Option<String>,
+    pub method: Option<String>,
 
     #[builder(default=Option::None)]
     pub headers: Option<BTreeMap<String, String>>,

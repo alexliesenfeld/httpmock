@@ -24,5 +24,5 @@ fn main() {
         .workers(params.workers)
         .build();
 
-    httpmock::start(config);
+    httpmock::start_server(config);
 }

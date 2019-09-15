@@ -79,7 +79,9 @@ fn to_route_response(
         Err(e) => Err(error::ErrorInternalServerError(e)),
         Ok(res) => {
             return match res {
-                None => Err(error::ErrorNotFound("No requests matched")),
+                None => Err(error::ErrorNotFound(
+                    "Request did not match any route or mock",
+                )),
                 Some(http_mock_response) => Ok(to_http_response(http_mock_response)),
             }
         }
@@ -197,7 +199,7 @@ mod test {
         // Assert
         assert_eq!(actual.is_err(), true);
         let err = actual.unwrap_err();
-        assert_eq!("No requests matched", err.to_string());
+        assert_eq!("Request did not match any route or mock", err.to_string());
         assert_eq!(
             404 as u16,
             err.as_response_error().error_response().status()

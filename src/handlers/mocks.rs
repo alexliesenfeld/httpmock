@@ -1,9 +1,18 @@
 use crate::handlers::{HttpMockRequest, HttpMockResponse, HttpMockState};
+use crate::util::http::NON_BODY_METHODS;
 use crate::util::std::{EqNoneAsEmpty, TreeMapOptExtension};
 use serde::{Deserialize, Serialize};
+use std::fs::read_to_string;
 
 /// Adds a new mock to the internal state.
-pub fn add_new_mock(state: &HttpMockState, req: SetMockRequest) -> Result<(), &'static str> {
+pub fn add_new_mock(state: &HttpMockState, req: SetMockRequest) -> Result<(), String> {
+    let result = validate_mock_request(&req);
+
+    if let Err(error_msg) = result {
+        let error_msg = format!("validation error: {}", error_msg);
+        return Err(error_msg);
+    }
+
     {
         let mut mocks = state.mocks.write().unwrap();
         mocks.push(req);
@@ -68,10 +77,29 @@ fn request_matches(req: &HttpMockRequest, mock: &HttpMockRequest) -> bool {
     true
 }
 
+/// Validates a mock request.
+fn validate_mock_request(req: &SetMockRequest) -> Result<(), String> {
+    if req.request.path.is_none() || req.request.path.as_ref().unwrap().trim().is_empty() {
+        return Err(String::from("You need to provide a path"));
+    }
+
+    if let Some(body) = &req.request.body {
+        if let Some(method) = &req.request.method {
+            if NON_BODY_METHODS.contains(&method.as_str()) {
+                return Err(String::from(
+                    "A body cannot be sent along with the specified method",
+                ));
+            }
+        }
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod test {
-    use crate::handlers::mocks::request_matches;
-    use crate::handlers::HttpMockRequest;
+    use crate::handlers::mocks::{request_matches, validate_mock_request, SetMockRequest};
+    use crate::handlers::{HttpMockRequest, HttpMockResponse};
     use std::collections::BTreeMap;
 
     /// This test makes sure that a request is considered "matched" if the paths of the
@@ -121,9 +149,8 @@ mod test {
     /// This test makes sure that a request is considered "not matched" if the path of the
     /// request is not set and that of the mock is set.
     ///
-    /// TODO: This test is obsolete when HttpMockRequest is refactored to contain "path" as a
-    /// non-optional attribute (refactoring should address that Mocks and Requests should have
-    /// different field requirements, i.e. optional/non-optional).
+    /// TODO: Consider to remove this test because this case does not appear due to a
+    /// request validation step.
     #[test]
     fn request_matches_path_no_match_empty() {
         // Arrange
@@ -410,4 +437,30 @@ mod test {
         assert_eq!(true, does_match_2);
     }
 
+    /// This test ensures that mock request cannot contain a request method that cannot
+    /// be sent along with a request body.
+    #[test]
+    fn validate_mock_request_no_body_method() {
+        // Arrange
+        let req: HttpMockRequest = HttpMockRequest::builder()
+            .method(Some("GET".to_string()))
+            .body(Some("test".to_string()))
+            .build();
+
+        let res: HttpMockResponse = HttpMockResponse::builder().status(418 as u16).build();
+
+        let smr: SetMockRequest = SetMockRequest::builder().request(req).response(res).build();
+
+        // Act
+        let result = validate_mock_request(&smr);
+
+        // Assert
+        assert_eq!(true, result.is_err());
+        assert_eq!(
+            false,
+            result
+                .unwrap_err()
+                .eq("A body cannot be sent along with the specified method")
+        );
+    }
 }

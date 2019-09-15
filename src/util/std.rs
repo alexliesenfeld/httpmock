@@ -77,6 +77,7 @@ mod test {
 
     #[test]
     fn tree_map_fully_contains_other() {
+        // Arrange
         let mut m1 = BTreeMap::new();
         m1.insert("h1", "v1");
         m1.insert("h2", "v2");
@@ -85,12 +86,16 @@ mod test {
         m2.insert("h1", "v1");
         m2.insert("h2", "v2");
 
+        // Act
+        let result = m1.contains(&m2);
+
         // Assert
-        assert_eq!(true, m1.contains(&m2));
+        assert_eq!(true, result);
     }
 
     #[test]
     fn tree_map_contains_subset() {
+        // Arrange
         let mut m1 = BTreeMap::new();
         m1.insert("h1", "v1");
         m1.insert("h2", "v2");
@@ -98,12 +103,16 @@ mod test {
         let mut m2 = BTreeMap::new();
         m2.insert("h1", "v1");
 
+        // Act
+        let result = m1.contains(&m2);
+
         // Assert
-        assert_eq!(true, m1.contains(&m2));
+        assert_eq!(true, result);
     }
 
     #[test]
     fn tree_map_does_not_contain_other() {
+        // Arrange
         let mut m1 = BTreeMap::new();
         m1.insert("h1", "v1");
 
@@ -111,12 +120,16 @@ mod test {
         m2.insert("h1", "v1");
         m2.insert("h2", "v2");
 
+        // Act
+        let result = m1.contains(&m2);
+
         // Assert
-        assert_eq!(false, m1.contains(&m2));
+        assert_eq!(false, result);
     }
 
     #[test]
     fn tree_map_contains_all_keys_no_values() {
+        // Arrange
         let mut m1 = BTreeMap::new();
         m1.insert("h1", "v1");
         m1.insert("h2", "v2");
@@ -125,12 +138,16 @@ mod test {
         m2.insert("h1", "v3");
         m2.insert("h2", "v4");
 
+        // Act
+        let result = m1.contains(&m2);
+
         // Assert
-        assert_eq!(false, m1.contains(&m2));
+        assert_eq!(false, result);
     }
 
     #[test]
     fn tree_map_contains_all_keys_some_values() {
+        // Arrange
         let mut m1 = BTreeMap::new();
         m1.insert("h1", "v1");
         m1.insert("h2", "v2");
@@ -140,12 +157,16 @@ mod test {
         m2.insert("h2", "v2");
         m2.insert("h3", "v3");
 
+        // Act
+        let result = m1.contains(&m2);
+
         // Assert
-        assert_eq!(false, m1.contains(&m2));
+        assert_eq!(false, result);
     }
 
     #[test]
     fn tree_map_contains_all_keys_some_values_equal_length() {
+        // Arrange
         let mut m1 = BTreeMap::new();
         m1.insert("h1", "v1");
         m1.insert("h2", "v2");
@@ -154,53 +175,76 @@ mod test {
         m2.insert("h1", "v1");
         m2.insert("h2", "v3");
 
+        // Act
+        let result = m1.contains(&m2);
+
         // Assert
-        assert_eq!(false, m1.contains(&m2));
+        assert_eq!(false, result);
     }
 
     #[test]
     fn tree_map_contains_opt_both_some() {
+        // Arrange
         let mut m1 = BTreeMap::new();
         m1.insert("h1", "v1");
 
         let mut m2 = BTreeMap::new();
         m2.insert("h1", "v1");
 
+        // Act
+        let result = Some(m1).contains_opt(&Some(m2));
+
         // Assert
-        assert_eq!(true, Some(m1).contains_opt(&Some(m2)));
+        assert_eq!(true, result);
     }
 
     #[test]
     fn tree_map_contains_opt_first_some_second_none() {
+        // Arrange
         let mut m = BTreeMap::new();
         m.insert("h1", "v1");
 
+        // Act
+        let result = Some(m).contains_opt(&None);
+
         // Assert
-        assert_eq!(true, Some(m).contains_opt(&None));
+        assert_eq!(true, result);
     }
 
     #[test]
     fn tree_map_contains_opt_first_none_second_some() {
+        // Arrange
         let mut m = BTreeMap::new();
         m.insert("h1", "v1");
 
+        // Act
+        let result = None.contains_opt(&Some(m));
+
         // Assert
-        assert_eq!(false, None.contains_opt(&Some(m)));
+        assert_eq!(false, result);
     }
 
     #[test]
     fn tree_map_contains_opt_first_none_second_some_but_empty() {
+        // Arrange
         let m: BTreeMap<String, String> = BTreeMap::new();
 
+        // Act
+        let result = None.contains_opt(&Some(m));
+
         // Assert
-        assert_eq!(true, None.contains_opt(&Some(m)));
+        assert_eq!(true, result);
     }
 
     #[test]
     fn tree_map_contains_opt_both_none() {
+        // Arrange
         let m: Option<BTreeMap<String, String>> = None;
 
+        // Act
+        let result = m.contains_opt(&None);
+
         // Assert
-        assert_eq!(true, m.contains_opt(&None));
+        assert_eq!(true, result);
     }
 }

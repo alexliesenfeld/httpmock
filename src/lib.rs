@@ -9,6 +9,7 @@ mod util;
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 const MOCK_PATH: &str = "/__mocks";
+const HEALTH_PATH: &str = "/__admin/health";
 
 #[derive(TypedBuilder, Debug)]
 pub struct HttpMockConfig {
@@ -16,7 +17,7 @@ pub struct HttpMockConfig {
     pub workers: usize,
 }
 
-pub fn start(http_mock_config: HttpMockConfig) {
+pub fn start_server(http_mock_config: HttpMockConfig) {
     HttpServer::new(|| {
         App::new()
             .register_data(web::Data::new(handlers::HttpMockState::new()))
@@ -26,6 +27,7 @@ pub fn start(http_mock_config: HttpMockConfig) {
             .route(MOCK_PATH, web::post().to(routes::mocks::add))
             .route(MOCK_PATH, web::get().to(routes::mocks::list))
             .route(MOCK_PATH, web::delete().to(routes::mocks::clear))
+            .route(HEALTH_PATH, web::get().to(routes::admin::health))
             .default_service(web::route().to_async(routes::mocks::serve))
     })
     .bind(format!("127.0.0.1:{}", http_mock_config.port))
