@@ -2,7 +2,7 @@ use crate::handlers::{HttpMockRequest, HttpMockResponse, HttpMockState};
 use crate::util::http::NON_BODY_METHODS;
 use crate::util::std::{EqNoneAsEmpty, TreeMapOptExtension};
 use serde::{Deserialize, Serialize};
-use std::fs::read_to_string;
+
 
 /// Adds a new mock to the internal state.
 pub fn add_new_mock(state: &HttpMockState, req: SetMockRequest) -> Result<(), String> {
@@ -83,7 +83,7 @@ fn validate_mock_request(req: &SetMockRequest) -> Result<(), String> {
         return Err(String::from("You need to provide a path"));
     }
 
-    if let Some(body) = &req.request.body {
+    if let Some(_body) = &req.request.body {
         if let Some(method) = &req.request.method {
             if NON_BODY_METHODS.contains(&method.as_str()) {
                 return Err(String::from(
@@ -443,6 +443,7 @@ mod test {
     fn validate_mock_request_no_body_method() {
         // Arrange
         let req: HttpMockRequest = HttpMockRequest::builder()
+            .path(Some("/test".to_string()))
             .method(Some("GET".to_string()))
             .body(Some("test".to_string()))
             .build();
@@ -457,10 +458,34 @@ mod test {
         // Assert
         assert_eq!(true, result.is_err());
         assert_eq!(
-            false,
+            true,
             result
                 .unwrap_err()
                 .eq("A body cannot be sent along with the specified method")
+        );
+    }
+
+    /// This test ensures that mock request cannot contain an empty path.
+    #[test]
+    fn validate_mock_request_no_path() {
+        // Arrange
+        let req: HttpMockRequest = HttpMockRequest::builder()
+            .build();
+
+        let res: HttpMockResponse = HttpMockResponse::builder().status(418 as u16).build();
+
+        let smr: SetMockRequest = SetMockRequest::builder().request(req).response(res).build();
+
+        // Act
+        let result = validate_mock_request(&smr);
+
+        // Assert
+        assert_eq!(true, result.is_err());
+        assert_eq!(
+            true,
+            result
+                .unwrap_err()
+                .eq("You need to provide a path")
         );
     }
 }
