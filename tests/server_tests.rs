@@ -1,8 +1,8 @@
 #[macro_use]
 extern crate lazy_static;
 
-use log::debug;
 use crate::common::prepare_test_environment;
+use log::debug;
 
 mod common;
 

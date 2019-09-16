@@ -1,7 +1,7 @@
-use log::{Level};
+use httpmock::{start_server, HttpMockConfig};
+use log::Level;
 use std::thread;
 use std::thread::JoinHandle;
-use httpmock::{start_server, HttpMockConfig};
 
 lazy_static! {
     pub static ref SERVER: Result<JoinHandle<()>, String> = {
@@ -15,10 +15,8 @@ lazy_static! {
         });
         Ok(t)
     };
-
-    pub static ref LOGGER: Result<(), log::SetLoggerError> = {
-        simple_logger::init_with_level(Level::Info)
-    };
+    pub static ref LOGGER: Result<(), log::SetLoggerError> =
+        { simple_logger::init_with_level(Level::Info) };
 }
 
 pub fn prepare_test_environment() {

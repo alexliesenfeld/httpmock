@@ -1,8 +1,7 @@
-use crate::handlers::{HttpMockRequest, HttpMockResponse, HttpMockState};
+use crate::handlers::{HttpMockRequest, HttpMockResponse, HttpMockState, Scheme};
 use crate::util::http::NON_BODY_METHODS;
 use crate::util::std::{EqNoneAsEmpty, TreeMapOptExtension};
 use serde::{Deserialize, Serialize};
-
 
 /// Adds a new mock to the internal state.
 pub fn add_new_mock(state: &HttpMockState, req: SetMockRequest) -> Result<(), String> {
@@ -469,8 +468,7 @@ mod test {
     #[test]
     fn validate_mock_request_no_path() {
         // Arrange
-        let req: HttpMockRequest = HttpMockRequest::builder()
-            .build();
+        let req: HttpMockRequest = HttpMockRequest::builder().build();
 
         let res: HttpMockResponse = HttpMockResponse::builder().status(418 as u16).build();
 
@@ -481,11 +479,6 @@ mod test {
 
         // Assert
         assert_eq!(true, result.is_err());
-        assert_eq!(
-            true,
-            result
-                .unwrap_err()
-                .eq("You need to provide a path")
-        );
+        assert_eq!(true, result.unwrap_err().eq("You need to provide a path"));
     }
 }

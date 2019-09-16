@@ -1,8 +1,11 @@
 #[macro_use]
 extern crate typed_builder;
+#[macro_use]
+extern crate lazy_static;
 
 use actix_web::{middleware, web, App, HttpServer};
 
+pub mod api;
 mod handlers;
 mod routes;
 mod util;
