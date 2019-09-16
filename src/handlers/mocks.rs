@@ -1,4 +1,4 @@
-use crate::handlers::{HttpMockRequest, HttpMockResponse, HttpMockState, Scheme};
+use crate::handlers::{HttpMockRequest, HttpMockResponse, HttpMockState};
 use crate::util::http::NON_BODY_METHODS;
 use crate::util::std::{EqNoneAsEmpty, TreeMapOptExtension};
 use serde::{Deserialize, Serialize};

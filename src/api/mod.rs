@@ -4,14 +4,12 @@ use crate::handlers::mocks::SetMockRequest;
 use crate::handlers::{HttpMockRequest, HttpMockResponse};
 use crate::{start_server, HttpMockConfig};
 
-use crate::api::Scheme::{HTTP, HTTPS};
 pub use crate::handlers::Scheme;
 use std::cell::RefCell;
 use std::collections::BTreeMap;
-use std::fmt;
-use std::fmt::format;
+
 use std::io::Read;
-use std::sync::{LockResult, Mutex, MutexGuard, PoisonError};
+use std::sync::{LockResult, Mutex, MutexGuard};
 use std::thread::{self, JoinHandle};
 
 lazy_static! {
