@@ -1,4 +1,4 @@
-use crate::handlers::mocks::SetMockRequest;
+use crate::server::handlers::mocks::SetMockRequest;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::sync::RwLock;

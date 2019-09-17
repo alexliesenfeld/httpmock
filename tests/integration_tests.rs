@@ -1,7 +1,7 @@
-extern crate httpmock;
+extern crate mokka;
 
-use httpmock::api::mock;
-use httpmock::api::Method::GET;
+use mokka::mock;
+use mokka::Method::GET;
 
 /// This test is supposed to make sure that mock can be stored, served and deleted.
 #[test]

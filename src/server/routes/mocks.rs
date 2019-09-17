@@ -1,6 +1,6 @@
-use crate::handlers;
-use crate::handlers::mocks::SetMockRequest;
-use crate::handlers::{HttpMockRequest, HttpMockResponse, HttpMockState};
+use crate::server::handlers;
+use crate::server::handlers::mocks::SetMockRequest;
+use crate::server::handlers::{HttpMockRequest, HttpMockResponse, HttpMockState};
 use actix_web::dev::HttpResponseBuilder;
 use actix_web::http::StatusCode;
 use actix_web::web::{Bytes, BytesMut, Data, Json, Payload};
@@ -118,8 +118,8 @@ fn to_http_response(res: HttpMockResponse) -> HttpResponse {
 
 #[cfg(test)]
 mod test {
-    use crate::handlers::HttpMockResponse;
-    use crate::routes::mocks::{to_http_response, to_route_response};
+    use crate::server::handlers::HttpMockResponse;
+    use crate::server::routes::mocks::{to_http_response, to_route_response};
     use actix_http::body::BodySize;
     use actix_http::body::{Body, MessageBody};
     use actix_http::Response;

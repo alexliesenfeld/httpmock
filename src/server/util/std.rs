@@ -72,7 +72,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::util::std::{TreeMapExtension, TreeMapOptExtension};
+    use crate::server::util::std::{TreeMapExtension, TreeMapOptExtension};
     use std::collections::BTreeMap;
 
     #[test]

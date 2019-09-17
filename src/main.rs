@@ -1,6 +1,8 @@
+extern crate mokka;
 extern crate simple_logger;
 
 use structopt::StructOpt;
+use mokka::{start_server, HttpMockConfig};
 
 /// Holds command line parameters provided by the user.
 #[derive(StructOpt, Debug)]
@@ -19,10 +21,10 @@ fn main() {
     simple_logger::init_with_level(params.log_level)
         .expect("There was an error configuring the logging backend");
 
-    let config = httpmock::HttpMockConfig::builder()
+    let config = HttpMockConfig::builder()
         .port(params.port)
         .workers(params.workers)
         .build();
 
-    httpmock::start_server(config);
+    start_server(config);
 }

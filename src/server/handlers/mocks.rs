@@ -1,6 +1,6 @@
-use crate::handlers::{HttpMockRequest, HttpMockResponse, HttpMockState};
-use crate::util::http::NON_BODY_METHODS;
-use crate::util::std::{EqNoneAsEmpty, TreeMapOptExtension};
+use crate::server::handlers::{HttpMockRequest, HttpMockResponse, HttpMockState};
+use crate::server::util::http::NON_BODY_METHODS;
+use crate::server::util::std::{EqNoneAsEmpty, TreeMapOptExtension};
 use serde::{Deserialize, Serialize};
 
 /// Lists all mocks.
@@ -106,9 +106,33 @@ fn validate_mock_request(req: &SetMockRequest) -> Result<(), String> {
 
 #[cfg(test)]
 mod test {
-    use crate::handlers::mocks::{request_matches, validate_mock_request, SetMockRequest};
-    use crate::handlers::{HttpMockRequest, HttpMockResponse};
+    use crate::server::handlers::mocks::{request_matches, validate_mock_request, SetMockRequest};
+    use crate::server::handlers::{HttpMockRequest, HttpMockResponse};
     use std::collections::BTreeMap;
+
+    /// TODO: Test that ensures list is working
+    #[test]
+    fn list() {
+
+    }
+
+    /// TODO: Test that ensures delete is working
+    #[test]
+    fn delete_all() {
+
+    }
+
+    /// TODO: Test that ensures deleting one mock is working
+    #[test]
+    fn delete_one() {
+
+    }
+
+    /// TODO: Test that ensures counting calls/matched requests is working
+    #[test]
+    fn count_calls() {
+
+    }
 
     /// This test makes sure that a request is considered "matched" if the paths of the
     /// request and the mock are equal.
