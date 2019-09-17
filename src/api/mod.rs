@@ -4,7 +4,6 @@ use crate::handlers::mocks::SetMockRequest;
 use crate::handlers::{HttpMockRequest, HttpMockResponse};
 use crate::{start_server, HttpMockConfig};
 
-pub use crate::handlers::Scheme;
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 
@@ -86,11 +85,6 @@ impl Mock {
         self
     }
 
-    pub fn expect_scheme(mut self, scheme: Scheme) -> Self {
-        self.mock.request.scheme = Some(scheme);
-        self
-    }
-
     pub fn expect_header(mut self, key: &str, value: &str) -> Self {
         if self.mock.request.headers.is_none() {
             self.mock.request.headers = Some(BTreeMap::new());
@@ -106,7 +100,7 @@ impl Mock {
         self
     }
 
-    pub fn create(&self) -> &Self {
+    pub fn create(self) -> Self {
         SERVER_GUARD.with(|_| {}); // Prevents tests run in parallel
 
         let json = serde_json::to_string(&self.mock).expect("cannot serialize request");
@@ -114,6 +108,7 @@ impl Mock {
         let mut res = self
             .client
             .post(request_url.as_str())
+            .header("Content-Type", "application/json")
             .body(json)
             .send()
             .expect("Mock server error");
@@ -139,6 +134,29 @@ impl Mock {
 
     pub fn server_address(&self) -> String {
         format!("{}:{}", self.server_host, self.server_port)
+    }
+}
+
+impl Drop for Mock {
+    fn drop(&mut self) {
+        let request_url = format!("http://{}/__mocks", &self.server_address());
+        let mut res = self
+            .client
+            .delete(request_url.as_str())
+            .send()
+            .expect("Mock server error");
+
+        if res.status() != 202 {
+            let mut buf = String::new();
+            res.read_to_string(&mut buf)
+                .expect("Failed to read response");
+            let err_msg = format!(
+                "Could not delete mocks from server (status = {}, message = {})",
+                res.status(),
+                buf
+            );
+            panic!(err_msg);
+        }
     }
 }
 
@@ -177,7 +195,6 @@ pub fn mock(method: Method, path: &str) -> Mock {
         client: reqwest::Client::new(),
         mock: SetMockRequest {
             request: HttpMockRequest {
-                scheme: None,
                 method: Some(method.as_str().to_string()),
                 path: Some(String::from(path)),
                 headers: None,

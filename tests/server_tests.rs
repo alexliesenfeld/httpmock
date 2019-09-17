@@ -17,7 +17,7 @@ fn to_route_response_internal_server_error() {
 }
 
 #[test]
-fn to_route_response_internal_server_error_2() {
+fn shared_state_ist_used() {
     prepare_test_environment();
 
     let mut response = reqwest::get("http://localhost:5000/__admin/health").unwrap();

@@ -18,28 +18,9 @@ impl HttpMockState {
     }
 }
 
-/// A protocol scheme.
-#[derive(Serialize, Deserialize, Debug)]
-pub enum Scheme {
-    HTTP,
-    HTTPS,
-}
-
-impl Scheme {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            Scheme::HTTP => "http",
-            Scheme::HTTPS => "https",
-        }
-    }
-}
-
 /// A general abstraction of an HTTP request for all handlers.
-#[derive(Serialize, Deserialize, TypedBuilder, Debug)]
+#[derive(Serialize, Deserialize, TypedBuilder, Clone, Debug)]
 pub struct HttpMockRequest {
-    #[builder(default=Option::None)]
-    pub scheme: Option<Scheme>,
-
     #[builder(default=Option::None)]
     pub path: Option<String>,
 
@@ -54,7 +35,7 @@ pub struct HttpMockRequest {
 }
 
 /// A general abstraction of an HTTP response for all handlers.
-#[derive(Serialize, Deserialize, TypedBuilder, Debug, Clone)]
+#[derive(Serialize, Deserialize, TypedBuilder, Clone, Debug)]
 pub struct HttpMockResponse {
     pub status: u16,
 

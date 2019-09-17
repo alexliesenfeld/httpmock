@@ -9,7 +9,7 @@ pub struct CommandLineParameters {
     pub port: u16,
     #[structopt(short, long, default_value = "3")]
     pub workers: usize,
-    #[structopt(short, long, default_value = "Info")]
+    #[structopt(short, long = "log-level", default_value = "Info")]
     pub log_level: log::Level,
 }
 

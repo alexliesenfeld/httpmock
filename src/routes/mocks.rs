@@ -10,8 +10,14 @@ use futures::{Future, Stream};
 use std::collections::BTreeMap;
 
 /// This route is responsible for listing all currently stored mocks
-pub fn list() -> Result<HttpResponse> {
-    Ok(HttpResponse::Ok().finish())
+pub fn list(state: Data<HttpMockState>) -> Result<HttpResponse> {
+    let result = handlers::mocks::list_all(&state.into_inner());
+
+    if let Err(e) = result {
+        return Ok(HttpResponse::InternalServerError().body(e));
+    }
+
+    Ok(HttpResponse::Accepted().json(&result.unwrap()))
 }
 
 /// This route is responsible for adding a new mock
@@ -26,14 +32,14 @@ pub fn add(state: Data<HttpMockState>, req: Json<SetMockRequest>) -> Result<Http
 }
 
 /// This route is responsible for clearing/deleting all mocks
-pub fn clear(state: Data<HttpMockState>, req: Json<SetMockRequest>) -> Result<HttpResponse> {
-    let result = handlers::mocks::clear_mocks(&state.into_inner(), req.into_inner());
+pub fn clear(state: Data<HttpMockState>) -> Result<HttpResponse> {
+    let result = handlers::mocks::clear_mocks(&state.into_inner());
 
     if let Err(e) = result {
         return Ok(HttpResponse::InternalServerError().body(e));
     }
 
-    Ok(HttpResponse::Ok().finish())
+    Ok(HttpResponse::Accepted().finish())
 }
 
 /// This route is responsible for finding a mock that matches the current request and serve a

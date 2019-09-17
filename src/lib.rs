@@ -21,9 +21,11 @@ pub struct HttpMockConfig {
 }
 
 pub fn start_server(http_mock_config: HttpMockConfig) {
-    HttpServer::new(|| {
+    let server_state = web::Data::new(handlers::HttpMockState::new());
+    HttpServer::new(move || {
+        let server_state = server_state.clone();
         App::new()
-            .register_data(web::Data::new(handlers::HttpMockState::new()))
+            .register_data(server_state)
             .wrap(middleware::DefaultHeaders::new().header("X-Version", VERSION))
             .wrap(middleware::Compress::default())
             .wrap(middleware::Logger::default())

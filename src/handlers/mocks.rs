@@ -3,6 +3,14 @@ use crate::util::http::NON_BODY_METHODS;
 use crate::util::std::{EqNoneAsEmpty, TreeMapOptExtension};
 use serde::{Deserialize, Serialize};
 
+/// Lists all mocks.
+pub fn list_all(state: &HttpMockState) -> Result<Vec<SetMockRequest>, String> {
+    {
+        let mocks = state.mocks.read().unwrap();
+        return Result::Ok(mocks.clone());
+    }
+}
+
 /// Adds a new mock to the internal state.
 pub fn add_new_mock(state: &HttpMockState, req: SetMockRequest) -> Result<(), String> {
     let result = validate_mock_request(&req);
@@ -15,20 +23,21 @@ pub fn add_new_mock(state: &HttpMockState, req: SetMockRequest) -> Result<(), St
     {
         let mut mocks = state.mocks.write().unwrap();
         mocks.push(req);
+        log::debug!("Number of routes = {}", mocks.len());
     }
 
     return Result::Ok(());
 }
 
 /// A Request that is made to set a new mock.
-#[derive(Serialize, Deserialize, TypedBuilder, Debug)]
+#[derive(Serialize, Deserialize, TypedBuilder, Clone, Debug)]
 pub struct SetMockRequest {
     pub request: HttpMockRequest,
     pub response: HttpMockResponse,
 }
 
 /// Clears all mocks from the internal state.
-pub fn clear_mocks(state: &HttpMockState, _req: SetMockRequest) -> Result<(), &'static str> {
+pub fn clear_mocks(state: &HttpMockState) -> Result<(), &'static str> {
     {
         let mut mocks = state.mocks.write().unwrap();
         mocks.clear();
