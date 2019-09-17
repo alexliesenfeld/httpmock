@@ -1,5 +1,5 @@
 [package]
-name = "mokka"
+name = "mocha"
 version = "0.1.0"
 authors = ["Alexander Liesenfeld <alexander.liesenfeld@outlook.com>"]
 edition = "2018"

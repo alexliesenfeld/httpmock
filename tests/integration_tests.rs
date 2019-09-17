@@ -1,7 +1,7 @@
-extern crate mokka;
+extern crate mocha;
 
-use mokka::mock;
-use mokka::Method::GET;
+use mocha::mock;
+use mocha::Method::GET;
 
 /// This test is supposed to make sure that mock can be stored, served and deleted.
 #[test]
