@@ -1,8 +1,8 @@
 extern crate mocha;
 extern crate simple_logger;
 
-use structopt::StructOpt;
 use mocha::{start_server, HttpMockConfig};
+use structopt::StructOpt;
 
 /// Holds command line parameters provided by the user.
 #[derive(StructOpt, Debug)]

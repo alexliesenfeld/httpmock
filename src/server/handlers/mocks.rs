@@ -112,27 +112,19 @@ mod test {
 
     /// TODO: Test that ensures list is working
     #[test]
-    fn list() {
-
-    }
+    fn list() {}
 
     /// TODO: Test that ensures delete is working
     #[test]
-    fn delete_all() {
-
-    }
+    fn delete_all() {}
 
     /// TODO: Test that ensures deleting one mock is working
     #[test]
-    fn delete_one() {
-
-    }
+    fn delete_one() {}
 
     /// TODO: Test that ensures counting calls/matched requests is working
     #[test]
-    fn count_calls() {
-
-    }
+    fn count_calls() {}
 
     /// This test makes sure that a request is considered "matched" if the paths of the
     /// request and the mock are equal.
