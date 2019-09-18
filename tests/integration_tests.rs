@@ -22,5 +22,5 @@ fn to_route_response_internal_server_error() {
         reqwest::get("http://localhost:5000/health").expect("ERROR MAKING REQUEST");
 
     assert_eq!(205, first_response.status());
-    assert_eq!(404, second_response.status());
+    assert_eq!(500, second_response.status());
 }

@@ -4,9 +4,9 @@ use crate::server::handlers::{HttpMockRequest, HttpMockResponse, HttpMockState};
 use actix_web::dev::HttpResponseBuilder;
 use actix_web::http::StatusCode;
 use actix_web::web::{Bytes, BytesMut, Data, Json, Payload};
-use actix_web::{error, Error, HttpRequest, HttpResponse, Result};
+use actix_web::{error, web, Error, HttpRequest, HttpResponse, Result};
 use futures::{Future, Stream};
-
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
 /// This route is responsible for listing all currently stored mocks
@@ -20,15 +20,19 @@ pub fn list(state: Data<HttpMockState>) -> Result<HttpResponse> {
     Ok(HttpResponse::Accepted().json(&result.unwrap()))
 }
 
+#[derive(Serialize, Deserialize, TypedBuilder, Clone, Debug)]
+pub struct MockCreatedResponse {
+    pub mock_id: usize,
+}
+
 /// This route is responsible for adding a new mock
 pub fn add(state: Data<HttpMockState>, req: Json<SetMockRequest>) -> Result<HttpResponse> {
     let result = handlers::mocks::add_new_mock(&state.into_inner(), req.into_inner());
 
-    if let Err(e) = result {
-        return Ok(HttpResponse::InternalServerError().body(e));
-    }
-
-    Ok(HttpResponse::Created().finish())
+    return match result {
+        Err(e) => Ok(HttpResponse::InternalServerError().body(e)),
+        Ok(mock_id) => Ok(HttpResponse::Created().json(MockCreatedResponse { mock_id })),
+    };
 }
 
 /// This route is responsible for clearing/deleting all mocks
@@ -40,6 +44,20 @@ pub fn clear(state: Data<HttpMockState>) -> Result<HttpResponse> {
     }
 
     Ok(HttpResponse::Accepted().finish())
+}
+
+/// This route is responsible for deleting mocks
+pub fn delete_one(state: Data<HttpMockState>, params: web::Path<usize>) -> Result<HttpResponse> {
+    let result = handlers::mocks::delete_one(&state.into_inner(), params.into_inner());
+    return match result {
+        Err(e) => Ok(HttpResponse::InternalServerError().body(e)),
+        Ok(found) => {
+            if !found {
+                return Ok(HttpResponse::NotFound().finish());
+            }
+            return Ok(HttpResponse::Accepted().finish());
+        }
+    };
 }
 
 /// This route is responsible for finding a mock that matches the current request and serve a
@@ -79,13 +97,13 @@ fn handle_mock_request(
 
 /// Maps the result of the serve handler to an HTTP response which the web framework understands
 fn to_route_response(
-    handler_result: Result<Option<HttpMockResponse>, &'static str>,
+    handler_result: Result<Option<HttpMockResponse>, String>,
 ) -> Result<HttpResponse> {
     return match handler_result {
         Err(e) => Err(error::ErrorInternalServerError(e)),
         Ok(res) => {
             return match res {
-                None => Err(error::ErrorNotFound(
+                None => Err(error::ErrorInternalServerError(
                     "Request did not match any route or mock",
                 )),
                 Some(http_mock_response) => Ok(to_http_response(http_mock_response)),
@@ -124,6 +142,10 @@ mod test {
     use actix_http::body::{Body, MessageBody};
     use actix_http::Response;
     use actix_web::http::StatusCode;
+
+    /// TODO: Checks if the delete route behaves as expected (especially with parameter parsing, bad request, etc.)
+    #[test]
+    fn delete_route() {}
 
     /// This test makes sure that a handler response with an HTTP status and an empty body is
     /// mapped correctly to a representation that the web framework understands
@@ -178,7 +200,7 @@ mod test {
     #[test]
     fn to_route_response_internal_server_error() {
         // Arrange
-        let input = Err("error message");
+        let input = Err("error message".to_string());
 
         // Act
         let actual = to_route_response(input);

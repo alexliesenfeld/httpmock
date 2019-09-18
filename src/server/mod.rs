@@ -1,13 +1,14 @@
 use actix_web::{middleware, web, App, HttpServer};
 
 pub use handlers::{mocks::SetMockRequest, HttpMockRequest, HttpMockResponse};
-
+pub use routes::mocks::MockCreatedResponse;
 mod handlers;
 mod routes;
 mod util;
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
-const MOCK_PATH: &str = "/__mocks";
+const MOCKS_PATH: &str = "/__mocks";
+const MOCK_PATH: &str = "/__mocks/{id}";
 const HEALTH_PATH: &str = "/__admin/health";
 
 #[derive(TypedBuilder, Debug)]
@@ -25,9 +26,10 @@ pub fn start_server(http_mock_config: HttpMockConfig) {
             .wrap(middleware::DefaultHeaders::new().header("X-Version", VERSION))
             .wrap(middleware::Compress::default())
             .wrap(middleware::Logger::default())
-            .route(MOCK_PATH, web::post().to(routes::mocks::add))
-            .route(MOCK_PATH, web::get().to(routes::mocks::list))
-            .route(MOCK_PATH, web::delete().to(routes::mocks::clear))
+            .route(MOCKS_PATH, web::post().to(routes::mocks::add))
+            .route(MOCKS_PATH, web::get().to(routes::mocks::list))
+            .route(MOCKS_PATH, web::delete().to(routes::mocks::clear))
+            .route(MOCK_PATH, web::delete().to(routes::mocks::delete_one))
             .route(HEALTH_PATH, web::get().to(routes::admin::health))
             .default_service(web::route().to_async(routes::mocks::serve))
     })

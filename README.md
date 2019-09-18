@@ -1,5 +1,5 @@
 # HTTP mock server 
-`mocha` is a lightweight, simple and efficient HTTP mock server that can be used for local tests as
+`mocha` is a simple and efficient HTTP mock server that can be used for local tests as
 well as tests that span multiple systems. It provides a local (or remote) mock server and
  a library to create, verify and remove HTTP mocks.
 
@@ -39,7 +39,7 @@ well as tests that span multiple systems. It provides a local (or remote) mock s
 
     // Make some assertions
     assert_eq!(response.status(), 200);
-    assert_eq!(health_mock.number_of_calls(), 1);
+    assert_eq!(health_mock.number_of_calls().unwrap(), 1);
  }
  ```
  As shown in the code snippet, a mock server is automatically created when the `mock` function
@@ -54,7 +54,7 @@ well as tests that span multiple systems. It provides a local (or remote) mock s
 
  A request is only considered to match a mock if the request contains all attributes required
  by the mock. If a request does not match any mock previously created, the mock server will
- respond with an empty response body and a status code `404 (Not Found)`.
+ respond with an empty response body and a status code `500 (Internal Server Error)`.
  
  ## License
  `mocha` is free software: you can redistribute it and/or modify it under the terms of the MIT Public License.

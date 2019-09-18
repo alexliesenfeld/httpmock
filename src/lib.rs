@@ -38,7 +38,7 @@
 //!
 //!    // Make some assertions
 //!    assert_eq!(response.status(), 200);
-//!    assert_eq!(health_mock.number_of_calls(), 1);
+//!    assert_eq!(health_mock.number_of_calls().unwrap(), 1);
 //! }
 //! ```
 //! As shown in the code snippet, a mock server is automatically created when the [`mock`] function
@@ -53,7 +53,7 @@
 //!
 //! A request is only considered to match a mock if the request contains all attributes required
 //! by the mock. If a request does not match any mock previously created, the mock server will
-//! respond with an empty response body and a status code 404 (Not Found).
+//! respond with an empty response body and a status code 500 (Internal Server Error).
 #[macro_use]
 extern crate lazy_static;
 #[macro_use]
@@ -66,15 +66,35 @@ use server::{HttpMockRequest, HttpMockResponse, SetMockRequest};
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 
+use crate::server::MockCreatedResponse;
 use std::io::Read;
 use std::sync::{LockResult, Mutex, MutexGuard};
 use std::thread::{self, JoinHandle};
 
 lazy_static! {
+    static ref SERVER_HOST: &'static str = {
+        let host: Option<&'static str> = option_env!("MOCHA_SERVER_HOST");
+        return match host {
+            None => "localhost",
+            Some(h) => h,
+        };
+    };
+
+    static ref SERVER_PORT: u16  = {
+        let port: Option<&'static str> = option_env!("MOCHA_SERVER_PORT");
+        return match port {
+            None => 5000 as u16,
+            Some(port_string) => port_string.parse::<u16>().expect(&format!(
+                "Cannot parse port from environment variable value '{}'",
+                port_string
+            )),
+        };
+    };
+
     static ref SERVER: Mutex<JoinHandle<()>> = {
         let server_thread = thread::spawn(move || {
             let config = HttpMockConfig::builder()
-                .port(5000 as u16)
+                .port(*SERVER_PORT as u16)
                 .workers(3 as usize)
                 .build();
 
@@ -91,19 +111,18 @@ thread_local!(
 
 #[derive(Debug)]
 pub struct Mock {
-    server_host: String,
-    server_port: u16,
     client: reqwest::Client,
     mock: SetMockRequest,
+    id: Option<usize>,
 }
 
 impl Mock {
     pub fn server_port(&self) -> u16 {
-        self.server_port
+        *SERVER_PORT as u16
     }
 
-    pub fn server_host(&self) -> &String {
-        &self.server_host
+    pub fn server_host(&self) -> &'static str {
+        *SERVER_HOST as &'static str
     }
 
     pub fn path(mut self, path: &str) -> Self {
@@ -159,12 +178,12 @@ impl Mock {
         self
     }
 
-    pub fn create(self) -> Self {
+    pub fn create(mut self) -> Self {
         SERVER_GUARD.with(|_| {}); // Prevents tests run in parallel
 
         let json = serde_json::to_string(&self.mock).expect("cannot serialize request");
         let request_url = format!("http://{}/__mocks", &self.server_address());
-        let mut res = self
+        let mut response = self
             .client
             .post(request_url.as_str())
             .header("Content-Type", "application/json")
@@ -172,17 +191,23 @@ impl Mock {
             .send()
             .expect("Mock server error");
 
-        if res.status() != 201 {
-            let mut buf = String::new();
-            res.read_to_string(&mut buf)
-                .expect("Failed to read response");
+        let mut body_contents = String::new();
+        response
+            .read_to_string(&mut body_contents)
+            .expect("Failed to read response");
+
+        if response.status() != 201 {
             let err_msg = format!(
                 "Could not create mock (status = {}, message = {})",
-                res.status(),
-                buf
+                response.status(),
+                body_contents
             );
             panic!(err_msg);
         }
+
+        let response: MockCreatedResponse = serde_json::from_str(body_contents.as_str())
+            .expect("Cannot deserialize mock server response");
+        self.id = Some(response.mock_id);
 
         self
     }
@@ -192,29 +217,32 @@ impl Mock {
     }
 
     pub fn server_address(&self) -> String {
-        format!("{}:{}", self.server_host, self.server_port)
+        format!("{}:{}", self.server_host(), self.server_port())
     }
 }
 
 impl Drop for Mock {
     fn drop(&mut self) {
-        let request_url = format!("http://{}/__mocks", &self.server_address());
-        let mut res = self
-            .client
-            .delete(request_url.as_str())
-            .send()
-            .expect("Mock server error");
+        if let Some(id) = self.id {
+            let request_url = format!("http://{}/__mocks/{}", &self.server_address(), id);
+            let mut response = self
+                .client
+                .delete(request_url.as_str())
+                .send()
+                .expect("Mock server error");
 
-        if res.status() != 202 {
-            let mut buf = String::new();
-            res.read_to_string(&mut buf)
-                .expect("Failed to read response");
-            let err_msg = format!(
-                "Could not delete mocks from server (status = {}, message = {})",
-                res.status(),
-                buf
-            );
-            panic!(err_msg);
+            if response.status() != 202 {
+                let mut buf = String::new();
+                response
+                    .read_to_string(&mut buf)
+                    .expect("Failed to read response");
+                let err_msg = format!(
+                    "Could not delete mocks from server (status = {}, message = {})",
+                    response.status(),
+                    buf
+                );
+                panic!(err_msg);
+            }
         }
     }
 }
@@ -249,8 +277,7 @@ impl Method {
 
 pub fn mock(method: Method, path: &str) -> Mock {
     Mock {
-        server_port: 5000,
-        server_host: "localhost".to_string(),
+        id: None,
         client: reqwest::Client::new(),
         mock: SetMockRequest {
             request: HttpMockRequest {

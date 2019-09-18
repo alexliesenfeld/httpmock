@@ -1,10 +1,12 @@
-use crate::server::handlers::{HttpMockRequest, HttpMockResponse, HttpMockState};
+use crate::server::handlers::{
+    HttpMockRequest, HttpMockResponse, HttpMockState, StoredSetMockRequest,
+};
 use crate::server::util::http::NON_BODY_METHODS;
 use crate::server::util::std::{EqNoneAsEmpty, TreeMapOptExtension};
 use serde::{Deserialize, Serialize};
 
 /// Lists all mocks.
-pub fn list_all(state: &HttpMockState) -> Result<Vec<SetMockRequest>, String> {
+pub fn list_all(state: &HttpMockState) -> Result<Vec<StoredSetMockRequest>, String> {
     {
         let mocks = state.mocks.read().unwrap();
         return Result::Ok(mocks.clone());
@@ -12,7 +14,7 @@ pub fn list_all(state: &HttpMockState) -> Result<Vec<SetMockRequest>, String> {
 }
 
 /// Adds a new mock to the internal state.
-pub fn add_new_mock(state: &HttpMockState, req: SetMockRequest) -> Result<(), String> {
+pub fn add_new_mock(state: &HttpMockState, req: SetMockRequest) -> Result<usize, String> {
     let result = validate_mock_request(&req);
 
     if let Err(error_msg) = result {
@@ -20,13 +22,18 @@ pub fn add_new_mock(state: &HttpMockState, req: SetMockRequest) -> Result<(), St
         return Err(error_msg);
     }
 
+    let mock_id = state.create_new_id();
     {
         let mut mocks = state.mocks.write().unwrap();
-        mocks.push(req);
+        mocks.push(StoredSetMockRequest {
+            id: mock_id,
+            mock: req,
+        });
+
         log::debug!("Number of routes = {}", mocks.len());
     }
 
-    return Result::Ok(());
+    return Result::Ok(mock_id);
 }
 
 /// A Request that is made to set a new mock.
@@ -37,7 +44,7 @@ pub struct SetMockRequest {
 }
 
 /// Clears all mocks from the internal state.
-pub fn clear_mocks(state: &HttpMockState) -> Result<(), &'static str> {
+pub fn clear_mocks(state: &HttpMockState) -> Result<(), String> {
     {
         let mut mocks = state.mocks.write().unwrap();
         mocks.clear();
@@ -46,18 +53,33 @@ pub fn clear_mocks(state: &HttpMockState) -> Result<(), &'static str> {
     return Result::Ok(());
 }
 
+/// Deletes all mocks that match the request. Returns the number of deleted elements.
+pub fn delete_one(state: &HttpMockState, id: usize) -> Result<bool, String> {
+    let deleted_items;
+    {
+        let mut mocks = state.mocks.write().unwrap();
+        let initial_items = mocks.len();
+        mocks.retain(|m| m.id != id);
+        deleted_items = initial_items - mocks.len();
+    }
+
+    return Result::Ok(deleted_items > 0);
+}
+
 /// Finds a mock that matches the current request and serve a response according to the mock
 /// specification. If no mock is found, an empty result is being returned.
 pub fn find_mock(
     state: &HttpMockState,
     req: HttpMockRequest,
-) -> Result<Option<HttpMockResponse>, &'static str> {
+) -> Result<Option<HttpMockResponse>, String> {
     {
         let mocks = state.mocks.read().unwrap();
-        let result = mocks.iter().find(|&m| request_matches(&req, &m.request));
+        let result = mocks
+            .iter()
+            .find(|&m| request_matches(&req, &m.mock.request));
 
         if let Some(found) = result {
-            return Ok(Some(found.response.clone()));
+            return Ok(Some(found.mock.response.clone()));
         }
     }
 
