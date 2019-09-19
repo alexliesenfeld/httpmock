@@ -60,6 +60,20 @@ pub fn delete_one(state: Data<HttpMockState>, params: web::Path<usize>) -> Resul
     };
 }
 
+/// This route is responsible for deleting mocks
+pub fn read_one(state: Data<HttpMockState>, params: web::Path<usize>) -> Result<HttpResponse> {
+    let handler_result = handlers::mocks::read_one(&state.into_inner(), params.into_inner());
+    return match handler_result {
+        Err(e) => Ok(HttpResponse::InternalServerError().body(e)),
+        Ok(mock_opt) => {
+            return match mock_opt {
+                Some(mock) => Ok(HttpResponse::Ok().json(mock)),
+                None => Ok(HttpResponse::NotFound().finish()),
+            }
+        }
+    };
+}
+
 /// This route is responsible for finding a mock that matches the current request and serve a
 /// response according to the mock specification
 pub fn serve(
@@ -229,7 +243,7 @@ mod test {
         let err = actual.unwrap_err();
         assert_eq!("Request did not match any route or mock", err.to_string());
         assert_eq!(
-            404 as u16,
+            500 as u16,
             err.as_response_error().error_response().status()
         );
     }

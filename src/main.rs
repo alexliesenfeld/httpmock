@@ -1,5 +1,5 @@
 extern crate mocha;
-extern crate simple_logger;
+extern crate env_logger;
 
 use mocha::{start_server, HttpMockConfig};
 use structopt::StructOpt;
@@ -11,15 +11,11 @@ pub struct CommandLineParameters {
     pub port: u16,
     #[structopt(short, long, default_value = "3")]
     pub workers: usize,
-    #[structopt(short, long = "log-level", default_value = "Info")]
-    pub log_level: log::Level,
 }
 
 fn main() {
     let params: CommandLineParameters = CommandLineParameters::from_args();
-
-    simple_logger::init_with_level(params.log_level)
-        .expect("There was an error configuring the logging backend");
+    env_logger::init();
 
     let config = HttpMockConfig::builder()
         .port(params.port)

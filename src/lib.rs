@@ -12,8 +12,7 @@
 //! system integration tests), you can switch the tests to use a standalone mock server by simply
 //! setting the address of the remote server using an environment variable. This way the remote
 //! server will be used for mocking and your mocks will be available to all participating systems.
-//! A standalone version of the HTTP mock server is available as an executable binary or a Docker
-//! image.
+//! A standalone version of the HTTP mock server is available as an executable binary.
 //!
 //! ## Getting Started
 //! You can use a local mock server in your tests like shown in the following:
@@ -38,7 +37,7 @@
 //!
 //!    // Make some assertions
 //!    assert_eq!(response.status(), 200);
-//!    assert_eq!(health_mock.number_of_calls().unwrap(), 1);
+//!    assert_eq!(health_mock.times_called().unwrap(), 1);
 //! }
 //! ```
 //! As shown in the code snippet, a mock server is automatically created when the [`mock`] function
@@ -62,26 +61,26 @@ extern crate typed_builder;
 mod server;
 
 pub use server::{start_server, HttpMockConfig};
-use server::{HttpMockRequest, HttpMockResponse, SetMockRequest};
+use server::{HttpMockRequest, HttpMockResponse, SetMockRequest, StoredSetMockRequest};
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 
 use crate::server::MockCreatedResponse;
 use std::io::Read;
+
 use std::sync::{LockResult, Mutex, MutexGuard};
 use std::thread::{self, JoinHandle};
 
 lazy_static! {
     static ref SERVER_HOST: &'static str = {
-        let host: Option<&'static str> = option_env!("MOCHA_SERVER_HOST");
+        let host: Option<&str> = option_env!("MOCHA_SERVER_HOST");
         return match host {
             None => "localhost",
             Some(h) => h,
         };
     };
-
-    static ref SERVER_PORT: u16  = {
-        let port: Option<&'static str> = option_env!("MOCHA_SERVER_PORT");
+    static ref SERVER_PORT: u16 = {
+        let port: Option<&str> = option_env!("MOCHA_SERVER_PORT");
         return match port {
             None => 5000 as u16,
             Some(port_string) => port_string.parse::<u16>().expect(&format!(
@@ -90,7 +89,6 @@ lazy_static! {
             )),
         };
     };
-
     static ref SERVER: Mutex<JoinHandle<()>> = {
         let server_thread = thread::spawn(move || {
             let config = HttpMockConfig::builder()
@@ -102,6 +100,11 @@ lazy_static! {
         });
         return Mutex::new(server_thread);
     };
+
+    // TODO: Rework how client is being used to allow more parallelism
+    static ref CLIENT: Mutex<reqwest::Client> = {
+        return Mutex::new(reqwest::Client::new());
+    };
 }
 
 thread_local!(
@@ -110,21 +113,156 @@ thread_local!(
 );
 
 #[derive(Debug)]
-pub struct Mock {
-    client: reqwest::Client,
-    mock: SetMockRequest,
-    id: Option<usize>,
-}
+struct ServerAdapter;
+impl ServerAdapter {
+    pub fn new() -> ServerAdapter {
+        SERVER_GUARD.with(|_| {}); // Prevents tests run in parallel
+        ServerAdapter {}
+    }
 
-impl Mock {
     pub fn server_port(&self) -> u16 {
         *SERVER_PORT as u16
     }
 
-    pub fn server_host(&self) -> &'static str {
-        *SERVER_HOST as &'static str
+    pub fn server_host(&self) -> &str {
+        *SERVER_HOST as &str
     }
 
+    pub fn server_address(&self) -> String {
+        format!("{}:{}", self.server_host(), self.server_port())
+    }
+
+    pub fn create_mock(&self, mock: &SetMockRequest) -> Result<MockCreatedResponse, String> {
+        // Serialize to JSON
+        let json = serde_json::to_string(mock);
+        if let Err(err) = json {
+            return Err(format!("cannot serialize mock object to JSON: {}", err));
+        }
+        let json = json.unwrap();
+
+        // Send the request to the mock server
+        let request_url = format!("http://{}/__mocks", &self.server_address());
+        let response;
+        {
+            let client = CLIENT.lock().unwrap();
+            response = client
+                .post(request_url.as_str())
+                .header("Content-Type", "application/json")
+                .body(json)
+                .send();
+        }
+        if let Err(err) = response {
+            return Err(format!("cannot send request to mock server: {}", err));
+        }
+
+        let mut response = response.unwrap();
+
+        // Extract the response body
+        let mut body_contents = String::new();
+        let result = response.read_to_string(&mut body_contents);
+        if let Err(err) = result {
+            return Err(format!("cannot read response body: {}", err));
+        }
+
+        // Evaluate the response status
+        if response.status() != 201 {
+            return Err(format!(
+                "could not create mock. Mock server response: status = {}, message = {}",
+                response.status(),
+                body_contents
+            ));
+        }
+
+        // Create response object
+        let response: serde_json::Result<MockCreatedResponse> =
+            serde_json::from_str(body_contents.as_str());
+        if let Err(err) = response {
+            return Err(format!("cannot deserialize mock server response: {}", err));
+        }
+
+        return Ok(response.unwrap());
+    }
+
+    pub fn fetch_mock(&self, mock_id: usize) -> Result<StoredSetMockRequest, String> {
+        // Send the request to the mock server
+        let request_url = format!("http://{}/__mocks/{}", &self.server_address(), mock_id);
+        let response;
+        {
+            let client = CLIENT.lock().unwrap();
+            response = client.get(request_url.as_str()).send();
+        }
+        if let Err(err) = response {
+            return Err(format!("cannot send request to mock server: {}", err));
+        }
+        let mut response = response.unwrap();
+
+        // Extract the response body
+        let mut body_contents = String::new();
+        let result = response.read_to_string(&mut body_contents);
+        if let Err(err) = result {
+            return Err(format!("cannot read response body: {}", err));
+        }
+
+        // Evaluate response status code
+        if response.status() != 200 {
+            return Err(format!(
+                "could not create mock. Mock server response: status = {}, message = {}",
+                response.status(),
+                body_contents
+            ));
+        }
+
+        // Create response object
+        let response: serde_json::Result<StoredSetMockRequest> =
+            serde_json::from_str(body_contents.as_str());
+        if let Err(err) = response {
+            return Err(format!("cannot deserialize mock server response: {}", err));
+        }
+
+        return Ok(response.unwrap());
+    }
+
+    pub fn delete_mock(&self, mock_id: usize) -> Result<(), String> {
+        // Send the request to the mock server
+        let request_url = format!("http://{}/__mocks/{}", &self.server_address(), mock_id);
+        let response;
+        {
+            let client = CLIENT.lock().unwrap();
+            response = client.delete(request_url.as_str()).send();
+        }
+        if let Err(err) = response {
+            return Err(format!("cannot send request to mock server: {}", err));
+        }
+        let mut response = response.unwrap();
+
+        // Extract the response body
+        let mut body_contents = String::new();
+        let result = response.read_to_string(&mut body_contents);
+        if let Err(err) = result {
+            return Err(format!("cannot read response body: {}", err));
+        }
+
+        // Evaluate response status code
+        if response.status() != 202 {
+            return Err(format!(
+                "Could not delete mocks from server (status = {}, message = {})",
+                response.status(),
+                body_contents
+            ));
+        }
+
+        return Ok(());
+    }
+}
+
+#[derive(Debug)]
+pub struct Mock {
+    mock: SetMockRequest,
+    server_adapter: ServerAdapter,
+    id: Option<usize>,
+}
+
+impl Mock {
     pub fn path(mut self, path: &str) -> Self {
         self.mock.request.path = Some(path.to_string());
         self
@@ -154,6 +292,7 @@ impl Mock {
         if self.mock.response.headers.is_none() {
             self.mock.response.headers = Some(BTreeMap::new());
         }
+
         self.mock
             .response
             .headers
@@ -179,70 +318,36 @@ impl Mock {
     }
 
     pub fn create(mut self) -> Self {
-        SERVER_GUARD.with(|_| {}); // Prevents tests run in parallel
-
-        let json = serde_json::to_string(&self.mock).expect("cannot serialize request");
-        let request_url = format!("http://{}/__mocks", &self.server_address());
-        let mut response = self
-            .client
-            .post(request_url.as_str())
-            .header("Content-Type", "application/json")
-            .body(json)
-            .send()
-            .expect("Mock server error");
-
-        let mut body_contents = String::new();
-        response
-            .read_to_string(&mut body_contents)
-            .expect("Failed to read response");
-
-        if response.status() != 201 {
-            let err_msg = format!(
-                "Could not create mock (status = {}, message = {})",
-                response.status(),
-                body_contents
-            );
-            panic!(err_msg);
-        }
-
-        let response: MockCreatedResponse = serde_json::from_str(body_contents.as_str())
+        let response = self
+            .server_adapter
+            .create_mock(&self.mock)
             .expect("Cannot deserialize mock server response");
-        self.id = Some(response.mock_id);
 
+        self.id = Some(response.mock_id);
         self
     }
 
-    pub fn number_of_calls(&self) -> Result<usize, String> {
-        Ok(5 as usize)
-    }
+    pub fn times_called(&self) -> usize {
+        if self.id.is_none() {
+            panic!("you cannot fetch the number of calls for a mock that has not yet been created")
+        }
 
-    pub fn server_address(&self) -> String {
-        format!("{}:{}", self.server_host(), self.server_port())
+        let response = self
+            .server_adapter
+            .fetch_mock(self.id.unwrap())
+            .expect("cannot deserialize mock server response");
+
+        return response.call_counter;
     }
 }
 
 impl Drop for Mock {
     fn drop(&mut self) {
         if let Some(id) = self.id {
-            let request_url = format!("http://{}/__mocks/{}", &self.server_address(), id);
-            let mut response = self
-                .client
-                .delete(request_url.as_str())
-                .send()
-                .expect("Mock server error");
-
-            if response.status() != 202 {
-                let mut buf = String::new();
-                response
-                    .read_to_string(&mut buf)
-                    .expect("Failed to read response");
-                let err_msg = format!(
-                    "Could not delete mocks from server (status = {}, message = {})",
-                    response.status(),
-                    buf
-                );
-                panic!(err_msg);
-            }
+            self
+                .server_adapter
+                .delete_mock(id)
+                .expect("could not delete mock from server");
         }
     }
 }
@@ -260,7 +365,7 @@ pub enum Method {
 }
 
 impl Method {
-    pub fn as_str(&self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Method::GET => "GET",
             Method::HEAD => "HEAD",
@@ -278,7 +383,7 @@ impl Method {
 pub fn mock(method: Method, path: &str) -> Mock {
     Mock {
         id: None,
-        client: reqwest::Client::new(),
+        server_adapter: ServerAdapter::new(),
         mock: SetMockRequest {
             request: HttpMockRequest {
                 method: Some(method.as_str().to_string()),

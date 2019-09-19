@@ -13,8 +13,7 @@ well as tests that span multiple systems. It provides a local (or remote) mock s
  system integration tests), you can switch the tests to use a standalone mock server by simply
  setting the address of the remote server using an environment variable. This way the remote
  server will be used for mocking and your mocks will be available to all participating systems.
- A standalone version of the HTTP mock server is available as an executable binary or a Docker
- image.
+ A standalone version of the HTTP mock server is available as an executable binary.
 
  ## Getting Started
  You can use a local mock server in your tests like shown in the following:
@@ -39,7 +38,7 @@ well as tests that span multiple systems. It provides a local (or remote) mock s
 
     // Make some assertions
     assert_eq!(response.status(), 200);
-    assert_eq!(health_mock.number_of_calls().unwrap(), 1);
+    assert_eq!(health_mock.times_called(), 1);
  }
  ```
  As shown in the code snippet, a mock server is automatically created when the `mock` function

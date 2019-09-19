@@ -9,7 +9,7 @@ pub mod mocks;
 
 /// The shared state accessible to all handlers
 pub struct HttpMockState {
-    pub mocks: RwLock<Vec<StoredSetMockRequest>>,
+    pub mocks: RwLock<BTreeMap<usize, StoredSetMockRequest>>,
     id_counter: AtomicUsize,
 }
 
@@ -21,14 +21,15 @@ impl HttpMockState {
 
 #[derive(Serialize, Deserialize, TypedBuilder, Clone, Debug)]
 pub struct StoredSetMockRequest {
-    id: usize,
-    mock: SetMockRequest,
+    pub id: usize,
+    pub call_counter: usize,
+    pub mock: SetMockRequest,
 }
 
 impl HttpMockState {
     pub fn new() -> HttpMockState {
         HttpMockState {
-            mocks: RwLock::new(Vec::new()),
+            mocks: RwLock::new(BTreeMap::new()),
             id_counter: AtomicUsize::new(0),
         }
     }

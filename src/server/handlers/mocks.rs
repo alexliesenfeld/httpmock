@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 pub fn list_all(state: &HttpMockState) -> Result<Vec<StoredSetMockRequest>, String> {
     {
         let mocks = state.mocks.read().unwrap();
-        return Result::Ok(mocks.clone());
+        return Result::Ok(mocks.values().into_iter().map(|m| m.clone()).collect());
     }
 }
 
@@ -25,15 +25,31 @@ pub fn add_new_mock(state: &HttpMockState, req: SetMockRequest) -> Result<usize,
     let mock_id = state.create_new_id();
     {
         let mut mocks = state.mocks.write().unwrap();
-        mocks.push(StoredSetMockRequest {
-            id: mock_id,
-            mock: req,
-        });
+        mocks.insert(
+            mock_id,
+            StoredSetMockRequest {
+                id: mock_id,
+                call_counter: 0,
+                mock: req,
+            },
+        );
 
         log::debug!("Number of routes = {}", mocks.len());
     }
 
     return Result::Ok(mock_id);
+}
+
+/// Reads exactly one mock object.
+pub fn read_one(state: &HttpMockState, id: usize) -> Result<Option<StoredSetMockRequest>, String> {
+    {
+        let mocks = state.mocks.read().unwrap();
+        let result = mocks.get(&id);
+        return match result {
+            Some(found) => Ok(Some(found.clone())),
+            None => Ok(None),
+        };
+    }
 }
 
 /// A Request that is made to set a new mock.
@@ -55,15 +71,13 @@ pub fn clear_mocks(state: &HttpMockState) -> Result<(), String> {
 
 /// Deletes all mocks that match the request. Returns the number of deleted elements.
 pub fn delete_one(state: &HttpMockState, id: usize) -> Result<bool, String> {
-    let deleted_items;
+    let result;
     {
         let mut mocks = state.mocks.write().unwrap();
-        let initial_items = mocks.len();
-        mocks.retain(|m| m.id != id);
-        deleted_items = initial_items - mocks.len();
+        result = mocks.remove(&id);
     }
 
-    return Result::Ok(deleted_items > 0);
+    return Result::Ok(result.is_some());
 }
 
 /// Finds a mock that matches the current request and serve a response according to the mock
@@ -72,15 +86,26 @@ pub fn find_mock(
     state: &HttpMockState,
     req: HttpMockRequest,
 ) -> Result<Option<HttpMockResponse>, String> {
+    let found_mock_id: Option<usize>;
     {
         let mocks = state.mocks.read().unwrap();
         let result = mocks
-            .iter()
-            .find(|&m| request_matches(&req, &m.mock.request));
+            .values()
+            .into_iter()
+            .find(|&mock| request_matches(&req, &mock.mock.request));
 
-        if let Some(found) = result {
-            return Ok(Some(found.mock.response.clone()));
-        }
+        found_mock_id = match result {
+            Some(mock) => Some(mock.id),
+            None => None,
+        };
+    }
+
+    if let Some(found_id) = found_mock_id {
+        let mut mocks = state.mocks.write().unwrap();
+        let result = mocks.get_mut(&found_id);
+        let mock = result.unwrap();
+        mock.call_counter += 1;
+        return Ok(Some(mock.mock.response.clone()));
     }
 
     return Result::Ok(None);
@@ -147,6 +172,10 @@ mod test {
     /// TODO: Test that ensures counting calls/matched requests is working
     #[test]
     fn count_calls() {}
+
+    /// TODO: Test that ensures reading one mock is working
+    #[test]
+    fn read_one() {}
 
     /// This test makes sure that a request is considered "matched" if the paths of the
     /// request and the mock are equal.

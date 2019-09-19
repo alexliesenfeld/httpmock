@@ -1,6 +1,8 @@
 use actix_web::{middleware, web, App, HttpServer};
 
-pub use handlers::{mocks::SetMockRequest, HttpMockRequest, HttpMockResponse};
+pub use handlers::{
+    mocks::SetMockRequest, HttpMockRequest, HttpMockResponse, StoredSetMockRequest,
+};
 pub use routes::mocks::MockCreatedResponse;
 mod handlers;
 mod routes;
@@ -30,6 +32,7 @@ pub fn start_server(http_mock_config: HttpMockConfig) {
             .route(MOCKS_PATH, web::get().to(routes::mocks::list))
             .route(MOCKS_PATH, web::delete().to(routes::mocks::clear))
             .route(MOCK_PATH, web::delete().to(routes::mocks::delete_one))
+            .route(MOCK_PATH, web::get().to(routes::mocks::read_one))
             .route(HEALTH_PATH, web::get().to(routes::admin::health))
             .default_service(web::route().to_async(routes::mocks::serve))
     })
