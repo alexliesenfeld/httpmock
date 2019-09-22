@@ -65,7 +65,17 @@
 //! [tests of this crate](https://github.com/alexliesenfeld/httpmock/blob/master/tests/integration_tests.rs )
 //! for more examples.
 //!
-//!
+//! # Debugging
+//! `httpmock` logs against the `log` crate. If you use the `env_logger` backend, you can activate
+//! debug logging by setting `RUST_LOG` environment variable to `debug` and then calling
+//! `env_logger::try_init()`:
+//! ```rust
+//! #[test]
+//! fn your_test() {
+//!     let _ = env_logger::try_init();
+//!     // ...
+//! }
+//! ```
 #[macro_use]
 extern crate lazy_static;
 #[macro_use]
