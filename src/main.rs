@@ -1,5 +1,5 @@
-extern crate mocha;
 extern crate env_logger;
+extern crate mocha;
 
 use mocha::{start_server, HttpMockConfig};
 use structopt::StructOpt;

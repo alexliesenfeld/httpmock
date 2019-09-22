@@ -1,0 +1,18 @@
+[package]
+name = "mocha-macros"
+version = "0.1.0"
+authors = ["Alexander Liesenfeld <alexander.liesenfeld@outlook.com>"]
+edition = "2018"
+description = "an HTTP mock server library for your tests"
+readme = "README.md"
+keywords = ["http", "mock", "test"]
+categories = ["development-tools::testing"]
+license = "MIT"
+repository = "https://github.com/alexliesenfeld/mocha"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+syn = { version = "1.0.5", features = ["full"] }
+quote = "1.0.2"

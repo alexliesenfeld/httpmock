@@ -1,5 +1,5 @@
 # HTTP mock server 
-`mocha` is a simple and efficient HTTP mock server that can be used for local tests as
+`mocha` is a simple-to-use mock server that can be used for local tests as
 well as tests that span multiple systems. It provides a local (or remote) mock server and
  a library to create, verify and remove HTTP mocks.
 
@@ -54,6 +54,25 @@ well as tests that span multiple systems. It provides a local (or remote) mock s
  A request is only considered to match a mock if the request contains all attributes required
  by the mock. If a request does not match any mock previously created, the mock server will
  respond with an empty response body and a status code `500 (Internal Server Error)`.
+ 
+ ## Debugging
+ `mocha` logs against the `log` crate. If you use the `env_logger` backend, you can activate debug logging 
+ by setting `RUST_LOG` environment variable to `debug` and then calling `env_logger::try_init()`  in your tests and like this:
+
+In your test:
+```rust
+#[test]
+fn your_test() {
+    let _ = env_logger::try_init();
+    // ...
+}
+```
+
+Starting your tests from command line:
+```
+RUST_LOG=mocha=debug cargo test
+```
+  
  
  ## License
  `mocha` is free software: you can redistribute it and/or modify it under the terms of the MIT Public License.

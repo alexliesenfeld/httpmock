@@ -1,54 +1,27 @@
 use crate::server::handlers;
-use crate::server::handlers::mocks::SetMockRequest;
-use crate::server::handlers::{HttpMockRequest, HttpMockResponse, HttpMockState};
 use actix_web::dev::HttpResponseBuilder;
 use actix_web::http::StatusCode;
 use actix_web::web::{Bytes, BytesMut, Data, Json, Payload};
 use actix_web::{error, web, Error, HttpRequest, HttpResponse, Result};
 use futures::{Future, Stream};
-use serde::{Deserialize, Serialize};
+
+use crate::server::data::*;
 use std::collections::BTreeMap;
-
-/// This route is responsible for listing all currently stored mocks
-pub fn list(state: Data<HttpMockState>) -> Result<HttpResponse> {
-    let result = handlers::mocks::list_all(&state.into_inner());
-
-    if let Err(e) = result {
-        return Ok(HttpResponse::InternalServerError().body(e));
-    }
-
-    Ok(HttpResponse::Accepted().json(&result.unwrap()))
-}
-
-#[derive(Serialize, Deserialize, TypedBuilder, Clone, Debug)]
-pub struct MockCreatedResponse {
-    pub mock_id: usize,
-}
+use qstring::QString;
 
 /// This route is responsible for adding a new mock
-pub fn add(state: Data<HttpMockState>, req: Json<SetMockRequest>) -> Result<HttpResponse> {
-    let result = handlers::mocks::add_new_mock(&state.into_inner(), req.into_inner());
+pub fn add(state: Data<ApplicationState>, req: Json<MockDefinition>) -> Result<HttpResponse> {
+    let result = handlers::add_new_mock(&state.into_inner(), req.into_inner());
 
     return match result {
         Err(e) => Ok(HttpResponse::InternalServerError().body(e)),
-        Ok(mock_id) => Ok(HttpResponse::Created().json(MockCreatedResponse { mock_id })),
+        Ok(mock_id) => Ok(HttpResponse::Created().json(MockIdentification { mock_id })),
     };
 }
 
-/// This route is responsible for clearing/deleting all mocks
-pub fn clear(state: Data<HttpMockState>) -> Result<HttpResponse> {
-    let result = handlers::mocks::clear_mocks(&state.into_inner());
-
-    if let Err(e) = result {
-        return Ok(HttpResponse::InternalServerError().body(e));
-    }
-
-    Ok(HttpResponse::Accepted().finish())
-}
-
 /// This route is responsible for deleting mocks
-pub fn delete_one(state: Data<HttpMockState>, params: web::Path<usize>) -> Result<HttpResponse> {
-    let result = handlers::mocks::delete_one(&state.into_inner(), params.into_inner());
+pub fn delete_one(state: Data<ApplicationState>, params: web::Path<usize>) -> Result<HttpResponse> {
+    let result = handlers::delete_one(&state.into_inner(), params.into_inner());
     return match result {
         Err(e) => Ok(HttpResponse::InternalServerError().body(e)),
         Ok(found) => {
@@ -61,8 +34,8 @@ pub fn delete_one(state: Data<HttpMockState>, params: web::Path<usize>) -> Resul
 }
 
 /// This route is responsible for deleting mocks
-pub fn read_one(state: Data<HttpMockState>, params: web::Path<usize>) -> Result<HttpResponse> {
-    let handler_result = handlers::mocks::read_one(&state.into_inner(), params.into_inner());
+pub fn read_one(state: Data<ApplicationState>, params: web::Path<usize>) -> Result<HttpResponse> {
+    let handler_result = handlers::read_one(&state.into_inner(), params.into_inner());
     return match handler_result {
         Err(e) => Ok(HttpResponse::InternalServerError().body(e)),
         Ok(mock_opt) => {
@@ -77,7 +50,7 @@ pub fn read_one(state: Data<HttpMockState>, params: web::Path<usize>) -> Result<
 /// This route is responsible for finding a mock that matches the current request and serve a
 /// response according to the mock specification
 pub fn serve(
-    state: Data<HttpMockState>,
+    state: Data<ApplicationState>,
     req: HttpRequest,
     payload: Payload,
 ) -> impl Future<Item = HttpResponse, Error = Error> {
@@ -96,22 +69,27 @@ fn append_chunk(mut buf: BytesMut, chunk: Bytes) -> Result<BytesMut> {
 /// Processes an HTTP request to serve a mock
 fn handle_mock_request(
     body_buffer: BytesMut,
-    state: Data<HttpMockState>,
+    state: Data<ApplicationState>,
     req: HttpRequest,
 ) -> Result<HttpResponse> {
     return match String::from_utf8(body_buffer.to_vec()) {
         Ok(content) => {
-            let handler_request = to_handler_request(req, content);
-            let handler_response = handlers::mocks::find_mock(&state, handler_request);
-            return to_route_response(handler_response);
+            let handler_request_result = to_handler_request(req, content);
+            return match handler_request_result {
+                Ok(handler_request) => {
+                    let handler_response = handlers::find_mock(&state, handler_request);
+                    return to_route_response(handler_response);
+                }
+                Err(error) => Err(error::ErrorBadRequest(error)),
+            };
         }
-        Err(error) => Err(error::ErrorBadRequest(error.to_string())),
+        Err(error) => Err(error::ErrorBadRequest(error)),
     };
 }
 
 /// Maps the result of the serve handler to an HTTP response which the web framework understands
 fn to_route_response(
-    handler_result: Result<Option<HttpMockResponse>, String>,
+    handler_result: Result<Option<MockServerHttpResponse>, String>,
 ) -> Result<HttpResponse> {
     return match handler_result {
         Err(e) => Err(error::ErrorInternalServerError(e)),
@@ -127,18 +105,53 @@ fn to_route_response(
 }
 
 /// Maps the request of the serve handler to a request representation which the handlers understand
-fn to_handler_request(req: HttpRequest, body: String) -> HttpMockRequest {
-    HttpMockRequest::builder()
+fn to_handler_request(req: HttpRequest, body: String) -> Result<MockServerHttpRequest, String> {
+    let headers = extract_headers(&req);
+    if let Err(e) = headers {
+        return Err(format!("error parsing headers: {}", e));
+    }
+
+    let query_params = extract_query_params(&req);
+    if let Err(e) = query_params {
+        return Err(format!("error parsing query_params: {}", e));
+    }
+
+    let request = MockServerHttpRequest::builder()
         .method(req.method().as_str().to_string())
         .path(req.path().to_string())
-        .headers(BTreeMap::new())
+        .headers(headers.unwrap())
+        .query_params(query_params.unwrap())
         .body(body)
-        .build()
+        .build();
+
+    Ok(request)
+}
+
+/// Extracts all headers from the URI of the given request.
+fn extract_headers(req: &HttpRequest) -> Result<BTreeMap<String, String>, String> {
+    let mut headers = BTreeMap::new();
+    for (name, value) in req.headers() {
+        let val = value.to_str();
+        if let Err(e) = val {
+            return Err(format!("error parsing header with name {}: {}", name, e));
+        }
+        headers.insert(name.as_str().to_string(), val.unwrap().to_string());
+    }
+    Ok(headers)
+}
+
+/// Extracts all query parameters from the URI of the given request.
+fn extract_query_params(req: &HttpRequest) -> Result<BTreeMap<String, String>, String> {
+    let mut query_params = BTreeMap::new();
+    for (key, value) in QString::from(req.query_string()) {
+        query_params.insert(key.to_string(), value.to_string());
+    }
+    Ok(query_params)
 }
 
 /// Maps the response of the serve handler to a response representation which the
 /// web framework understand
-fn to_http_response(res: HttpMockResponse) -> HttpResponse {
+fn to_http_response(res: MockServerHttpResponse) -> HttpResponse {
     let status_code = StatusCode::from_u16(res.status).unwrap();
     let mut response_builder = HttpResponseBuilder::new(status_code);
 
@@ -150,8 +163,8 @@ fn to_http_response(res: HttpMockResponse) -> HttpResponse {
 
 #[cfg(test)]
 mod test {
-    use crate::server::handlers::HttpMockResponse;
-    use crate::server::routes::mocks::{to_http_response, to_route_response};
+    use crate::server::data::MockServerHttpResponse as HttpMockResponse;
+    use crate::server::routes::{to_http_response, to_route_response};
     use actix_http::body::BodySize;
     use actix_http::body::{Body, MessageBody};
     use actix_http::Response;

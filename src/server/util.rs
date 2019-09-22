@@ -1,36 +1,20 @@
 use std::cmp::Ordering;
 use std::collections::BTreeMap;
 
-pub trait EqNoneAsEmpty<T>
-where
-    T: Default + PartialEq,
-{
-    fn eq_none_as_default(&self, other: &Option<T>) -> bool;
-}
-
-impl<T> EqNoneAsEmpty<T> for Option<T>
-where
-    T: Default + PartialEq,
-{
-    fn eq_none_as_default(&self, other: &Option<T>) -> bool {
-        return match (self, other) {
-            (Some(s), Some(o)) => s == o,
-            (None, Some(o)) => &T::default() == o,
-            (Some(s), None) => s == &T::default(),
-            (None, None) => true,
-        };
-    }
-}
-
+/// Extends a tree map to provide additional operations.
 pub trait TreeMapExtension<K, V>
 where
     K: std::cmp::Ord,
     V: std::cmp::Ord,
 {
+    /// Checks if a tree map contains another tree map.
     fn contains(&self, other: &BTreeMap<K, V>) -> bool;
+
+    /// Checks if a tree map contains a certain pair of values.
     fn contains_entry(&self, key: &K, value: &V) -> bool;
 }
 
+/// Implements [`TreeMapExtension`].
 impl<K, V> TreeMapExtension<K, V> for BTreeMap<K, V>
 where
     K: std::cmp::Ord,
@@ -47,32 +31,45 @@ where
     }
 }
 
-pub trait TreeMapOptExtension<K, V>
-where
-    K: std::cmp::Ord,
-    V: std::cmp::Ord,
-{
-    fn contains_opt(&self, other: &Option<BTreeMap<K, V>>) -> bool;
+/// Extends a string based tree map to provide additional operations.
+pub trait StringTreeMapExtension {
+    /// Checks if a tree map contains another tree map while ignoring the case of the key.
+    fn contains_with_case_insensitive_key(&self, other: &BTreeMap<String, String>) -> bool;
+
+    /// Checks if a tree map contains a certain pair of values while ignoring the case of the key.
+    fn contains_entry_with_case_insensitive_key(&self, key: &String, value: &String) -> bool;
+
+    /// Checks if a tree map contains a key while ignoring the case of the key.
+    fn contains_case_insensitive_key(&self, key: &String) -> bool;
 }
 
-impl<K, V> TreeMapOptExtension<K, V> for Option<BTreeMap<K, V>>
-where
-    K: std::cmp::Ord,
-    V: std::cmp::Ord,
-{
-    fn contains_opt(&self, other: &Option<BTreeMap<K, V>>) -> bool {
-        return match (&self, other) {
-            (Some(m1), Some(m2)) => m1.contains(m2),
-            (Some(_), None) => true,
-            (None, Some(m2)) => m2.is_empty(),
-            (None, None) => true,
-        };
+/// Implements [`StringTreeMapExtension`].
+impl StringTreeMapExtension for BTreeMap<String, String> {
+    fn contains_with_case_insensitive_key(&self, other: &BTreeMap<String, String>) -> bool {
+        return other
+            .iter()
+            .all(|(k, v)| self.contains_entry_with_case_insensitive_key(k, v));
+    }
+
+    fn contains_entry_with_case_insensitive_key(&self, key: &String, value: &String) -> bool {
+        return self.iter().any(|(k, v)| {
+            k.to_lowercase().cmp(&key.to_lowercase()) == Ordering::Equal
+                && v.cmp(value) == Ordering::Equal
+        });
+    }
+
+    fn contains_case_insensitive_key(&self, key: &String) -> bool {
+        let key_lc = key.to_lowercase();
+        return self
+            .keys()
+            .into_iter()
+            .any(|k| k.to_lowercase().eq(&key_lc));
     }
 }
 
 #[cfg(test)]
 mod test {
-    use crate::server::util::std::{TreeMapExtension, TreeMapOptExtension};
+    use crate::server::util::{StringTreeMapExtension, TreeMapExtension};
     use std::collections::BTreeMap;
 
     #[test]
@@ -183,66 +180,18 @@ mod test {
     }
 
     #[test]
-    fn tree_map_contains_opt_both_some() {
+    fn string_tree_map_contains_all_keys_some_values_equal_length() {
         // Arrange
         let mut m1 = BTreeMap::new();
-        m1.insert("h1", "v1");
+        m1.insert("h1".to_string(), "v1".to_string());
+        m1.insert("h2".to_string(), "v2".to_string());
 
         let mut m2 = BTreeMap::new();
-        m2.insert("h1", "v1");
+        m2.insert("H1".to_string(), "v1".to_string());
+        m2.insert("H2".to_string(), "v2".to_string());
 
         // Act
-        let result = Some(m1).contains_opt(&Some(m2));
-
-        // Assert
-        assert_eq!(true, result);
-    }
-
-    #[test]
-    fn tree_map_contains_opt_first_some_second_none() {
-        // Arrange
-        let mut m = BTreeMap::new();
-        m.insert("h1", "v1");
-
-        // Act
-        let result = Some(m).contains_opt(&None);
-
-        // Assert
-        assert_eq!(true, result);
-    }
-
-    #[test]
-    fn tree_map_contains_opt_first_none_second_some() {
-        // Arrange
-        let mut m = BTreeMap::new();
-        m.insert("h1", "v1");
-
-        // Act
-        let result = None.contains_opt(&Some(m));
-
-        // Assert
-        assert_eq!(false, result);
-    }
-
-    #[test]
-    fn tree_map_contains_opt_first_none_second_some_but_empty() {
-        // Arrange
-        let m: BTreeMap<String, String> = BTreeMap::new();
-
-        // Act
-        let result = None.contains_opt(&Some(m));
-
-        // Assert
-        assert_eq!(true, result);
-    }
-
-    #[test]
-    fn tree_map_contains_opt_both_none() {
-        // Arrange
-        let m: Option<BTreeMap<String, String>> = None;
-
-        // Act
-        let result = m.contains_opt(&None);
+        let result = m1.contains_with_case_insensitive_key(&m2);
 
         // Assert
         assert_eq!(true, result);
