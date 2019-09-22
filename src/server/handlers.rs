@@ -38,7 +38,7 @@ pub fn read_one(state: &ApplicationState, id: usize) -> Result<Option<ActiveMock
     }
 }
 
-/// Deletes all mocks that match the request. Returns the number of deleted elements.
+/// Deletes one mock by id. Returns the number of deleted elements.
 pub fn delete_one(state: &ApplicationState, id: usize) -> Result<bool, String> {
     let result;
     {
@@ -47,6 +47,18 @@ pub fn delete_one(state: &ApplicationState, id: usize) -> Result<bool, String> {
     }
 
     return Result::Ok(result.is_some());
+}
+
+/// Deletes all mocks. Returns the number of deleted elements.
+pub fn delete_all(state: &ApplicationState) -> Result<usize, String> {
+    let result;
+    {
+        let mut mocks = state.mocks.write().unwrap();
+        result = mocks.len();
+        mocks.clear();
+    }
+
+    return Result::Ok(result);
 }
 
 /// Finds a mock that matches the current request and serve a response according to the mock

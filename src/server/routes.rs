@@ -33,6 +33,15 @@ pub fn delete_one(state: Data<ApplicationState>, params: web::Path<usize>) -> Re
     };
 }
 
+/// This route is responsible for deleting all mocks
+pub fn delete_all(state: Data<ApplicationState>) -> Result<HttpResponse> {
+    let result = handlers::delete_all(&state.into_inner());
+    return match result {
+        Err(e) => Ok(HttpResponse::InternalServerError().body(e)),
+        Ok(_) => Ok(HttpResponse::Accepted().finish()),
+    };
+}
+
 /// This route is responsible for deleting mocks
 pub fn read_one(state: Data<ApplicationState>, params: web::Path<usize>) -> Result<HttpResponse> {
     let handler_result = handlers::read_one(&state.into_inner(), params.into_inner());

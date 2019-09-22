@@ -1,5 +1,5 @@
 [package]
-name = "mocha"
+name = "httpmock"
 version = "0.2.0"
 authors = ["Alexander Liesenfeld <alexander.liesenfeld@outlook.com>"]
 edition = "2018"
@@ -8,7 +8,7 @@ readme = "README.md"
 keywords = ["http", "mock", "test"]
 categories = ["development-tools::testing"]
 license = "MIT"
-repository = "https://github.com/alexliesenfeld/mocha"
+repository = "https://github.com/alexliesenfeld/httpmock"
 
 [dependencies]
 serde = { version = "1.0.101", features = ["derive"] }
@@ -24,13 +24,12 @@ env_logger = "0.6.2"
 serde_regex = "0.4.0"
 regex = "1.3.1"
 qstring = "0.7.0"
-mocha-macros = { path = "macros", version = "0.1" }
+httpmock-macros = { path = "./lib/macros", version = "0.1.0"}
 
 [dev-dependencies]
 actix-http = "0.2.10"
 
-
 [workspace]
 members = [
-  "macros"
+  "lib/macros"
 ]

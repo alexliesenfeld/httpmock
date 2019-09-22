@@ -1,64 +1,71 @@
-//! A simple-to-use HTTP mock server that can be used for local tests as
-//! well as tests that span multiple systems. It provides a local (or remote) mock server and
-//! a library to create, verify and remove HTTP mocks.
+//! A simple-to-use HTTP mock server that can be used for mocking HTTP calls in your tests. This
+//! crate can be used for both, local tests as well as tests that span multiple systems.
+//! It provides an API to create mocks on a local or remote mock server.
 //!
-//! # Usage
 //! If used without a dedicated (standalone) mock server instance, an HTTP mock server will
 //! automatically be created in the background of your tests. The local mock server is created
-//! in a separate thread that will be started when a test needs a mock server for the first time.
+//! in a separate thread. It will be started when your tests need one for the first time.
 //! It will be shut down at the end of the test run.
 //!
-//! Should you need to extend or change your tests to span multiple systems later (such as in
-//! system integration tests), you can switch the tests to use a standalone mock server by simply
-//! setting the address of the remote server using an environment variable. This way the remote
-//! server will be used for mocking and your mocks will be available to all participating systems.
-//! A standalone version of the HTTP mock server is available as an executable binary.
+//! To use this crate in standalone mode you can just use the binary or start it using cargo
+//! (`cargo run`).
 //!
-//! ## Getting Started
+//! # Getting Started
 //! You can use a local mock server in your tests like shown in the following:
 //! ```rust
-//! extern crate mocha;
+//! extern crate httpmock;
 //!
-//! use mocha::mock;
-//! use mocha::Method::GET;
+//! use httpmock::Method::GET;
+//! use httpmock::{mock, with_mock_server};
 //!
 //! #[test]
+//! #[with_mock_server]
 //! fn simple_test() {
-//!     let m = mock(GET, "/health")
-//!        .expect_header("User-Agent", "rust-test")
-//!        .return_status(200)
-//!        .return_header("X-Version", "0.0.1")
-//!        .return_body("OK")
+//!    let health_mock = mock(GET, "/search")
+//!        .expect_query_param("query", "metallica")
+//!        .return_status(204)
 //!        .create();
 //!
-//!     let response = reqwest::Client::new()
-//!        .get("http://localhost:5000/health")
-//!         .header("User-Agent", "rust-test")
-//!         .send()
-//!         .unwrap();
+//!    let response = reqwest::get("http://localhost:5000/search?query=metallica").unwrap();
 //!
-//!     assert_eq!(response.status(), 200);
-//!     assert_eq!(m.times_called(), 1);
+//!    assert_eq!(response.status(), 204);
+//!    assert_eq!(health_mock.times_called(), 1);
 //! }
 //! ```
-//! As shown in the code snippet, a mock server is automatically created when the [`mock`] function
-//! is called. You can provide expected request attributes (such as headers, body content, etc.)
+//! In the snippet, a mock server is automatically created when the test launches. This is ensured
+//! by the [with_mock_server](../httpmock_macros/attr.with_mock_server.html)
+//! annotation, which wraps the test inside an initializer function performing multiple
+//! preparation steps, such as starting a server (if none yet exists) or clearing the server
+//! from old mocks. It also sequentializes tests that involve a mock server.
+//!
+//! If you try to create a mock without having annotated you test function
+//! with the [with_mock_server](../httpmock_macros/attr.with_mock_server.html) annotation,
+//! you will receive a panic at runtime pointing you to this problem.
+//! You can provide expected request attributes (such as headers, body content, etc.)
 //! and values that will be returned by the mock to the calling application using the
-//! [`expect_xxx`] and [`return_xxx`] methods, respectively. The [`create`] method will eventually
-//! make a request to the mock server (either local or remote) to create the mock at the server.
+//! `expect_xxx` and `return_xxx` methods, respectively. The
+//! [Mock::create](struct.Mock.html#method.create) method will eventually make a request to the
+//! mock server (either local or remote) to create the mock at the server.
 //!
-//! You can use the mock object returned by the [`create`] method to fetch information about
-//! the mock from the mock server, such as the number of times this mock has been called.
-//! This object is useful for test assertions.
+//! You can use the mock object returned by the [Mock::create](struct.Mock.html#method.create)
+//! method to fetch information about it from the mock server. This might be the number of
+//! times this mock has been called. You might use this information in your test assertions.
 //!
-//! A request is only considered to match a mock if the request contains all attributes required
-//! by the mock. If a request does not match any mock previously created, the mock server will
+//! An HTTP request made by your application is only considered to match a mock if the request
+//! fulfills all specified requirements. If a request does not match any mock, the mock server will
 //! respond with an empty response body and a status code 500 (Internal Server Error).
 //!
-//! If a server port is not provided using an environment variable (MOCHA_SERVER_PORT), the
-//! internal mock server port will be set to 5000. If another server address is explicitely set
-//! using an environment variable (MOCHA_SERVER_HOST), then this API will use the remote server
-//! for creating and managing mocks.
+//! By default, if a server port is not provided using an environment variable (`MOCHA_SERVER_PORT`),
+//! the port 5000 will be used. If another server host is explicitely set
+//! using an environment variable (`MOCHA_SERVER_HOST`), then this API will use the remote server
+//! managing mocks.
+//!
+//! # Examples
+//! Please refer to the
+//! [tests of this crate](https://github.com/alexliesenfeld/httpmock/blob/master/tests/integration_tests.rs )
+//! for more examples.
+//!
+//!
 #[macro_use]
 extern crate lazy_static;
 #[macro_use]
@@ -66,7 +73,9 @@ extern crate typed_builder;
 
 mod server;
 
+pub use httpmock_macros::with_mock_server;
 pub use server::{start_server, HttpMockConfig};
+
 use std::collections::BTreeMap;
 
 use std::io::Read;
@@ -76,69 +85,89 @@ use crate::server::data::{
     RequestRequirements,
 };
 use serde::Serialize;
-use std::sync::{Mutex};
-use std::thread::{self};
 use std::cell::RefCell;
+use std::sync::{Mutex, MutexGuard};
+use std::thread::{self};
 
+/// Refer to [regex::Regex](../regex/struct.Regex.html).
 pub type Regex = regex::Regex;
 
-fn get_host_from_env() -> Option<&'static str> {
-    option_env!("MOCHA_SERVER_HOST")
-}
-
-fn get_port_from_env() -> Option<&'static str> {
-    option_env!("MOCHA_SERVER_PORT")
-}
-
 lazy_static! {
-    static ref SERVER_HOST: &'static str = {
-        return match get_host_from_env() {
-            None => "localhost",
-            Some(h) => h,
-        };
-    };
-    static ref SERVER_PORT: u16 = {
-        return match get_port_from_env() {
-            None => 5000 as u16,
-            Some(port_string) => port_string.parse::<u16>().expect(&format!(
-                "Cannot parse port from environment variable value '{}'",
-                port_string
-            )),
-        };
-    };
-    pub static ref SERVER_MUTEX: Mutex<()> = {
+    static ref SERVER_MUTEX: Mutex<ServerAdapter> = {
+        let server = ServerAdapter::from_env();
+
         // Start local server if necessary
-        if get_host_from_env().is_none() {
-             thread::spawn(move || {
+        if !server.is_remote {
+            let port = server.port;
+
+            thread::spawn(move || {
                 let config = HttpMockConfig::builder()
-                    .port(*SERVER_PORT as u16)
+                    .port(port)
                     .workers(3 as usize)
                     .build();
 
                 start_server(config);
             });
         }
-        return Mutex::new(());
+
+        return Mutex::new(server);
     };
+
     static ref CLIENT: Mutex<reqwest::Client> = {
         return Mutex::new(reqwest::Client::new());
     };
 }
 
 thread_local!(
-    pub static TEST_INITIALIZED: RefCell<bool> = RefCell::new(false);
+    static TEST_INITIALIZED: RefCell<bool> = RefCell::new(false);
 );
 
 
-#[derive(Debug)]
-struct ServerAdapter {
-    host: String,
-    port: u16
+/// For internal use only. Do not use it.
+#[doc(hidden)]
+pub fn internal_thread_local_test_init_status(status: bool) {
+    TEST_INITIALIZED.with(|is_init| *is_init.borrow_mut() = status);
 }
 
+/// For internal use only. Do not use it.
+#[doc(hidden)]
+pub fn internal_server_management_lock() -> MutexGuard<'static, ServerAdapter> {
+    return match SERVER_MUTEX.lock() {
+        Ok(guard) => guard,
+        Err(poisoned) => poisoned.into_inner(),
+    };
+}
+
+/// This adapter allows to access the servers management functionality.
+///
+/// You can create an adapter by calling `ServerAdapter::from_env` to create a new instance.
+/// You should never actually need to use this adapter, but you certainly can, if you absolutely
+/// need to.
+#[derive(Debug)]
+pub struct ServerAdapter {
+    is_remote: bool,
+    host: String,
+    port: u16,
+}
 impl ServerAdapter {
-    pub fn new(host: &str, port: u16) -> ServerAdapter {
-        ServerAdapter { host: host.to_string(), port }
+    pub fn from_env() -> ServerAdapter {
+        let host = option_env!("MOCHA_SERVER_HOST");
+        let port = option_env!("MOCHA_SERVER_PORT");
+
+        ServerAdapter {
+            is_remote: host.is_some(),
+            host: match host {
+                None => "localhost".to_string(),
+                Some(h) => h.to_string(),
+            },
+            port: match port {
+                None => 5000 as u16,
+                Some(port_string) => port_string.parse::<u16>().expect(&format!(
+                    "Cannot parse port from environment variable value '{}'",
+                    port_string
+                )),
+            },
+        }
     }
 
     pub fn server_port(&self) -> u16 {
@@ -273,20 +302,55 @@ impl ServerAdapter {
 
         return Ok(());
     }
+
+    pub fn delete_all_mocks(&self) -> Result<(), String> {
+        // Send the request to the mock server
+        let request_url = format!("http://{}/__mocks", &self.server_address());
+        let response;
+        {
+            let client = CLIENT.lock().unwrap();
+            response = client.delete(request_url.as_str()).send();
+        }
+        if let Err(err) = response {
+            return Err(format!("cannot send request to mock server: {}", err));
+        }
+        let mut response = response.unwrap();
+
+        // Extract the response body
+        let mut body_contents = String::new();
+        let result = response.read_to_string(&mut body_contents);
+        if let Err(err) = result {
+            return Err(format!("cannot read response body: {}", err));
+        }
+
+        // Evaluate response status code
+        if response.status() != 202 {
+            return Err(format!(
+                "Could not delete mocks from server (status = {}, message = {})",
+                response.status(),
+                body_contents
+            ));
+        }
+
+        return Ok(());
+    }
 }
 
-/// This struct presents the mocking interface to the user. It is the main struct to use in tests.
-/// If there is no mock server running at the time when the mock is created, a mock server will be
-/// created automatically in a background thread. The mock server will then be used for every
-/// following test when needed by other mock objects and will be shut down at the end of the test
-/// run. You can configure a mock like in the following example:
-/// ```rust
-/// extern crate mocha;
+/// Represents the mocking user interface to the mock server for your tests.
 ///
-/// use mocha::mock;
-/// use mocha::Method::GET;
+/// To be able to create a mock, you need to mark your test function with the
+/// `httpmock::with_mock_server` annotation. If you do not do this, you will
+/// receive a panic during runtime telling about this fact. You can use as in the following example.
+///
+/// ### Example
+/// ```rust
+/// extern crate httpmock;
+///
+/// use httpmock::{mock, with_mock_server};
+/// use httpmock::Method::GET;
 ///
 /// #[test]
+/// #[with_mock_server]
 /// fn simple_test() {
 ///    let health_mock = mock(GET, "/health")
 ///       .return_status(200)
@@ -300,50 +364,34 @@ impl ServerAdapter {
 ///    assert_eq!(health_mock.times_called().unwrap(), 1);
 /// }
 /// ```
-/// Remember to call the [create](Mock::create) method when you are finished configuring the mock. This
-/// will craete the mock object at the mock server and return you a mock object that represents
-/// the mock. It will be used to fetch mock related information from the server or to delete the mock
-/// once it gets out of scope. The mock will be deleted from the mock once it gets out of scope,
-/// so you need to make sure to store the result of the [create](Mock::create) method.
-/// The following will result in a mock that will be created and deleted from the server because it
-/// got out of scope and hence instantly being removed from the server again:
-/// ```rust
-/// extern crate mocha;
+/// Remember to call the `Mock#create` method when you are finished configuring the mock.
+/// This will craete the mock object at the mock server and return you a mock object that represents
+/// a reference of the mock at the servers application state. The reference can be  used to fetch
+/// mock related information from the server or to delete the mock.
 ///
-/// use mocha::mock;
-/// use mocha::Method::GET;
+/// While `httpmock::mock` is a convenience function, you can have more control over matching
+/// the path by directly creating a new mock object yourself using the `Mock::new` method
+/// like in the following example:
+/// ```rust
+/// extern crate httpmock;
+///
+/// use httpmock::Method::POST;
+/// use httpmock::{Mock, Regex, with_mock_server};
 ///
 /// #[test]
+/// #[with_mock_server]
 /// fn simple_test() {
-///    mock(GET, "/health") // WRONG! Created mock is not being held in a variable!
+///     Mock::new()
+///       .expect_path("/test")
+///       .expect_path_contains("test")
+///       .expect_path_matches(Regex::new(r#"test"#).unwrap())
+///       .expect_method(POST)
 ///       .return_status(200)
 ///       .create();
 /// }
 /// ```
-/// Node that the [mock](mocha::mock) function is only there for convenience. If you want to have
-/// more control over matching the path, you can use the [create](Mock::new) method like this:
-/// ```rust
-/// extern crate mocha;
-///
-/// use mocha::{Mock, Regex};
-/// use mocha::Method::POST;
-///
-/// #[test]
-/// fn simple_test() {
-///     let m = Mock::new()
-///     .expect_path("/test")
-///     .expect_path_contains("test")
-///     .expect_path_matches(Regex::new(r#"test"#).unwrap())
-///     .expect_method(POST)
-///     .return_status(200)
-///     .create();
-/// }
-/// ```
-/// If a server port is not provided using an environment variable (MOCHA_SERVER_PORT), the
-/// internal mock server port will be set to 5000. If another server address is explicitely set
-/// using an environment variable (MOCHA_SERVER_HOST), then this API will use the remote server
-/// for creating and managing mocks.
-///
+/// Please have a look in the integration test in the source code of this crate to see more
+/// examples of how you can use this structure in your tests.
 #[derive(Debug)]
 pub struct Mock {
     mock: MockDefinition,
@@ -356,7 +404,7 @@ impl Mock {
     pub fn new() -> Mock {
         Mock {
             id: None,
-            server_adapter: ServerAdapter::new(*SERVER_HOST as &str, *SERVER_PORT as u16),
+            server_adapter: ServerAdapter::from_env(),
             mock: MockDefinition {
                 request: RequestRequirements {
                     method: None,
@@ -543,6 +591,11 @@ impl Mock {
         self
     }
 
+    /// Sets an expected query parameter. If the query parameters of an HTTP request at the server
+    /// contains the provided query parameter name and value, the request will be considered a
+    /// match for this mock to respond (given all other criteria are met).
+    /// * `name` - The query parameter name that will matched against.
+    /// * `value` - The value parameter name that will matched against.
     pub fn expect_query_param(mut self, name: &str, value: &str) -> Self {
         if self.mock.request.query_param.is_none() {
             self.mock.request.query_param = Some(BTreeMap::new());
@@ -558,6 +611,10 @@ impl Mock {
         self
     }
 
+    /// Sets an expected query parameter name. If the query parameters of an HTTP request at the server
+    /// contains the provided query parameter name (not considering the value), the request will be
+    /// considered a match for this mock to respond (given all other criteria are met).
+    /// * `name` - The query parameter name that will matched against.
     pub fn expect_query_param_exists(mut self, name: &str) -> Self {
         if self.mock.request.query_param_exists.is_none() {
             self.mock.request.query_param_exists = Some(Vec::new());
@@ -626,15 +683,15 @@ impl Mock {
         self
     }
 
-    /// This method creates the mock at the server side and returns a Mock object representing
-    /// the mock.
+    /// This method creates the mock at the server side and returns a `Mock` object
+    /// representing the reference of the created mock at the server.
     ///
-    /// This method will also block a test thread to prevent that multiple tests are being executed
-    /// against the same mock server in parallel.
+    /// # Panics
+    /// This method will panic if your test method was not marked using the the
+    /// `httpmock::with_mock_server` annotation.
     pub fn create(mut self) -> Self {
-
         if !TEST_INITIALIZED.with(|is_init| *is_init.borrow()) {
-            panic!("Mocking framework is not initialized (did you decorate your test method with #[with_mock_server]?)")
+            panic!("Mocking framework is not initialized (did you mark your test method with the #[with_mock_server] attribute?)")
         }
 
         let response = self
@@ -647,6 +704,9 @@ impl Mock {
     }
 
     /// This method returns the number of times a mock has been called at the mock server.
+    ///
+    /// # Panics
+    /// This method will panic if there is a problem to communicate with the server.
     pub fn times_called(&self) -> usize {
         if self.id.is_none() {
             panic!("you cannot fetch the number of calls for a mock that has not yet been created")
@@ -678,20 +738,23 @@ impl Mock {
     pub fn server_address(&self) -> String {
         self.server_adapter.server_address()
     }
-}
 
-impl Drop for Mock {
-    /// Drops a mock and deletes it from the (remote) mock server.
-    fn drop(&mut self) {
+    /// Deletes this mock from the mock server.
+    ///
+    /// # Panics
+    /// This method will panic if there is a problem to communicate with the server.
+    pub fn delete(&mut self) {
         if let Some(id) = self.id {
             self.server_adapter
                 .delete_mock(id)
                 .expect("could not delete mock from server");
+        } else {
+            panic!("Cannot delete mock, because it has not been created at the server yet.");
         }
     }
 }
 
-/// The HTTP Method a mock should respond to.
+/// Represents an HTTP method.
 #[derive(Debug)]
 pub enum Method {
     GET,
@@ -705,16 +768,16 @@ pub enum Method {
     PATCH,
 }
 
-// Enables enum to_string conversion
+/// Enables enum to_string conversion
 impl std::fmt::Display for Method {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         std::fmt::Debug::fmt(self, f)
     }
 }
 
-/// This is a convenience method to create an HTTP mock. It automatically calls
-/// [Mock::new](Mock::new) and already sets a path and an HTTP method for it.
-/// Please refer to [Mock](Mock).
+/// A convenience function to create an HTTP mock. It automatically calls
+/// [Mock::new](struct.Mock.html#method.new) and already sets a path and an HTTP method.
+/// Please refer to [Mock](struct.Mock.html) struct for a more detailed description.
 pub fn mock(method: Method, path: &str) -> Mock {
     Mock::new().expect_method(method).expect_path(path)
 }

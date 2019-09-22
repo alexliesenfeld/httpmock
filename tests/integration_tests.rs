@@ -1,34 +1,41 @@
-extern crate mocha;
+extern crate httpmock;
 
-use mocha::Method::{GET, POST};
-use mocha::{mock, Mock, Regex};
-use mocha_macros::with_mock_server;
+use httpmock::Method::{GET, POST};
+use httpmock::{mock, with_mock_server, Mock, Regex};
 use std::io::Read;
 
 /// This test asserts that mocks can be stored, served and deleted as designed.
 #[test]
 #[with_mock_server]
 fn simple_test() {
-    let m = mock(GET, "/health")
-        .expect_header("User-Agent", "rust-test")
-        .return_status(205)
-        .return_header("Content-Type", "application/text")
-        .return_header("X-Version", "0.0.1")
-        .return_body("OK")
+    let health_mock = mock(GET, "/search")
+        .expect_query_param("query", "metallica")
+        .return_status(204)
         .create();
+
+    let response = reqwest::get("http://localhost:5000/search?query=metallica").unwrap();
+
+    assert_eq!(response.status(), 204);
+    assert_eq!(health_mock.times_called(), 1);
+}
+
+/// Ensures that once explicitly deleting a mock, it will not be delivered by the server anymore.
+#[test]
+#[with_mock_server]
+fn explicit_delete_test() {
+    let mut m = mock(GET, "/health").return_status(205).create();
 
     let response = reqwest::Client::new()
         .get("http://localhost:5000/health")
-        .header("User-Agent", "rust-test")
         .send()
         .unwrap();
 
     assert_eq!(response.status(), 205);
     assert_eq!(m.times_called(), 1);
 
-    drop(m);
+    m.delete();
 
-    let response = reqwest::get("http://localhost:5000/health").expect("ERROR MAKING REQUEST");
+    let response = reqwest::get("http://localhost:5000/health").unwrap();
     assert_eq!(response.status(), 500);
 }
 

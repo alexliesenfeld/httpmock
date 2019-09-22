@@ -1,7 +1,7 @@
 extern crate env_logger;
-extern crate mocha;
+extern crate httpmock;
 
-use mocha::{start_server, HttpMockConfig};
+use httpmock::{start_server, HttpMockConfig};
 use structopt::StructOpt;
 
 /// Holds command line parameters provided by the user.
