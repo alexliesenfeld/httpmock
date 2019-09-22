@@ -67,7 +67,6 @@ extern crate typed_builder;
 mod server;
 
 pub use server::{start_server, HttpMockConfig};
-use std::cell::RefCell;
 use std::collections::BTreeMap;
 
 use std::io::Read;
@@ -77,22 +76,29 @@ use crate::server::data::{
     RequestRequirements,
 };
 use serde::Serialize;
-use std::sync::{LockResult, Mutex, MutexGuard};
-use std::thread::{self, JoinHandle};
+use std::sync::{Mutex};
+use std::thread::{self};
+use std::cell::RefCell;
 
 pub type Regex = regex::Regex;
 
+fn get_host_from_env() -> Option<&'static str> {
+    option_env!("MOCHA_SERVER_HOST")
+}
+
+fn get_port_from_env() -> Option<&'static str> {
+    option_env!("MOCHA_SERVER_PORT")
+}
+
 lazy_static! {
     static ref SERVER_HOST: &'static str = {
-        let host: Option<&str> = option_env!("MOCHA_SERVER_HOST");
-        return match host {
+        return match get_host_from_env() {
             None => "localhost",
             Some(h) => h,
         };
     };
     static ref SERVER_PORT: u16 = {
-        let port: Option<&str> = option_env!("MOCHA_SERVER_PORT");
-        return match port {
+        return match get_port_from_env() {
             None => 5000 as u16,
             Some(port_string) => port_string.parse::<u16>().expect(&format!(
                 "Cannot parse port from environment variable value '{}'",
@@ -100,42 +106,47 @@ lazy_static! {
             )),
         };
     };
-    static ref SERVER: Mutex<JoinHandle<()>> = {
-        let server_thread = thread::spawn(move || {
-            let config = HttpMockConfig::builder()
-                .port(*SERVER_PORT as u16)
-                .workers(3 as usize)
-                .build();
+    pub static ref SERVER_MUTEX: Mutex<()> = {
+        // Start local server if necessary
+        if get_host_from_env().is_none() {
+             thread::spawn(move || {
+                let config = HttpMockConfig::builder()
+                    .port(*SERVER_PORT as u16)
+                    .workers(3 as usize)
+                    .build();
 
-            start_server(config);
-        });
-        return Mutex::new(server_thread);
+                start_server(config);
+            });
+        }
+        return Mutex::new(());
     };
-
     static ref CLIENT: Mutex<reqwest::Client> = {
         return Mutex::new(reqwest::Client::new());
     };
 }
 
 thread_local!(
-    pub static SERVER_GUARD: RefCell<LockResult<MutexGuard<'static, JoinHandle<()>>>> =
-        RefCell::new(SERVER.lock());
+    pub static TEST_INITIALIZED: RefCell<bool> = RefCell::new(false);
 );
 
+
 #[derive(Debug)]
-struct ServerAdapter;
+struct ServerAdapter {
+    host: String,
+    port: u16
+}
+
 impl ServerAdapter {
-    pub fn new() -> ServerAdapter {
-        SERVER_GUARD.with(|_| {}); // Prevents tests run in parallel
-        ServerAdapter {}
+    pub fn new(host: &str, port: u16) -> ServerAdapter {
+        ServerAdapter { host: host.to_string(), port }
     }
 
     pub fn server_port(&self) -> u16 {
-        *SERVER_PORT as u16
+        self.port
     }
 
     pub fn server_host(&self) -> &str {
-        *SERVER_HOST as &str
+        &self.host
     }
 
     pub fn server_address(&self) -> String {
@@ -345,7 +356,7 @@ impl Mock {
     pub fn new() -> Mock {
         Mock {
             id: None,
-            server_adapter: ServerAdapter::new(),
+            server_adapter: ServerAdapter::new(*SERVER_HOST as &str, *SERVER_PORT as u16),
             mock: MockDefinition {
                 request: RequestRequirements {
                     method: None,
@@ -621,6 +632,11 @@ impl Mock {
     /// This method will also block a test thread to prevent that multiple tests are being executed
     /// against the same mock server in parallel.
     pub fn create(mut self) -> Self {
+
+        if !TEST_INITIALIZED.with(|is_init| *is_init.borrow()) {
+            panic!("Mocking framework is not initialized (did you decorate your test method with #[with_mock_server]?)")
+        }
+
         let response = self
             .server_adapter
             .create_mock(&self.mock)

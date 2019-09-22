@@ -6,8 +6,8 @@ use actix_web::{error, web, Error, HttpRequest, HttpResponse, Result};
 use futures::{Future, Stream};
 
 use crate::server::data::*;
-use std::collections::BTreeMap;
 use qstring::QString;
+use std::collections::BTreeMap;
 
 /// This route is responsible for adding a new mock
 pub fn add(state: Data<ApplicationState>, req: Json<MockDefinition>) -> Result<HttpResponse> {

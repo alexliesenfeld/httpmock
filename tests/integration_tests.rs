@@ -2,8 +2,8 @@ extern crate mocha;
 
 use mocha::Method::{GET, POST};
 use mocha::{mock, Mock, Regex};
-use std::io::Read;
 use mocha_macros::with_mock_server;
+use std::io::Read;
 
 /// This test asserts that mocks can be stored, served and deleted as designed.
 #[test]
@@ -34,6 +34,7 @@ fn simple_test() {
 
 /// Tests and demonstrates body matching.
 #[test]
+#[with_mock_server]
 fn exact_body_match_test() {
     #[derive(serde::Serialize, serde::Deserialize)]
     struct TestUser {
@@ -83,7 +84,6 @@ fn exact_body_match_test() {
 #[test]
 #[with_mock_server]
 fn matching_features_test() {
-
     let _ = env_logger::try_init();
 
     #[derive(serde::Serialize, serde::Deserialize)]

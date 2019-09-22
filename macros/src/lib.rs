@@ -13,9 +13,25 @@ pub fn with_mock_server(args: TokenStream, function: TokenStream) -> TokenStream
     let block = function.block;
 
     function.block = Box::new(parse_quote!({
-        mocha::SERVER_GUARD.with(|_| {});
-        #block
-    }));
+            let mut server_guard = match mocha::SERVER_MUTEX.lock() {
+                Ok(guard) => guard,
+                Err(poisoned) => poisoned.into_inner(),
+            };
+
+            mocha::TEST_INITIALIZED.with(|is_init| {
+                *is_init.borrow_mut() = true
+            });
+
+            let test_result = std::panic::catch_unwind(move || {
+                #block
+            });
+
+            mocha::TEST_INITIALIZED.with(|is_init| {
+                *is_init.borrow_mut() = false
+            });
+
+            test_result.unwrap();
+        }));
 
     TokenStream::from(quote!(#function))
 }
