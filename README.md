@@ -4,7 +4,7 @@
     <a href="https://crates.io/crates/httpmock"><img src="https://img.shields.io/crates/v/httpmock.svg"></a>
     <a href="https://docs.rs/httpmock"><img src="https://docs.rs/httpmock/badge.svg"></a>
   </p>
-  <p align="center"><em>An HTTP mocking library for Rust</em></p>
+  <p align="center"><b>An HTTP mocking library for Rust</b></p>
 </p>
 
 ---
