@@ -16,9 +16,9 @@
 //! The mock server can also be started in **standalone mode** (more information below).
 //!
 //! # Getting Started
-//! Add `httpmock` in your Cargo.toml:
+//! Add `httpmock` in your `Cargo.toml`:
 //!
-//! ````toml
+//! ```toml
 //! [dev-dependencies]
 //! httpmock = "0.2.0
 //! ```

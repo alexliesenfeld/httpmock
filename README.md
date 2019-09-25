@@ -24,7 +24,7 @@ separate thread, so it does not conflict with your tests.
 The mock server can also be started in **standalone mode** (more information below).
 
 # Getting Started
-Add `httpmock` in your `Cargo.toml`:
+Add `httpmock` to `Cargo.toml`:
 
 ```toml
 [dev-dependencies]
