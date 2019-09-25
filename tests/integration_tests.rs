@@ -153,13 +153,15 @@ fn body_partial_json_str_test() {
 
     // Arranging the test by creating HTTP mocks.
     let m = mock(POST, "/users")
-        .expect_json_body_partial(r#"
+        .expect_json_body_partial(
+            r#"
             {
                 "child" : {
                     "some_attribute" : "Fred"
                 }
             }
-        "#)
+        "#,
+        )
         .return_status(201)
         .create();
 
@@ -180,4 +182,3 @@ fn body_partial_json_str_test() {
     assert_eq!(response.status(), 201);
     assert_eq!(m.times_called(), 1);
 }
-

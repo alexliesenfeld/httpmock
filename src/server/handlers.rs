@@ -277,7 +277,11 @@ fn match_json(req: &Option<String>, mock: &Value, exact: bool) -> bool {
             }
             let req_value = result.unwrap();
 
-            log::trace!("Comapring the following JSON values: (1){}, (2){}", &req_value, &mock);
+            log::trace!(
+                "Comapring the following JSON values: (1){}, (2){}",
+                &req_value,
+                &mock
+            );
 
             // Compare JSON values
             let result = match exact {
@@ -300,7 +304,7 @@ fn match_json(req: &Option<String>, mock: &Value, exact: bool) -> bool {
                 }
             };
         }
-        None => false
+        None => false,
     };
 }
 

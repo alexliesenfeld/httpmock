@@ -685,13 +685,16 @@ impl Mock {
             self.mock.request.json_body_includes = Some(Vec::new());
         }
 
-        let value =
-            Value::from_str(partial).expect("cannot convert JSON string to serde value");
+        let value = Value::from_str(partial).expect("cannot convert JSON string to serde value");
 
-        self.mock.request.json_body_includes.as_mut().unwrap().push(value);
+        self.mock
+            .request
+            .json_body_includes
+            .as_mut()
+            .unwrap()
+            .push(value);
         self
     }
-
 
     /// Sets an expected HTTP body substring. If the body of an HTTP request at the server contains
     /// the provided substring, the request will be considered a match for this mock to respond

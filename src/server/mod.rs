@@ -1,5 +1,8 @@
 use crate::server::data::ApplicationState;
-use actix_web::{middleware, web, App, HttpServer};
+
+use std::sync::Arc;
+use std::thread;
+use tiny_http::Response;
 
 pub(crate) mod data;
 mod handlers;
@@ -28,6 +31,37 @@ pub fn start_server(http_mock_config: HttpMockConfig) {
         false => "127.0.0.1", // allow traffic from localhost only
     };
 
+    let server_state = Arc::new(ApplicationState::new());
+
+    let server = tiny_http::Server::http(format!("{}:{}", host, port)).unwrap();
+    let server = Arc::new(server);
+    let mut workers = Vec::new();
+
+    for _ in 0 .. http_mock_config.workers {
+        let server = server.clone();
+        let server_state = server_state.clone();
+
+        let guard = thread::spawn(move || {
+            loop {
+                match server.recv() {
+                    Err(e) => {
+                        log::error!("Error receiving HTTP request: {}", e);
+                    },
+                    Ok(req) => {
+                        req.respond(Response::from_string("test".to_string()));
+                    }
+                }
+            }
+        });
+
+        workers.push(guard);
+    }
+
+    workers.iter().for_each(|w| w.join())
+}
+
+/*
+
     let server_state = web::Data::new(ApplicationState::new());
     HttpServer::new(move || {
         let server_state = server_state.clone();
@@ -47,4 +81,5 @@ pub fn start_server(http_mock_config: HttpMockConfig) {
     .workers(http_mock_config.workers)
     .run()
     .expect("Cannot start server");
-}
+
+*/
