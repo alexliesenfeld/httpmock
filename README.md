@@ -41,7 +41,7 @@ use httpmock::{mock, with_mock_server};
 #[test]
 #[with_mock_server]
 fn simple_test() {
-   let health_mock = mock(GET, "/search")
+   let search_mock = mock(GET, "/search")
        .expect_query_param("query", "metallica")
        .return_status(204)
        .create();
@@ -49,7 +49,7 @@ fn simple_test() {
    let response = reqwest::get("http://localhost:5000/search?query=metallica").unwrap();
 
    assert_eq!(response.status(), 204);
-   assert_eq!(health_mock.times_called(), 1);
+   assert_eq!(search_mock.times_called(), 1);
 }
 ```
 In the above example, a mock server is automatically created when the test launches.

@@ -10,7 +10,7 @@ use std::io::Read;
 fn simple_test() {
     let _ = env_logger::try_init();
 
-    let health_mock = mock(GET, "/search")
+    let search_mock = mock(GET, "/search")
         .expect_query_param("query", "metallica")
         .return_status(204)
         .create();
@@ -18,7 +18,7 @@ fn simple_test() {
     let response = reqwest::get("http://localhost:5000/search?query=metallica").unwrap();
 
     assert_eq!(response.status(), 204);
-    assert_eq!(health_mock.times_called(), 1);
+    assert_eq!(search_mock.times_called(), 1);
 }
 
 /// Ensures that once explicitly deleting a mock, it will not be delivered by the server anymore.

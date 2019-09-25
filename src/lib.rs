@@ -33,7 +33,7 @@
 //! #[test]
 //! #[with_mock_server]
 //! fn simple_test() {
-//!    let health_mock = mock(GET, "/search")
+//!    let search_mock = mock(GET, "/search")
 //!        .expect_query_param("query", "metallica")
 //!        .return_status(204)
 //!        .create();
@@ -41,7 +41,7 @@
 //!    let response = reqwest::get("http://localhost:5000/search?query=metallica").unwrap();
 //!
 //!    assert_eq!(response.status(), 204);
-//!    assert_eq!(health_mock.times_called(), 1);
+//!    assert_eq!(search_mock.times_called(), 1);
 //! }
 //! ```
 //! In the above example, a mock server is automatically created when the test launches.
@@ -419,7 +419,7 @@ impl ServerAdapter {
 /// #[test]
 /// #[with_mock_server]
 /// fn simple_test() {
-///    let health_mock = mock(GET, "/health")
+///    let search_mock = mock(GET, "/health")
 ///       .return_status(200)
 ///       .create();
 ///
@@ -428,7 +428,7 @@ impl ServerAdapter {
 ///
 ///    // Make some assertions
 ///    assert_eq!(response.status(), 200);
-///    assert_eq!(health_mock.times_called().unwrap(), 1);
+///    assert_eq!(search_mock.times_called().unwrap(), 1);
 /// }
 /// ```
 /// To be able to create a mock, you need to mark your test function with the
