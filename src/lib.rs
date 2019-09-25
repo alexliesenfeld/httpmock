@@ -62,7 +62,7 @@
 //!
 //! The expected style of usage is to
 //! * create a [Mock](struct.Mock.html) object using the
-//! [Mock::create](struct.Mock.html#method.create) function
+//! [Mock::create](struct.Mock.html#method.create) method
 //! (or [Mock::new](struct.Mock.html#method.new) for slightly more control)
 //! * Set all your mock requirements using `expect_xxx`-methods, such as headers, body content, etc.
 //! These methods describe what attributes an HTTP request needs to have to be considered a
@@ -108,7 +108,7 @@
 //! (or by using a binary that you can build with `cargo build --release`).
 //! * On the host that is executing the tests, provide a host name by setting the environment variable
 //! `HTTPMOCK_HOST`. If set, tests are assuming a mock server is being executed elsewhere,
-//! so no local mock server will be started for your tests anymore. Instead, this library will use
+//! so no local mock server will be started for your tests anymore. Instead, this library will be using
 //! the remote server to create mocks.
 //!
 //! By default, if a server port is not provided by the environment variable
