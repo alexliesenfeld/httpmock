@@ -8,6 +8,8 @@ use std::io::Read;
 #[test]
 #[with_mock_server]
 fn simple_test() {
+    let _ = env_logger::try_init();
+
     let health_mock = mock(GET, "/search")
         .expect_query_param("query", "metallica")
         .return_status(204)
@@ -23,6 +25,8 @@ fn simple_test() {
 #[test]
 #[with_mock_server]
 fn explicit_delete_test() {
+    let _ = env_logger::try_init();
+
     let mut m = mock(GET, "/health").return_status(205).create();
 
     let response = reqwest::Client::new()
@@ -43,6 +47,8 @@ fn explicit_delete_test() {
 #[test]
 #[with_mock_server]
 fn exact_body_match_test() {
+    let _ = env_logger::try_init();
+
     #[derive(serde::Serialize, serde::Deserialize)]
     struct TestUser {
         name: String,
@@ -125,3 +131,53 @@ fn matching_features_test() {
     assert_eq!(response.status(), 200);
     assert_eq!(m.times_called(), 1);
 }
+
+/// Tests and demonstrates matching JSON body partials.
+#[test]
+#[with_mock_server]
+fn body_partial_json_str_test() {
+    let _ = env_logger::try_init();
+
+    // This is the structure that needs to be included in the request
+    #[derive(serde::Serialize, serde::Deserialize)]
+    struct ChildStructure {
+        some_attribute: String,
+    }
+
+    // This is a parent structure that carries the included structure
+    #[derive(serde::Serialize, serde::Deserialize)]
+    struct ParentStructure {
+        some_other_value: String,
+        child: ChildStructure,
+    }
+
+    // Arranging the test by creating HTTP mocks.
+    let m = mock(POST, "/users")
+        .expect_json_body_partial(r#"
+            {
+                "child" : {
+                    "some_attribute" : "Fred"
+                }
+            }
+        "#)
+        .return_status(201)
+        .create();
+
+    // Simulates application that makes the request to the mock.
+    let client = reqwest::Client::new();
+    let response = client
+        .post(&format!("http://{}/users", m.server_address()))
+        .json(&ParentStructure {
+            child: ChildStructure {
+                some_attribute: "Fred".to_string(),
+            },
+            some_other_value: "Flintstone".to_string(),
+        })
+        .send()
+        .expect("request failed");
+
+    // Assertions
+    assert_eq!(response.status(), 201);
+    assert_eq!(m.times_called(), 1);
+}
+

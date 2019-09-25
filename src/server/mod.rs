@@ -15,12 +15,19 @@ const MOCK_PATH: &str = "/__mocks/{id}";
 pub struct HttpMockConfig {
     pub port: u16,
     pub workers: usize,
+    pub expose: bool,
 }
 
 /// Starts a new instance of an HTTP mock server. You should never need to use this function
 /// directly. Use it if you absolutely need to manage the low-level details of how the mock
 /// server operates.
 pub fn start_server(http_mock_config: HttpMockConfig) {
+    let port = http_mock_config.port;
+    let host = match http_mock_config.expose {
+        true => "0.0.0.0",    // allow traffic from all sources
+        false => "127.0.0.1", // allow traffic from localhost only
+    };
+
     let server_state = web::Data::new(ApplicationState::new());
     HttpServer::new(move || {
         let server_state = server_state.clone();
@@ -35,7 +42,7 @@ pub fn start_server(http_mock_config: HttpMockConfig) {
             .route(MOCK_PATH, web::get().to(routes::read_one))
             .default_service(web::route().to_async(routes::serve))
     })
-    .bind(format!("127.0.0.1:{}", http_mock_config.port))
+    .bind(format!("{}:{}", host, port))
     .expect("Cannot bind to port")
     .workers(http_mock_config.workers)
     .run()

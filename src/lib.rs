@@ -1,17 +1,22 @@
-//! A simple-to-use HTTP mock server that can be used for mocking HTTP calls in your tests. This
-//! crate can be used for both, local tests as well as tests that span multiple systems.
-//! It provides an API to create mocks on a local or remote mock server.
+//! An easy-to-use library that allows you to mock HTTP endpoints in your tests.
 //!
-//! If used without a dedicated (standalone) mock server instance, an HTTP mock server will
-//! automatically be created in the background of your tests. The local mock server is created
-//! in a separate thread. It will be started when your tests need one for the first time.
-//! It will be shut down at the end of the test run.
+//! This crate contains two major components:
 //!
-//! To use this crate in standalone mode you can just use the binary or start it using cargo
-//! (`cargo run`).
+//! * a **mock server** that is automatically started in the background of your tests, and
+//! * a **test library** to create HTTP mocks on the server.
+//!
+//! All interaction with the mock server happens through the provided library. Therefore, you do
+//! not need to interact with the mock server directly (but you certainly can!).
+//!
+//! By default, an HTTP mock server instance will be started in the background of
+//! your tests. It will be created when your tests need the mock server for the first
+//! time and will be shut down at the end of the test run. The mock server is executed in a
+//! separate thread, so it does not conflict with your tests.
+//!
+//! The mock server can also be started in **standalone mode** (more information below).
 //!
 //! # Getting Started
-//! You can use a local mock server in your tests like shown in the following:
+//! You can use `httpmock` in your tests like shown in the following example:
 //! ```rust
 //! extern crate httpmock;
 //!
@@ -32,38 +37,47 @@
 //!    assert_eq!(health_mock.times_called(), 1);
 //! }
 //! ```
-//! In the snippet, a mock server is automatically created when the test launches. This is ensured
-//! by the [with_mock_server](../httpmock_macros/attr.with_mock_server.html)
-//! annotation, which wraps the test inside an initializer function performing multiple
-//! preparation steps, such as starting a server (if none yet exists) or clearing the server
-//! from old mocks. It also sequentializes tests that involve a mock server.
+//! In the above example, a mock server is automatically created when the test launches.
+//! This is ensured by the [with_mock_server](../httpmock_macros/attr.with_mock_server.html)
+//! annotation. It wraps the test with an initializer function that is performing several important
+//! preparation steps, such as starting the mock server if none yet exists
+//! and cleaning up the mock server state, so that each test can start with
+//! a clean mock server. The annotation also sequentializes tests that are marked with it, so
+//! they do not conflict with each other when using the mock server.
 //!
-//! If you try to create a mock without having annotated you test function
+//! If you try to create a mock without having annotated your test function
 //! with the [with_mock_server](../httpmock_macros/attr.with_mock_server.html) annotation,
 //! you will receive a panic at runtime pointing you to this problem.
-//! You can provide expected request attributes (such as headers, body content, etc.)
-//! and values that will be returned by the mock to the calling application using the
-//! `expect_xxx` and `return_xxx` methods, respectively. The
-//! [Mock::create](struct.Mock.html#method.create) method will eventually make a request to the
-//! mock server (either local or remote) to create the mock at the server.
 //!
-//! You can use the mock object returned by the [Mock::create](struct.Mock.html#method.create)
-//! method to fetch information about it from the mock server. This might be the number of
-//! times this mock has been called. You might use this information in your test assertions.
+//! # Usage
+//! The main point of interaction with the mock server happens via [Mock](struct.Mock.html).
+//! It provides you all mocking functionality that is supported by the mock server.
 //!
+//! The expected style of usage is to
+//! * create a [Mock](struct.Mock.html) object using the
+//! [Mock::create](struct.Mock.html#method.create) function
+//! (or [Mock::new](struct.Mock.html#method.new) for slightly more control)
+//! * Set all your mock requirements using `expect_xxx`-methods, such as headers, body content, etc.
+//! These methods describe what attributes an HTTP request needs to have to be considered a
+//! "match" for the mock you are creating.
+//! * use `return_xxx`-methods to describe what the mock server should return when it receives
+//! an HTTP request that matches the mock. If the server does not find any matching mocks for an
+//! HTTP request, it will return a response with an empty body and an HTTP status code 500.
+//! * create the mock using the [Mock::create](struct.Mock.html#method.create) method. If you do
+//! not call this method when you complete configuring it, it will not be created at the mock
+//! server and your test will not receive the expected response.
+//! * using the mock object returned by by the [Mock::create](struct.Mock.html#method.create) method
+//! to assert that a mock has been called by your code under test (please refer to any example).
+//!
+//! # Responses
 //! An HTTP request made by your application is only considered to match a mock if the request
-//! fulfills all specified requirements. If a request does not match any mock, the mock server will
-//! respond with an empty response body and a status code 500 (Internal Server Error).
-//!
-//! By default, if a server port is not provided using an environment variable (`MOCHA_SERVER_PORT`),
-//! the port 5000 will be used. If another server host is explicitely set
-//! using an environment variable (`MOCHA_SERVER_HOST`), then this API will use the remote server
-//! managing mocks.
+//! fulfills all specified mock requirements. If a request does not match any mock currently stored
+//! on the mock server, it will respond with an empty response body and an HTTP status code 500
+//! (Internal Server Error).
 //!
 //! # Examples
-//! Please refer to the
-//! [tests of this crate](https://github.com/alexliesenfeld/httpmock/blob/master/tests/integration_tests.rs )
-//! for more examples.
+//! Fore more examples, please refer to
+//! [this crates test directory](https://github.com/alexliesenfeld/httpmock/blob/master/tests/integration_tests.rs ).
 //!
 //! # Debugging
 //! `httpmock` logs against the `log` crate. If you use the `env_logger` backend, you can activate
@@ -71,11 +85,49 @@
 //! `env_logger::try_init()`:
 //! ```rust
 //! #[test]
+//! #[with_mock_server]
 //! fn your_test() {
 //!     let _ = env_logger::try_init();
 //!     // ...
 //! }
 //! ```
+//! # Standalone Mode
+//! You can use this crate to provide both, an HTTP mock server for your local tests,
+//! but also a standalone mock server that is reachable for other applications as well. This can be
+//! useful if you are running integration tests that span multiple applications.
+//!
+//! To activate standalone mode, you need to do the following steps:
+//! * Start the mock server in standalone mode by running `cargo run --release` from the sources
+//! (or by using a binary that you can build with `cargo build --release`).
+//! * On the host that is executing the tests, provide a host name by setting the environment variable
+//! `HTTPMOCK_HOST`. If set, tests are assuming a mock server is being executed elsewhere,
+//! so no local mock server will be started for your tests anymore. Instead, this library will use
+//! the remote server to create mocks.
+//!
+//! By default, if a server port is not provided by the environment variable
+//! `HTTPMOCK_PORT`, port 5000 will be used.
+//!
+//! ## Exposing the mock server to the network
+//! If you want to expose the server to machines other than localhost, you need to provide the
+//! `--expose` parameter:
+//! * using cargo: `cargo run --release -- --expose`
+//! * using the binary: `httpmock --expose`
+//!
+//! ## Docker container
+//! As an alternative to building the mock server yourself, you can use the Docker image from
+//! the sources to run a mock server in standalone mode:
+//! ```shell
+//! docker build -t httpmock .
+//! docker run -it --rm -p 5000:5000 --name httpmock httpmock
+//! ```
+//! To enable extended logging, you can run the docker container with the `RUST_LOG` environment
+//! variable set to the log level of your choice:
+//! ```shell
+//! docker run -it --rm -e RUST_LOG=httpmock=debug -p 5000:5000 --name httpmock httpmock
+//! ```
+//! Please refer to the [log](../log/index.html) and [env_logger](../env_logger/index.html) crates
+//! for more information about logging.
+
 #[macro_use]
 extern crate lazy_static;
 #[macro_use]
@@ -95,7 +147,9 @@ use crate::server::data::{
     RequestRequirements,
 };
 use serde::Serialize;
+use serde_json::Value;
 use std::cell::RefCell;
+use std::str::FromStr;
 use std::sync::{Mutex, MutexGuard};
 use std::thread::{self};
 
@@ -114,6 +168,7 @@ lazy_static! {
                 let config = HttpMockConfig::builder()
                     .port(port)
                     .workers(3 as usize)
+                    .expose(false)
                     .build();
 
                 start_server(config);
@@ -131,7 +186,6 @@ lazy_static! {
 thread_local!(
     static TEST_INITIALIZED: RefCell<bool> = RefCell::new(false);
 );
-
 
 /// For internal use only. Do not use it.
 #[doc(hidden)]
@@ -161,8 +215,8 @@ pub struct ServerAdapter {
 }
 impl ServerAdapter {
     pub fn from_env() -> ServerAdapter {
-        let host = option_env!("MOCHA_SERVER_HOST");
-        let port = option_env!("MOCHA_SERVER_PORT");
+        let host = option_env!("HTTPMOCK_HOST");
+        let port = option_env!("HTTPMOCK_PORT");
 
         ServerAdapter {
             is_remote: host.is_some(),
@@ -346,13 +400,9 @@ impl ServerAdapter {
     }
 }
 
-/// Represents the mocking user interface to the mock server for your tests.
+/// Represents the primary interface to the mock server.
 ///
-/// To be able to create a mock, you need to mark your test function with the
-/// `httpmock::with_mock_server` annotation. If you do not do this, you will
-/// receive a panic during runtime telling about this fact. You can use as in the following example.
-///
-/// ### Example
+/// # Example
 /// ```rust
 /// extern crate httpmock;
 ///
@@ -374,14 +424,25 @@ impl ServerAdapter {
 ///    assert_eq!(health_mock.times_called().unwrap(), 1);
 /// }
 /// ```
-/// Remember to call the `Mock#create` method when you are finished configuring the mock.
-/// This will craete the mock object at the mock server and return you a mock object that represents
-/// a reference of the mock at the servers application state. The reference can be  used to fetch
-/// mock related information from the server or to delete the mock.
+/// To be able to create a mock, you need to mark your test function with the
+/// [httpmock::with_mock_server](../httpmock/attr.with_mock_server.html) attribute. If you try to
+/// create a mock by calling [Mock::create](struct.Mock.html#method.create) without marking your
+/// test function with [httpmock::with_mock_server](../httpmock/attr.with_mock_server.html),
+/// you will receive a panic during runtime telling you about this fact.
 ///
-/// While `httpmock::mock` is a convenience function, you can have more control over matching
-/// the path by directly creating a new mock object yourself using the `Mock::new` method
-/// like in the following example:
+/// Note that you need to call the [Mock::create](struct.Mock.html#method.create) method once you
+/// are finished configuring your mock. This will create the mock on the server. Thereafter, the
+/// mock will be served whenever clients send HTTP requests that match all requirements of your mock.
+///
+/// The [Mock::create](struct.Mock.html#method.create) method returns a reference that
+/// identifies the mock at the server side. The reference can be used to fetch
+/// mock related information from the server, such as the number of times it has been called or to
+/// explicitly delete the mock from the server.
+///
+/// While [httpmock::mock](struct.Mock.html#method.create) is a convenience function, you can
+/// have more control over matching the path by directly creating a new [Mock](struct.Mock.html)
+/// object yourself using the [Mock::new](struct.Mock.html#method.new) method.
+/// # Example
 /// ```rust
 /// extern crate httpmock;
 ///
@@ -400,8 +461,8 @@ impl ServerAdapter {
 ///       .create();
 /// }
 /// ```
-/// Please have a look in the integration test in the source code of this crate to see more
-/// examples of how you can use this structure in your tests.
+/// Fore more examples, please refer to
+/// [this crates test directory](https://github.com/alexliesenfeld/httpmock/blob/master/tests/integration_tests.rs ).
 #[derive(Debug)]
 pub struct Mock {
     mock: MockDefinition,
@@ -423,6 +484,8 @@ impl Mock {
                     headers: None,
                     header_exists: None,
                     body: None,
+                    json_body: None,
+                    json_body_includes: None,
                     body_contains: None,
                     path_matches: None,
                     body_matches: None,
@@ -561,9 +624,67 @@ impl Mock {
     {
         let serialized_body =
             serde_json::to_string(body).expect("cannot serialize json body to JSON string ");
-        self.mock.request.body = Some(serialized_body);
+
+        let value =
+            Value::from_str(&serialized_body).expect("cannot convert JSON string to serde value");
+
+        self.mock.request.json_body = Some(value);
         self
     }
+
+    /// Sets an expected partial HTTP body JSON string.
+    ///
+    /// If the body of an HTTP request at the server matches the
+    /// partial, the request will be considered a match for
+    /// this mock to respond (given all other criteria are met).
+    ///
+    /// # Important Notice
+    /// The partial string needs to contain the full JSON object path from the root.
+    ///
+    /// ## Example
+    /// If your application sends the following JSON request data to the mock server
+    /// ```json
+    /// {
+    ///     "parent_attribute" : "Some parent data goes here",
+    ///     "child" : {
+    ///         "target_attribute" : "Target value",
+    ///         "other_attribute" : "Another value"
+    ///     }
+    /// }
+    /// ```
+    /// and you only want to make sure that `target_attribute` has the value
+    /// `Target value`, you need to provide a partial JSON string to this method, that starts from
+    /// the root of the JSON object, but may leave out unimportant values:
+    /// ```
+    /// use httpmock::Method::POST;
+    /// use httpmock::mock;
+    ///
+    /// mock(POST, "/path")
+    ///     .expect_json_body_partial(r#"
+    ///         {
+    ///             "child" : {
+    ///                 "target_attribute" : "Target value"
+    ///             }
+    ///         }
+    ///     "#)
+    ///     .return_status(200)
+    ///     .create();
+    /// ```
+    /// String format and attribute order will be ignored.
+    ///
+    /// * `partial` - The JSON partial.
+    pub fn expect_json_body_partial(mut self, partial: &str) -> Self {
+        if self.mock.request.json_body_includes.is_none() {
+            self.mock.request.json_body_includes = Some(Vec::new());
+        }
+
+        let value =
+            Value::from_str(partial).expect("cannot convert JSON string to serde value");
+
+        self.mock.request.json_body_includes.as_mut().unwrap().push(value);
+        self
+    }
+
 
     /// Sets an expected HTTP body substring. If the body of an HTTP request at the server contains
     /// the provided substring, the request will be considered a match for this mock to respond
@@ -731,20 +852,20 @@ impl Mock {
     }
 
     /// Returns the port of the mock server this mock is using. By default this is port 5000 if
-    /// not set otherwise by the environment variable MOCHA_SERVER_PORT.
+    /// not set otherwise by the environment variable HTTPMOCK_PORT.
     pub fn server_port(&self) -> u16 {
         self.server_adapter.server_port()
     }
 
     /// Returns the host of the mock server this mock is using. By default this is localhost if
-    /// not set otherwise by the environment variable MOCHA_SERVER_HOST.
+    /// not set otherwise by the environment variable HTTPMOCK_HOST.
     pub fn server_host(&self) -> &str {
         self.server_adapter.server_host()
     }
 
     /// Returns the address of the mock server this mock is using. By default this is
-    /// "localhost:5000" if not set otherwise by the environment variables  MOCHA_SERVER_HOST and
-    /// MOCHA_SERVER_PORT.
+    /// "localhost:5000" if not set otherwise by the environment variables  HTTPMOCK_HOST and
+    /// HTTPMOCK_PORT.
     pub fn server_address(&self) -> String {
         self.server_adapter.server_address()
     }

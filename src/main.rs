@@ -11,15 +11,24 @@ pub struct CommandLineParameters {
     pub port: u16,
     #[structopt(short, long, default_value = "3")]
     pub workers: usize,
+    #[structopt(short, long)]
+    pub expose: bool,
 }
 
 fn main() {
     let params: CommandLineParameters = CommandLineParameters::from_args();
     env_logger::init();
 
+    if params.expose {
+        log::info!("Starting public mock server on port {}", params.port);
+    } else {
+        log::info!("Starting private mock server on port {}", params.port);
+    }
+
     let config = HttpMockConfig::builder()
         .port(params.port)
         .workers(params.workers)
+        .expose(params.expose)
         .build();
 
     start_server(config);

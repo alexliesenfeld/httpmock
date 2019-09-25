@@ -2,6 +2,7 @@ extern crate serde_regex;
 
 use regex::Regex;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::cmp::Ordering;
 use std::collections::BTreeMap;
 use std::sync::atomic::AtomicUsize;
@@ -92,6 +93,12 @@ pub struct RequestRequirements {
 
     #[builder(default=Option::None)]
     pub body: Option<String>,
+
+    #[builder(default=Option::None)]
+    pub json_body: Option<Value>,
+
+    #[builder(default=Option::None)]
+    pub json_body_includes: Option<Vec<Value>>,
 
     #[builder(default=Option::None)]
     pub body_contains: Option<Vec<String>>,
