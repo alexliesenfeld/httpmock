@@ -16,7 +16,14 @@
 //! The mock server can also be started in **standalone mode** (more information below).
 //!
 //! # Getting Started
-//! You can use `httpmock` in your tests like shown in the following example:
+//! Add `httpmock` in your Cargo.toml:
+//!
+//! ````toml
+//! [dev-dependencies]
+//! httpmock = "0.2.0
+//! ```
+//!
+//! You can then use `httpmock` in your tests like shown in the following example:
 //! ```rust
 //! extern crate httpmock;
 //!

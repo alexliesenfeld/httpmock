@@ -1,11 +1,9 @@
-<p>
-  <p align="center"><img height="150" src="https://raw.githubusercontent.com/alexliesenfeld/httpmock/master/banner.png"></p>
-  <p align="center">
+<p align="center"><img height="150" src="https://raw.githubusercontent.com/alexliesenfeld/httpmock/master/banner.png"></p>
+<p align="center">
     <a href="https://crates.io/crates/httpmock"><img src="https://img.shields.io/crates/v/httpmock.svg"></a>
     <a href="https://docs.rs/httpmock"><img src="https://docs.rs/httpmock/badge.svg"></a>
-  </p>
-  <p align="center"><b>An HTTP mocking library for Rust</b></p>
 </p>
+<p align="center"><b>An HTTP mocking library for Rust</b></p>
 
 ---
 `httpmock` is an easy-to-use library that allows you to mock HTTP endpoints in your tests.
@@ -26,7 +24,14 @@ separate thread, so it does not conflict with your tests.
 The mock server can also be started in **standalone mode** (more information below).
 
 # Getting Started
-You can use `httpmock` in your tests like shown in the following example:
+Add `httpmock` in your `Cargo.toml`:
+
+```toml
+[dev-dependencies]
+httpmock = "0.2.0
+```
+
+You can then use `httpmock` in your tests like shown in the following example:
 ```rust
 extern crate httpmock;
 
