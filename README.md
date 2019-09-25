@@ -1,5 +1,5 @@
 <p>
-  <p align="center"><img src="https://raw.githubusercontent.com/alexliesenfeld/httpmock/master/banner.png"></p>
+  <p align="center"><img height="140" src="https://raw.githubusercontent.com/alexliesenfeld/httpmock/master/banner.png"></p>
   <p align="center">
     <a href="https://crates.io/crates/httpmock"><img src="https://img.shields.io/crates/v/httpmock.svg"></a>
     <a href="https://docs.rs/httpmock"><img src="https://docs.rs/httpmock/badge.svg"></a>
