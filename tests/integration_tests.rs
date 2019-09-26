@@ -113,7 +113,7 @@ fn matching_features_test() {
         .expect_method(POST)
         .expect_header("Content-Type", "application/json")
         .expect_header_exists("User-Agent")
-        .expect_body("{ \"number\" : 5")
+        .expect_body("{\"number\":5}")
         .expect_body_contains("number")
         .expect_body_matches(Regex::new(r#"(\d+)"#).unwrap())
         .expect_json_body(&TransferItem { number: 5 })

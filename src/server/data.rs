@@ -160,3 +160,18 @@ impl ActiveMock {
         }
     }
 }
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ErrorResponse {
+    pub message: String,
+}
+
+impl ErrorResponse {
+    pub fn new<T>(message: &T) -> ErrorResponse
+    where
+        T: ToString,
+    {
+        ErrorResponse {
+            message: message.to_string(),
+        }
+    }
+}

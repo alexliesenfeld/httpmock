@@ -258,7 +258,10 @@ fn match_query_params_exact(req: &MockServerHttpRequest, mock: &RequestRequireme
 /// Matches body
 fn match_body_exact(req: &MockServerHttpRequest, mock: &RequestRequirements) -> bool {
     return match (&req.body, &mock.body) {
-        (Some(rb), Some(mb)) => rb.eq(mb),
+        (Some(rb), Some(mb)) => {
+            log::debug!("{} --> {}", rb, mb);
+            rb.eq(mb)
+        }
         (None, Some(mb)) => mb.is_empty(),
         (Some(rb), None) => rb.is_empty(),
         (None, None) => true,
