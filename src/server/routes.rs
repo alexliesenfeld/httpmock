@@ -1,4 +1,4 @@
-use crate::server::handlers;
+use crate::server::{handlers, ServerRequest, ServerResponse};
 
 use crate::server::data::*;
 
@@ -7,19 +7,17 @@ use serde::Serialize;
 use std::collections::BTreeMap;
 use std::io::Cursor;
 
-use tiny_http::{Request, Response};
+use hyper::rt::{Future, Stream};
+use hyper::service::{make_service_fn, service_fn};
+
+use hyper::Chunk;
 
 /// This route is responsible for adding a new mock
 pub fn add(
     state: &ApplicationState,
-    req: &mut Request,
-) -> Result<Response<Cursor<Vec<u8>>>, String> {
-    let body = read_body(req);
-    if let Err(e) = body {
-        return create_json_response(500, None, ErrorResponse::new(&e));
-    }
-    let body = body.unwrap();
-    let mock_def: serde_json::Result<MockDefinition> = serde_json::from_str(&body);
+    req: ServerRequest,
+) -> Result<ServerResponse, String> {
+    let mock_def: serde_json::Result<MockDefinition> = serde_json::from_str(&req.body);
     if let Err(e) = mock_def {
         return create_json_response(500, None, ErrorResponse::new(&e));
     }
@@ -36,9 +34,9 @@ pub fn add(
 /// This route is responsible for deleting mocks
 pub fn delete_one(
     state: &ApplicationState,
-    _req: &mut Request,
+    _req: ServerRequest,
     id: usize,
-) -> Result<Response<Cursor<Vec<u8>>>, String> {
+) -> Result<ServerResponse, String> {
     let result = handlers::delete_one(state, id);
     return match result {
         Err(e) => create_json_response(500, None, ErrorResponse::new(&e)),
@@ -52,8 +50,8 @@ pub fn delete_one(
 /// This route is responsible for deleting all mocks
 pub fn delete_all(
     state: &ApplicationState,
-    _req: &mut Request,
-) -> Result<Response<Cursor<Vec<u8>>>, String> {
+    _req: ServerRequest,
+) -> Result<ServerResponse, String> {
     let result = handlers::delete_all(state);
     return match result {
         Err(e) => create_json_response(500, None, ErrorResponse::new(&e)),
@@ -64,9 +62,9 @@ pub fn delete_all(
 /// This route is responsible for deleting mocks
 pub fn read_one(
     state: &ApplicationState,
-    _req: &mut Request,
+    _req: ServerRequest,
     id: usize,
-) -> Result<Response<Cursor<Vec<u8>>>, String> {
+) -> Result<ServerResponse, String> {
     let handler_result = handlers::read_one(state, id);
     return match handler_result {
         Err(e) => create_json_response(500, None, ErrorResponse { message: e.clone() }),
@@ -81,11 +79,8 @@ pub fn read_one(
 
 /// This route is responsible for finding a mock that matches the current request and serve a
 /// response according to the mock specification
-pub fn serve(
-    state: &ApplicationState,
-    req: &mut Request,
-) -> Result<Response<Cursor<Vec<u8>>>, String> {
-    let handler_request_result = to_handler_request(req);
+pub fn serve(state: &ApplicationState, req: ServerRequest) -> Result<ServerResponse, String> {
+    let handler_request_result = to_handler_request(&req);
     return match handler_request_result {
         Ok(handler_request) => {
             let handler_response = handlers::find_mock(&state, handler_request);
@@ -98,7 +93,7 @@ pub fn serve(
 /// Maps the result of the serve handler to an HTTP response which the web framework understands
 fn to_route_response(
     handler_result: Result<Option<MockServerHttpResponse>, String>,
-) -> Result<Response<Cursor<Vec<u8>>>, String> {
+) -> Result<ServerResponse, String> {
     return match handler_result {
         Err(e) => create_json_response(500 as u16, None, ErrorResponse { message: e.clone() }),
         Ok(res) => {
@@ -118,7 +113,7 @@ fn create_json_response<T>(
     status: u16,
     headers: Option<BTreeMap<String, String>>,
     body: T,
-) -> Result<Response<Cursor<Vec<u8>>>, String>
+) -> Result<ServerResponse, String>
 where
     T: Serialize,
 {
@@ -127,119 +122,48 @@ where
         return Err(format!("Cannot serialize body: {}", e));
     }
 
-    match create_response(status, headers, Some(body.unwrap())) {
-        Ok(response) => {
-            let header = tiny_http::Header::from_bytes(
-                "Content-Type".as_bytes(),
-                "application/json".as_bytes(),
-            )
-            .expect("Cannot create header");
+    let mut headers = headers.unwrap_or(BTreeMap::new());
+    headers.insert("Content-Type".to_string(), "application/json".to_string());
 
-            Ok(response.with_header(header))
-        }
-        Err(e) => {
-            return Err(format!("Cannot serialize body: {}", e));
-        }
-    }
+    create_response(status, Some(headers), Some(body.unwrap()))
 }
 
 fn create_response(
     status: u16,
     headers: Option<BTreeMap<String, String>>,
     body: Option<String>,
-) -> Result<Response<Cursor<Vec<u8>>>, String> {
-    let mut response = match body {
-        Some(body) => Response::from_data(body),
-        None => Response::from_data(""),
-    };
-
-    response = response.with_status_code(status);
-
-    if let Some(headers) = headers {
-        for (h, _v) in headers {
-            let header = tiny_http::Header::from_bytes(
-                "Content-Type".as_bytes(),
-                "application/json".as_bytes(),
-            );
-
-            if let Err(_e) = header {
-                return Err(format!("Cannot create header: {}", h));
-            }
-
-            response.add_header(header.unwrap());
-        }
-    }
-
-    Ok(response)
+) -> Result<ServerResponse, String> {
+    Ok(ServerResponse::builder()
+        .status(status)
+        .headers(headers.unwrap_or(BTreeMap::new()))
+        .body(body.unwrap_or(String::new()))
+        .build())
 }
 
-fn read_body(req: &mut Request) -> Result<String, String> {
-    let mut body = String::new();
-    let result = req.as_reader().read_to_string(&mut body);
-    if let Err(e) = result {
-        return Err(format!("error reading request body: {}", e));
-    }
-    return Ok(body);
-}
 /// Maps the request of the serve handler to a request representation which the handlers understand
-fn to_handler_request(req: &mut Request) -> Result<MockServerHttpRequest, String> {
-    let body = read_body(req);
-    if let Err(e) = body {
-        return Err(format!("error reading request body: {}", e));
-    }
-    let body = body.unwrap();
-
-    let headers = extract_headers(&req);
-    if let Err(e) = headers {
-        return Err(format!("error parsing headers: {}", e));
-    }
-
-    let query_params = extract_query_params(&req);
+fn to_handler_request(req: &ServerRequest) -> Result<MockServerHttpRequest, String> {
+    let query_params = extract_query_params(&req.query);
     if let Err(e) = query_params {
         return Err(format!("error parsing query_params: {}", e));
     }
 
-    let path = extract_path(req);
-
-    let body = match body.is_empty() {
-        true => None,
-        false => Some(body),
-    };
-
     let request = MockServerHttpRequest::builder()
-        .method(req.method().as_str().to_string())
-        .path(path.to_string())
-        .headers(headers.unwrap())
-        .query_params(query_params.unwrap())
-        .body(body)
+        .method(req.method.to_string())
+        .path(req.path.to_string())
+        .headers(req.headers.clone())
+        .query_params(query_params.unwrap().clone())
+        .body(req.body.to_string())
         .build();
 
     Ok(request)
 }
 
-/// Extracts path from the URI of the given request.
-fn extract_path(req: &Request) -> String {
-    let parts: Vec<&str> = req.url().splitn(2, '?').collect();
-    parts[0].to_string()
-}
-
-/// Extracts all headers from the URI of the given request.
-fn extract_headers(req: &Request) -> Result<BTreeMap<String, String>, String> {
-    let mut headers = BTreeMap::new();
-    for header in req.headers() {
-        headers.insert(header.field.to_string(), header.value.to_string());
-    }
-    Ok(headers)
-}
-
 /// Extracts all query parameters from the URI of the given request.
-fn extract_query_params(req: &Request) -> Result<BTreeMap<String, String>, String> {
+fn extract_query_params(query_string: &str) -> Result<BTreeMap<String, String>, String> {
     let mut query_params = BTreeMap::new();
-    let parts: Vec<&str> = req.url().splitn(2, '?').collect();
-    if parts.len() > 1 {
-        for (key, value) in QString::from(parts[1]) {
-            query_params.insert(key.to_string(), value.to_string());
-        }
+
+    for (key, value) in QString::from(query_string) {
+        query_params.insert(key.to_string(), value.to_string());
     }
 
     Ok(query_params)

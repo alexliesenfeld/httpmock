@@ -666,16 +666,21 @@ impl Mock {
     /// use httpmock::Method::POST;
     /// use httpmock::mock;
     ///
-    /// mock(POST, "/path")
-    ///     .expect_json_body_partial(r#"
-    ///         {
-    ///             "child" : {
-    ///                 "target_attribute" : "Target value"
+    /// #[test]
+    /// #[with_mock_server]
+    /// fn partial_json_test() {
+    ///     mock(POST, "/path")
+    ///         .expect_json_body_partial(r#"
+    ///             {
+    ///                 "child" : {
+    ///                     "target_attribute" : "Target value"
+    ///                 }
     ///             }
-    ///         }
-    ///     "#)
-    ///     .return_status(200)
-    ///     .create();
+    ///         "#)
+    ///         .return_status(200)
+    ///         .create();
+    /// }
+    ///
     /// ```
     /// String format and attribute order will be ignored.
     ///

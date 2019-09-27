@@ -16,7 +16,7 @@ serde_json = "1.0.40"
 reqwest = "0.9.20"
 lazy_static = "1.4.0"
 typed-builder = "0.3.0"
-tiny_http = "0.6.2"
+hyper = "0.12.35"
 log = "0.4.8"
 futures = "0.1.29"
 structopt = "0.3.1"
@@ -27,8 +27,6 @@ qstring = "0.7.0"
 uuid = { version = "0.7.4", features = ["v4"] }
 assert-json-diff = "1.0.0"
 httpmock-macros = { path = "./lib/macros", version = "0.1.0"}
-
-[dev-dependencies]
 
 [workspace]
 members = [
