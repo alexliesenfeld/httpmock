@@ -1,22 +1,18 @@
 use crate::server::data::ApplicationState;
 
 use regex::Regex;
-use std::io::Cursor;
-use std::sync::Arc;
-use std::thread;
 
-use futures::{future, Future, IntoFuture, Stream};
+use futures::{future, Future, Stream};
 
-use hyper::client::HttpConnector;
-use hyper::service::{service_fn, service_fn_ok};
+use hyper::service::service_fn;
 use hyper::{
-    header, Body, Chunk, Client, HeaderMap, Method, Request, Response, Server, StatusCode,
+    Body, Chunk, HeaderMap, Request as HyperRequest, Response as HyperResponse, Server, StatusCode, http::response::Builder as HyperResponseBuilder
 };
 
 use hyper::header::HeaderValue;
+use hyper::http::header::HeaderName;
 use std::collections::BTreeMap;
-use std::io::{Read, Write};
-use std::net::{SocketAddr, TcpListener, TcpStream};
+use std::str::FromStr;
 
 pub(crate) mod data;
 mod handlers;
@@ -24,7 +20,7 @@ mod routes;
 mod util;
 
 type GenericError = Box<dyn std::error::Error + Send + Sync>;
-type ResponseFuture = Box<dyn Future<Item = Response<Body>, Error = GenericError> + Send>;
+type ResponseFuture = Box<dyn Future<Item = HyperResponse<Body>, Error = GenericError> + Send>;
 
 /// Holds server configuration properties.
 #[derive(TypedBuilder, Debug)]
@@ -35,16 +31,32 @@ pub struct HttpMockConfig {
 }
 
 #[derive(TypedBuilder, Default, Debug)]
-pub struct ServerRequest {
+pub(crate) struct ServerRequestHeader {
     pub method: String,
     pub path: String,
     pub query: String,
     pub headers: BTreeMap<String, String>,
-    pub body: String,
 }
 
+impl ServerRequestHeader {
+    pub fn from(req: &HyperRequest<Body>) -> Result<ServerRequestHeader, String> {
+        let headers = extract_headers(req.headers());
+        if let Err(e) = headers {
+            return Err(format!("error parsing headers: {}", e));
+        }
+
+        let server_request = ServerRequestHeader::builder()
+            .method(req.method().as_str().to_string())
+            .path(req.uri().path().to_string())
+            .query(req.uri().query().unwrap_or("").to_string())
+            .headers(headers.unwrap())
+            .build();
+
+        Ok(server_request)
+    }
+}
 #[derive(TypedBuilder, Default, Debug)]
-pub struct ServerResponse {
+pub(crate) struct ServerResponse {
     pub status: u16,
     pub headers: BTreeMap<String, String>,
     pub body: String,
@@ -75,31 +87,35 @@ pub fn start_server(http_mock_config: HttpMockConfig) {
     };
 
     hyper::rt::run(future::lazy(move || {
-
         let new_service = move || {
-
-
-            service_fn(|req: Request<Body>| {
-                let headers = req.headers().clone();
-                let path = req.uri().path().to_string();
-                let query = req.uri().query().unwrap_or("").to_string();
-                let method = req.method().as_str().to_string();
-
+            service_fn(|req: HyperRequest<Body>| {
+                let request_header = ServerRequestHeader::from(&req);
                 Box::new(
                     req.into_body()
                         .concat2()
                         .from_err()
                         .and_then(|entire_body: Chunk| {
+                            if let Err(e) = request_header {
+                                return Ok(error_response(format!("Cannot parse request: {}", e)));
+                            }
 
-                            Ok(process_request(
-                                &APPLICATION_STATE,
-                                method,
-                                path,
-                                query,
-                                headers,
-                                entire_body
-                            ))
+                            let body = String::from_utf8(entire_body.to_vec());
+                            if let Err(e) = body {
+                                return Ok(error_response(format!("Cannot read body: {}", e)));
+                            }
 
+                            let routing_result =
+                                route_request(&STATE, &request_header.unwrap(), body.unwrap());
+                            if let Err(e) = routing_result {
+                                return Ok(error_response(format!("Request handler error: {}", e)));
+                            }
+
+                            let response = map_response(routing_result.unwrap());
+                            if let Err(e) = response {
+                                return Ok(error_response(format!("Cannot build response: {}", e)));
+                            }
+
+                            Ok(response.unwrap())
                         }),
                 ) as ResponseFuture
             })
@@ -116,122 +132,79 @@ pub fn start_server(http_mock_config: HttpMockConfig) {
     }));
 }
 
-fn process_request(
-    state: &ApplicationState,
-    method: String,
-    path: String,
-    query: String,
-    headers: HeaderMap<HeaderValue>,
-    body: Chunk,
-) -> hyper::Response<Body> {
-    let body = String::from_utf8(body.to_vec());
-    if let Err(e) = body {
-        return Response::builder()
-            .status(StatusCode::INTERNAL_SERVER_ERROR)
-            .body(Body::from(format!("cannot build response: {}", e)))
-            .expect("Cannot build body error response");
-    }
-
-    let headers = extract_headers(&headers);
-    if let Err(e) = headers {
-        return Response::builder()
-            .status(StatusCode::INTERNAL_SERVER_ERROR)
-            .body(Body::from(format!(
-                "cannot build headers error response: {}",
-                e
-            )))
-            .expect("Cannot build response");
-    }
-
-    let routing_result = route_request(
-        state,
-        ServerRequest::builder()
-            .method(method)
-            .path(path)
-            .query(query)
-            .headers(headers.unwrap())
-            .body(body.unwrap())
-            .build(),
-    );
-
-    if let Err(e) = routing_result {
-        return Response::builder()
-            .status(StatusCode::INTERNAL_SERVER_ERROR)
-            .body(Body::from(format!("Cannot build body: {}", e)))
-            .expect("Cannot build route error response");
-    }
-
-    let route_response = routing_result.unwrap();
-
-    let mut builder = hyper::Response::builder();
+fn map_response(route_response: ServerResponse) -> Result<HyperResponse<Body>, String> {
+    let mut builder = HyperResponse::builder();
     builder.status(route_response.status);
 
     for (k, v) in route_response.headers {
-        let name = hyper::header::HeaderName::from_bytes(k.as_bytes());
-        if let Err(e) = name {
-            return Response::builder()
-                .status(StatusCode::INTERNAL_SERVER_ERROR)
-                .body(Body::from(format!("Cannot create header from name: {}", e)))
-                .expect("Cannot build route error response");
-        }
-
-        let value = hyper::header::HeaderValue::from_bytes(v.as_bytes());
+        let value = add_header(&mut builder, &k, &v);
         if let Err(e) = value {
-            return Response::builder()
-                .status(StatusCode::INTERNAL_SERVER_ERROR)
-                .body(Body::from(format!("Cannot create header from value: {}", e)))
-                .expect("Cannot build route error response");
+            return Err(format!("Cannot create header from value string: {}", e));
         }
-        let value = value.unwrap();
-        let value = value.to_str();
-        if let Err(e) = value {
-            return Response::builder()
-                .status(StatusCode::INTERNAL_SERVER_ERROR)
-                .body(Body::from(format!("Cannot create header from value string: {}", e)))
-                .expect("Cannot build route error response");
-        }
-
-        builder.header(name.unwrap(), value.unwrap());
     }
 
     let result = builder.body(Body::from(route_response.body));
     if let Err(e) = result {
-        return Response::builder()
-            .status(StatusCode::INTERNAL_SERVER_ERROR)
-            .body(Body::from(format!("Cannot create HTTP response: {}", e)))
-            .expect("Cannot build response HTTP error response");
+        return Err(format!("Cannot create HTTP response: {}", e));
     }
 
-    result.unwrap()
+    Ok(result.unwrap())
 }
 
-fn route_request(state: &ApplicationState, req: ServerRequest) -> Result<ServerResponse, String> {
-    // log::trace!("Matching new incoming request with uri '{}'", req.());
+fn add_header(builder: &mut HyperResponseBuilder, key: &str, value: &str) -> Result<(), String> {
+    let name = HeaderName::from_str(key);
+    if let Err(e) = name {
+        return Err(format!("Cannot create header from name: {}", e));
+    }
 
-        if MOCKS_PATH.is_match(&req.path) {
-            match req.method.as_str() {
-                "POST" => return routes::add(state, req),
-                "DELETE" => return routes::delete_all(state, req),
-                _ => {}
-            }
-        }
+    let value = HeaderValue::from_str(value);
+    if let Err(e) = value {
+        return Err(format!("Cannot create header from value: {}", e));
+    }
 
-        if MOCK_PATH.is_match(&req.path) {
-            let id = get_path_param(&MOCK_PATH, 1, &req.path);
-            if let Err(e) = id {
-                return Err(format!("Cannot parse id from path: {}", e));
-            }
-            let id = id.unwrap();
+    let value = value.unwrap();
+    let value = value.to_str();
+    if let Err(e) = value {
+        return Err(format!("Cannot create header from value string: {}", e));
+    }
 
-            match req.method.as_str() {
-                "GET" => return routes::read_one(state, req, id),
-                "DELETE" => return routes::delete_one(state, req, id),
-                _ => {}
-            }
-        }
+    builder.header(name.unwrap(), value.unwrap());
 
-    return routes::serve(state, req);
+    Ok(())
 }
+
+fn route_request(
+    state: &ApplicationState,
+    request_header: &ServerRequestHeader,
+    body: String,
+) -> Result<ServerResponse, String> {
+    log::trace!("Routing incoming request: {:?}", request_header);
+
+    if MOCKS_PATH.is_match(&request_header.path) {
+        match request_header.method.as_str() {
+            "POST" => return routes::add(state, body),
+            "DELETE" => return routes::delete_all(state),
+            _ => {}
+        }
+    }
+
+    if MOCK_PATH.is_match(&request_header.path) {
+        let id = get_path_param(&MOCK_PATH, 1, &request_header.path);
+        if let Err(e) = id {
+            return Err(format!("Cannot parse id from path: {}", e));
+        }
+        let id = id.unwrap();
+
+        match request_header.method.as_str() {
+            "GET" => return routes::read_one(state, id),
+            "DELETE" => return routes::delete_one(state, id),
+            _ => {}
+        }
+    }
+
+    return routes::serve(state, request_header, body);
+}
+
 fn get_path_param(regex: &Regex, idx: usize, path: &str) -> Result<usize, String> {
     let cap = regex.captures(path);
     if cap.is_none() {
@@ -260,11 +233,17 @@ fn get_path_param(regex: &Regex, idx: usize, path: &str) -> Result<usize, String
     Ok(id)
 }
 
+fn error_response(body: String) -> HyperResponse<Body> {
+    HyperResponse::builder()
+        .status(StatusCode::INTERNAL_SERVER_ERROR)
+        .body(Body::from(body))
+        .expect("Cannot build route error response")
+}
+
 lazy_static! {
     static ref MOCK_PATH: Regex = Regex::new(r"/__mocks/([0-9]+)$").unwrap();
     static ref MOCKS_PATH: Regex = Regex::new(r"/__mocks$").unwrap();
-    static ref APPLICATION_STATE: ApplicationState = ApplicationState::new();
-
+    static ref STATE: ApplicationState = ApplicationState::new();
 }
 
 #[cfg(test)]
