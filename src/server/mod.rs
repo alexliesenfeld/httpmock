@@ -124,14 +124,15 @@ pub fn start_server(http_mock_config: HttpMockConfig) {
         let addr = &format!("{}:{}", host, port).parse().unwrap();
         let server = Server::bind(&addr)
             .serve(new_service)
-            .map_err(|e| eprintln!("server error: {}", e));
+            .map_err(|e| log::error!("server error: {}", e));
 
-        println!("Listening on http://{}", addr);
+        log::info!("Listening on {}", addr);
 
         server
     }));
 }
 
+/// Maps a server response to a hyper response.
 fn map_response(route_response: ServerResponse) -> Result<HyperResponse<Body>, String> {
     let mut builder = HyperResponse::builder();
     builder.status(route_response.status);
@@ -151,6 +152,7 @@ fn map_response(route_response: ServerResponse) -> Result<HyperResponse<Body>, S
     Ok(result.unwrap())
 }
 
+/// Adds a header to a hyper response.
 fn add_header(builder: &mut HyperResponseBuilder, key: &str, value: &str) -> Result<(), String> {
     let name = HeaderName::from_str(key);
     if let Err(e) = name {
@@ -173,6 +175,7 @@ fn add_header(builder: &mut HyperResponseBuilder, key: &str, value: &str) -> Res
     Ok(())
 }
 
+/// Routes a request to the appropriate route handler.
 fn route_request(
     state: &ApplicationState,
     request_header: &ServerRequestHeader,
@@ -205,6 +208,7 @@ fn route_request(
     return routes::serve(state, request_header, body);
 }
 
+/// Get request path parameters.
 fn get_path_param(regex: &Regex, idx: usize, path: &str) -> Result<usize, String> {
     let cap = regex.captures(path);
     if cap.is_none() {
@@ -233,6 +237,7 @@ fn get_path_param(regex: &Regex, idx: usize, path: &str) -> Result<usize, String
     Ok(id)
 }
 
+/// Creates a default error response.
 fn error_response(body: String) -> HyperResponse<Body> {
     HyperResponse::builder()
         .status(StatusCode::INTERNAL_SERVER_ERROR)
