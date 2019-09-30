@@ -1,6 +1,6 @@
 //! An easy-to-use library that allows you to mock HTTP endpoints in your tests.
 //!
-//! This crate contains two major components:
+//! This crate contains two major lib:
 //!
 //! * a **mock server** that is automatically started in the background of your tests, and
 //! * a **test library** to create HTTP mocks on the server.
@@ -104,8 +104,9 @@
 //! useful if you are running integration tests that span multiple applications.
 //!
 //! To activate standalone mode, you need to do the following steps:
-//! * Start the mock server in standalone mode by running `cargo run --release` from the sources
-//! (or by using a binary that you can build with `cargo build --release`).
+//! * Start the mock server in standalone mode by running
+//! `cargo run --features="standalone" --release` from the sources
+//! (or by using a binary that you can build with `cargo build --features="standalone" --release`).
 //! * On the host that is executing the tests, provide a host name by setting the environment variable
 //! `HTTPMOCK_HOST`. If set, tests are assuming a mock server is being executed elsewhere,
 //! so no local mock server will be started for your tests anymore. Instead, this library will be using
@@ -117,7 +118,7 @@
 //! ## Exposing the mock server to the network
 //! If you want to expose the server to machines other than localhost, you need to provide the
 //! `--expose` parameter:
-//! * using cargo: `cargo run --release -- --expose`
+//! * using cargo: `cargo run --features="standalone" --release -- --expose`
 //! * using the binary: `httpmock --expose`
 //!
 //! ## Docker container

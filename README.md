@@ -113,8 +113,8 @@ but also a standalone mock server that is reachable for other applications as we
 useful if you are running integration tests that span multiple applications.
 
 To activate standalone mode, you need to do the following steps:
-* Start the mock server in standalone mode by running `cargo run --release` from the sources
-(or by using a binary that you can build with `cargo build --release`).
+* Start the mock server in standalone mode by running `cargo run --features="standalone" --release` from the sources
+(or by using a binary that you can build with `cargo build --features="standalone" --release`).
 * On the host that is executing the tests, provide a host name by setting the environment variable
 `HTTPMOCK_HOST`. If set, tests are assuming a mock server is being executed elsewhere,
 so no local mock server will be started for your tests anymore. Instead, this library will be using
@@ -126,7 +126,7 @@ By default, if a server port is not provided by the environment variable
 ## Exposing the mock server to the network
 If you want to expose the server to machines other than localhost, you need to provide the
 `--expose` parameter:
-* using cargo: `cargo run --release -- --expose`
+* using cargo: `cargo run --features="standalone" --release -- --expose`
 * using the binary: `httpmock --expose`
 
 ## Docker container

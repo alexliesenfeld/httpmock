@@ -1,9 +1,9 @@
 FROM rust:latest
 
 WORKDIR /usr/src/httpmock
-COPY ../.. .
+COPY . .
 
-RUN cargo install --path .
+RUN cargo install --features="standalone" --path .
 
 EXPOSE 5000
 
