@@ -147,8 +147,6 @@ pub use server::{start_server, HttpMockConfig};
 
 use std::collections::BTreeMap;
 
-use std::io::Read;
-
 use crate::server::data::{
     ActiveMock, MockDefinition, MockIdentification, MockServerHttpResponse, Pattern,
     RequestRequirements,
@@ -165,9 +163,8 @@ use futures::{Future, Stream};
 
 use hyper::client::connect::dns::GaiResolver;
 use hyper::client::HttpConnector;
+use hyper::Request;
 use hyper::{Body, Client, Error, Method as HyperMethod, StatusCode};
-use hyper::{Request, Response};
-use std::borrow::{Borrow, BorrowMut};
 use std::time::Duration;
 
 /// Refer to [regex::Regex](../regex/struct.Regex.html).
@@ -333,8 +330,7 @@ impl ServerAdapter {
         if status != 200 {
             return Err(format!(
                 "could not create mock. Mock server response: status = {}, message = {}",
-                status,
-                body
+                status, body
             ));
         }
 
@@ -366,8 +362,7 @@ impl ServerAdapter {
         if status != 202 {
             return Err(format!(
                 "Could not delete mocks from server (status = {}, message = {})",
-                status,
-                body
+                status, body
             ));
         }
 
@@ -394,8 +389,7 @@ impl ServerAdapter {
         if status != 202 {
             return Err(format!(
                 "Could not delete mocks from server (status = {}, message = {})",
-                status,
-                body
+                status, body
             ));
         }
 
