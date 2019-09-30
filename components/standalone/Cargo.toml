@@ -1,0 +1,16 @@
+[package]
+name = "httpmock-standalone"
+version = "0.1.0"
+authors = ["Alexander Liesenfeld <alexander.liesenfeld@outlook.com>"]
+edition = "2018"
+description = "an HTTP mock server library for your tests"
+readme = "README.md"
+keywords = ["http", "mock", "test"]
+categories = ["development-tools::testing"]
+license = "MIT"
+repository = "https://github.com/alexliesenfeld/httpmock"
+
+[dependencies]
+httpmock = { path = "../..", version = "*"}
+structopt = "0.3.1"
+env_logger = "0.6.2"

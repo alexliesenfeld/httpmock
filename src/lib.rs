@@ -160,6 +160,16 @@ use std::str::FromStr;
 use std::sync::{Mutex, MutexGuard};
 use std::thread::{self};
 
+use futures::future;
+use futures::{Future, Stream};
+
+use hyper::client::connect::dns::GaiResolver;
+use hyper::client::HttpConnector;
+use hyper::{Body, Client, Error, Method as HyperMethod, StatusCode};
+use hyper::{Request, Response};
+use std::borrow::{Borrow, BorrowMut};
+use std::time::Duration;
+
 /// Refer to [regex::Regex](../regex/struct.Regex.html).
 pub type Regex = regex::Regex;
 
@@ -184,14 +194,22 @@ lazy_static! {
 
         return Mutex::new(server);
     };
-
-    static ref CLIENT: Mutex<reqwest::Client> = {
-        return Mutex::new(reqwest::Client::new());
-    };
 }
 
 thread_local!(
     static TEST_INITIALIZED: RefCell<bool> = RefCell::new(false);
+
+    static TOKIO_RUNTIME: RefCell<tokio::runtime::Runtime> = {
+        let runtime = tokio::runtime::Builder::new()
+            .core_threads(1)
+            .keep_alive(Some(Duration::from_secs(60)))
+            .build()
+            .expect("Cannot build thread local tokio tuntime");
+        RefCell::new(runtime)
+    };
+
+    static HYPER_CLIENT: Client<HttpConnector<GaiResolver>, Body> =
+        { hyper::client::Client::new() };
 );
 
 /// For internal use only. Do not use it.
@@ -263,40 +281,31 @@ impl ServerAdapter {
 
         // Send the request to the mock server
         let request_url = format!("http://{}/__mocks", &self.server_address());
-        let response;
-        {
-            let client = CLIENT.lock().unwrap();
-            response = client
-                .post(request_url.as_str())
-                .header("Content-Type", "application/json")
-                .body(json)
-                .send();
-        }
+
+        let request = Request::builder()
+            .method(HyperMethod::POST)
+            .uri(request_url)
+            .header("Content-Type", "application/json")
+            .body(Body::from(json))
+            .expect("Cannot build request");
+
+        let response = execute_request(request);
         if let Err(err) = response {
             return Err(format!("cannot send request to mock server: {}", err));
         }
 
-        let mut response = response.unwrap();
-
-        // Extract the response body
-        let mut body_contents = String::new();
-        let result = response.read_to_string(&mut body_contents);
-        if let Err(err) = result {
-            return Err(format!("cannot read response body: {}", err));
-        }
+        let (status, body) = response.unwrap();
 
         // Evaluate the response status
-        if response.status() != 201 {
+        if status != 201 {
             return Err(format!(
                 "could not create mock. Mock server response: status = {}, message = {}",
-                response.status(),
-                body_contents
+                status, body
             ));
         }
 
         // Create response object
-        let response: serde_json::Result<MockIdentification> =
-            serde_json::from_str(body_contents.as_str());
+        let response: serde_json::Result<MockIdentification> = serde_json::from_str(&body);
         if let Err(err) = response {
             return Err(format!("cannot deserialize mock server response: {}", err));
         }
@@ -307,34 +316,30 @@ impl ServerAdapter {
     pub fn fetch_mock(&self, mock_id: usize) -> Result<ActiveMock, String> {
         // Send the request to the mock server
         let request_url = format!("http://{}/__mocks/{}", &self.server_address(), mock_id);
-        let response;
-        {
-            let client = CLIENT.lock().unwrap();
-            response = client.get(request_url.as_str()).send();
-        }
+        let request = Request::builder()
+            .method(HyperMethod::GET)
+            .uri(request_url)
+            .body(Body::empty())
+            .expect("Cannot build request");
+
+        let response = execute_request(request);
         if let Err(err) = response {
             return Err(format!("cannot send request to mock server: {}", err));
         }
-        let mut response = response.unwrap();
 
-        // Extract the response body
-        let mut body_contents = String::new();
-        let result = response.read_to_string(&mut body_contents);
-        if let Err(err) = result {
-            return Err(format!("cannot read response body: {}", err));
-        }
+        let (status, body) = response.unwrap();
 
         // Evaluate response status code
-        if response.status() != 200 {
+        if status != 200 {
             return Err(format!(
                 "could not create mock. Mock server response: status = {}, message = {}",
-                response.status(),
-                body_contents
+                status,
+                body
             ));
         }
 
         // Create response object
-        let response: serde_json::Result<ActiveMock> = serde_json::from_str(body_contents.as_str());
+        let response: serde_json::Result<ActiveMock> = serde_json::from_str(&body);
         if let Err(err) = response {
             return Err(format!("cannot deserialize mock server response: {}", err));
         }
@@ -345,29 +350,24 @@ impl ServerAdapter {
     pub fn delete_mock(&self, mock_id: usize) -> Result<(), String> {
         // Send the request to the mock server
         let request_url = format!("http://{}/__mocks/{}", &self.server_address(), mock_id);
-        let response;
-        {
-            let client = CLIENT.lock().unwrap();
-            response = client.delete(request_url.as_str()).send();
-        }
+        let request = Request::builder()
+            .method(HyperMethod::DELETE)
+            .uri(request_url)
+            .body(Body::empty())
+            .expect("Cannot build request");
+
+        let response = execute_request(request);
         if let Err(err) = response {
             return Err(format!("cannot send request to mock server: {}", err));
         }
-        let mut response = response.unwrap();
-
-        // Extract the response body
-        let mut body_contents = String::new();
-        let result = response.read_to_string(&mut body_contents);
-        if let Err(err) = result {
-            return Err(format!("cannot read response body: {}", err));
-        }
+        let (status, body) = response.unwrap();
 
         // Evaluate response status code
-        if response.status() != 202 {
+        if status != 202 {
             return Err(format!(
                 "Could not delete mocks from server (status = {}, message = {})",
-                response.status(),
-                body_contents
+                status,
+                body
             ));
         }
 
@@ -377,29 +377,25 @@ impl ServerAdapter {
     pub fn delete_all_mocks(&self) -> Result<(), String> {
         // Send the request to the mock server
         let request_url = format!("http://{}/__mocks", &self.server_address());
-        let response;
-        {
-            let client = CLIENT.lock().unwrap();
-            response = client.delete(request_url.as_str()).send();
-        }
+        let request = Request::builder()
+            .method(HyperMethod::DELETE)
+            .uri(request_url)
+            .body(Body::empty())
+            .expect("Cannot build request");
+
+        let response = execute_request(request);
         if let Err(err) = response {
             return Err(format!("cannot send request to mock server: {}", err));
         }
-        let mut response = response.unwrap();
 
-        // Extract the response body
-        let mut body_contents = String::new();
-        let result = response.read_to_string(&mut body_contents);
-        if let Err(err) = result {
-            return Err(format!("cannot read response body: {}", err));
-        }
+        let (status, body) = response.unwrap();
 
         // Evaluate response status code
-        if response.status() != 202 {
+        if status != 202 {
             return Err(format!(
                 "Could not delete mocks from server (status = {}, message = {})",
-                response.status(),
-                body_contents
+                status,
+                body
             ));
         }
 
@@ -926,4 +922,24 @@ impl std::fmt::Display for Method {
 /// Please refer to [Mock](struct.Mock.html) struct for a more detailed description.
 pub fn mock(method: Method, path: &str) -> Mock {
     Mock::new().expect_method(method).expect_path(path)
+}
+
+/// Executes an HTTP request synchronously
+fn execute_request(req: Request<Body>) -> Result<(StatusCode, String), Error> {
+    HYPER_CLIENT.with(move |client| {
+        let fut = client.request(req).and_then(|res| {
+            let status = res.status();
+
+            res.into_body()
+                .fold(Vec::new(), |mut v, chunk| {
+                    v.extend(&chunk[..]);
+                    future::ok::<_, Error>(v)
+                })
+                .and_then(move |chunks| {
+                    let s = String::from_utf8_lossy(&chunks).to_string();
+                    future::ok::<_, Error>((status, s))
+                })
+        });
+        TOKIO_RUNTIME.with(|runtime| (*runtime.borrow_mut()).block_on(fut))
+    })
 }

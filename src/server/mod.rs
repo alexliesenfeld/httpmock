@@ -6,7 +6,8 @@ use futures::{future, Future, Stream};
 
 use hyper::service::service_fn;
 use hyper::{
-    Body, Chunk, HeaderMap, Request as HyperRequest, Response as HyperResponse, Server, StatusCode, http::response::Builder as HyperResponseBuilder
+    http::response::Builder as HyperResponseBuilder, Body, Chunk, HeaderMap,
+    Request as HyperRequest, Response as HyperResponse, Server, StatusCode,
 };
 
 use hyper::header::HeaderValue;
