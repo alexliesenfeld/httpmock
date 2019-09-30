@@ -3,7 +3,7 @@
     <a href="https://crates.io/crates/httpmock"><img src="https://img.shields.io/crates/v/httpmock.svg"></a>
     <a href="https://docs.rs/httpmock"><img src="https://docs.rs/httpmock/badge.svg"></a>
 </p>
-<p align="center"><b>An HTTP mocking library for Rust</b></p>
+<p align="center"><b>HTTP mocking library for Rust</b></p>
 
 ---
 `httpmock` is an easy-to-use library that allows you to mock HTTP endpoints in your tests.
