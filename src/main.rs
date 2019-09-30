@@ -1,6 +1,3 @@
-extern crate env_logger;
-extern crate httpmock;
-
 use httpmock::{start_server, HttpMockConfig};
 use structopt::StructOpt;
 
@@ -16,8 +13,9 @@ pub struct CommandLineParameters {
 }
 
 fn main() {
-    let params: CommandLineParameters = CommandLineParameters::from_args();
     env_logger::init();
+
+    let params: CommandLineParameters = CommandLineParameters::from_args();
 
     if params.expose {
         log::info!("Starting public mock server on port {}", params.port);
