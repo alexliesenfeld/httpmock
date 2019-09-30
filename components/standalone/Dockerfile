@@ -1,7 +1,7 @@
 FROM rust:latest
 
 WORKDIR /usr/src/httpmock
-COPY . .
+COPY ../.. .
 
 RUN cargo install --path .
 

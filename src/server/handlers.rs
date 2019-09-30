@@ -258,7 +258,10 @@ fn match_query_params_exact(req: &MockServerHttpRequest, mock: &RequestRequireme
 /// Matches body
 fn match_body_exact(req: &MockServerHttpRequest, mock: &RequestRequirements) -> bool {
     return match (&req.body, &mock.body) {
-        (Some(rb), Some(mb)) => rb.eq(mb),
+        (Some(rb), Some(mb)) => {
+            log::debug!("{} --> {}", rb, mb);
+            rb.eq(mb)
+        }
         (None, Some(mb)) => mb.is_empty(),
         (Some(rb), None) => rb.is_empty(),
         (None, None) => true,
@@ -277,7 +280,11 @@ fn match_json(req: &Option<String>, mock: &Value, exact: bool) -> bool {
             }
             let req_value = result.unwrap();
 
-            log::trace!("Comapring the following JSON values: (1){}, (2){}", &req_value, &mock);
+            log::trace!(
+                "Comapring the following JSON values: (1){}, (2){}",
+                &req_value,
+                &mock
+            );
 
             // Compare JSON values
             let result = match exact {
@@ -300,7 +307,7 @@ fn match_json(req: &Option<String>, mock: &Value, exact: bool) -> bool {
                 }
             };
         }
-        None => false
+        None => false,
     };
 }
 
