@@ -13,15 +13,11 @@ pub struct CommandLineParameters {
 }
 
 fn main() {
-    env_logger::init();
+    env_logger::init_from_env(env_logger::Env::default().default_filter_or("httpmock=info"));
 
     let params: CommandLineParameters = CommandLineParameters::from_args();
 
-    if params.expose {
-        log::info!("Starting public mock server on port {}", params.port);
-    } else {
-        log::info!("Starting private mock server on port {}", params.port);
-    }
+    log::info!("Starting mock server (version {})", env!("CARGO_PKG_VERSION"));
 
     let config = HttpMockConfig::builder()
         .port(params.port)

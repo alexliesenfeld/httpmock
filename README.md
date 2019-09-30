@@ -28,7 +28,7 @@ Add `httpmock` to `Cargo.toml`:
 
 ```toml
 [dev-dependencies]
-httpmock = "0.2.0
+httpmock = "0.3.0
 ```
 
 You can then use `httpmock` in your tests like shown in the following example:
@@ -121,7 +121,7 @@ so no local mock server will be started for your tests anymore. Instead, this li
 the remote server to create mocks.
 
 By default, if a server port is not provided by the environment variable
-`HTTPMOCK_PORT`, port 5000 will be used.
+`HTTPMOCK_PORT`, port `5000` will be used.
 
 ## Exposing the mock server to the network
 If you want to expose the server to machines other than localhost, you need to provide the
