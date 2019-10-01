@@ -24,14 +24,24 @@ type GenericError = Box<dyn std::error::Error + Send + Sync>;
 type ResponseFuture = Box<dyn Future<Item = HyperResponse<Body>, Error = GenericError> + Send>;
 
 /// Holds server configuration properties.
-#[derive(TypedBuilder, Debug)]
+#[derive(Debug)]
 pub struct HttpMockConfig {
     pub port: u16,
     pub workers: usize,
     pub expose: bool,
 }
 
-#[derive(TypedBuilder, Default, Debug)]
+impl HttpMockConfig {
+    pub fn new(port: u16, workers: usize, expose: bool) -> Self {
+        Self {
+            port,
+            workers,
+            expose,
+        }
+    }
+}
+
+#[derive(Default, Debug)]
 pub(crate) struct ServerRequestHeader {
     pub method: String,
     pub path: String,
@@ -46,21 +56,46 @@ impl ServerRequestHeader {
             return Err(format!("error parsing headers: {}", e));
         }
 
-        let server_request = ServerRequestHeader::builder()
-            .method(req.method().as_str().to_string())
-            .path(req.uri().path().to_string())
-            .query(req.uri().query().unwrap_or("").to_string())
-            .headers(headers.unwrap())
-            .build();
+        let method = req.method().as_str().to_string();
+        let path = req.uri().path().to_string();
+        let query = req.uri().query().unwrap_or("").to_string();
+        let headers = headers.unwrap();
+
+        let server_request = ServerRequestHeader::new(method, path, query, headers);
 
         Ok(server_request)
     }
+
+    pub fn new(
+        method: String,
+        path: String,
+        query: String,
+        headers: BTreeMap<String, String>,
+    ) -> Self {
+        Self {
+            method,
+            path,
+            query,
+            headers,
+        }
+    }
 }
-#[derive(TypedBuilder, Default, Debug)]
+
+#[derive(Default, Debug)]
 pub(crate) struct ServerResponse {
     pub status: u16,
     pub headers: BTreeMap<String, String>,
     pub body: String,
+}
+
+impl ServerResponse {
+    pub fn new(status: u16, headers: BTreeMap<String, String>, body: String) -> Self {
+        Self {
+            status,
+            headers,
+            body,
+        }
+    }
 }
 
 /// Extracts all headers from the URI of the given request.

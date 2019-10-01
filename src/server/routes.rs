@@ -117,11 +117,9 @@ fn create_response(
     headers: Option<BTreeMap<String, String>>,
     body: Option<String>,
 ) -> Result<ServerResponse, String> {
-    Ok(ServerResponse::builder()
-        .status(status)
-        .headers(headers.unwrap_or(BTreeMap::new()))
-        .body(body.unwrap_or(String::new()))
-        .build())
+    let headers = headers.unwrap_or(BTreeMap::new());
+    let body = body.unwrap_or(String::new());
+    Ok(ServerResponse::new(status, headers, body))
 }
 
 /// Maps the request of the serve handler to a request representation which the handlers understand

@@ -211,17 +211,30 @@ impl RequestRequirements {
 }
 
 /// A Request that is made to set a new mock.
-#[derive(Serialize, Deserialize, TypedBuilder, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct MockDefinition {
     pub request: RequestRequirements,
     pub response: MockServerHttpResponse,
 }
 
-#[derive(Serialize, Deserialize, TypedBuilder)]
+impl MockDefinition {
+    pub fn new(req: RequestRequirements, mock: MockServerHttpResponse) -> Self {
+        Self {
+            request: req,
+            response: mock,
+        }
+    }
+}
+#[derive(Serialize, Deserialize)]
 pub struct MockIdentification {
     pub mock_id: usize,
 }
 
+impl MockIdentification {
+    pub fn new(mock_id: usize) -> Self {
+        Self { mock_id }
+    }
+}
 /// The shared state accessible to all handlers
 pub struct ApplicationState {
     pub mocks: RwLock<BTreeMap<usize, ActiveMock>>,
@@ -241,7 +254,7 @@ impl ApplicationState {
     }
 }
 
-#[derive(Serialize, Deserialize, TypedBuilder, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct ActiveMock {
     pub id: usize,
     pub call_counter: usize,

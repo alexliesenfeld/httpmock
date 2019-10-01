@@ -138,8 +138,6 @@
 
 #[macro_use]
 extern crate lazy_static;
-#[macro_use]
-extern crate typed_builder;
 
 mod server;
 
@@ -180,12 +178,9 @@ lazy_static! {
             let port = server.port;
 
             thread::spawn(move || {
-                let config = HttpMockConfig::builder()
-                    .port(port)
-                    .workers(3 as usize)
-                    .expose(false)
-                    .build();
-
+                let number_of_workers : usize = 3;
+                let expose_to_network = false;
+                let config = HttpMockConfig::new(port, number_of_workers, expose_to_network);
                 start_server(config);
             });
         }

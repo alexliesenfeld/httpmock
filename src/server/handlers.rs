@@ -383,8 +383,7 @@ mod test {
     #[test]
     fn request_matches_path_match() {
         // Arrange
-        let req1: MockServerHttpRequest =
-            MockServerHttpRequest::new("GET".to_string(), "/test-path".to_string());
+        let req1 = MockServerHttpRequest::new("GET".to_string(), "/test-path".to_string());
 
         let req2 = RequestRequirements::new().with_path("/test-path".to_string());
 
@@ -400,8 +399,7 @@ mod test {
     #[test]
     fn request_matches_path_no_match() {
         // Arrange
-        let req1: MockServerHttpRequest =
-            MockServerHttpRequest::new("GET".to_string(), "/test-path".to_string());
+        let req1 = MockServerHttpRequest::new("GET".to_string(), "/test-path".to_string());
 
         let req2 = RequestRequirements::new().with_path("/another-path".to_string());
 
@@ -417,8 +415,7 @@ mod test {
     #[test]
     fn request_matches_method_match() {
         // Arrange
-        let req1: MockServerHttpRequest =
-            MockServerHttpRequest::new("GET".to_string(), "/test".to_string());
+        let req1 = MockServerHttpRequest::new("GET".to_string(), "/test".to_string());
 
         let req2 = RequestRequirements::new().with_method("GET".to_string());
 
@@ -434,8 +431,7 @@ mod test {
     #[test]
     fn request_matches_method_no_match() {
         // Arrange
-        let req1: MockServerHttpRequest =
-            MockServerHttpRequest::new("GET".to_string(), "/test".to_string());
+        let req1 = MockServerHttpRequest::new("GET".to_string(), "/test".to_string());
 
         let req2 = RequestRequirements::new().with_method("POST".to_string());
 
@@ -451,9 +447,8 @@ mod test {
     #[test]
     fn request_matches_body_match() {
         // Arrange
-        let req1: MockServerHttpRequest =
-            MockServerHttpRequest::new("GET".to_string(), "/test".to_string())
-                .with_body("test".to_string());
+        let req1 = MockServerHttpRequest::new("GET".to_string(), "/test".to_string())
+            .with_body("test".to_string());
 
         let req2 = RequestRequirements::new().with_body("test".to_string());
 
@@ -469,9 +464,8 @@ mod test {
     #[test]
     fn request_matches_body_no_match() {
         // Arrange
-        let req1: MockServerHttpRequest =
-            MockServerHttpRequest::new("GET".to_string(), "/test".to_string())
-                .with_body("some text".to_string());
+        let req1 = MockServerHttpRequest::new("GET".to_string(), "/test".to_string())
+            .with_body("some text".to_string());
 
         let req2 = RequestRequirements::new().with_body("some other text".to_string());
 
@@ -495,7 +489,7 @@ mod test {
         h2.insert("h1".to_string(), "v1".to_string());
         h2.insert("h2".to_string(), "v2".to_string());
 
-        let req1: MockServerHttpRequest =
+        let req1 =
             MockServerHttpRequest::new("GET".to_string(), "/test".to_string()).with_headers(h1);
 
         let req2 = RequestRequirements::new().with_headers(h2);
@@ -519,7 +513,7 @@ mod test {
         h2.insert("h1".to_string(), "v1".to_string());
         h2.insert("h2".to_string(), "v2".to_string());
 
-        let req1: MockServerHttpRequest =
+        let req1 =
             MockServerHttpRequest::new("GET".to_string(), "/test".to_string()).with_headers(h1);
 
         let req2 = RequestRequirements::new().with_headers(h2);
@@ -545,9 +539,8 @@ mod test {
         let mut h2 = BTreeMap::new();
         h2.insert("h1".to_string(), "v1".to_string());
 
-        let req1: MockServerHttpRequest =
+        let req1 =
             MockServerHttpRequest::new("GET".to_string(), "/test".to_string()).with_headers(h1);
-
         let req2 = RequestRequirements::new().with_headers(h2);
 
         // Act
@@ -567,9 +560,8 @@ mod test {
         req_headers.insert("req_headers".to_string(), "v1".to_string());
         req_headers.insert("h2".to_string(), "v2".to_string());
 
-        let req: MockServerHttpRequest =
-            MockServerHttpRequest::new("GET".to_string(), "/test".to_string())
-                .with_headers(req_headers);
+        let req = MockServerHttpRequest::new("GET".to_string(), "/test".to_string())
+            .with_headers(req_headers);
 
         let mock = RequestRequirements::new();
 
@@ -585,9 +577,7 @@ mod test {
     #[test]
     fn request_matches_headers_match_empty() {
         // Arrange
-        let req1: MockServerHttpRequest =
-            MockServerHttpRequest::new("GET".to_string(), "/test".to_string());
-
+        let req1 = MockServerHttpRequest::new("GET".to_string(), "/test".to_string());
         let req2 = RequestRequirements::new();
 
         // Act
@@ -607,9 +597,8 @@ mod test {
             .with_method("GET".to_string())
             .with_body("test".to_string());
 
-        let res: MockServerHttpResponse = MockServerHttpResponse::new(418 as u16);
-
-        let smr: MockDefinition = MockDefinition::builder().request(req).response(res).build();
+        let res = MockServerHttpResponse::new(418 as u16);
+        let smr = MockDefinition::new(req, res);
 
         // Act
         let result = validate_mock_definition(&smr);
@@ -629,10 +618,8 @@ mod test {
     fn validate_mock_definition_no_path() {
         // Arrange
         let req = RequestRequirements::new();
-
-        let res: MockServerHttpResponse = MockServerHttpResponse::new(418 as u16);
-
-        let smr: MockDefinition = MockDefinition::builder().request(req).response(res).build();
+        let res = MockServerHttpResponse::new(418 as u16);
+        let smr = MockDefinition::new(req, res);
 
         // Act
         let result = validate_mock_definition(&smr);
