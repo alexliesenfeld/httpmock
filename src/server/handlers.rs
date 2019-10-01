@@ -383,11 +383,10 @@ mod test {
     #[test]
     fn request_matches_path_match() {
         // Arrange
-        let req1: MockServerHttpRequest = MockServerHttpRequest::new("GET".to_string(), "/test-path".to_string());
+        let req1: MockServerHttpRequest =
+            MockServerHttpRequest::new("GET".to_string(), "/test-path".to_string());
 
-        let req2: RequestRequirements = RequestRequirements::builder()
-            .path(Some("/test-path".to_string()))
-            .build();
+        let req2 = RequestRequirements::new().with_path("/test-path".to_string());
 
         // Act
         let does_match = request_matches(&req1, &req2);
@@ -401,11 +400,10 @@ mod test {
     #[test]
     fn request_matches_path_no_match() {
         // Arrange
-        let req1: MockServerHttpRequest = MockServerHttpRequest::new("GET".to_string(), "/test-path".to_string());
+        let req1: MockServerHttpRequest =
+            MockServerHttpRequest::new("GET".to_string(), "/test-path".to_string());
 
-        let req2: RequestRequirements = RequestRequirements::builder()
-            .path(Some("/another-path".to_string()))
-            .build();
+        let req2 = RequestRequirements::new().with_path("/another-path".to_string());
 
         // Act
         let does_match = request_matches(&req1, &req2);
@@ -419,11 +417,10 @@ mod test {
     #[test]
     fn request_matches_method_match() {
         // Arrange
-        let req1: MockServerHttpRequest = MockServerHttpRequest::new("GET".to_string(), "/test".to_string());
+        let req1: MockServerHttpRequest =
+            MockServerHttpRequest::new("GET".to_string(), "/test".to_string());
 
-        let req2: RequestRequirements = RequestRequirements::builder()
-            .method("GET".to_string())
-            .build();
+        let req2 = RequestRequirements::new().with_method("GET".to_string());
 
         // Act
         let does_match = request_matches(&req1, &req2);
@@ -437,11 +434,10 @@ mod test {
     #[test]
     fn request_matches_method_no_match() {
         // Arrange
-        let req1: MockServerHttpRequest = MockServerHttpRequest::new("GET".to_string(), "/test".to_string());
+        let req1: MockServerHttpRequest =
+            MockServerHttpRequest::new("GET".to_string(), "/test".to_string());
 
-        let req2: RequestRequirements = RequestRequirements::builder()
-            .method(Some("POST".to_string()))
-            .build();
+        let req2 = RequestRequirements::new().with_method("POST".to_string());
 
         // Act
         let does_match = request_matches(&req1, &req2);
@@ -455,11 +451,11 @@ mod test {
     #[test]
     fn request_matches_body_match() {
         // Arrange
-        let req1: MockServerHttpRequest = MockServerHttpRequest::new("GET".to_string(), "/test".to_string()).with_body("test".to_string());
+        let req1: MockServerHttpRequest =
+            MockServerHttpRequest::new("GET".to_string(), "/test".to_string())
+                .with_body("test".to_string());
 
-        let req2: RequestRequirements = RequestRequirements::builder()
-            .body("test".to_string())
-            .build();
+        let req2 = RequestRequirements::new().with_body("test".to_string());
 
         // Act
         let does_match = request_matches(&req1, &req2);
@@ -473,11 +469,11 @@ mod test {
     #[test]
     fn request_matches_body_no_match() {
         // Arrange
-        let req1: MockServerHttpRequest = MockServerHttpRequest::new("GET".to_string(), "/test".to_string()).with_body("some text".to_string());
+        let req1: MockServerHttpRequest =
+            MockServerHttpRequest::new("GET".to_string(), "/test".to_string())
+                .with_body("some text".to_string());
 
-        let req2: RequestRequirements = RequestRequirements::builder()
-            .body(Some("some other text".to_string()))
-            .build();
+        let req2 = RequestRequirements::new().with_body("some other text".to_string());
 
         // Act
         let does_match = request_matches(&req1, &req2);
@@ -499,9 +495,10 @@ mod test {
         h2.insert("h1".to_string(), "v1".to_string());
         h2.insert("h2".to_string(), "v2".to_string());
 
-        let req1: MockServerHttpRequest = MockServerHttpRequest::new("GET".to_string(), "/test".to_string()).with_headers(h1);
+        let req1: MockServerHttpRequest =
+            MockServerHttpRequest::new("GET".to_string(), "/test".to_string()).with_headers(h1);
 
-        let req2: RequestRequirements = RequestRequirements::builder().headers(Some(h2)).build();
+        let req2 = RequestRequirements::new().with_headers(h2);
 
         // Act
         let does_match = request_matches(&req1, &req2);
@@ -522,9 +519,10 @@ mod test {
         h2.insert("h1".to_string(), "v1".to_string());
         h2.insert("h2".to_string(), "v2".to_string());
 
-        let req1: MockServerHttpRequest = MockServerHttpRequest::new("GET".to_string(), "/test".to_string()).with_headers(h1);
+        let req1: MockServerHttpRequest =
+            MockServerHttpRequest::new("GET".to_string(), "/test".to_string()).with_headers(h1);
 
-        let req2: RequestRequirements = RequestRequirements::builder().headers(Some(h2)).build();
+        let req2 = RequestRequirements::new().with_headers(h2);
 
         // Act
         let does_match = request_matches(&req1, &req2);
@@ -547,9 +545,10 @@ mod test {
         let mut h2 = BTreeMap::new();
         h2.insert("h1".to_string(), "v1".to_string());
 
-        let req1: MockServerHttpRequest = MockServerHttpRequest::new("GET".to_string(), "/test".to_string()).with_headers(h1);
+        let req1: MockServerHttpRequest =
+            MockServerHttpRequest::new("GET".to_string(), "/test".to_string()).with_headers(h1);
 
-        let req2: RequestRequirements = RequestRequirements::builder().headers(Some(h2)).build();
+        let req2 = RequestRequirements::new().with_headers(h2);
 
         // Act
         let does_match = request_matches(&req1, &req2);
@@ -568,9 +567,11 @@ mod test {
         req_headers.insert("req_headers".to_string(), "v1".to_string());
         req_headers.insert("h2".to_string(), "v2".to_string());
 
-        let req: MockServerHttpRequest = MockServerHttpRequest::new("GET".to_string(), "/test".to_string()).with_headers(req_headers);
+        let req: MockServerHttpRequest =
+            MockServerHttpRequest::new("GET".to_string(), "/test".to_string())
+                .with_headers(req_headers);
 
-        let mock: RequestRequirements = RequestRequirements::builder().headers(None).build();
+        let mock = RequestRequirements::new();
 
         // Act
         let does_match_1 = request_matches(&req, &mock);
@@ -584,9 +585,10 @@ mod test {
     #[test]
     fn request_matches_headers_match_empty() {
         // Arrange
-        let req1: MockServerHttpRequest = MockServerHttpRequest::new("GET".to_string(), "/test".to_string());
+        let req1: MockServerHttpRequest =
+            MockServerHttpRequest::new("GET".to_string(), "/test".to_string());
 
-        let req2: RequestRequirements = RequestRequirements::builder().headers(None).build();
+        let req2 = RequestRequirements::new();
 
         // Act
         let does_match = request_matches(&req1, &req2);
@@ -600,11 +602,10 @@ mod test {
     #[test]
     fn validate_mock_definition_no_body_method() {
         // Arrange
-        let req: RequestRequirements = RequestRequirements::builder()
-            .path("/test".to_string())
-            .method("GET".to_string())
-            .body(Some("test".to_string()))
-            .build();
+        let req = RequestRequirements::new()
+            .with_path("/test".to_string())
+            .with_method("GET".to_string())
+            .with_body("test".to_string());
 
         let res: MockServerHttpResponse = MockServerHttpResponse::new(418 as u16);
 
@@ -627,7 +628,7 @@ mod test {
     #[test]
     fn validate_mock_definition_no_path() {
         // Arrange
-        let req: RequestRequirements = RequestRequirements::builder().build();
+        let req = RequestRequirements::new();
 
         let res: MockServerHttpResponse = MockServerHttpResponse::new(418 as u16);
 
