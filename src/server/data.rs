@@ -10,31 +10,68 @@ use std::sync::atomic::Ordering::Relaxed;
 use std::sync::RwLock;
 
 /// A general abstraction of an HTTP request for all handlers.
-#[derive(Serialize, Deserialize, TypedBuilder, Clone, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct MockServerHttpRequest {
     pub path: String,
     pub method: String,
-
-    #[builder(default=Option::None)]
     pub headers: Option<BTreeMap<String, String>>,
-
-    #[builder(default=Option::None)]
     pub query_params: Option<BTreeMap<String, String>>,
-
-    #[builder(default=Option::None)]
     pub body: Option<String>,
 }
 
+impl MockServerHttpRequest {
+    pub fn new(method: String, path: String) -> Self {
+        MockServerHttpRequest {
+            path,
+            method,
+            headers: None,
+            query_params: None,
+            body: None,
+        }
+    }
+
+    pub fn with_headers(mut self, arg: BTreeMap<String, String>) -> Self {
+        self.headers = Some(arg);
+        self
+    }
+
+    pub fn with_query_params(mut self, arg: BTreeMap<String, String>) -> Self {
+        self.query_params = Some(arg);
+        self
+    }
+
+    pub fn with_body(mut self, arg: String) -> Self {
+        self.body = Some(arg);
+        self
+    }
+}
+
 /// A general abstraction of an HTTP response for all handlers.
-#[derive(Serialize, Deserialize, TypedBuilder, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct MockServerHttpResponse {
     pub status: u16,
-
-    #[builder(default=Option::None)]
     pub headers: Option<BTreeMap<String, String>>,
-
-    #[builder(default=Option::None)]
     pub body: Option<String>,
+}
+
+impl MockServerHttpResponse {
+    pub fn new(status: u16) -> Self {
+        MockServerHttpResponse {
+            status,
+            headers: None,
+            body: None
+        }
+    }
+
+    pub fn with_headers(mut self, arg: BTreeMap<String, String>) -> Self {
+        self.headers = Some(arg);
+        self
+    }
+
+    pub fn with_body(mut self, arg: String) -> Self {
+        self.body = Some(arg);
+        self
+    }
 }
 
 /// A general abstraction of an HTTP request for all handlers.
@@ -120,7 +157,7 @@ pub struct MockDefinition {
     pub response: MockServerHttpResponse,
 }
 
-#[derive(Serialize, Deserialize, TypedBuilder, Clone, Debug)]
+#[derive(Serialize, Deserialize, TypedBuilder)]
 pub struct MockIdentification {
     pub mock_id: usize,
 }
@@ -144,7 +181,7 @@ impl ApplicationState {
     }
 }
 
-#[derive(Serialize, Deserialize, TypedBuilder, Clone, Debug)]
+#[derive(Serialize, Deserialize, TypedBuilder, Clone)]
 pub struct ActiveMock {
     pub id: usize,
     pub call_counter: usize,
@@ -160,7 +197,7 @@ impl ActiveMock {
         }
     }
 }
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize)]
 pub struct ErrorResponse {
     pub message: String,
 }

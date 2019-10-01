@@ -383,10 +383,7 @@ mod test {
     #[test]
     fn request_matches_path_match() {
         // Arrange
-        let req1: MockServerHttpRequest = MockServerHttpRequest::builder()
-            .path("/test-path".to_string())
-            .method("GET") // mandatory attribute
-            .build();
+        let req1: MockServerHttpRequest = MockServerHttpRequest::new("GET".to_string(), "/test-path".to_string());
 
         let req2: RequestRequirements = RequestRequirements::builder()
             .path(Some("/test-path".to_string()))
@@ -404,10 +401,7 @@ mod test {
     #[test]
     fn request_matches_path_no_match() {
         // Arrange
-        let req1: MockServerHttpRequest = MockServerHttpRequest::builder()
-            .path("/test-path".to_string())
-            .method("GET") // mandatory attribute
-            .build();
+        let req1: MockServerHttpRequest = MockServerHttpRequest::new("GET".to_string(), "/test-path".to_string());
 
         let req2: RequestRequirements = RequestRequirements::builder()
             .path(Some("/another-path".to_string()))
@@ -425,10 +419,7 @@ mod test {
     #[test]
     fn request_matches_method_match() {
         // Arrange
-        let req1: MockServerHttpRequest = MockServerHttpRequest::builder()
-            .path("/test") // mandatory attribute
-            .method("GET".to_string())
-            .build();
+        let req1: MockServerHttpRequest = MockServerHttpRequest::new("GET".to_string(), "/test".to_string());
 
         let req2: RequestRequirements = RequestRequirements::builder()
             .method("GET".to_string())
@@ -446,10 +437,7 @@ mod test {
     #[test]
     fn request_matches_method_no_match() {
         // Arrange
-        let req1: MockServerHttpRequest = MockServerHttpRequest::builder()
-            .path("/test") // mandatory attribute
-            .method("GET".to_string())
-            .build();
+        let req1: MockServerHttpRequest = MockServerHttpRequest::new("GET".to_string(), "/test".to_string());
 
         let req2: RequestRequirements = RequestRequirements::builder()
             .method(Some("POST".to_string()))
@@ -467,11 +455,7 @@ mod test {
     #[test]
     fn request_matches_body_match() {
         // Arrange
-        let req1: MockServerHttpRequest = MockServerHttpRequest::builder()
-            .body("test".to_string())
-            .path("/test") // mandatory attribute
-            .method("GET".to_string()) // mandatory attribute
-            .build();
+        let req1: MockServerHttpRequest = MockServerHttpRequest::new("GET".to_string(), "/test".to_string()).with_body("test".to_string());
 
         let req2: RequestRequirements = RequestRequirements::builder()
             .body("test".to_string())
@@ -489,11 +473,7 @@ mod test {
     #[test]
     fn request_matches_body_no_match() {
         // Arrange
-        let req1: MockServerHttpRequest = MockServerHttpRequest::builder()
-            .path("/test") // mandatory attribute
-            .method("GET".to_string()) // mandatory attribute
-            .body(Some("some text".to_string()))
-            .build();
+        let req1: MockServerHttpRequest = MockServerHttpRequest::new("GET".to_string(), "/test".to_string()).with_body("some text".to_string());
 
         let req2: RequestRequirements = RequestRequirements::builder()
             .body(Some("some other text".to_string()))
@@ -519,11 +499,7 @@ mod test {
         h2.insert("h1".to_string(), "v1".to_string());
         h2.insert("h2".to_string(), "v2".to_string());
 
-        let req1: MockServerHttpRequest = MockServerHttpRequest::builder()
-            .path("/test") // mandatory attribute
-            .method("GET".to_string()) // mandatory attribute
-            .headers(Some(h1))
-            .build();
+        let req1: MockServerHttpRequest = MockServerHttpRequest::new("GET".to_string(), "/test".to_string()).with_headers(h1);
 
         let req2: RequestRequirements = RequestRequirements::builder().headers(Some(h2)).build();
 
@@ -546,11 +522,7 @@ mod test {
         h2.insert("h1".to_string(), "v1".to_string());
         h2.insert("h2".to_string(), "v2".to_string());
 
-        let req1: MockServerHttpRequest = MockServerHttpRequest::builder()
-            .path("/test") // mandatory attribute
-            .method("GET".to_string()) // mandatory attribute
-            .headers(Some(h1))
-            .build();
+        let req1: MockServerHttpRequest = MockServerHttpRequest::new("GET".to_string(), "/test".to_string()).with_headers(h1);
 
         let req2: RequestRequirements = RequestRequirements::builder().headers(Some(h2)).build();
 
@@ -575,11 +547,7 @@ mod test {
         let mut h2 = BTreeMap::new();
         h2.insert("h1".to_string(), "v1".to_string());
 
-        let req1: MockServerHttpRequest = MockServerHttpRequest::builder()
-            .path("/test") // mandatory attribute
-            .method("GET".to_string()) // mandatory attribute
-            .headers(Some(h1))
-            .build();
+        let req1: MockServerHttpRequest = MockServerHttpRequest::new("GET".to_string(), "/test".to_string()).with_headers(h1);
 
         let req2: RequestRequirements = RequestRequirements::builder().headers(Some(h2)).build();
 
@@ -600,11 +568,7 @@ mod test {
         req_headers.insert("req_headers".to_string(), "v1".to_string());
         req_headers.insert("h2".to_string(), "v2".to_string());
 
-        let req: MockServerHttpRequest = MockServerHttpRequest::builder()
-            .path("/test") // mandatory attribute
-            .method("GET".to_string()) // mandatory attribute
-            .headers(Some(req_headers))
-            .build();
+        let req: MockServerHttpRequest = MockServerHttpRequest::new("GET".to_string(), "/test".to_string()).with_headers(req_headers);
 
         let mock: RequestRequirements = RequestRequirements::builder().headers(None).build();
 
@@ -620,11 +584,7 @@ mod test {
     #[test]
     fn request_matches_headers_match_empty() {
         // Arrange
-        let req1: MockServerHttpRequest = MockServerHttpRequest::builder()
-            .path("/test") // mandatory attribute
-            .method("GET".to_string()) // mandatory attribute
-            .headers(None)
-            .build();
+        let req1: MockServerHttpRequest = MockServerHttpRequest::new("GET".to_string(), "/test".to_string());
 
         let req2: RequestRequirements = RequestRequirements::builder().headers(None).build();
 
@@ -646,8 +606,7 @@ mod test {
             .body(Some("test".to_string()))
             .build();
 
-        let res: MockServerHttpResponse =
-            MockServerHttpResponse::builder().status(418 as u16).build();
+        let res: MockServerHttpResponse = MockServerHttpResponse::new(418 as u16);
 
         let smr: MockDefinition = MockDefinition::builder().request(req).response(res).build();
 
@@ -670,8 +629,7 @@ mod test {
         // Arrange
         let req: RequestRequirements = RequestRequirements::builder().build();
 
-        let res: MockServerHttpResponse =
-            MockServerHttpResponse::builder().status(418 as u16).build();
+        let res: MockServerHttpResponse = MockServerHttpResponse::new(418 as u16);
 
         let smr: MockDefinition = MockDefinition::builder().request(req).response(res).build();
 

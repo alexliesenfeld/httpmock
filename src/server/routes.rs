@@ -134,13 +134,10 @@ fn to_handler_request(
         return Err(format!("error parsing query_params: {}", e));
     }
 
-    let request = MockServerHttpRequest::builder()
-        .method(req.method.to_string())
-        .path(req.path.to_string())
-        .headers(req.headers.clone())
-        .query_params(query_params.unwrap().clone())
-        .body(body)
-        .build();
+    let request = MockServerHttpRequest::new(req.method.to_string(), req.path.to_string())
+        .with_headers(req.headers.clone())
+        .with_query_params(query_params.unwrap().clone())
+        .with_body(body);
 
     Ok(request)
 }

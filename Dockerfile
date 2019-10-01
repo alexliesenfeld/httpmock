@@ -8,4 +8,5 @@ RUN cargo install --features="standalone" --path .
 EXPOSE 5000
 
 ENV RUST_LOG httpmock=info
-CMD ["httpmock", "--expose"]
+
+ENTRYPOINT httpmock --expose
