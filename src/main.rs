@@ -17,16 +17,9 @@ fn main() {
 
     let params: CommandLineParameters = CommandLineParameters::from_args();
 
-    log::info!(
-        "Starting mock server (version {})",
-        env!("CARGO_PKG_VERSION")
-    );
+    log::info!("Starting {} server V{}",env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
 
-    let config = HttpMockConfig::builder()
-        .port(params.port)
-        .workers(params.workers)
-        .expose(params.expose)
-        .build();
+    let config = HttpMockConfig::new(params.port, params.workers, params.expose);
 
     start_server(config);
 }
