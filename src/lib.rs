@@ -1,4 +1,4 @@
-//! An a Rust library that allows you to mock HTTP responses.
+//! An a library that allows you to mock HTTP responses.
 //!
 //! This crate contains two major lib:
 //!
