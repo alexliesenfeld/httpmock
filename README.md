@@ -71,7 +71,7 @@ It provides you all mocking functionality that is supported by the mock server.
 The expected style of usage is to
 * create a `Mock` object using the
 `Mock::create` method
-(or `Mock::new`) for slightly more control)
+(or `Mock::new` for slightly more control)
 * Set all your mock requirements using `expect_xxx`-methods, such as headers, body content, etc.
 These methods describe what attributes an HTTP request needs to have to be considered a
 "match" for the mock you are creating.

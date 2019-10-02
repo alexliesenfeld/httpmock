@@ -303,5 +303,6 @@ mod test {
         assert_eq!(MOCKS_PATH.is_match("/__mocks"), true);
         assert_eq!(MOCKS_PATH.is_match("/__mocks/5"), false);
         assert_eq!(MOCKS_PATH.is_match("test/__mocks/5"), false);
+        assert_eq!(MOCKS_PATH.is_match("test/__mocks/567"), false);
     }
 }
