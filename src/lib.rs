@@ -1,4 +1,4 @@
-//! An a library that allows you to mock HTTP responses.
+//! An a library that allows you to mock HTTP responses in your tests.
 //!
 //! This crate contains two major lib:
 //!
