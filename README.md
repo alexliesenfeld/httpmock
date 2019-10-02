@@ -6,7 +6,7 @@
 <p align="center"><b>HTTP mocking library for Rust</b></p>
 
 ---
-`httpmock` is an easy-to-use library that allows you to mock HTTP endpoints in your tests.
+`httpmock` is an easy-to-use library that allows you to mock HTTP responses in your tests.
 
 This crate contains two major components:
 
@@ -28,7 +28,7 @@ Add `httpmock` to `Cargo.toml`:
 
 ```toml
 [dev-dependencies]
-httpmock = "0.3.0
+httpmock = "0.3.1
 ```
 
 You can then use `httpmock` in your tests like shown in the following example:

@@ -1,4 +1,4 @@
-//! An easy-to-use library that allows you to mock HTTP endpoints in your tests.
+//! An easy-to-use library that allows you to mock HTTP responses in your tests.
 //!
 //! This crate contains two major lib:
 //!
@@ -20,7 +20,7 @@
 //!
 //! ```toml
 //! [dev-dependencies]
-//! httpmock = "0.3.0
+//! httpmock = "0.3.1
 //! ```
 //!
 //! You can then use `httpmock` in your tests like shown in the following example:
