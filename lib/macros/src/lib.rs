@@ -19,7 +19,8 @@ pub fn with_mock_server(args: TokenStream, function: TokenStream) -> TokenStream
     function.block = Box::new(parse_quote!({
         let mut server = httpmock::internal_server_management_lock();
 
-        server.delete_all_mocks().expect("Cannot initialize mock server");
+        httpmock::util::with_retry(10, 1000, || server.delete_all_mocks())
+            .expect("Cannot initialize mock server");
 
         httpmock::internal_thread_local_test_init_status(true);
 

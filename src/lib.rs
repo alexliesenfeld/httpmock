@@ -140,6 +140,8 @@
 extern crate lazy_static;
 
 mod server;
+#[doc(hidden)]
+pub mod util;
 
 pub use httpmock_macros::with_mock_server;
 pub use server::{start_server, HttpMockConfig};
@@ -155,7 +157,7 @@ use serde_json::Value;
 use std::cell::RefCell;
 use std::str::FromStr;
 use std::sync::{Mutex, MutexGuard};
-use std::thread::{self};
+use std::thread;
 
 use futures::future;
 use futures::{Future, Stream};
@@ -164,10 +166,22 @@ use hyper::client::connect::dns::GaiResolver;
 use hyper::client::HttpConnector;
 use hyper::Request;
 use hyper::{Body, Client, Error, Method as HyperMethod, StatusCode};
-use std::time::Duration;
+use std::net::TcpListener;
 
 /// Refer to [regex::Regex](../regex/struct.Regex.html).
 pub type Regex = regex::Regex;
+
+/// Waits until a given port is available on a given address or panics if this takes too long.
+fn wait_until_port_available(addr: &str, port: u16) {
+    let result = util::with_retry(100, 100, || TcpListener::bind((addr, port)));
+
+    if result.is_err() {
+        panic!(format!(
+            "Cannot create mock server (port {} seems busy)",
+            port
+        ))
+    }
+}
 
 lazy_static! {
     static ref SERVER_MUTEX: Mutex<ServerAdapter> = {
@@ -175,8 +189,9 @@ lazy_static! {
 
         // Start local server if necessary
         if !server.is_remote {
-            let port = server.port;
+            wait_until_port_available(&server.host, server.port);
 
+            let port = server.port;
             thread::spawn(move || {
                 let number_of_workers : usize = 3;
                 let expose_to_network = false;
@@ -192,11 +207,8 @@ lazy_static! {
 thread_local!(
     static TEST_INITIALIZED: RefCell<bool> = RefCell::new(false);
 
-    static TOKIO_RUNTIME: RefCell<tokio::runtime::Runtime> = {
-        let runtime = tokio::runtime::Builder::new()
-            .core_threads(1)
-            .keep_alive(Some(Duration::from_secs(60)))
-            .build()
+    static TOKIO_RUNTIME: RefCell<tokio::runtime::current_thread::Runtime> = {
+        let runtime = tokio::runtime::current_thread::Runtime::new()
             .expect("Cannot build thread local tokio tuntime");
         RefCell::new(runtime)
     };

@@ -17,7 +17,11 @@ fn main() {
 
     let params: CommandLineParameters = CommandLineParameters::from_args();
 
-    log::info!("Starting {} server V{}",env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
+    log::info!(
+        "Starting {} server V{}",
+        env!("CARGO_PKG_NAME"),
+        env!("CARGO_PKG_VERSION")
+    );
 
     let config = HttpMockConfig::new(params.port, params.workers, params.expose);
 
