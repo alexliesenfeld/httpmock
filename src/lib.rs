@@ -1,12 +1,11 @@
-//! An a library that allows you to mock HTTP responses in your tests.
-//!
-//! This crate contains two major lib:
+//! `httpmock` is a Rust crate that allows you to mock HTTP responses in your tests. It contains
+//! two major components:
 //!
 //! * a **mock server** that is automatically started in the background of your tests, and
 //! * a **test library** to create HTTP mocks on the server.
 //!
 //! All interaction with the mock server happens through the provided library. Therefore, you do
-//! not need to interact with the mock server directly (but you certainly can!).
+//! not need to interact with the mock server directly.
 //!
 //! By default, an HTTP mock server instance will be started in the background of
 //! your tests. It will be created when your tests need the mock server for the first
@@ -20,7 +19,7 @@
 //!
 //! ```toml
 //! [dev-dependencies]
-//! httpmock = "0.3.2"
+//! httpmock = "0.3.3"
 //! ```
 //!
 //! You can then use `httpmock` in your tests like shown in the following example:
@@ -48,8 +47,8 @@
 //! This is ensured by the [with_mock_server](../httpmock_macros/attr.with_mock_server.html)
 //! annotation. It wraps the test with an initializer function that is performing several important
 //! preparation steps, such as starting the mock server if none yet exists
-//! and cleaning up the mock server state, so that each test can start with
-//! a clean mock server. The annotation also sequentializes tests that are marked with it, so
+//! and cleaning up old mock server state, so that each test can start with
+//! a clean server. The annotation also sequentializes tests, so
 //! they do not conflict with each other when using the mock server.
 //!
 //! If you try to create a mock without having annotated your test function
@@ -57,39 +56,45 @@
 //! you will receive a panic at runtime pointing you to this problem.
 //!
 //! # Usage
-//! The main point of interaction with the mock server happens via [Mock](struct.Mock.html).
+//! Interaction with the mock server happens via the [Mock](struct.Mock.html) structure.
 //! It provides you all mocking functionality that is supported by the mock server.
 //!
-//! The expected style of usage is to
-//! * create a [Mock](struct.Mock.html) object using the
+//! The expected style of usage is as follows:
+//! * Create a [Mock](struct.Mock.html) object using the
 //! [Mock::create](struct.Mock.html#method.create) method
-//! (or [Mock::new](struct.Mock.html#method.new) for slightly more control)
-//! * Set all your mock requirements using `expect_xxx`-methods, such as headers, body content, etc.
-//! These methods describe what attributes an HTTP request needs to have to be considered a
-//! "match" for the mock you are creating.
-//! * use `return_xxx`-methods to describe what the mock server should return when it receives
-//! an HTTP request that matches the mock. If the server does not find any matching mocks for an
-//! HTTP request, it will return a response with an empty body and an HTTP status code 500.
+//! (or [Mock::new](struct.Mock.html#method.new) for slightly more control).
+//! * Set your mock requirements using the provided `expect`-methods, such as
+//! [expect_header](struct.Mock.html#method.expect_header),
+//! [expect_body](struct.Mock.html#method.expect_body), etc.
+//! These methods describe what attributes an HTTP request needs to have
+//! to be considered a "match" for the mock you are creating.
+//!
+//! * use the provided `return`-methods to describe what the mock server should return when it
+//! receives an HTTP request that matches all mock requirements. Some example `return`-methods
+//! are [return_status](struct.Mock.html#method.return_status) and
+//! [return_body](struct.Mock.html#method.return_body). If the server does not find any matching
+//! mocks for an incoming HTTP request, it will return a response with an empty body and HTTP
+//! status code 500.
 //! * create the mock using the [Mock::create](struct.Mock.html#method.create) method. If you do
-//! not call this method when you complete configuring it, it will not be created at the mock
+//! not call this method when you are finished configuring it, it will not be created at the mock
 //! server and your test will not receive the expected response.
-//! * using the mock object returned by by the [Mock::create](struct.Mock.html#method.create) method
+//! * using the mock object returned by the [Mock::create](struct.Mock.html#method.create) method
 //! to assert that a mock has been called by your code under test (please refer to any example).
 //!
 //! # Responses
-//! An HTTP request made by your application is only considered to match a mock if the request
-//! fulfills all specified mock requirements. If a request does not match any mock currently stored
-//! on the mock server, it will respond with an empty response body and an HTTP status code 500
-//! (Internal Server Error).
+//! For any HTTP request sent to the mock server by your application, the request is only
+//! considered to match a mock if it fulfills all of the mocks request requirements.
+//! If a request does not match any mock, the server will respond with an empty response body
+//! and an HTTP status code 500 (Internal Server Error).
 //!
 //! # Examples
 //! Fore more examples, please refer to
 //! [this crates test directory](https://github.com/alexliesenfeld/httpmock/blob/master/tests/integration_tests.rs ).
 //!
 //! # Debugging
-//! `httpmock` logs against the `log` crate. If you use the `env_logger` backend, you can activate
-//! debug logging by setting `RUST_LOG` environment variable to `debug` and then calling
-//! `env_logger::try_init()`:
+//! `httpmock` logs against the `log` crate. For example, if you use the `env_logger` logging
+//! backend, you can activate debug logging by setting `RUST_LOG` environment variable to `debug`
+//! and then calling `env_logger::try_init()`:
 //! ```rust
 //! #[test]
 //! #[with_mock_server]
@@ -99,9 +104,9 @@
 //! }
 //! ```
 //! # Standalone Mode
-//! You can use this crate to provide both, an HTTP mock server for your local tests,
-//! but also a standalone mock server that is reachable for other applications as well. This can be
-//! useful if you are running integration tests that span multiple applications.
+//! You can use `httpmock` to provide a standalone mock server that is available to multiple
+//! applications. This can be useful if you are running integration tests that involve
+//! multiple applications and you want to mock only a subset of them.
 //!
 //! To activate standalone mode, you need to do the following steps:
 //! * Start the mock server in standalone mode by running

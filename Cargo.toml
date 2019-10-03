@@ -1,6 +1,6 @@
 [package]
 name = "httpmock"
-version = "0.3.2"
+version = "0.3.3"
 authors = ["Alexander Liesenfeld <alexander.liesenfeld@outlook.com>"]
 edition = "2018"
 description = "an HTTP mock server library for your tests"
