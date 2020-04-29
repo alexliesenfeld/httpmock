@@ -1,6 +1,6 @@
 [package]
 name = "httpmock"
-version = "0.3.4"
+version = "0.3.5"
 authors = ["Alexander Liesenfeld <alexander.liesenfeld@outlook.com>"]
 edition = "2018"
 description = "an HTTP mock server library for your tests"
@@ -21,7 +21,7 @@ hyper = "0.12.35"
 tokio = "0.1.22"
 log = "0.4.8"
 qstring = "0.7.2"
-assert-json-diff = "1.0.1"
+assert-json-diff = "1.0.3"
 httpmock-macros = { path = "./lib/macros", version = "0.2.0" }
 
 structopt = { version = "0.3.8", optional = true }

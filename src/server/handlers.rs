@@ -3,7 +3,7 @@ use crate::server::data::{
     RequestRequirements,
 };
 use crate::server::util::{StringTreeMapExtension, TreeMapExtension};
-use assert_json_diff::{assert_json_no_panic, Actual, Comparison, Expected};
+use assert_json_diff::{assert_json_eq_no_panic, assert_json_include_no_panic};
 use serde_json::Value;
 use std::str::FromStr;
 
@@ -288,11 +288,8 @@ fn match_json(req: &Option<String>, mock: &Value, exact: bool) -> bool {
 
             // Compare JSON values
             let result = match exact {
-                true => assert_json_no_panic(Comparison::Exact(req_value, mock.clone())),
-                false => assert_json_no_panic(Comparison::Include(
-                    Actual::from(req_value),
-                    Expected::from(mock.clone()),
-                )),
+                true => assert_json_eq_no_panic(&req_value, mock),
+                false => assert_json_include_no_panic(&req_value, mock),
             };
 
             // Log and return the comparison result
