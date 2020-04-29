@@ -26,7 +26,7 @@ Add `httpmock` to `Cargo.toml`:
 
 ```toml
 [dev-dependencies]
-httpmock = "0.3.4"
+httpmock = "0.3.5"
 ```
 
 You can then use `httpmock` in your tests like shown in the following example:
