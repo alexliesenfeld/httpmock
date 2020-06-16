@@ -18,9 +18,15 @@ pub fn with_mock_server(args: TokenStream, function: TokenStream) -> TokenStream
 
     function.block = Box::new(parse_quote!({
         let mut server = httpmock::internal_server_management_lock();
+        let keep_mocks = option_env!("HTTPMOCK_KEEP_MOCKS");
 
-        httpmock::util::with_retry(10, 1000, || server.delete_all_mocks())
-            .expect("Cannot initialize mock server");
+        httpmock::util::with_retry(10, 1000, || {
+            if !keep_mocks.is_some() {
+                server.delete_all_mocks()
+            } else {
+                Ok(())
+            }
+        }).expect("Cannot initialize mock server");
 
         httpmock::internal_thread_local_test_init_status(true);
 
@@ -30,8 +36,12 @@ pub fn with_mock_server(args: TokenStream, function: TokenStream) -> TokenStream
 
         httpmock::internal_thread_local_test_init_status(false);
 
-        match std::panic::catch_unwind(move || match server.delete_all_mocks() {
-            _ => {}
+        match std::panic::catch_unwind(move || {
+            if !keep_mocks.is_some() {
+                match server.delete_all_mocks() {
+                    _ => {}
+                }
+            }
         }) {
             _ => {}
         }
