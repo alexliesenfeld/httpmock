@@ -254,7 +254,7 @@ impl ApplicationState {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ActiveMock {
     pub id: usize,
     pub call_counter: usize,
