@@ -221,6 +221,7 @@ fn route_request(
 
     if MOCKS_PATH.is_match(&request_header.path) {
         match request_header.method.as_str() {
+            "GET" => return routes::read_all(state),
             "POST" => return routes::add(state, body),
             "DELETE" => return routes::delete_all(state),
             _ => {}

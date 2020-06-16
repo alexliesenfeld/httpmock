@@ -6,6 +6,7 @@ use crate::server::util::{StringTreeMapExtension, TreeMapExtension};
 use assert_json_diff::{assert_json_eq_no_panic, assert_json_include_no_panic};
 use serde_json::Value;
 use std::str::FromStr;
+use std::collections::BTreeMap;
 
 /// Contains HTTP methods which cannot have a body.
 const NON_BODY_METHODS: &'static [&str] = &["GET", "HEAD", "DELETE"];
@@ -38,6 +39,16 @@ pub fn read_one(state: &ApplicationState, id: usize) -> Result<Option<ActiveMock
             Some(found) => Ok(Some(found.clone())),
             None => Ok(None),
         };
+    }
+}
+
+/// Reads exactly one mock object.
+pub fn read_all(state: &ApplicationState) -> Result<BTreeMap<usize, ActiveMock>, String> {
+    {
+        let mocks = state.mocks.read().unwrap();
+        let result = mocks.clone();
+        log::debug!("Showing all mocks {:?}", result);
+        return Ok(result)
     }
 }
 

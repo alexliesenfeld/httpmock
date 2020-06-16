@@ -57,6 +57,15 @@ pub(crate) fn read_one(state: &ApplicationState, id: usize) -> Result<ServerResp
     };
 }
 
+/// This route is responsible for returning all mocks
+pub(crate) fn read_all(state: &ApplicationState) -> Result<ServerResponse, String> {
+    let handler_result = handlers::read_all(state);
+    return match handler_result {
+        Err(e) => create_json_response(500, None, ErrorResponse { message: e.clone() }),
+        Ok(mocks) => create_json_response(200, None, mocks),
+    };
+}
+
 /// This route is responsible for finding a mock that matches the current request and serve a
 /// response according to the mock specification
 pub(crate) fn serve(
