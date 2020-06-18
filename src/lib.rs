@@ -164,14 +164,12 @@ use std::str::FromStr;
 use std::sync::{Mutex, MutexGuard};
 use std::thread;
 
-use futures::future;
-use futures::{Future, Stream};
-
 use hyper::client::connect::dns::GaiResolver;
 use hyper::client::HttpConnector;
 use hyper::Request;
 use hyper::{Body, Client, Error, Method as HyperMethod, StatusCode};
 use std::net::TcpListener;
+use hyper::body::Bytes;
 
 /// Refer to [regex::Regex](../regex/struct.Regex.html).
 pub type Regex = regex::Regex;
@@ -212,8 +210,8 @@ lazy_static! {
 thread_local!(
     static TEST_INITIALIZED: RefCell<bool> = RefCell::new(false);
 
-    static TOKIO_RUNTIME: RefCell<tokio::runtime::current_thread::Runtime> = {
-        let runtime = tokio::runtime::current_thread::Runtime::new()
+    static TOKIO_RUNTIME: RefCell<tokio::runtime::Runtime> = {
+        let runtime = tokio::runtime::Builder::new().enable_all().basic_scheduler().build()
             .expect("Cannot build thread local tokio tuntime");
         RefCell::new(runtime)
     };
@@ -933,20 +931,21 @@ pub fn mock(method: Method, path: &str) -> Mock {
 
 /// Executes an HTTP request synchronously
 fn execute_request(req: Request<Body>) -> Result<(StatusCode, String), Error> {
-    HYPER_CLIENT.with(move |client| {
-        let fut = client.request(req).and_then(|res| {
-            let status = res.status();
+    return TOKIO_RUNTIME.with(|runtime| {
+        let local = tokio::task::LocalSet::new();
+        let mut rt = &mut *runtime.borrow_mut();
+        return local.block_on(&mut rt, async {
+            let client = Client::new();
 
-            res.into_body()
-                .fold(Vec::new(), |mut v, chunk| {
-                    v.extend(&chunk[..]);
-                    future::ok::<_, Error>(v)
-                })
-                .and_then(move |chunks| {
-                    let s = String::from_utf8_lossy(&chunks).to_string();
-                    future::ok::<_, Error>((status, s))
-                })
+            let resp = client.request(req).await.unwrap();
+            let status = resp.status();
+
+            let body: Bytes = hyper::body::to_bytes(resp.into_body()).await.unwrap();
+
+            let body_str = String::from_utf8(body.to_vec()).unwrap();
+
+            Ok((status, body_str))
         });
-        TOKIO_RUNTIME.with(|runtime| (*runtime.borrow_mut()).block_on(fut))
-    })
+    });
 }
+

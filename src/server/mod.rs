@@ -1,19 +1,16 @@
-use crate::server::data::ApplicationState;
+extern crate async_std;
 
-use regex::Regex;
-
-use futures::{future, Future, Stream};
-
-use hyper::service::service_fn;
-use hyper::{
-    http::response::Builder as HyperResponseBuilder, Body, Chunk, HeaderMap,
-    Request as HyperRequest, Response as HyperResponse, Server, StatusCode,
-};
-
-use hyper::header::HeaderValue;
-use hyper::http::header::HeaderName;
 use std::collections::BTreeMap;
 use std::str::FromStr;
+
+use hyper::{Body, HeaderMap, Request as HyperRequest, Response as HyperResponse, Result as HyperResult, Server, StatusCode};
+use hyper::body::{Buf};
+use hyper::header::HeaderValue;
+use hyper::http::header::HeaderName;
+use hyper::service::{make_service_fn, service_fn};
+use regex::Regex;
+
+use crate::server::data::ApplicationState;
 
 pub(crate) mod data;
 mod handlers;
@@ -21,7 +18,6 @@ mod routes;
 mod util;
 
 type GenericError = Box<dyn std::error::Error + Send + Sync>;
-type ResponseFuture = Box<dyn Future<Item = HyperResponse<Body>, Error = GenericError> + Send>;
 
 /// Holds server configuration properties.
 #[derive(Debug)]
@@ -112,72 +108,103 @@ fn extract_headers(header_map: &HeaderMap) -> Result<BTreeMap<String, String>, S
     Ok(headers)
 }
 
+async fn do_it(req: HyperRequest<Body>) -> HyperResult<HyperResponse<Body>> {
+    let request_header = ServerRequestHeader::from(&req);
+
+    if let Err(e) = request_header {
+        return Ok(error_response(format!("Cannot parse request: {}", e)));
+    }
+
+    let entire_body = hyper::body::aggregate(req.into_body()).await;
+    if let Err(e) = entire_body {
+        return Ok(error_response(format!("Cannot read request body: {}", e)));
+    }
+
+    let the_body = entire_body.unwrap();
+    let body_bytes = the_body.bytes();
+    let body = String::from_utf8(body_bytes.to_vec());
+
+    if let Err(e) = body {
+        return Ok(error_response(format!("Cannot read body: {}", e)));
+    }
+
+    let routing_result =
+        route_request(&STATE, &request_header.unwrap(), body.unwrap());
+    if let Err(e) = routing_result {
+        return Ok(error_response(format!("Request handler error: {}", e)));
+    }
+
+    let response = map_response(routing_result.unwrap());
+    if let Err(e) = response {
+        return Ok(error_response(format!("Cannot build response: {}", e)));
+    }
+
+    Ok(response.unwrap())
+}
+
+
 /// Starts a new instance of an HTTP mock server. You should never need to use this function
 /// directly. Use it if you absolutely need to manage the low-level details of how the mock
 /// server operates.
 pub fn start_server(http_mock_config: HttpMockConfig) {
-    let port = http_mock_config.port;
-    let host = match http_mock_config.expose {
-        true => "0.0.0.0",    // allow traffic from all sources
-        false => "127.0.0.1", // allow traffic from localhost only
-    };
+    // Configure a runtime that runs everything on the current thread
+    let mut rt = tokio::runtime::Builder::new()
+        .enable_all()
+        .threaded_scheduler()
+        .build()
+        .expect("build runtime");
 
-    hyper::rt::run(future::lazy(move || {
-        let new_service = move || {
-            service_fn(|req: HyperRequest<Body>| {
-                let request_header = ServerRequestHeader::from(&req);
-                Box::new(
-                    req.into_body()
-                        .concat2()
-                        .from_err()
-                        .and_then(|entire_body: Chunk| {
-                            if let Err(e) = request_header {
-                                return Ok(error_response(format!("Cannot parse request: {}", e)));
-                            }
-
-                            let body = String::from_utf8(entire_body.to_vec());
-                            if let Err(e) = body {
-                                return Ok(error_response(format!("Cannot read body: {}", e)));
-                            }
-
-                            let routing_result =
-                                route_request(&STATE, &request_header.unwrap(), body.unwrap());
-                            if let Err(e) = routing_result {
-                                return Ok(error_response(format!("Request handler error: {}", e)));
-                            }
-
-                            let response = map_response(routing_result.unwrap());
-                            if let Err(e) = response {
-                                return Ok(error_response(format!("Cannot build response: {}", e)));
-                            }
-
-                            Ok(response.unwrap())
-                        }),
-                ) as ResponseFuture
-            })
+    // Combine it with a `LocalSet,  which means it can spawn !Send futures...
+    let local = tokio::task::LocalSet::new();
+    local.block_on(&mut rt, async {
+        let port = http_mock_config.port;
+        let host = match http_mock_config.expose {
+            true => "0.0.0.0",    // allow traffic from all sources
+            false => "127.0.0.1", // allow traffic from localhost only
         };
+
+        let new_service = make_service_fn(move |_| async {
+            Ok::<_, GenericError>(service_fn(move |req: HyperRequest<Body>| {
+                do_it(req)
+            } ))
+        });
 
         let addr = &format!("{}:{}", host, port).parse().unwrap();
         let server = Server::bind(&addr)
-            .serve(new_service)
-            .map_err(|e| log::error!("server error: {}", e));
+            .serve(new_service);
 
         log::info!("Listening on {}", addr);
 
-        server
-    }));
+        if let Err(e) = server.await {
+            eprintln!("server error: {}", e);
+        }
+    });
+
 }
 
 /// Maps a server response to a hyper response.
 fn map_response(route_response: ServerResponse) -> Result<HyperResponse<Body>, String> {
     let mut builder = HyperResponse::builder();
-    builder.status(route_response.status);
+    builder = builder.status(route_response.status);
 
-    for (k, v) in route_response.headers {
-        let value = add_header(&mut builder, &k, &v);
+    for (key, value) in route_response.headers {
+        let name = HeaderName::from_str(&key);
+        if let Err(e) = name {
+            return Err(format!("Cannot create header from name: {}", e));
+        }
+
+        let value = HeaderValue::from_str(&value);
+        if let Err(e) = value {
+            return Err(format!("Cannot create header from value: {}", e));
+        }
+
+        let value = value.unwrap();
+        let value = value.to_str();
         if let Err(e) = value {
             return Err(format!("Cannot create header from value string: {}", e));
         }
+
+        builder = builder.header(name.unwrap(), value.unwrap());
     }
 
     let result = builder.body(Body::from(route_response.body));
@@ -186,29 +213,6 @@ fn map_response(route_response: ServerResponse) -> Result<HyperResponse<Body>, S
     }
 
     Ok(result.unwrap())
-}
-
-/// Adds a header to a hyper response.
-fn add_header(builder: &mut HyperResponseBuilder, key: &str, value: &str) -> Result<(), String> {
-    let name = HeaderName::from_str(key);
-    if let Err(e) = name {
-        return Err(format!("Cannot create header from name: {}", e));
-    }
-
-    let value = HeaderValue::from_str(value);
-    if let Err(e) = value {
-        return Err(format!("Cannot create header from value: {}", e));
-    }
-
-    let value = value.unwrap();
-    let value = value.to_str();
-    if let Err(e) = value {
-        return Err(format!("Cannot create header from value string: {}", e));
-    }
-
-    builder.header(name.unwrap(), value.unwrap());
-
-    Ok(())
 }
 
 /// Routes a request to the appropriate route handler.
@@ -289,7 +293,7 @@ lazy_static! {
 
 #[cfg(test)]
 mod test {
-    use crate::server::{MOCKS_PATH, MOCK_PATH};
+    use crate::server::{MOCK_PATH, MOCKS_PATH};
 
     #[test]
     fn route_regex_test() {

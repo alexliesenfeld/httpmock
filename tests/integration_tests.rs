@@ -15,7 +15,7 @@ fn simple_test() {
         .return_status(204)
         .create();
 
-    let response = reqwest::get("http://localhost:5000/search?query=metallica").unwrap();
+    let response = reqwest::blocking::get("http://localhost:5000/search?query=metallica").unwrap();
 
     assert_eq!(response.status(), 204);
     assert_eq!(search_mock.times_called(), 1);
@@ -29,7 +29,7 @@ fn explicit_delete_test() {
 
     let mut m = mock(GET, "/health").return_status(205).create();
 
-    let response = reqwest::Client::new()
+    let response = reqwest::blocking::Client::new()
         .get("http://localhost:5000/health")
         .send()
         .unwrap();
@@ -39,7 +39,7 @@ fn explicit_delete_test() {
 
     m.delete();
 
-    let response = reqwest::get("http://localhost:5000/health").unwrap();
+    let response = reqwest::blocking::get("http://localhost:5000/health").unwrap();
     assert_eq!(response.status(), 500);
 }
 
@@ -68,7 +68,7 @@ fn exact_body_match_test() {
         .create();
 
     // Simulates application that makes the request to the mock.
-    let client = reqwest::Client::new();
+    let client = reqwest::blocking::Client::new();
     let mut response = client
         .post(&format!("http://{}/users", m.server_address()))
         .json(&TestUser {
@@ -120,7 +120,7 @@ fn matching_features_test() {
         .return_status(200)
         .create();
 
-    let response = reqwest::Client::new()
+    let response = reqwest::blocking::Client::new()
         .post("http://localhost:5000/test?myQueryParam=%C3%BCberschall")
         .header("Content-Type", "application/json")
         .header("User-Agent", "rust-test")
@@ -166,7 +166,7 @@ fn body_partial_json_str_test() {
         .create();
 
     // Simulates application that makes the request to the mock.
-    let client = reqwest::Client::new();
+    let client = reqwest::blocking::Client::new();
     let response = client
         .post(&format!("http://{}/users", m.server_address()))
         .json(&ParentStructure {
