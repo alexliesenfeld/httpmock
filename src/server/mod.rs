@@ -1,18 +1,22 @@
 extern crate async_std;
 
+use std::borrow::Borrow;
 use std::collections::BTreeMap;
 use std::str::FromStr;
+use std::sync::Arc;
 
-use hyper::{Body, HeaderMap, Request as HyperRequest, Response as HyperResponse, Result as HyperResult, Server, StatusCode};
-use hyper::body::{Buf};
+use hyper::body::Buf;
 use hyper::header::HeaderValue;
 use hyper::http::header::HeaderName;
 use hyper::service::{make_service_fn, service_fn};
+use hyper::{
+    Body, HeaderMap, Request as HyperRequest, Response as HyperResponse, Result as HyperResult,
+    Server, StatusCode,
+};
 use regex::Regex;
 
 use crate::server::data::MockServerState;
-use std::sync::Arc;
-use std::borrow::Borrow;
+use std::net::SocketAddr;
 
 pub(crate) mod data;
 mod handlers;
@@ -110,7 +114,10 @@ fn extract_headers(header_map: &HeaderMap) -> Result<BTreeMap<String, String>, S
     Ok(headers)
 }
 
-async fn handle_server_request(req: HyperRequest<Body>, state: Arc<MockServerState>) -> HyperResult<HyperResponse<Body>> {
+async fn handle_server_request(
+    req: HyperRequest<Body>,
+    state: Arc<MockServerState>,
+) -> HyperResult<HyperResponse<Body>> {
     let request_header = ServerRequestHeader::from(&req);
 
     if let Err(e) = request_header {
@@ -130,8 +137,7 @@ async fn handle_server_request(req: HyperRequest<Body>, state: Arc<MockServerSta
         return Ok(error_response(format!("Cannot read body: {}", e)));
     }
 
-    let routing_result =
-        route_request(state.borrow(), &request_header.unwrap(), body.unwrap());
+    let routing_result = route_request(state.borrow(), &request_header.unwrap(), body.unwrap());
     if let Err(e) = routing_result {
         return Ok(error_response(format!("Request handler error: {}", e)));
     }
@@ -144,11 +150,15 @@ async fn handle_server_request(req: HyperRequest<Body>, state: Arc<MockServerSta
     Ok(response.unwrap())
 }
 
-
 /// Starts a new instance of an HTTP mock server. You should never need to use this function
 /// directly. Use it if you absolutely need to manage the low-level details of how the mock
 /// server operates.
-pub async fn start_server(http_mock_config: HttpMockConfig, state: &Arc<MockServerState>) -> Result<(), GenericError>{
+pub async fn start_server(
+    http_mock_config: HttpMockConfig,
+    state: &Arc<MockServerState>,
+    shutdown_receiver: Option<tokio::sync::oneshot::Receiver<()>>,
+    socket_addr_sender: Option<tokio::sync::oneshot::Sender<SocketAddr>>,
+) -> Result<(), String> {
     let port = http_mock_config.port;
     let host = match http_mock_config.expose {
         true => "0.0.0.0",    // allow traffic from all sources
@@ -162,19 +172,37 @@ pub async fn start_server(http_mock_config: HttpMockConfig, state: &Arc<MockServ
             Ok::<_, GenericError>(service_fn(move |req: HyperRequest<Body>| {
                 let state = state.clone();
                 handle_server_request(req, state)
-            } ))
+            }))
         }
     });
 
-    let addr = &format!("{}:{}", host, port).parse().unwrap();
-    let server = Server::bind(&addr)
-        .serve(new_service);
+    let server = Server::bind(&format!("{}:{}", host, port).parse().unwrap()).serve(new_service);
 
-    log::info!("Listening on {}", addr);
+    if let Some(socket_addr_sender) = socket_addr_sender {
+        socket_addr_sender
+            .send(server.local_addr())
+            .expect("Cannot send socket information to the test thread");
+    }
 
-    server.await?;
+    log::info!("Listening on {}", server.local_addr());
 
-    Ok(())
+    return match shutdown_receiver {
+        Some(rx) => {
+            let graceful = server.with_graceful_shutdown(async {
+                rx.await.ok();
+            });
+            if let Err(e) = graceful.await {
+                return Err(format!("Err: {}", e));
+            }
+            Ok(())
+        }
+        None => {
+            if let Err(e) = server.await {
+                return Err(format!("Err: {}", e));
+            }
+            Ok(())
+        }
+    };
 }
 
 /// Maps a server response to a hyper response.
@@ -287,7 +315,7 @@ lazy_static! {
 
 #[cfg(test)]
 mod test {
-    use crate::server::{MOCK_PATH, MOCKS_PATH};
+    use crate::server::{MOCKS_PATH, MOCK_PATH};
 
     #[test]
     fn route_regex_test() {

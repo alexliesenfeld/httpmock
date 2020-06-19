@@ -1,5 +1,6 @@
 extern crate httpmock;
 
+
 use httpmock::Method::{GET, POST};
 use httpmock::{mock, Mock, Regex};
 use std::io::Read;
@@ -100,7 +101,7 @@ fn matching_features_test() {
         number: usize,
     }
 
-    let m = Mock::new()
+    let m = Mock::from_env()
         .expect_path("/test")
         .expect_path_contains("test")
         .expect_query_param("myQueryParam", "überschall")
@@ -178,3 +179,20 @@ fn body_partial_json_str_test() {
     assert_eq!(m.times_called(), 1);
 }
 
+/// This test asserts that mocks can be stored, served and deleted as designed.
+#[test]
+fn multiple_servers_test() {
+    let _ = env_logger::try_init();
+    let mock_server = httpmock::local::MockServer::new();
+
+    let search_mock = mock_server
+        .mock(GET, "/search")
+        .expect_query_param("query", "metallica")
+        .return_status(204)
+        .create();
+
+    let response = reqwest::blocking::get(&format!("http://localhost:{}/search?query=metallica", mock_server.port())).unwrap();
+
+    assert_eq!(response.status(), 204);
+    assert_eq!(search_mock.times_called(), 1);
+}

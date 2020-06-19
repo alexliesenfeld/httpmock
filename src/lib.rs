@@ -153,8 +153,8 @@ pub use server::{start_server, HttpMockConfig};
 use std::collections::BTreeMap;
 
 use crate::server::data::{
-    ActiveMock, MockDefinition, MockIdentification, MockServerHttpResponse, Pattern,
-    RequestRequirements,MockServerState
+    ActiveMock, MockDefinition, MockIdentification, MockServerHttpResponse, MockServerState,
+    Pattern, RequestRequirements,
 };
 use serde::Serialize;
 use serde_json::Value;
@@ -163,12 +163,12 @@ use std::str::FromStr;
 use std::sync::{Mutex, MutexGuard};
 use std::thread;
 
+use hyper::body::Bytes;
 use hyper::client::connect::dns::GaiResolver;
 use hyper::client::HttpConnector;
 use hyper::Request;
 use hyper::{Body, Client, Error, Method as HyperMethod, StatusCode};
-use std::net::TcpListener;
-use hyper::body::Bytes;
+use std::net::{SocketAddr, TcpListener};
 
 use std::sync::Arc;
 
@@ -213,7 +213,10 @@ lazy_static! {
 
                 // Combine it with a `LocalSet,  which means it can spawn !Send futures...
                 let local = tokio::task::LocalSet::new();
-                local.block_on(&mut rt, start_server(config, &state));
+
+                local.block_on(&mut rt, async {
+                    start_server(config, &state, None, None)
+                });
             });
         }
 
@@ -225,7 +228,10 @@ thread_local!(
     static TEST_INITIALIZED: RefCell<bool> = RefCell::new(false);
 
     static TOKIO_RUNTIME: RefCell<tokio::runtime::Runtime> = {
-        let runtime = tokio::runtime::Builder::new().enable_all().basic_scheduler().build()
+        let runtime = tokio::runtime::Builder::new()
+            .enable_all()
+            .basic_scheduler()
+            .build()
             .expect("Cannot build thread local tokio tuntime");
         RefCell::new(runtime)
     };
@@ -278,6 +284,14 @@ impl ServerAdapter {
                     port_string
                 )),
             },
+        }
+    }
+
+    pub(crate) fn new(is_remote: bool, host: String, port: u16) -> ServerAdapter {
+        ServerAdapter {
+            is_remote,
+            host,
+            port,
         }
     }
 
@@ -488,16 +502,46 @@ impl ServerAdapter {
 #[derive(Debug)]
 pub struct Mock {
     mock: MockDefinition,
-    server_adapter: ServerAdapter,
+    server_adapter: Arc<ServerAdapter>,
     id: Option<usize>,
 }
 
 impl Mock {
     /// Creates a new mock that automatically returns HTTP status code 200 if hit by an HTTP call.
-    pub fn new() -> Mock {
+    pub fn from_env() -> Mock {
         Mock {
             id: None,
-            server_adapter: ServerAdapter::from_env(),
+            server_adapter: Arc::new(ServerAdapter::from_env()),
+            mock: MockDefinition {
+                request: RequestRequirements {
+                    method: None,
+                    path: None,
+                    path_contains: None,
+                    headers: None,
+                    header_exists: None,
+                    body: None,
+                    json_body: None,
+                    json_body_includes: None,
+                    body_contains: None,
+                    path_matches: None,
+                    body_matches: None,
+                    query_param_exists: None,
+                    query_param: None,
+                },
+                response: MockServerHttpResponse {
+                    status: 200,
+                    headers: None,
+                    body: None,
+                },
+            },
+        }
+    }
+
+    /// Creates a new mock that automatically returns HTTP status code 200 if hit by an HTTP call.
+    pub fn new(server_adapter: Arc<ServerAdapter>) -> Mock {
+        Mock {
+            id: None,
+            server_adapter: server_adapter.clone(),
             mock: MockDefinition {
                 request: RequestRequirements {
                     method: None,
@@ -852,7 +896,7 @@ impl Mock {
     /// `httpmock::with_mock_server` annotation.
     pub fn create(mut self) -> Self {
         if !TEST_INITIALIZED.with(|is_init| *is_init.borrow()) {
-            panic!("Mocking framework is not initialized (did you mark your test method with the #[with_mock_server] attribute?)")
+            // panic!("Mocking framework is not initialized (did you mark your test method with the #[with_mock_server] attribute?)")
         }
 
         let response = self
@@ -940,7 +984,7 @@ impl std::fmt::Display for Method {
 /// [Mock::new](struct.Mock.html#method.new) and already sets a path and an HTTP method.
 /// Please refer to [Mock](struct.Mock.html) struct for a more detailed description.
 pub fn mock(method: Method, path: &str) -> Mock {
-    Mock::new().expect_method(method).expect_path(path)
+    Mock::from_env().expect_method(method).expect_path(path)
 }
 
 /// Executes an HTTP request synchronously
@@ -963,21 +1007,90 @@ fn execute_request(req: Request<Body>) -> Result<(StatusCode, String), Error> {
     });
 }
 
-
-
-
 pub mod local {
-    pub struct MockServer {
+    use crate::server::data::MockServerState;
+    use crate::util::with_retry;
+    use crate::{execute_request, start_server, HttpMockConfig, ServerAdapter, Method, Mock};
+    use hyper::Request;
+    use std::net::SocketAddr;
+    use std::sync::Arc;
+    use std::thread::JoinHandle;
 
+    pub struct MockServer {
+        shutdown_sender: Option<tokio::sync::oneshot::Sender<()>>,
+        server_state: Arc<MockServerState>,
+        executing_thread: JoinHandle<Result<(), String>>,
+        server_addr: SocketAddr,
+        server_adapter: Arc<ServerAdapter>,
     }
 
-
     impl MockServer {
-        fn new() -> Self {
-            return MockServer {
+        pub fn new() -> Self {
+            let (shutdown_sender, shutdown_receiver) = tokio::sync::oneshot::channel();
+            let (socket_addr_sender, socket_addr_receiver) =
+                tokio::sync::oneshot::channel::<SocketAddr>();
 
+            let state = Arc::new(MockServerState::new());
+            let state_clone = state.clone();
+
+            let join_handle = std::thread::spawn(move || {
+                let config = HttpMockConfig::new(0, 1, false);
+                let state = state.clone();
+
+                let mut rt = tokio::runtime::Builder::new()
+                    .enable_all()
+                    .basic_scheduler()
+                    .build()
+                    .expect("build runtime");
+
+                let local_set = tokio::task::LocalSet::new();
+                return local_set.block_on(&mut rt, async {
+                    start_server(
+                        config,
+                        &state,
+                        Some(shutdown_receiver),
+                        Some(socket_addr_sender),
+                    )
+                    .await
+                });
+            });
+
+            let server_addr = futures::executor::block_on(socket_addr_receiver)
+                .expect("Error waiting for the mock server to start");
+
+            let server_adapter =
+                ServerAdapter::new(false, "localhost".to_string(), server_addr.port());
+
+            // Reliably make sure the server accepts HTTP requests
+            with_retry(20, 500, || server_adapter.delete_all_mocks());
+
+            MockServer {
+                shutdown_sender: Some(shutdown_sender),
+                server_state: state_clone,
+                executing_thread: join_handle,
+                server_addr,
+                server_adapter: Arc::new(server_adapter),
+            }
+        }
+
+        pub fn mock(&self, method: Method, path: &str) -> Mock {
+            Mock::new(self.server_adapter.clone()).expect_method(method).expect_path(path)
+        }
+
+        pub fn port(&self) -> u16 {
+            self.server_adapter.port
+        }
+    }
+
+    impl Drop for MockServer {
+        fn drop(&mut self) {
+            println!("IN DROP!");
+            let mut shutdown_sender = std::mem::replace(&mut self.shutdown_sender, None);
+            let shutdown_sender = shutdown_sender.expect("Cannot get shutdown sender.");
+            if let Err(e) = shutdown_sender.send(()) {
+                println!("Cannot send mock server shutdown signal.");
+                log::warn!("Cannot send mock server shutdown signal: {:?}", e)
             }
         }
     }
 }
-
