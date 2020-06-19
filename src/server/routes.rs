@@ -7,7 +7,7 @@ use serde::Serialize;
 use std::collections::BTreeMap;
 
 /// This route is responsible for adding a new mock
-pub(crate) fn add(state: &ApplicationState, body: String) -> Result<ServerResponse, String> {
+pub(crate) fn add(state: &MockServerState, body: String) -> Result<ServerResponse, String> {
     let mock_def: serde_json::Result<MockDefinition> = serde_json::from_str(&body);
     if let Err(e) = mock_def {
         return create_json_response(500, None, ErrorResponse::new(&e));
@@ -23,7 +23,7 @@ pub(crate) fn add(state: &ApplicationState, body: String) -> Result<ServerRespon
 }
 
 /// This route is responsible for deleting mocks
-pub(crate) fn delete_one(state: &ApplicationState, id: usize) -> Result<ServerResponse, String> {
+pub(crate) fn delete_one(state: &MockServerState, id: usize) -> Result<ServerResponse, String> {
     let result = handlers::delete_one(state, id);
     return match result {
         Err(e) => create_json_response(500, None, ErrorResponse::new(&e)),
@@ -35,7 +35,7 @@ pub(crate) fn delete_one(state: &ApplicationState, id: usize) -> Result<ServerRe
 }
 
 /// This route is responsible for deleting all mocks
-pub(crate) fn delete_all(state: &ApplicationState) -> Result<ServerResponse, String> {
+pub(crate) fn delete_all(state: &MockServerState) -> Result<ServerResponse, String> {
     let result = handlers::delete_all(state);
     return match result {
         Err(e) => create_json_response(500, None, ErrorResponse::new(&e)),
@@ -44,7 +44,7 @@ pub(crate) fn delete_all(state: &ApplicationState) -> Result<ServerResponse, Str
 }
 
 /// This route is responsible for deleting mocks
-pub(crate) fn read_one(state: &ApplicationState, id: usize) -> Result<ServerResponse, String> {
+pub(crate) fn read_one(state: &MockServerState, id: usize) -> Result<ServerResponse, String> {
     let handler_result = handlers::read_one(state, id);
     return match handler_result {
         Err(e) => create_json_response(500, None, ErrorResponse { message: e.clone() }),
@@ -60,7 +60,7 @@ pub(crate) fn read_one(state: &ApplicationState, id: usize) -> Result<ServerResp
 /// This route is responsible for finding a mock that matches the current request and serve a
 /// response according to the mock specification
 pub(crate) fn serve(
-    state: &ApplicationState,
+    state: &MockServerState,
     req: &ServerRequestHeader,
     body: String,
 ) -> Result<ServerResponse, String> {

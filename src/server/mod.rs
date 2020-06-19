@@ -10,7 +10,9 @@ use hyper::http::header::HeaderName;
 use hyper::service::{make_service_fn, service_fn};
 use regex::Regex;
 
-use crate::server::data::ApplicationState;
+use crate::server::data::MockServerState;
+use std::sync::Arc;
+use std::borrow::Borrow;
 
 pub(crate) mod data;
 mod handlers;
@@ -108,7 +110,7 @@ fn extract_headers(header_map: &HeaderMap) -> Result<BTreeMap<String, String>, S
     Ok(headers)
 }
 
-async fn do_it(req: HyperRequest<Body>) -> HyperResult<HyperResponse<Body>> {
+async fn handle_server_request(req: HyperRequest<Body>, state: Arc<MockServerState>) -> HyperResult<HyperResponse<Body>> {
     let request_header = ServerRequestHeader::from(&req);
 
     if let Err(e) = request_header {
@@ -129,7 +131,7 @@ async fn do_it(req: HyperRequest<Body>) -> HyperResult<HyperResponse<Body>> {
     }
 
     let routing_result =
-        route_request(&STATE, &request_header.unwrap(), body.unwrap());
+        route_request(state.borrow(), &request_header.unwrap(), body.unwrap());
     if let Err(e) = routing_result {
         return Ok(error_response(format!("Request handler error: {}", e)));
     }
@@ -146,40 +148,33 @@ async fn do_it(req: HyperRequest<Body>) -> HyperResult<HyperResponse<Body>> {
 /// Starts a new instance of an HTTP mock server. You should never need to use this function
 /// directly. Use it if you absolutely need to manage the low-level details of how the mock
 /// server operates.
-pub fn start_server(http_mock_config: HttpMockConfig) {
-    // Configure a runtime that runs everything on the current thread
-    let mut rt = tokio::runtime::Builder::new()
-        .enable_all()
-        .threaded_scheduler()
-        .build()
-        .expect("build runtime");
+pub async fn start_server(http_mock_config: HttpMockConfig, state: &Arc<MockServerState>) -> Result<(), GenericError>{
+    let port = http_mock_config.port;
+    let host = match http_mock_config.expose {
+        true => "0.0.0.0",    // allow traffic from all sources
+        false => "127.0.0.1", // allow traffic from localhost only
+    };
 
-    // Combine it with a `LocalSet,  which means it can spawn !Send futures...
-    let local = tokio::task::LocalSet::new();
-    local.block_on(&mut rt, async {
-        let port = http_mock_config.port;
-        let host = match http_mock_config.expose {
-            true => "0.0.0.0",    // allow traffic from all sources
-            false => "127.0.0.1", // allow traffic from localhost only
-        };
-
-        let new_service = make_service_fn(move |_| async {
+    let state = state.clone();
+    let new_service = make_service_fn(move |_| {
+        let state = state.clone();
+        async move {
             Ok::<_, GenericError>(service_fn(move |req: HyperRequest<Body>| {
-                do_it(req)
+                let state = state.clone();
+                handle_server_request(req, state)
             } ))
-        });
-
-        let addr = &format!("{}:{}", host, port).parse().unwrap();
-        let server = Server::bind(&addr)
-            .serve(new_service);
-
-        log::info!("Listening on {}", addr);
-
-        if let Err(e) = server.await {
-            eprintln!("server error: {}", e);
         }
     });
 
+    let addr = &format!("{}:{}", host, port).parse().unwrap();
+    let server = Server::bind(&addr)
+        .serve(new_service);
+
+    log::info!("Listening on {}", addr);
+
+    server.await?;
+
+    Ok(())
 }
 
 /// Maps a server response to a hyper response.
@@ -217,7 +212,7 @@ fn map_response(route_response: ServerResponse) -> Result<HyperResponse<Body>, S
 
 /// Routes a request to the appropriate route handler.
 fn route_request(
-    state: &ApplicationState,
+    state: &MockServerState,
     request_header: &ServerRequestHeader,
     body: String,
 ) -> Result<ServerResponse, String> {
@@ -288,7 +283,6 @@ fn error_response(body: String) -> HyperResponse<Body> {
 lazy_static! {
     static ref MOCK_PATH: Regex = Regex::new(r"/__mocks/([0-9]+)$").unwrap();
     static ref MOCKS_PATH: Regex = Regex::new(r"/__mocks$").unwrap();
-    static ref STATE: ApplicationState = ApplicationState::new();
 }
 
 #[cfg(test)]

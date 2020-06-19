@@ -148,14 +148,13 @@ mod server;
 #[doc(hidden)]
 pub mod util;
 
-pub use httpmock_macros::with_mock_server;
 pub use server::{start_server, HttpMockConfig};
 
 use std::collections::BTreeMap;
 
 use crate::server::data::{
     ActiveMock, MockDefinition, MockIdentification, MockServerHttpResponse, Pattern,
-    RequestRequirements,
+    RequestRequirements,MockServerState
 };
 use serde::Serialize;
 use serde_json::Value;
@@ -170,6 +169,8 @@ use hyper::Request;
 use hyper::{Body, Client, Error, Method as HyperMethod, StatusCode};
 use std::net::TcpListener;
 use hyper::body::Bytes;
+
+use std::sync::Arc;
 
 /// Refer to [regex::Regex](../regex/struct.Regex.html).
 pub type Regex = regex::Regex;
@@ -199,7 +200,20 @@ lazy_static! {
                 let number_of_workers : usize = 3;
                 let expose_to_network = false;
                 let config = HttpMockConfig::new(port, number_of_workers, expose_to_network);
-                start_server(config);
+
+                let state = Arc::new(MockServerState::new());
+
+
+                // Configure a runtime that runs everything on the current thread
+                let mut rt = tokio::runtime::Builder::new()
+                    .enable_all()
+                    .threaded_scheduler()
+                    .build()
+                    .expect("build runtime");
+
+                // Combine it with a `LocalSet,  which means it can spawn !Send futures...
+                let local = tokio::task::LocalSet::new();
+                local.block_on(&mut rt, start_server(config, &state));
             });
         }
 
@@ -947,5 +961,23 @@ fn execute_request(req: Request<Body>) -> Result<(StatusCode, String), Error> {
             Ok((status, body_str))
         });
     });
+}
+
+
+
+
+pub mod local {
+    pub struct MockServer {
+
+    }
+
+
+    impl MockServer {
+        fn new() -> Self {
+            return MockServer {
+
+            }
+        }
+    }
 }
 

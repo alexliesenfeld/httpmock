@@ -1,12 +1,11 @@
 extern crate httpmock;
 
 use httpmock::Method::{GET, POST};
-use httpmock::{mock, with_mock_server, Mock, Regex};
+use httpmock::{mock, Mock, Regex};
 use std::io::Read;
 
 /// This test asserts that mocks can be stored, served and deleted as designed.
 #[test]
-#[with_mock_server]
 fn simple_test() {
     let _ = env_logger::try_init();
 
@@ -23,7 +22,6 @@ fn simple_test() {
 
 /// Ensures that once explicitly deleting a mock, it will not be delivered by the server anymore.
 #[test]
-#[with_mock_server]
 fn explicit_delete_test() {
     let _ = env_logger::try_init();
 
@@ -45,7 +43,6 @@ fn explicit_delete_test() {
 
 /// Tests and demonstrates body matching.
 #[test]
-#[with_mock_server]
 fn exact_body_match_test() {
     let _ = env_logger::try_init();
 
@@ -95,7 +92,6 @@ fn exact_body_match_test() {
 
 /// Tests and demonstrates matching features.
 #[test]
-#[with_mock_server]
 fn matching_features_test() {
     let _ = env_logger::try_init();
 
@@ -134,7 +130,6 @@ fn matching_features_test() {
 
 /// Tests and demonstrates matching JSON body partials.
 #[test]
-#[with_mock_server]
 fn body_partial_json_str_test() {
     let _ = env_logger::try_init();
 
@@ -182,3 +177,4 @@ fn body_partial_json_str_test() {
     assert_eq!(response.status(), 201);
     assert_eq!(m.times_called(), 1);
 }
+

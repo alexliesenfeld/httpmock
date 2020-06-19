@@ -1,5 +1,6 @@
 use httpmock::{start_server, HttpMockConfig};
 use structopt::StructOpt;
+use std::sync::Arc;
 
 /// Holds command line parameters provided by the user.
 #[derive(StructOpt, Debug)]
@@ -25,5 +26,6 @@ fn main() {
 
     let config = HttpMockConfig::new(params.port, params.workers, params.expose);
 
-    start_server(config);
+    let state = Arc::new(MockServerState::new());
+    start_server(config, state).await;
 }

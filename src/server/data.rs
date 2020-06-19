@@ -236,18 +236,18 @@ impl MockIdentification {
     }
 }
 /// The shared state accessible to all handlers
-pub struct ApplicationState {
+pub struct MockServerState {
     pub mocks: RwLock<BTreeMap<usize, ActiveMock>>,
     id_counter: AtomicUsize,
 }
 
-impl ApplicationState {
+impl MockServerState {
     pub fn create_new_id(&self) -> usize {
         self.id_counter.fetch_add(1, Relaxed)
     }
 
-    pub fn new() -> ApplicationState {
-        ApplicationState {
+    pub fn new() -> MockServerState {
+        MockServerState {
             mocks: RwLock::new(BTreeMap::new()),
             id_counter: AtomicUsize::new(0),
         }
