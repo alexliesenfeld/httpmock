@@ -150,26 +150,20 @@ pub mod util;
 
 pub use server::{start_server, HttpMockConfig};
 
-use std::collections::BTreeMap;
+use crate::server::data::{ActiveMock, MockDefinition, MockIdentification, Pattern, RequestRequirements, MockServerHttpResponse};
 
-use crate::server::data::{
-    ActiveMock, MockDefinition, MockIdentification, MockServerHttpResponse, MockServerState,
-    Pattern, RequestRequirements,
-};
-use serde::Serialize;
-use serde_json::Value;
 use std::cell::RefCell;
-use std::str::FromStr;
-use std::sync::{Mutex, MutexGuard};
-use std::thread;
 
 use hyper::body::Bytes;
 use hyper::client::connect::dns::GaiResolver;
 use hyper::client::HttpConnector;
 use hyper::Request;
 use hyper::{Body, Client, Error, Method as HyperMethod, StatusCode};
-use std::net::{SocketAddr, TcpListener};
-
+use std::net::TcpListener;
+use std::collections::BTreeMap;
+use serde::Serialize;
+use serde_json::Value;
+use std::str::FromStr;
 use std::sync::Arc;
 
 /// Refer to [regex::Regex](../regex/struct.Regex.html).
@@ -187,46 +181,7 @@ fn wait_until_port_available(addr: &str, port: u16) {
     }
 }
 
-lazy_static! {
-    static ref SERVER_MUTEX: Mutex<ServerAdapter> = {
-        let server = ServerAdapter::from_env();
-
-        // Start local server if necessary
-        if !server.is_remote {
-            wait_until_port_available(&server.host, server.port);
-
-            let port = server.port;
-            thread::spawn(move || {
-                let number_of_workers : usize = 3;
-                let expose_to_network = false;
-                let config = HttpMockConfig::new(port, number_of_workers, expose_to_network);
-
-                let state = Arc::new(MockServerState::new());
-
-
-                // Configure a runtime that runs everything on the current thread
-                let mut rt = tokio::runtime::Builder::new()
-                    .enable_all()
-                    .threaded_scheduler()
-                    .build()
-                    .expect("build runtime");
-
-                // Combine it with a `LocalSet,  which means it can spawn !Send futures...
-                let local = tokio::task::LocalSet::new();
-
-                local.block_on(&mut rt, async {
-                    start_server(config, &state, None, None)
-                });
-            });
-        }
-
-        return Mutex::new(server);
-    };
-}
-
 thread_local!(
-    static TEST_INITIALIZED: RefCell<bool> = RefCell::new(false);
-
     static TOKIO_RUNTIME: RefCell<tokio::runtime::Runtime> = {
         let runtime = tokio::runtime::Builder::new()
             .enable_all()
@@ -240,21 +195,6 @@ thread_local!(
         { hyper::client::Client::new() };
 );
 
-/// For internal use only. Do not use it.
-#[doc(hidden)]
-pub fn internal_thread_local_test_init_status(status: bool) {
-    TEST_INITIALIZED.with(|is_init| *is_init.borrow_mut() = status);
-}
-
-/// For internal use only. Do not use it.
-#[doc(hidden)]
-pub fn internal_server_management_lock() -> MutexGuard<'static, ServerAdapter> {
-    return match SERVER_MUTEX.lock() {
-        Ok(guard) => guard,
-        Err(poisoned) => poisoned.into_inner(),
-    };
-}
-
 /// This adapter allows to access the servers management functionality.
 ///
 /// You can create an adapter by calling `ServerAdapter::from_env` to create a new instance.
@@ -262,37 +202,12 @@ pub fn internal_server_management_lock() -> MutexGuard<'static, ServerAdapter> {
 /// need to.
 #[derive(Debug)]
 pub struct ServerAdapter {
-    is_remote: bool,
     host: String,
     port: u16,
 }
 impl ServerAdapter {
-    pub fn from_env() -> ServerAdapter {
-        let host = option_env!("HTTPMOCK_HOST");
-        let port = option_env!("HTTPMOCK_PORT");
-
-        ServerAdapter {
-            is_remote: host.is_some(),
-            host: match host {
-                None => "localhost".to_string(),
-                Some(h) => h.to_string(),
-            },
-            port: match port {
-                None => 5000 as u16,
-                Some(port_string) => port_string.parse::<u16>().expect(&format!(
-                    "Cannot parse port from environment variable value '{}'",
-                    port_string
-                )),
-            },
-        }
-    }
-
-    pub(crate) fn new(is_remote: bool, host: String, port: u16) -> ServerAdapter {
-        ServerAdapter {
-            is_remote,
-            host,
-            port,
-        }
+    pub(crate) fn new(host: String, port: u16) -> ServerAdapter {
+        ServerAdapter { host, port }
     }
 
     pub fn server_port(&self) -> u16 {
@@ -436,6 +351,47 @@ impl ServerAdapter {
     }
 }
 
+/// Represents an HTTP method.
+#[derive(Debug)]
+pub enum Method {
+    GET,
+    HEAD,
+    POST,
+    PUT,
+    DELETE,
+    CONNECT,
+    OPTIONS,
+    TRACE,
+    PATCH,
+}
+
+/// Enables enum to_string conversion
+impl std::fmt::Display for Method {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        std::fmt::Debug::fmt(self, f)
+    }
+}
+
+/// Executes an HTTP request synchronously
+fn execute_request(req: Request<Body>) -> Result<(StatusCode, String), Error> {
+    return TOKIO_RUNTIME.with(|runtime| {
+        let local = tokio::task::LocalSet::new();
+        let mut rt = &mut *runtime.borrow_mut();
+        return local.block_on(&mut rt, async {
+            let client = Client::new();
+
+            let resp = client.request(req).await.unwrap();
+            let status = resp.status();
+
+            let body: Bytes = hyper::body::to_bytes(resp.into_body()).await.unwrap();
+
+            let body_str = String::from_utf8(body.to_vec()).unwrap();
+
+            Ok((status, body_str))
+        });
+    });
+}
+
 /// Represents the primary interface to the mock server.
 ///
 /// # Example
@@ -484,6 +440,8 @@ impl ServerAdapter {
 ///
 /// use httpmock::Method::POST;
 /// use httpmock::{Mock, Regex, with_mock_server};
+/// use httpmock::remote::Mock;
+/// use regex::Regex;
 ///
 /// #[test]
 /// #[with_mock_server]
@@ -507,36 +465,6 @@ pub struct Mock {
 }
 
 impl Mock {
-    /// Creates a new mock that automatically returns HTTP status code 200 if hit by an HTTP call.
-    pub fn from_env() -> Mock {
-        Mock {
-            id: None,
-            server_adapter: Arc::new(ServerAdapter::from_env()),
-            mock: MockDefinition {
-                request: RequestRequirements {
-                    method: None,
-                    path: None,
-                    path_contains: None,
-                    headers: None,
-                    header_exists: None,
-                    body: None,
-                    json_body: None,
-                    json_body_includes: None,
-                    body_contains: None,
-                    path_matches: None,
-                    body_matches: None,
-                    query_param_exists: None,
-                    query_param: None,
-                },
-                response: MockServerHttpResponse {
-                    status: 200,
-                    headers: None,
-                    body: None,
-                },
-            },
-        }
-    }
-
     /// Creates a new mock that automatically returns HTTP status code 200 if hit by an HTTP call.
     pub fn new(server_adapter: Arc<ServerAdapter>) -> Mock {
         Mock {
@@ -685,14 +613,14 @@ impl Mock {
     ///
     /// * `body` - The HTTP body object that will be serialized to JSON using serde.
     pub fn expect_json_body<T>(mut self, body: &T) -> Self
-    where
-        T: Serialize,
+        where
+            T: Serialize,
     {
         let serialized_body =
             serde_json::to_string(body).expect("cannot serialize json body to JSON string ");
 
-        let value =
-            Value::from_str(&serialized_body).expect("cannot convert JSON string to serde value");
+        let value = Value::from_str(&serialized_body)
+            .expect("cannot convert JSON string to serde value");
 
         self.mock.request.json_body = Some(value);
         self
@@ -749,7 +677,8 @@ impl Mock {
             self.mock.request.json_body_includes = Some(Vec::new());
         }
 
-        let value = Value::from_str(partial).expect("cannot convert JSON string to serde value");
+        let value =
+            Value::from_str(partial).expect("cannot convert JSON string to serde value");
 
         self.mock
             .request
@@ -860,8 +789,8 @@ impl Mock {
     ///
     /// * `body` - The HTTP response body the mock server will return in the form of a JSON string.
     pub fn return_json_body<T>(mut self, body: &T) -> Self
-    where
-        T: Serialize,
+        where
+            T: Serialize,
     {
         let serialized_body =
             serde_json::to_string(body).expect("cannot serialize json body to JSON string ");
@@ -895,10 +824,6 @@ impl Mock {
     /// This method will panic if your test method was not marked using the the
     /// `httpmock::with_mock_server` annotation.
     pub fn create(mut self) -> Self {
-        if !TEST_INITIALIZED.with(|is_init| *is_init.borrow()) {
-            // panic!("Mocking framework is not initialized (did you mark your test method with the #[with_mock_server] attribute?)")
-        }
-
         let response = self
             .server_adapter
             .create_mock(&self.mock)
@@ -914,7 +839,9 @@ impl Mock {
     /// This method will panic if there is a problem to communicate with the server.
     pub fn times_called(&self) -> usize {
         if self.id.is_none() {
-            panic!("you cannot fetch the number of calls for a mock that has not yet been created")
+            panic!(
+                "you cannot fetch the number of calls for a mock that has not yet been created"
+            )
         }
 
         let response = self
@@ -958,73 +885,70 @@ impl Mock {
         }
     }
 }
-
-/// Represents an HTTP method.
-#[derive(Debug)]
-pub enum Method {
-    GET,
-    HEAD,
-    POST,
-    PUT,
-    DELETE,
-    CONNECT,
-    OPTIONS,
-    TRACE,
-    PATCH,
-}
-
-/// Enables enum to_string conversion
-impl std::fmt::Display for Method {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        std::fmt::Debug::fmt(self, f)
-    }
-}
-
-/// A convenience function to create an HTTP mock. It automatically calls
-/// [Mock::new](struct.Mock.html#method.new) and already sets a path and an HTTP method.
-/// Please refer to [Mock](struct.Mock.html) struct for a more detailed description.
-pub fn mock(method: Method, path: &str) -> Mock {
-    Mock::from_env().expect_method(method).expect_path(path)
-}
-
-/// Executes an HTTP request synchronously
-fn execute_request(req: Request<Body>) -> Result<(StatusCode, String), Error> {
-    return TOKIO_RUNTIME.with(|runtime| {
-        let local = tokio::task::LocalSet::new();
-        let mut rt = &mut *runtime.borrow_mut();
-        return local.block_on(&mut rt, async {
-            let client = Client::new();
-
-            let resp = client.request(req).await.unwrap();
-            let status = resp.status();
-
-            let body: Bytes = hyper::body::to_bytes(resp.into_body()).await.unwrap();
-
-            let body_str = String::from_utf8(body.to_vec()).unwrap();
-
-            Ok((status, body_str))
-        });
-    });
-}
-
 pub mod local {
     use crate::server::data::MockServerState;
-    use crate::util::with_retry;
-    use crate::{execute_request, start_server, HttpMockConfig, ServerAdapter, Method, Mock};
-    use hyper::Request;
-    use std::net::SocketAddr;
+
+    use crate::{start_server, HttpMockConfig, Method, Regex, ServerAdapter, Mock};
+
+    use std::net::{SocketAddr, ToSocketAddrs};
     use std::sync::Arc;
-    use std::thread::JoinHandle;
+
+    use crate::util::with_retry;
+    use serde::Serialize;
 
     pub struct MockServer {
-        shutdown_sender: Option<tokio::sync::oneshot::Sender<()>>,
-        server_state: Arc<MockServerState>,
-        executing_thread: JoinHandle<Result<(), String>>,
-        server_addr: SocketAddr,
         server_adapter: Arc<ServerAdapter>,
+        shutdown_sender: Option<tokio::sync::oneshot::Sender<()>>,
+        local_state: Option<Arc<MockServerState>>
     }
 
     impl MockServer {
+        fn from_internals(
+            addr: SocketAddr,
+            shutdown_sender: Option<tokio::sync::oneshot::Sender<()>>,
+            local_state: Option<Arc<MockServerState>>,
+        ) -> Self {
+            let server_adapter = ServerAdapter::new(addr.ip().to_string(), addr.port());
+
+            // Reliably make sure the server accepts HTTP requests
+            with_retry(20, 500, || server_adapter.delete_all_mocks()).expect(&format!(
+                "No response from mock server at '{}'. Is the server running?",
+                addr
+            ));
+
+            MockServer {
+                server_adapter: Arc::new(server_adapter),
+                shutdown_sender,
+                local_state,
+            }
+        }
+
+        pub fn new_remote_with_address(addr: SocketAddr) -> Self {
+            return MockServer::from_internals(addr, None, None);
+        }
+
+        pub fn new_remote() -> Self {
+            let host = match option_env!("HTTPMOCK_HOST") {
+                None => "localhost".to_string(),
+                Some(h) => h.to_string(),
+            };
+            let port = match option_env!("HTTPMOCK_PORT") {
+                None => 5000 as u16,
+                Some(port_string) => port_string.parse::<u16>().expect(&format!(
+                    "Cannot parse port from environment variable value '{}'",
+                    port_string
+                )),
+            };
+
+            let addr = format!("{}:{}", host, port)
+                .to_socket_addrs()
+                .expect("Cannot parse mock server address")
+                .next()
+                .expect("Cannot find mock server address in user input");
+
+            return MockServer::from_internals(addr, None, None);
+        }
+
         pub fn new() -> Self {
             let (shutdown_sender, shutdown_receiver) = tokio::sync::oneshot::channel();
             let (socket_addr_sender, socket_addr_receiver) =
@@ -1033,7 +957,7 @@ pub mod local {
             let state = Arc::new(MockServerState::new());
             let state_clone = state.clone();
 
-            let join_handle = std::thread::spawn(move || {
+            std::thread::spawn(move || {
                 let config = HttpMockConfig::new(0, 1, false);
                 let state = state.clone();
 
@@ -1041,7 +965,7 @@ pub mod local {
                     .enable_all()
                     .basic_scheduler()
                     .build()
-                    .expect("build runtime");
+                    .expect("Cannot build local tokio runtime");
 
                 let local_set = tokio::task::LocalSet::new();
                 return local_set.block_on(&mut rt, async {
@@ -1058,34 +982,28 @@ pub mod local {
             let server_addr = futures::executor::block_on(socket_addr_receiver)
                 .expect("Error waiting for the mock server to start");
 
-            let server_adapter =
-                ServerAdapter::new(false, "localhost".to_string(), server_addr.port());
-
-            // Reliably make sure the server accepts HTTP requests
-            with_retry(20, 500, || server_adapter.delete_all_mocks());
-
-            MockServer {
-                shutdown_sender: Some(shutdown_sender),
-                server_state: state_clone,
-                executing_thread: join_handle,
-                server_addr,
-                server_adapter: Arc::new(server_adapter),
-            }
+            MockServer::from_internals(server_addr, Some(shutdown_sender), Some(state_clone))
         }
 
         pub fn mock(&self, method: Method, path: &str) -> Mock {
-            Mock::new(self.server_adapter.clone()).expect_method(method).expect_path(path)
+            Mock::new(self.server_adapter.clone())
+                .expect_method(method)
+                .expect_path(path)
         }
 
         pub fn port(&self) -> u16 {
             self.server_adapter.port
+        }
+
+        pub fn host(&self) -> &str {
+            &self.server_adapter.host
         }
     }
 
     impl Drop for MockServer {
         fn drop(&mut self) {
             println!("IN DROP!");
-            let mut shutdown_sender = std::mem::replace(&mut self.shutdown_sender, None);
+            let shutdown_sender = std::mem::replace(&mut self.shutdown_sender, None);
             let shutdown_sender = shutdown_sender.expect("Cannot get shutdown sender.");
             if let Err(e) = shutdown_sender.send(()) {
                 println!("Cannot send mock server shutdown signal.");

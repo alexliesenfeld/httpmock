@@ -1,21 +1,27 @@
 extern crate httpmock;
 
-
+use httpmock::local::MockServer;
 use httpmock::Method::{GET, POST};
-use httpmock::{mock, Mock, Regex};
+use httpmock::Regex;
 use std::io::Read;
 
 /// This test asserts that mocks can be stored, served and deleted as designed.
 #[test]
 fn simple_test() {
     let _ = env_logger::try_init();
+    let mock_server = MockServer::new();
 
-    let search_mock = mock(GET, "/search")
+    let search_mock = mock_server
+        .mock(GET, "/search")
         .expect_query_param("query", "metallica")
         .return_status(204)
         .create();
 
-    let response = reqwest::blocking::get("http://localhost:5000/search?query=metallica").unwrap();
+    let response = reqwest::blocking::get(&format!(
+        "http://localhost:{}/search?query=metallica",
+        search_mock.server_port()
+    ))
+    .unwrap();
 
     assert_eq!(response.status(), 204);
     assert_eq!(search_mock.times_called(), 1);
@@ -25,11 +31,12 @@ fn simple_test() {
 #[test]
 fn explicit_delete_test() {
     let _ = env_logger::try_init();
+    let mock_server = MockServer::new();
 
-    let mut m = mock(GET, "/health").return_status(205).create();
+    let mut m = mock_server.mock(GET, "/health").return_status(205).create();
 
     let response = reqwest::blocking::Client::new()
-        .get("http://localhost:5000/health")
+        .get(&format!("http://localhost:{}/health", mock_server.port()))
         .send()
         .unwrap();
 
@@ -38,7 +45,8 @@ fn explicit_delete_test() {
 
     m.delete();
 
-    let response = reqwest::blocking::get("http://localhost:5000/health").unwrap();
+    let response =
+        reqwest::blocking::get(&format!("http://localhost:{}/health", mock_server.port())).unwrap();
     assert_eq!(response.status(), 500);
 }
 
@@ -46,6 +54,7 @@ fn explicit_delete_test() {
 #[test]
 fn exact_body_match_test() {
     let _ = env_logger::try_init();
+    let mock_server = MockServer::new();
 
     #[derive(serde::Serialize, serde::Deserialize)]
     struct TestUser {
@@ -53,7 +62,8 @@ fn exact_body_match_test() {
     }
 
     // Arranging the test by creating HTTP mocks.
-    let m = mock(POST, "/users")
+    let m = mock_server
+        .mock(POST, "/users")
         .expect_header("Content-Type", "application/json")
         .expect_json_body(&TestUser {
             name: String::from("Fred"),
@@ -95,19 +105,19 @@ fn exact_body_match_test() {
 #[test]
 fn matching_features_test() {
     let _ = env_logger::try_init();
+    let mock_server = MockServer::new();
 
     #[derive(serde::Serialize, serde::Deserialize)]
     struct TransferItem {
         number: usize,
     }
 
-    let m = Mock::from_env()
-        .expect_path("/test")
+    let m = mock_server
+        .mock(POST, "/test")
         .expect_path_contains("test")
         .expect_query_param("myQueryParam", "überschall")
         .expect_query_param_exists("myQueryParam")
         .expect_path_matches(Regex::new(r#"test"#).unwrap())
-        .expect_method(POST)
         .expect_header("Content-Type", "application/json")
         .expect_header_exists("User-Agent")
         .expect_body("{\"number\":5}")
@@ -118,7 +128,10 @@ fn matching_features_test() {
         .create();
 
     let response = reqwest::blocking::Client::new()
-        .post("http://localhost:5000/test?myQueryParam=%C3%BCberschall")
+        .post(&format!(
+            "http://localhost:{}/test?myQueryParam=%C3%BCberschall",
+            mock_server.port()
+        ))
         .header("Content-Type", "application/json")
         .header("User-Agent", "rust-test")
         .json(&TransferItem { number: 5 })
@@ -133,6 +146,7 @@ fn matching_features_test() {
 #[test]
 fn body_partial_json_str_test() {
     let _ = env_logger::try_init();
+    let mock_server = MockServer::new();
 
     // This is the structure that needs to be included in the request
     #[derive(serde::Serialize, serde::Deserialize)]
@@ -148,7 +162,8 @@ fn body_partial_json_str_test() {
     }
 
     // Arranging the test by creating HTTP mocks.
-    let m = mock(POST, "/users")
+    let m = mock_server
+        .mock(POST, "/users")
         .expect_json_body_partial(
             r#"
             {
@@ -191,7 +206,11 @@ fn multiple_servers_test() {
         .return_status(204)
         .create();
 
-    let response = reqwest::blocking::get(&format!("http://localhost:{}/search?query=metallica", mock_server.port())).unwrap();
+    let response = reqwest::blocking::get(&format!(
+        "http://{}/search?query=metallica",
+        search_mock.server_address()
+    ))
+    .unwrap();
 
     assert_eq!(response.status(), 204);
     assert_eq!(search_mock.times_called(), 1);

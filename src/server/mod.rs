@@ -194,12 +194,17 @@ pub async fn start_server(
             if let Err(e) = graceful.await {
                 return Err(format!("Err: {}", e));
             }
+            log::info!("LIEAVING {}", 1);
+            println!("LIEAVING {}", 1);
             Ok(())
         }
         None => {
             if let Err(e) = server.await {
                 return Err(format!("Err: {}", e));
             }
+
+            log::info!("LIEAVING {}", 2);
+            println!("LIEAVING {}", 2);
             Ok(())
         }
     };
