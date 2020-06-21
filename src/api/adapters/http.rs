@@ -7,9 +7,7 @@ use std::fmt::Debug;
 use std::cell::RefCell;
 use hyper::body::Bytes;
 use crate::server::{start_server, HttpMockConfig};
-
-/// Refer to [regex::Regex](../regex/struct.Regex.html).
-pub type Regex = regex::Regex;
+use crate::api::Method;
 
 thread_local!(
     static TOKIO_RUNTIME: RefCell<tokio::runtime::Runtime> = {
@@ -179,19 +177,6 @@ impl MockServerHttpAdapter {
     }
 }
 
-/// Represents an HTTP method.
-#[derive(Debug)]
-pub enum Method {
-    GET,
-    HEAD,
-    POST,
-    PUT,
-    DELETE,
-    CONNECT,
-    OPTIONS,
-    TRACE,
-    PATCH,
-}
 
 /// Enables enum to_string conversion
 impl std::fmt::Display for Method {
@@ -218,27 +203,4 @@ fn execute_request(req: Request<Body>) -> Result<(StatusCode, String), Error> {
             Ok((status, body_str))
         });
     });
-}
-
-pub struct LocalMockServerAdapter {
-    shutdown_sender: Option<tokio::sync::oneshot::Sender<()>>,
-    local_state: Arc<MockServerState>
-}
-
-impl LocalMockServerAdapter {
-    pub(crate) fn new(  shutdown_sender: tokio::sync::oneshot::Sender<()>, local_state: Arc<MockServerState>) -> LocalMockServerAdapter {
-        LocalMockServerAdapter { shutdown_sender: Some(shutdown_sender), local_state }
-    }
-}
-
-impl Drop for LocalMockServerAdapter {
-    fn drop(&mut self) {
-        println!("IN DROP!");
-        let shutdown_sender = std::mem::replace(&mut self.shutdown_sender, None);
-        let shutdown_sender = shutdown_sender.expect("Cannot get shutdown sender.");
-        if let Err(e) = shutdown_sender.send(()) {
-            println!("Cannot send mock server shutdown signal.");
-            log::warn!("Cannot send mock server shutdown signal: {:?}", e)
-        }
-    }
 }

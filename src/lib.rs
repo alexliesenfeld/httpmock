@@ -153,10 +153,8 @@ use crate::server::data::MockServerState;
 use std::net::{SocketAddr, ToSocketAddrs};
 use crate::util::with_retry;
 use crate::server::{HttpMockConfig, start_server};
-use crate::api::mock::Mock;
-
-pub use crate::api::adapters::{Method, Regex};
-use crate::api::adapters::{MockServerHttpAdapter, LocalMockServerAdapter};
+use crate::api::{MockServerHttpAdapter, LocalMockServerAdapter};
+pub use crate::api::{Method, Mock, Regex};
 
 pub struct MockServer {
     http_adapter: Arc<MockServerHttpAdapter>,

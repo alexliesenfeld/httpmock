@@ -4,8 +4,8 @@ use std::collections::BTreeMap;
 use serde::Serialize;
 use serde_json::Value;
 use std::str::FromStr;
-use crate::{MockServer, Regex, Method};
 use crate::api::adapters::{MockServerHttpAdapter, LocalMockServerAdapter};
+use crate::api::{Regex, Method};
 
 /// Represents the primary interface to the mock server.
 ///
