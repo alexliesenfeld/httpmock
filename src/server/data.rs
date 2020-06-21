@@ -235,6 +235,7 @@ impl MockIdentification {
         Self { mock_id }
     }
 }
+
 /// The shared state accessible to all handlers
 pub struct MockServerState {
     pub mocks: RwLock<BTreeMap<usize, ActiveMock>>,

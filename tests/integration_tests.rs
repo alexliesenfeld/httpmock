@@ -1,8 +1,7 @@
 extern crate httpmock;
 
-use httpmock::local::MockServer;
 use httpmock::Method::{GET, POST};
-use httpmock::Regex;
+use httpmock::{Regex, MockServer};
 use std::io::Read;
 
 /// This test asserts that mocks can be stored, served and deleted as designed.
@@ -198,7 +197,7 @@ fn body_partial_json_str_test() {
 #[test]
 fn multiple_servers_test() {
     let _ = env_logger::try_init();
-    let mock_server = httpmock::local::MockServer::new();
+    let mock_server = httpmock::MockServer::new();
 
     let search_mock = mock_server
         .mock(GET, "/search")
