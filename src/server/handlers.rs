@@ -6,6 +6,8 @@ use crate::server::util::{StringTreeMapExtension, TreeMapExtension};
 use assert_json_diff::{assert_json_eq_no_panic, assert_json_include_no_panic};
 use serde_json::Value;
 use std::str::FromStr;
+use std::sync::Arc;
+use std::rc::Rc;
 
 /// Contains HTTP methods which cannot have a body.
 const NON_BODY_METHODS: &'static [&str] = &["GET", "HEAD", "DELETE"];
@@ -72,13 +74,15 @@ pub fn find_mock(
     state: &MockServerState,
     req: MockServerHttpRequest,
 ) -> Result<Option<MockServerHttpResponse>, String> {
+    let a = Rc::new(req);
+
     let found_mock_id: Option<usize>;
     {
         let mocks = state.mocks.read().unwrap();
         let result = mocks
             .values()
             .into_iter()
-            .find(|&mock| request_matches(&req, &mock.definition.request));
+            .find(|&mock| request_matches(a.clone(), &mock.definition.request));
 
         found_mock_id = match result {
             Some(mock) => Some(mock.id),
@@ -90,7 +94,7 @@ pub fn find_mock(
         log::debug!(
             "Matched mock with id={} to the following request: {:?}",
             found_id,
-            req
+            a.clone()
         );
         let mut mocks = state.mocks.write().unwrap();
         let mock = mocks.get_mut(&found_id).unwrap();
@@ -100,13 +104,13 @@ pub fn find_mock(
 
     log::debug!(
         "Could not match any mock to the following request: {:?}",
-        req
+        a.clone()
     );
     return Result::Ok(None);
 }
 
 /// Checks if a request matches a mock.
-fn request_matches(req: &MockServerHttpRequest, mock: &RequestRequirements) -> bool {
+fn request_matches(req: Rc<MockServerHttpRequest>, mock: &RequestRequirements) -> bool {
     log::trace!(
         "Matching incoming HTTP request {:?} against mock {:?}",
         req,
@@ -229,6 +233,14 @@ fn request_matches(req: &MockServerHttpRequest, mock: &RequestRequirements) -> b
         return false;
     }
 
+    if let Some(matchers) = &mock.matchers {
+        for matcher in matchers {
+            if !matcher(req.clone()) {
+                return false;
+            }
+        }
+    }
+
     true
 }
 
@@ -334,6 +346,7 @@ mod test {
     };
     use crate::server::handlers::{request_matches, validate_mock_definition};
     use std::collections::BTreeMap;
+    use std::rc::Rc;
 
     /// TODO
     #[test]
@@ -385,7 +398,7 @@ mod test {
         let req2 = RequestRequirements::new().with_path("/test-path".to_string());
 
         // Act
-        let does_match = request_matches(&req1, &req2);
+        let does_match = request_matches(Rc::new(req1), &req2);
 
         // Assert
         assert_eq!(true, does_match);
@@ -401,7 +414,7 @@ mod test {
         let req2 = RequestRequirements::new().with_path("/another-path".to_string());
 
         // Act
-        let does_match = request_matches(&req1, &req2);
+        let does_match = request_matches(Rc::new(req1), &req2);
 
         // Assert
         assert_eq!(false, does_match);
@@ -417,7 +430,7 @@ mod test {
         let req2 = RequestRequirements::new().with_method("GET".to_string());
 
         // Act
-        let does_match = request_matches(&req1, &req2);
+        let does_match = request_matches(Rc::new(req1), &req2);
 
         // Assert
         assert_eq!(true, does_match);
@@ -433,7 +446,7 @@ mod test {
         let req2 = RequestRequirements::new().with_method("POST".to_string());
 
         // Act
-        let does_match = request_matches(&req1, &req2);
+        let does_match = request_matches(Rc::new(req1), &req2);
 
         // Assert
         assert_eq!(false, does_match);
@@ -450,7 +463,7 @@ mod test {
         let req2 = RequestRequirements::new().with_body("test".to_string());
 
         // Act
-        let does_match = request_matches(&req1, &req2);
+        let does_match = request_matches(Rc::new(req1), &req2);
 
         // Assert
         assert_eq!(true, does_match);
@@ -467,7 +480,7 @@ mod test {
         let req2 = RequestRequirements::new().with_body("some other text".to_string());
 
         // Act
-        let does_match = request_matches(&req1, &req2);
+        let does_match = request_matches(Rc::new(req1), &req2);
 
         // Assert
         assert_eq!(false, does_match);
@@ -492,7 +505,7 @@ mod test {
         let req2 = RequestRequirements::new().with_headers(h2);
 
         // Act
-        let does_match = request_matches(&req1, &req2);
+        let does_match = request_matches(Rc::new(req1), &req2);
 
         // Assert
         assert_eq!(true, does_match);
@@ -516,7 +529,7 @@ mod test {
         let req2 = RequestRequirements::new().with_headers(h2);
 
         // Act
-        let does_match = request_matches(&req1, &req2);
+        let does_match = request_matches(Rc::new(req1), &req2);
 
         // Assert
         assert_eq!(false, does_match); // Request misses header "h2"
@@ -541,7 +554,7 @@ mod test {
         let req2 = RequestRequirements::new().with_headers(h2);
 
         // Act
-        let does_match = request_matches(&req1, &req2);
+        let does_match = request_matches(Rc::new(req1), &req2);
 
         // Assert
         assert_eq!(true, does_match); // matches, because request contains more headers than the mock expects
@@ -563,7 +576,7 @@ mod test {
         let mock = RequestRequirements::new();
 
         // Act
-        let does_match_1 = request_matches(&req, &mock);
+        let does_match_1 = request_matches(Rc::new(req), &mock);
 
         // Assert
         assert_eq!(true, does_match_1); // effectively empty because mock does not expect any headers
@@ -578,7 +591,7 @@ mod test {
         let req2 = RequestRequirements::new();
 
         // Act
-        let does_match = request_matches(&req1, &req2);
+        let does_match = request_matches(Rc::new(req1), &req2);
 
         // Assert
         assert_eq!(true, does_match);

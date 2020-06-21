@@ -1,13 +1,8 @@
-use crate::api::mock::Mock;
-use crate::server::data::{MockServerState, ActiveMock, MockIdentification, MockDefinition};
-use std::sync::Arc;
-use std::net::{SocketAddr, ToSocketAddrs};
-use hyper::{Request, StatusCode, Body, Error, Method as HyperMethod};
-use std::fmt::Debug;
-use std::cell::RefCell;
+use crate::server::data::{ActiveMock, MockDefinition, MockIdentification};
 use hyper::body::Bytes;
-use crate::server::{start_server, HttpMockConfig};
-use crate::api::Method;
+use hyper::{Body, Error, Method as HyperMethod, Request, StatusCode};
+use std::cell::RefCell;
+use std::fmt::Debug;
 
 thread_local!(
     static TOKIO_RUNTIME: RefCell<tokio::runtime::Runtime> = {
@@ -19,6 +14,22 @@ thread_local!(
         RefCell::new(runtime)
     };
 );
+/// Refer to [regex::Regex](../regex/struct.Regex.html).
+pub type Regex = regex::Regex;
+
+/// Represents an HTTP method.
+#[derive(Debug)]
+pub enum Method {
+    GET,
+    HEAD,
+    POST,
+    PUT,
+    DELETE,
+    CONNECT,
+    OPTIONS,
+    TRACE,
+    PATCH,
+}
 
 /// This adapter allows to access the servers management functionality.
 ///
@@ -26,14 +37,14 @@ thread_local!(
 /// You should never actually need to use this adapter, but you certainly can, if you absolutely
 /// need to.
 #[derive(Debug)]
-pub struct MockServerHttpAdapter {
+pub struct MockServerAdapter {
     pub(crate) host: String,
     pub(crate) port: u16,
 }
 
-impl MockServerHttpAdapter {
-    pub(crate) fn new(host: String, port: u16) -> MockServerHttpAdapter {
-        MockServerHttpAdapter { host, port }
+impl MockServerAdapter {
+    pub(crate) fn new(host: String, port: u16) -> MockServerAdapter {
+        MockServerAdapter { host, port }
     }
 
     pub fn server_port(&self) -> u16 {
@@ -176,7 +187,6 @@ impl MockServerHttpAdapter {
         return Ok(());
     }
 }
-
 
 /// Enables enum to_string conversion
 impl std::fmt::Display for Method {

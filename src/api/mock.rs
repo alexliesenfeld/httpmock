@@ -1,11 +1,13 @@
-use crate::server::data::{MockDefinition, RequestRequirements, MockServerHttpResponse, Pattern};
-use std::sync::Arc;
-use std::collections::BTreeMap;
+use crate::api::MockServerAdapter;
+use crate::api::{Method, Regex};
+use crate::server::data::{MockDefinition, MockServerHttpResponse, MockServerState, Pattern, RequestRequirements, MockMatcherClosure};
+use crate::server::handlers::add_new_mock;
 use serde::Serialize;
 use serde_json::Value;
+use std::borrow::BorrowMut;
+use std::collections::BTreeMap;
 use std::str::FromStr;
-use crate::api::adapters::{MockServerHttpAdapter, LocalMockServerAdapter};
-use crate::api::{Regex, Method};
+use std::sync::Arc;
 
 /// Represents the primary interface to the mock server.
 ///
@@ -72,20 +74,23 @@ use crate::api::{Regex, Method};
 /// ```
 /// Fore more examples, please refer to
 /// [this crates test directory](https://github.com/alexliesenfeld/httpmock/blob/master/tests/integration_tests.rs ).
-pub struct Mock {
+pub struct Mock  {
     id: Option<usize>,
     mock: MockDefinition,
-    server_adapter: Arc<MockServerHttpAdapter>,
-    local_mock_server_adapter: Option<Arc<LocalMockServerAdapter>>
+    server_adapter: Arc<MockServerAdapter>,
+    local_state: Option<Arc<MockServerState>>,
 }
 
 impl Mock {
     /// Creates a new mock that automatically returns HTTP status code 200 if hit by an HTTP call.
-    pub(crate) fn new(http_mock_server_adapter: Arc<MockServerHttpAdapter>, local_mock_server_adapter: Option<Arc<LocalMockServerAdapter>>) -> Mock {
+    pub(crate) fn new(
+        server_adapter: Arc<MockServerAdapter>,
+        local_state: Option<Arc<MockServerState>>,
+    ) -> Self {
         Mock {
             id: None,
-            server_adapter: http_mock_server_adapter,
-            local_mock_server_adapter,
+            server_adapter,
+            local_state,
             mock: MockDefinition {
                 request: RequestRequirements {
                     method: None,
@@ -101,6 +106,7 @@ impl Mock {
                     body_matches: None,
                     query_param_exists: None,
                     query_param: None,
+                    matchers: None
                 },
                 response: MockServerHttpResponse {
                     status: 200,
@@ -229,14 +235,14 @@ impl Mock {
     ///
     /// * `body` - The HTTP body object that will be serialized to JSON using serde.
     pub fn expect_json_body<T>(mut self, body: &T) -> Self
-        where
-            T: Serialize,
+    where
+        T: Serialize,
     {
         let serialized_body =
             serde_json::to_string(body).expect("cannot serialize json body to JSON string ");
 
-        let value = Value::from_str(&serialized_body)
-            .expect("cannot convert JSON string to serde value");
+        let value =
+            Value::from_str(&serialized_body).expect("cannot convert JSON string to serde value");
 
         self.mock.request.json_body = Some(value);
         self
@@ -292,8 +298,7 @@ impl Mock {
             self.mock.request.json_body_includes = Some(Vec::new());
         }
 
-        let value = Value::from_str(partial)
-            .expect("cannot convert JSON string to serde value");
+        let value = Value::from_str(partial).expect("cannot convert JSON string to serde value");
 
         self.mock
             .request
@@ -404,8 +409,8 @@ impl Mock {
     ///
     /// * `body` - The HTTP response body the mock server will return in the form of a JSON string.
     pub fn return_json_body<T>(mut self, body: &T) -> Self
-        where
-            T: Serialize,
+    where
+        T: Serialize,
     {
         let serialized_body =
             serde_json::to_string(body).expect("cannot serialize json body to JSON string ");
@@ -439,12 +444,17 @@ impl Mock {
     /// This method will panic if your test method was not marked using the the
     /// `httpmock::with_mock_server` annotation.
     pub fn create(mut self) -> Self {
-        let response = self
-            .server_adapter
-            .create_mock(&self.mock)
-            .expect("Cannot deserialize mock server response");
-
-        self.id = Some(response.mock_id);
+        if let Some(state) = self.local_state.borrow_mut() {
+            let id =
+                add_new_mock(state, self.mock.clone()).expect("Cannot add mock to local state");
+            self.id = Some(id)
+        } else {
+            let response = self
+                .server_adapter
+                .create_mock(&self.mock)
+                .expect("Cannot deserialize mock server response");
+            self.id = Some(response.mock_id);
+        }
         self
     }
 
@@ -454,9 +464,7 @@ impl Mock {
     /// This method will panic if there is a problem to communicate with the server.
     pub fn times_called(&self) -> usize {
         if self.id.is_none() {
-            panic!(
-                "you cannot fetch the number of calls for a mock that has not yet been created"
-            )
+            panic!("you cannot fetch the number of calls for a mock that has not yet been created")
         }
 
         let response = self
@@ -499,5 +507,19 @@ impl Mock {
             panic!("Cannot delete mock, because it has not been created at the server yet.");
         }
     }
-}
 
+    pub fn expect(mut self, request_matcher: MockMatcherClosure) -> Self {
+        if self.mock.request.matchers.is_none() {
+            self.mock.request.matchers = Some(Vec::new());
+        }
+
+        self.mock
+            .request
+            .matchers
+            .as_mut()
+            .unwrap()
+            .push(request_matcher);
+
+        self
+    }
+}

@@ -19,7 +19,8 @@ use crate::server::data::MockServerState;
 use std::net::SocketAddr;
 
 pub(crate) mod data;
-mod handlers;
+pub(crate) mod handlers;
+
 mod routes;
 mod util;
 
@@ -117,7 +118,7 @@ fn extract_headers(header_map: &HeaderMap) -> Result<BTreeMap<String, String>, S
 async fn handle_server_request(
     req: HyperRequest<Body>,
     state: Arc<MockServerState>,
-) -> HyperResult<HyperResponse<Body>> {
+) -> HyperResult<HyperResponse<Body>>  {
     let request_header = ServerRequestHeader::from(&req);
 
     if let Err(e) = request_header {
@@ -312,7 +313,6 @@ fn error_response(body: String) -> HyperResponse<Body> {
         .body(Body::from(body))
         .expect("Cannot build route error response")
 }
-
 
 lazy_static! {
     static ref MOCK_PATH: Regex = Regex::new(r"/__mocks/([0-9]+)$").unwrap();

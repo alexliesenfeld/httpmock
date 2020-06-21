@@ -144,29 +144,31 @@
 #[macro_use]
 extern crate lazy_static;
 
-mod server;
 mod api;
+mod server;
 mod util;
 
-use std::sync::Arc;
-use crate::server::data::MockServerState;
-use std::net::{SocketAddr, ToSocketAddrs};
-use crate::util::with_retry;
-use crate::server::{HttpMockConfig, start_server};
-use crate::api::{MockServerHttpAdapter, LocalMockServerAdapter};
+use crate::api::MockServerAdapter;
 pub use crate::api::{Method, Mock, Regex};
+use crate::server::data::MockServerState;
+use crate::server::{start_server, HttpMockConfig};
+use crate::util::with_retry;
+use std::net::{SocketAddr, ToSocketAddrs};
+use std::sync::Arc;
 
 pub struct MockServer {
-    http_adapter: Arc<MockServerHttpAdapter>,
-    local_adapter : Option<Arc<LocalMockServerAdapter>>
+    http_adapter: Arc<MockServerAdapter>,
+    local_state: Option<Arc<MockServerState>>,
+    shutdown_sender: Option<tokio::sync::oneshot::Sender<()>>,
 }
 
 impl MockServer {
     fn from_internals(
         addr: SocketAddr,
-        local_adapter: Option<Arc<LocalMockServerAdapter>>,
+        local_state: Option<Arc<MockServerState>>,
+        shutdown_sender: Option<tokio::sync::oneshot::Sender<()>>,
     ) -> Self {
-        let http_adapter = MockServerHttpAdapter::new(addr.ip().to_string(), addr.port());
+        let http_adapter = MockServerAdapter::new(addr.ip().to_string(), addr.port());
 
         // Reliably make sure the server accepts HTTP requests
         with_retry(20, 500, || http_adapter.delete_all_mocks()).expect(&format!(
@@ -176,12 +178,13 @@ impl MockServer {
 
         MockServer {
             http_adapter: Arc::new(http_adapter),
-            local_adapter
+            local_state,
+            shutdown_sender,
         }
     }
 
     pub fn new_remote_with_address(addr: SocketAddr) -> Self {
-        return MockServer::from_internals(addr, None);
+        return MockServer::from_internals(addr, None, None);
     }
 
     pub fn new_remote() -> Self {
@@ -203,7 +206,7 @@ impl MockServer {
             .next()
             .expect("Cannot find mock server address in user input");
 
-        return MockServer::from_internals(addr, None);
+        return MockServer::from_internals(addr, None, None);
     }
 
     pub fn new() -> Self {
@@ -232,19 +235,18 @@ impl MockServer {
                     Some(shutdown_receiver),
                     Some(socket_addr_sender),
                 )
-                    .await
+                .await
             });
         });
 
         let server_addr = futures::executor::block_on(socket_addr_receiver)
             .expect("Error waiting for the mock server to start");
 
-        let local_adapter = Arc::new(LocalMockServerAdapter::new(shutdown_sender, state_clone));
-        MockServer::from_internals(server_addr, Some(local_adapter))
+        MockServer::from_internals(server_addr, Some(state_clone), Some(shutdown_sender))
     }
 
     pub fn mock(&self, method: Method, path: &str) -> Mock {
-        Mock::new(self.http_adapter.clone(), self.local_adapter.clone())
+        Mock::new(self.http_adapter.clone(), self.local_state.clone())
             .expect_method(method)
             .expect_path(path)
     }
@@ -256,5 +258,16 @@ impl MockServer {
     pub fn host(&self) -> &str {
         &self.http_adapter.host
     }
+}
 
+impl Drop for MockServer {
+    fn drop(&mut self) {
+        println!("IN DROP!");
+        let shutdown_sender = std::mem::replace(&mut self.shutdown_sender, None);
+        let shutdown_sender = shutdown_sender.expect("Cannot get shutdown sender.");
+        if let Err(e) = shutdown_sender.send(()) {
+            println!("Cannot send mock server shutdown signal.");
+            log::warn!("Cannot send mock server shutdown signal: {:?}", e)
+        }
+    }
 }

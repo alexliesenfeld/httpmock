@@ -1,7 +1,7 @@
 extern crate httpmock;
 
 use httpmock::Method::{GET, POST};
-use httpmock::{Regex, MockServer};
+use httpmock::{MockServer, Regex};
 use std::io::Read;
 
 /// This test asserts that mocks can be stored, served and deleted as designed.
@@ -9,6 +9,7 @@ use std::io::Read;
 fn simple_test() {
     let _ = env_logger::try_init();
     let mock_server = MockServer::new();
+
 
     let search_mock = mock_server
         .mock(GET, "/search")
@@ -123,6 +124,9 @@ fn matching_features_test() {
         .expect_body_contains("number")
         .expect_body_matches(Regex::new(r#"(\d+)"#).unwrap())
         .expect_json_body(&TransferItem { number: 5 })
+        .expect(move |req| {
+            req.path.contains("es")
+        })
         .return_status(200)
         .create();
 

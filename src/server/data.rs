@@ -7,7 +7,9 @@ use std::cmp::Ordering;
 use std::collections::BTreeMap;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::Relaxed;
-use std::sync::RwLock;
+use std::sync::{RwLock, Arc};
+use std::fmt::Debug;
+use std::rc::Rc;
 
 /// A general abstraction of an HTTP request for all handlers.
 #[derive(Serialize, Deserialize, Debug)]
@@ -107,9 +109,11 @@ impl PartialEq for Pattern {
 
 impl Eq for Pattern {}
 
+pub type MockMatcherClosure = fn(Rc<MockServerHttpRequest>) -> bool;
+
 /// A general abstraction of an HTTP request for all handlers.
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct RequestRequirements {
+pub struct RequestRequirements  {
     pub path: Option<String>,
     pub path_contains: Option<Vec<String>>,
     pub path_matches: Option<Vec<Pattern>>,
@@ -123,6 +127,9 @@ pub struct RequestRequirements {
     pub body_matches: Option<Vec<Pattern>>,
     pub query_param_exists: Option<Vec<String>>,
     pub query_param: Option<BTreeMap<String, String>>,
+
+    #[serde(skip_serializing,skip_deserializing)]
+    pub matchers: Option<Vec<MockMatcherClosure>>,
 }
 
 impl RequestRequirements {
@@ -141,6 +148,7 @@ impl RequestRequirements {
             body_matches: None,
             query_param_exists: None,
             query_param: None,
+            matchers: None,
         }
     }
 
@@ -212,12 +220,12 @@ impl RequestRequirements {
 
 /// A Request that is made to set a new mock.
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct MockDefinition {
-    pub request: RequestRequirements,
+pub struct MockDefinition  {
+    pub request: RequestRequirements ,
     pub response: MockServerHttpResponse,
 }
 
-impl MockDefinition {
+impl MockDefinition  {
     pub fn new(req: RequestRequirements, mock: MockServerHttpResponse) -> Self {
         Self {
             request: req,
@@ -225,6 +233,7 @@ impl MockDefinition {
         }
     }
 }
+
 #[derive(Serialize, Deserialize)]
 pub struct MockIdentification {
     pub mock_id: usize,
@@ -237,17 +246,17 @@ impl MockIdentification {
 }
 
 /// The shared state accessible to all handlers
-pub struct MockServerState {
-    pub mocks: RwLock<BTreeMap<usize, ActiveMock>>,
+pub struct MockServerState  {
+    pub mocks: RwLock<BTreeMap<usize, ActiveMock >>,
     id_counter: AtomicUsize,
 }
 
-impl MockServerState {
+impl  MockServerState  {
     pub fn create_new_id(&self) -> usize {
         self.id_counter.fetch_add(1, Relaxed)
     }
 
-    pub fn new() -> MockServerState {
+    pub fn new() -> Self {
         MockServerState {
             mocks: RwLock::new(BTreeMap::new()),
             id_counter: AtomicUsize::new(0),
@@ -256,14 +265,14 @@ impl MockServerState {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
-pub struct ActiveMock {
+pub struct ActiveMock  {
     pub id: usize,
     pub call_counter: usize,
-    pub definition: MockDefinition,
+    pub definition: MockDefinition ,
 }
 
-impl ActiveMock {
-    pub fn new(id: usize, mock_definition: MockDefinition) -> ActiveMock {
+impl  ActiveMock  {
+    pub fn new(id: usize, mock_definition: MockDefinition) -> Self {
         ActiveMock {
             id,
             definition: mock_definition,
