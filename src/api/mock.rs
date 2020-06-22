@@ -1,4 +1,4 @@
-use crate::api::MockServerAdapter;
+use crate::api::RemoteMockServerAdapter;
 use crate::api::{Method, Regex};
 use crate::server::data::{MockDefinition, MockServerHttpResponse, MockServerState, Pattern, RequestRequirements, MockMatcherClosure};
 use crate::server::handlers::add_new_mock;
@@ -8,6 +8,7 @@ use std::borrow::BorrowMut;
 use std::collections::BTreeMap;
 use std::str::FromStr;
 use std::sync::Arc;
+use crate::api::adapter::MockServerAdapter;
 
 /// Represents the primary interface to the mock server.
 ///
@@ -77,20 +78,17 @@ use std::sync::Arc;
 pub struct Mock  {
     id: Option<usize>,
     mock: MockDefinition,
-    server_adapter: Arc<MockServerAdapter>,
-    local_state: Option<Arc<MockServerState>>,
+    server_adapter: Arc<dyn MockServerAdapter>
 }
 
 impl Mock {
     /// Creates a new mock that automatically returns HTTP status code 200 if hit by an HTTP call.
     pub(crate) fn new(
-        server_adapter: Arc<MockServerAdapter>,
-        local_state: Option<Arc<MockServerState>>,
+        server_adapter: Arc<dyn MockServerAdapter>
     ) -> Self {
         Mock {
             id: None,
             server_adapter,
-            local_state,
             mock: MockDefinition {
                 request: RequestRequirements {
                     method: None,
@@ -444,17 +442,11 @@ impl Mock {
     /// This method will panic if your test method was not marked using the the
     /// `httpmock::with_mock_server` annotation.
     pub fn create(mut self) -> Self {
-        if let Some(state) = self.local_state.borrow_mut() {
-            let id =
-                add_new_mock(state, self.mock.clone()).expect("Cannot add mock to local state");
-            self.id = Some(id)
-        } else {
-            let response = self
-                .server_adapter
-                .create_mock(&self.mock)
-                .expect("Cannot deserialize mock server response");
-            self.id = Some(response.mock_id);
-        }
+        let response = self
+            .server_adapter
+            .create_mock(&self.mock)
+            .expect("Cannot deserialize mock server response");
+        self.id = Some(response.mock_id);
         self
     }
 
@@ -483,8 +475,8 @@ impl Mock {
 
     /// Returns the host of the mock server this mock is using. By default this is localhost if
     /// not set otherwise by the environment variable HTTPMOCK_HOST.
-    pub fn server_host(&self) -> &str {
-        self.server_adapter.server_host()
+    pub fn server_host(&self) -> String {
+        self.server_adapter.server_host().to_string()
     }
 
     /// Returns the address of the mock server this mock is using. By default this is

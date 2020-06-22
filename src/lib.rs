@@ -148,43 +148,47 @@ mod api;
 mod server;
 mod util;
 
-use crate::api::MockServerAdapter;
+use crate::api::{RemoteMockServerAdapter, MockServerAdapter, LocalMockServerAdapter};
 pub use crate::api::{Method, Mock, Regex};
-use crate::server::data::MockServerState;
+use crate::server::data::{MockServerState, MockServerHttpRequest };
 use crate::server::{start_server, HttpMockConfig};
 use crate::util::with_retry;
 use std::net::{SocketAddr, ToSocketAddrs};
 use std::sync::Arc;
+use std::rc::Rc;
+
+pub type MockServerRequest = Rc<MockServerHttpRequest>;
 
 pub struct MockServer {
-    http_adapter: Arc<MockServerAdapter>,
-    local_state: Option<Arc<MockServerState>>,
+    http_adapter: Arc<dyn MockServerAdapter>,
     shutdown_sender: Option<tokio::sync::oneshot::Sender<()>>,
 }
 
+//local_state: Option<Arc<MockServerState>>,
+//         shutdown_sender: Option<tokio::sync::oneshot::Sender<()>>
 impl MockServer {
     fn from_internals(
-        addr: SocketAddr,
-        local_state: Option<Arc<MockServerState>>,
+        server_adapter: Arc<dyn MockServerAdapter>,
         shutdown_sender: Option<tokio::sync::oneshot::Sender<()>>,
     ) -> Self {
-        let http_adapter = MockServerAdapter::new(addr.ip().to_string(), addr.port());
-
         // Reliably make sure the server accepts HTTP requests
+        // TODO: Replace creating a new remote mock server with a dedicated HTTP call for a local server
+        let http_adapter = RemoteMockServerAdapter::new(server_adapter.server_host(), server_adapter.server_port());
         with_retry(20, 500, || http_adapter.delete_all_mocks()).expect(&format!(
-            "No response from mock server at '{}'. Is the server running?",
-            addr
+            "No response from mock server at '{}:{}'. Is the server running?",
+            server_adapter.server_host(),
+            server_adapter.server_host()
         ));
 
         MockServer {
-            http_adapter: Arc::new(http_adapter),
-            local_state,
+            http_adapter: server_adapter,
             shutdown_sender,
         }
     }
 
     pub fn new_remote_with_address(addr: SocketAddr) -> Self {
-        return MockServer::from_internals(addr, None, None);
+        let server_adapter = RemoteMockServerAdapter::new(addr.ip().to_string(), addr.port());
+        return MockServer::from_internals(Arc::new(server_adapter), None);
     }
 
     pub fn new_remote() -> Self {
@@ -206,7 +210,8 @@ impl MockServer {
             .next()
             .expect("Cannot find mock server address in user input");
 
-        return MockServer::from_internals(addr, None, None);
+        let server_adapter = RemoteMockServerAdapter::new(addr.ip().to_string(), addr.port());
+        return MockServer::from_internals(Arc::new(server_adapter), None);
     }
 
     pub fn new() -> Self {
@@ -239,24 +244,25 @@ impl MockServer {
             });
         });
 
-        let server_addr = futures::executor::block_on(socket_addr_receiver)
+        let addr = futures::executor::block_on(socket_addr_receiver)
             .expect("Error waiting for the mock server to start");
 
-        MockServer::from_internals(server_addr, Some(state_clone), Some(shutdown_sender))
+        let server_adapter = LocalMockServerAdapter::new(addr.ip().to_string(), addr.port(), state_clone);
+        MockServer::from_internals(Arc::new(server_adapter), Some(shutdown_sender))
     }
 
     pub fn mock(&self, method: Method, path: &str) -> Mock {
-        Mock::new(self.http_adapter.clone(), self.local_state.clone())
+        Mock::new(self.http_adapter.clone())
             .expect_method(method)
             .expect_path(path)
     }
 
     pub fn port(&self) -> u16 {
-        self.http_adapter.port
+        self.http_adapter.server_port()
     }
 
-    pub fn host(&self) -> &str {
-        &self.http_adapter.host
+    pub fn host(&self) -> String {
+        self.http_adapter.server_host()
     }
 }
 

@@ -119,14 +119,14 @@ fn request_matches(req: Rc<MockServerHttpRequest>, mock: &RequestRequirements) -
 
     if let Some(path) = &mock.path {
         if !&req.path.eq(path) {
-            log::trace!("Request does not match the mock (attribute: path)");
+            log::debug!("Request does not match the mock (attribute: path)");
             return false;
         }
     }
 
     if let Some(path_contains) = &mock.path_contains {
         if !path_contains.iter().all(|pc| req.path.contains(pc)) {
-            log::trace!("Request does not match the mock (attribute: path contains)");
+            log::debug!("Request does not match the mock (attribute: path contains)");
             return false;
         }
     }
@@ -136,21 +136,21 @@ fn request_matches(req: Rc<MockServerHttpRequest>, mock: &RequestRequirements) -
             .iter()
             .all(|pat| pat.regex.is_match(&req.path))
         {
-            log::trace!("Request does not match the mock (attribute: path regex)");
+            log::debug!("Request does not match the mock (attribute: path regex)");
             return false;
         }
     }
 
     if let Some(method) = &mock.method {
         if !&req.method.eq(method) {
-            log::trace!("Request does not match the mock (attribute: request method)");
+            log::debug!("Request does not match the mock (attribute: request method)");
             return false;
         }
     }
 
     if mock.body.is_some() {
         if !match_body_exact(&req, &mock) {
-            log::trace!("Request does not match the mock (attribute: body)");
+            log::debug!("Request does not match the mock (attribute: body)");
             return false;
         }
     }
@@ -162,7 +162,7 @@ fn request_matches(req: Rc<MockServerHttpRequest>, mock: &RequestRequirements) -
         };
 
         if !matches {
-            log::trace!("Request does not match the mock (attribute: body contains)");
+            log::debug!("Request does not match the mock (attribute: body contains)");
             return false;
         }
     }
@@ -174,14 +174,14 @@ fn request_matches(req: Rc<MockServerHttpRequest>, mock: &RequestRequirements) -
         };
 
         if !matches {
-            log::trace!("Request does not match the mock (attribute: body regex)");
+            log::debug!("Request does not match the mock (attribute: body regex)");
             return false;
         }
     }
 
     if let Some(expected_json_body) = &mock.json_body {
         if !match_json(&req.body, expected_json_body, true) {
-            log::trace!("Request does not match the mock (attribute: body)");
+            log::debug!("Request does not match the mock (attribute: body)");
             return false;
         }
     }
@@ -189,7 +189,7 @@ fn request_matches(req: Rc<MockServerHttpRequest>, mock: &RequestRequirements) -
     if let Some(expected_json_includes) = &mock.json_body_includes {
         for expected_include_value in expected_json_includes {
             if !match_json(&req.body, expected_include_value, false) {
-                log::trace!("Request does not match the mock (attribute: body)");
+                log::debug!("Request does not match the mock (attribute: body)");
                 return false;
             }
         }
@@ -204,13 +204,13 @@ fn request_matches(req: Rc<MockServerHttpRequest>, mock: &RequestRequirements) -
         };
 
         if !matches {
-            log::trace!("Request does not match the mock (attribute: header exists)");
+            log::debug!("Request does not match the mock (attribute: header exists)");
             return false;
         }
     }
 
     if !match_headers_exact(&req, &mock) {
-        log::trace!("Request does not match the mock (attribute: headers)");
+        log::debug!("Request does not match the mock (attribute: headers)");
         return false;
     }
 
@@ -223,19 +223,20 @@ fn request_matches(req: Rc<MockServerHttpRequest>, mock: &RequestRequirements) -
         };
 
         if !matches {
-            log::trace!("Request does not match the mock (attribute: query param exists)");
+            log::debug!("Request does not match the mock (attribute: query param exists)");
             return false;
         }
     }
 
     if !match_query_params_exact(&req, &mock) {
-        log::trace!("Request does not match the mock (attribute: query param)");
+        log::debug!("Request does not match the mock (attribute: query param)");
         return false;
     }
 
     if let Some(matchers) = &mock.matchers {
-        for matcher in matchers {
+        for (idx, matcher) in matchers.iter().enumerate() {
             if !matcher(req.clone()) {
+                log::debug!("Request does not match the mock (attribute: custom closure/matcher, index: {})", idx);
                 return false;
             }
         }
@@ -270,10 +271,7 @@ fn match_query_params_exact(req: &MockServerHttpRequest, mock: &RequestRequireme
 /// Matches body
 fn match_body_exact(req: &MockServerHttpRequest, mock: &RequestRequirements) -> bool {
     return match (&req.body, &mock.body) {
-        (Some(rb), Some(mb)) => {
-            log::debug!("{} --> {}", rb, mb);
-            rb.eq(mb)
-        }
+        (Some(rb), Some(mb)) => rb.eq(mb),
         (None, Some(mb)) => mb.is_empty(),
         (Some(rb), None) => rb.is_empty(),
         (None, None) => true,

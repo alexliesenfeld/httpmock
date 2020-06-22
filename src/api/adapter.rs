@@ -1,8 +1,10 @@
-use crate::server::data::{ActiveMock, MockDefinition, MockIdentification};
+use crate::server::data::{ActiveMock, MockDefinition, MockIdentification, MockServerState};
 use hyper::body::Bytes;
 use hyper::{Body, Error, Method as HyperMethod, Request, StatusCode};
 use std::cell::RefCell;
 use std::fmt::Debug;
+use std::sync::Arc;
+use crate::server::handlers::{add_new_mock, read_one, delete_one, delete_all};
 
 thread_local!(
     static TOKIO_RUNTIME: RefCell<tokio::runtime::Runtime> = {
@@ -31,35 +33,47 @@ pub enum Method {
     PATCH,
 }
 
+pub(crate) trait MockServerAdapter {
+    fn server_port(&self) -> u16;
+    fn server_host(&self) -> String;
+    fn server_address(&self) -> String;
+    fn create_mock(&self, mock: &MockDefinition) -> Result<MockIdentification, String>;
+    fn fetch_mock(&self, mock_id: usize) -> Result<ActiveMock, String>;
+    fn delete_mock(&self, mock_id: usize) -> Result<(), String>;
+    fn delete_all_mocks(&self) -> Result<(), String>;
+}
+
 /// This adapter allows to access the servers management functionality.
 ///
 /// You can create an adapter by calling `ServerAdapter::from_env` to create a new instance.
 /// You should never actually need to use this adapter, but you certainly can, if you absolutely
 /// need to.
 #[derive(Debug)]
-pub struct MockServerAdapter {
+pub struct RemoteMockServerAdapter {
     pub(crate) host: String,
     pub(crate) port: u16,
 }
 
-impl MockServerAdapter {
-    pub(crate) fn new(host: String, port: u16) -> MockServerAdapter {
-        MockServerAdapter { host, port }
+impl RemoteMockServerAdapter {
+    pub(crate) fn new(host: String, port: u16) -> RemoteMockServerAdapter {
+        RemoteMockServerAdapter { host, port }
     }
+}
 
-    pub fn server_port(&self) -> u16 {
+impl MockServerAdapter for RemoteMockServerAdapter {
+    fn server_port(&self) -> u16 {
         self.port
     }
 
-    pub fn server_host(&self) -> &str {
-        &self.host
+    fn server_host(&self) -> String {
+        self.host.to_string()
     }
 
-    pub fn server_address(&self) -> String {
+    fn server_address(&self) -> String {
         format!("{}:{}", self.server_host(), self.server_port())
     }
 
-    pub fn create_mock(&self, mock: &MockDefinition) -> Result<MockIdentification, String> {
+    fn create_mock(&self, mock: &MockDefinition) -> Result<MockIdentification, String> {
         // Serialize to JSON
         let json = serde_json::to_string(mock);
         if let Err(err) = json {
@@ -101,7 +115,7 @@ impl MockServerAdapter {
         return Ok(response.unwrap());
     }
 
-    pub fn fetch_mock(&self, mock_id: usize) -> Result<ActiveMock, String> {
+    fn fetch_mock(&self, mock_id: usize) -> Result<ActiveMock, String> {
         // Send the request to the mock server
         let request_url = format!("http://{}/__mocks/{}", &self.server_address(), mock_id);
         let request = Request::builder()
@@ -134,7 +148,7 @@ impl MockServerAdapter {
         return Ok(response.unwrap());
     }
 
-    pub fn delete_mock(&self, mock_id: usize) -> Result<(), String> {
+    fn delete_mock(&self, mock_id: usize) -> Result<(), String> {
         // Send the request to the mock server
         let request_url = format!("http://{}/__mocks/{}", &self.server_address(), mock_id);
         let request = Request::builder()
@@ -160,7 +174,7 @@ impl MockServerAdapter {
         return Ok(());
     }
 
-    pub fn delete_all_mocks(&self) -> Result<(), String> {
+    fn delete_all_mocks(&self) -> Result<(), String> {
         // Send the request to the mock server
         let request_url = format!("http://{}/__mocks", &self.server_address());
         let request = Request::builder()
@@ -184,6 +198,57 @@ impl MockServerAdapter {
             ));
         }
 
+        return Ok(());
+    }
+}
+
+pub struct LocalMockServerAdapter {
+    pub(crate) host: String,
+    pub(crate) port: u16,
+    local_state: Arc<MockServerState>,
+}
+
+impl LocalMockServerAdapter {
+    pub(crate) fn new(host: String, port: u16, local_state: Arc<MockServerState>) -> Self {
+        LocalMockServerAdapter { host, port, local_state }
+    }
+}
+
+impl MockServerAdapter for LocalMockServerAdapter {
+    fn server_port(&self) -> u16 {
+        self.port
+    }
+
+    fn server_host(&self) -> String {
+        self.host.to_string()
+    }
+
+    fn server_address(&self) -> String {
+        format!("{}:{}", self.server_host(), self.server_port())
+    }
+
+    fn create_mock(&self, mock: &MockDefinition) -> Result<MockIdentification, String> {
+        let id = add_new_mock(&self.local_state, mock.clone())?;
+        return Ok(MockIdentification::new(id));
+    }
+
+    fn fetch_mock(&self, mock_id: usize) -> Result<ActiveMock, String> {
+        return match read_one(&self.local_state, mock_id)? {
+            Some(mock) => Ok(mock),
+            None => Err("Cannot find mock".to_string())
+        };
+    }
+
+    fn delete_mock(&self, mock_id: usize) -> Result<(), String> {
+        let deleted = delete_one(&self.local_state, mock_id)?;
+        return match deleted {
+            false => Err("Mock could not deleted".to_string()),
+            true => Ok(())
+        };
+    }
+
+    fn delete_all_mocks(&self) -> Result<(), String> {
+        delete_all(&self.local_state)?;
         return Ok(());
     }
 }
