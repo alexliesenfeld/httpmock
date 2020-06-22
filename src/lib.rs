@@ -160,12 +160,10 @@ use std::rc::Rc;
 pub type MockServerRequest = Rc<MockServerHttpRequest>;
 
 pub struct MockServer {
-    http_adapter: Arc<dyn MockServerAdapter>,
+    server_adapter: Arc<dyn MockServerAdapter>,
     shutdown_sender: Option<tokio::sync::oneshot::Sender<()>>,
 }
 
-//local_state: Option<Arc<MockServerState>>,
-//         shutdown_sender: Option<tokio::sync::oneshot::Sender<()>>
 impl MockServer {
     fn from_internals(
         server_adapter: Arc<dyn MockServerAdapter>,
@@ -181,7 +179,7 @@ impl MockServer {
         ));
 
         MockServer {
-            http_adapter: server_adapter,
+            server_adapter,
             shutdown_sender,
         }
     }
@@ -252,23 +250,22 @@ impl MockServer {
     }
 
     pub fn mock(&self, method: Method, path: &str) -> Mock {
-        Mock::new(self.http_adapter.clone())
+        Mock::new(self.server_adapter.clone())
             .expect_method(method)
             .expect_path(path)
     }
 
     pub fn port(&self) -> u16 {
-        self.http_adapter.server_port()
+        self.server_adapter.server_port()
     }
 
     pub fn host(&self) -> String {
-        self.http_adapter.server_host()
+        self.server_adapter.server_host()
     }
 }
 
 impl Drop for MockServer {
     fn drop(&mut self) {
-        println!("IN DROP!");
         let shutdown_sender = std::mem::replace(&mut self.shutdown_sender, None);
         let shutdown_sender = shutdown_sender.expect("Cannot get shutdown sender.");
         if let Err(e) = shutdown_sender.send(()) {
