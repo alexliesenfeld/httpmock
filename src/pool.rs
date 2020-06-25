@@ -1,5 +1,6 @@
 use std::ptr;
-use std::sync::{Arc, Condvar, Mutex};
+use async_std::sync::{Mutex, Condvar};
+use std::sync::Arc;
 
 #[derive(Debug)]
 struct ItemPoolState<T> {
@@ -30,9 +31,9 @@ impl<T> ItemPool<T> {
         }
     }
 
-    pub fn put_back(&self, item: Arc<T>) {
+    pub async fn put_back(&self, item: Arc<T>) {
         let &(ref lock, ref cvar) = &*self.sync_pair.clone();
-        let mut state = lock.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let mut state = lock.lock().await;
 
         if let Some(idx) = (*state)
             .taken
@@ -47,18 +48,15 @@ impl<T> ItemPool<T> {
         cvar.notify_one();
     }
 
-    pub fn get_or_create_from<F>(&self, create: F) -> Arc<T>
-    where
-        F: FnOnce() -> T,
+    pub async fn get_or_create_from<F>(&self, create: F) -> Arc<T>
+        where
+            F: FnOnce() -> T,
     {
         let &(ref lock, ref cvar) = &*self.sync_pair.clone();
-        let mut state = lock.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let mut state = lock.lock().await;
 
         while (*state).free.len() == 0 && (*state).taken.len() >= self.max {
-            state = match cvar.wait(state) {
-                Err(e) => e.into_inner(),
-                Ok(s) => s,
-            };
+            state = cvar.wait(state).await;
         }
 
         if ((*state).free.len() + (*state).taken.len()) < self.max {

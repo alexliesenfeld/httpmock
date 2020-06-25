@@ -61,3 +61,44 @@ pub fn read_env(name: &str, default: &str) -> String {
         Err(_) => default.to_string(),
     };
 }
+
+
+
+/// Extension trait for efficiently blocking on a future.
+use crossbeam_utils::sync::{Parker, Unparker};
+use futures_util::{pin_mut, task::ArcWake};
+use std::{
+    future::Future,
+    net::{UdpSocket},
+    task::{Context, Poll, Waker},
+};
+
+pub(crate) trait Join: Future {
+    fn join(self) -> <Self as Future>::Output;
+}
+
+impl<F: Future> Join for F {
+    fn join(self) -> <Self as Future>::Output {
+        struct ThreadWaker(Unparker);
+
+        impl ArcWake for ThreadWaker {
+            fn wake_by_ref(arc_self: &Arc<Self>) {
+                arc_self.0.unpark();
+            }
+        }
+
+        let parker = Parker::new();
+        let waker = futures_util::task::waker(Arc::new(ThreadWaker(parker.unparker().clone())));
+        let mut context = Context::from_waker(&waker);
+
+        let future = self;
+        pin_mut!(future);
+
+        loop {
+            match future.as_mut().poll(&mut context) {
+                Poll::Ready(output) => return output,
+                Poll::Pending => parker.park(),
+            }
+        }
+    }
+}

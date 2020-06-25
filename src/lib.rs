@@ -163,12 +163,24 @@ use crate::server::data::{MockServerHttpRequest, MockServerState};
 use crate::server::{start_server, HttpMockConfig};
 use crate::util::{read_env, with_retry, MaxPassLatch};
 use futures::executor::block_on;
+use util::Join;
+
+use crossbeam_utils::sync::{Parker, Unparker};
+use futures_util::{pin_mut, task::ArcWake};
+use std::{
+    future::Future,
+    net::{UdpSocket},
+
+    task::{Context, Poll, Waker},
+};
+
 
 mod api;
 pub mod pool;
 mod server;
 mod util;
 use tokio::task::LocalSet;
+use isahc::prelude::Configurable;
 
 pub type MockServerRequest = Rc<MockServerHttpRequest>;
 
@@ -178,16 +190,17 @@ pub struct MockServer {
 
 impl MockServer {
     fn from(server_adapter: Arc<Arc<dyn MockServerAdapter + Send + Sync>>) -> Self {
-        let client =
-            LOCAL_CLIENT_POOL.get_or_create_from(|| Arc::new(reqwest::blocking::Client::new()));
-        defer::defer(|| LOCAL_CLIENT_POOL.put_back(client.clone()));
+        let client : Arc<Arc<isahc::HttpClient>>= LOCAL_CLIENT_POOL.get_or_create_from(|| {
+            return Arc::new(isahc::HttpClientBuilder::new()
+                .tcp_keepalive(Duration::from_secs(60 * 60 * 24 * 256))
+                .build().expect("Cannot build client"));
+        }).join();
 
         // TODO: No pool but exactly one fixed client per local server
         // TODO: for remote servers, it should be a pool of clients for one remote server
-        client
-           .delete(&format!("http://{}/__mocks", server_adapter.address()))
-            .send()
-            .unwrap();
+        client.delete(&format!("http://{}/__mocks", server_adapter.address()))
+            .expect("Cannot contact HTTP server");
+
         MockServer { server_adapter }
     }
 
@@ -211,7 +224,7 @@ impl MockServer {
     }
 
     pub fn new() -> Self {
-        let adapter = LOCAL_SERVER_POOL.get_or_create_from(LOCAL_SERVER_ADAPTER_GENERATOR);
+        let adapter = LOCAL_SERVER_POOL.get_or_create_from(LOCAL_SERVER_ADAPTER_GENERATOR).join();
         MockServer::from(adapter)
     }
 
@@ -240,7 +253,7 @@ impl MockServer {
 
 impl Drop for MockServer {
     fn drop(&mut self) {
-        LOCAL_SERVER_POOL.put_back(self.server_adapter.clone());
+        LOCAL_SERVER_POOL.put_back(self.server_adapter.clone()).join();
     }
 }
 
@@ -277,10 +290,11 @@ lazy_static! {
             max_servers,
         ));
     };
-    static ref LOCAL_CLIENT_POOL: Arc<ItemPool<Arc<reqwest::blocking::Client>>> = {
+    static ref LOCAL_CLIENT_POOL: Arc<ItemPool<Arc<isahc::HttpClient>>> = {
         let max_clients = read_env("HTTPMOCK_MAX_LOCAL_CLIENTS", "30")
             .parse::<usize>()
             .expect("Cannot parse environment variable HTTPMOCK_MAX_LOCAL_CLIENTS to an integer");
-        return Arc::new(ItemPool::<Arc<reqwest::blocking::Client>>::new(max_clients));
+        return Arc::new(ItemPool::<Arc<isahc::HttpClient>>::new(max_clients));
     };
 }
+
