@@ -118,7 +118,7 @@ fn extract_headers(header_map: &HeaderMap) -> Result<BTreeMap<String, String>, S
 async fn handle_server_request(
     req: HyperRequest<Body>,
     state: Arc<MockServerState>,
-) -> HyperResult<HyperResponse<Body>>  {
+) -> HyperResult<HyperResponse<Body>> {
     let request_header = ServerRequestHeader::from(&req);
 
     if let Err(e) = request_header {
@@ -180,9 +180,12 @@ pub async fn start_server(
     let server = Server::bind(&format!("{}:{}", host, port).parse().unwrap()).serve(new_service);
 
     if let Some(socket_addr_sender) = socket_addr_sender {
-        socket_addr_sender
-            .send(server.local_addr())
-            .expect("Cannot send socket information to the test thread");
+        if let Err(e) = socket_addr_sender.send(server.local_addr()) {
+            return Err(format!(
+                "Cannot send socket information to the test thread: {:?}",
+                e
+            ));
+        }
     }
 
     log::info!("Listening on {}", server.local_addr());
@@ -195,17 +198,12 @@ pub async fn start_server(
             if let Err(e) = graceful.await {
                 return Err(format!("Err: {}", e));
             }
-            log::info!("LIEAVING {}", 1);
-            println!("LIEAVING {}", 1);
             Ok(())
         }
         None => {
             if let Err(e) = server.await {
                 return Err(format!("Err: {}", e));
             }
-
-            log::info!("LIEAVING {}", 2);
-            println!("LIEAVING {}", 2);
             Ok(())
         }
     };

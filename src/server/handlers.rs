@@ -5,9 +5,9 @@ use crate::server::data::{
 use crate::server::util::{StringTreeMapExtension, TreeMapExtension};
 use assert_json_diff::{assert_json_eq_no_panic, assert_json_include_no_panic};
 use serde_json::Value;
+use std::rc::Rc;
 use std::str::FromStr;
 use std::sync::Arc;
-use std::rc::Rc;
 
 /// Contains HTTP methods which cannot have a body.
 const NON_BODY_METHODS: &'static [&str] = &["GET", "HEAD", "DELETE"];
@@ -235,7 +235,7 @@ fn request_matches(req: Rc<MockServerHttpRequest>, mock: &RequestRequirements) -
 
     if let Some(matchers) = &mock.matchers {
         for (idx, matcher) in matchers.iter().enumerate() {
-            if !matcher(req.clone()) {
+            if !(matcher)(req.clone()) {
                 log::debug!("Request does not match the mock (attribute: custom closure/matcher, index: {})", idx);
                 return false;
             }
@@ -624,6 +624,8 @@ mod test {
     /// This test ensures that mock request cannot contain an empty path.
     #[test]
     fn validate_mock_definition_no_path() {
+        // FIXME TODO: Why does this rule exist? If this rule exists, users cannot create mocks that for example only contains "expect_path_matches".
+
         // Arrange
         let req = RequestRequirements::new();
         let res = MockServerHttpResponse::new(418 as u16);

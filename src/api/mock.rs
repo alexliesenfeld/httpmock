@@ -1,14 +1,18 @@
+use crate::api::adapter::MockServerAdapter;
 use crate::api::RemoteMockServerAdapter;
 use crate::api::{Method, Regex};
-use crate::server::data::{MockDefinition, MockServerHttpResponse, MockServerState, Pattern, RequestRequirements, MockMatcherClosure};
+use crate::server::data::{
+    MockDefinition, MockMatcherClosure, MockServerHttpResponse, MockServerState, Pattern,
+    RequestRequirements,
+};
 use crate::server::handlers::add_new_mock;
 use serde::Serialize;
 use serde_json::Value;
 use std::borrow::BorrowMut;
 use std::collections::BTreeMap;
+use std::net::SocketAddr;
 use std::str::FromStr;
 use std::sync::Arc;
-use crate::api::adapter::MockServerAdapter;
 
 /// Represents the primary interface to the mock server.
 ///
@@ -75,17 +79,32 @@ use crate::api::adapter::MockServerAdapter;
 /// ```
 /// Fore more examples, please refer to
 /// [this crates test directory](https://github.com/alexliesenfeld/httpmock/blob/master/tests/integration_tests.rs ).
-pub struct Mock  {
+pub struct Mock {
     id: Option<usize>,
     mock: MockDefinition,
-    server_adapter: Arc<dyn MockServerAdapter>
+    server_adapter: Arc<Arc<dyn MockServerAdapter + Send + Sync>>,
 }
 
+// TODO: Add possibility to limit mock server count (ulimit)
+// TODO: Add matching a mock a few times and then not (countdown). Each mock request counts down 1.
+// Add the following matchers that are able to extract the following info from Content-Type (potentially containing encoding, etc.)
+// TODO: - add Content Type matcher that is able to determine if body is an XML type
+// TODO: - add Content Type matcher that is able to determine if body is an JSON type
+// TODO: - add Content Type matcher that is able to determine if body is an HTML type
+// TODO: - add Content Type matcher that is able to determine if body is an text/plain type
+// TODO: - add Content Type matcher that is able to determine if body is multipart form data ("multipart/form-data")
+// TODO: - add Content Type matcher that is able to determine if body is "application/x-www-form-urlencoded"
+// something like expect_content_type(ContentType::XML)
+// TODO: Add HTTPS support and add matching the scheme
+// TODO: like expect_json_body(struct) but for XML ?
+// Add matchers for the following info:
+// TODO: - CompressionSchemes (gzip)
+// TODO: // MatchHost matches the HTTP host header field of the given request
+// TODO: Return bytes from mock as response body
+// TODO: Expect / return files
 impl Mock {
     /// Creates a new mock that automatically returns HTTP status code 200 if hit by an HTTP call.
-    pub(crate) fn new(
-        server_adapter: Arc<dyn MockServerAdapter>
-    ) -> Self {
+    pub(crate) fn new(server_adapter: Arc<Arc<dyn MockServerAdapter + Send + Sync>>) -> Self {
         Mock {
             id: None,
             server_adapter,
@@ -104,7 +123,7 @@ impl Mock {
                     body_matches: None,
                     query_param_exists: None,
                     query_param: None,
-                    matchers: None
+                    matchers: None,
                 },
                 response: MockServerHttpResponse {
                     status: 200,
@@ -470,20 +489,20 @@ impl Mock {
     /// Returns the port of the mock server this mock is using. By default this is port 5000 if
     /// not set otherwise by the environment variable HTTPMOCK_PORT.
     pub fn server_port(&self) -> u16 {
-        self.server_adapter.server_port()
+        self.server_adapter.address().port()
     }
 
     /// Returns the host of the mock server this mock is using. By default this is localhost if
     /// not set otherwise by the environment variable HTTPMOCK_HOST.
     pub fn server_host(&self) -> String {
-        self.server_adapter.server_host().to_string()
+        self.server_adapter.address().ip().to_string()
     }
 
     /// Returns the address of the mock server this mock is using. By default this is
     /// "localhost:5000" if not set otherwise by the environment variables  HTTPMOCK_HOST and
     /// HTTPMOCK_PORT.
-    pub fn server_address(&self) -> String {
-        self.server_adapter.server_address()
+    pub fn server_address(&self) -> &SocketAddr {
+        self.server_adapter.address()
     }
 
     /// Deletes this mock from the mock server.
@@ -500,7 +519,7 @@ impl Mock {
         }
     }
 
-    pub fn expect(mut self, request_matcher: MockMatcherClosure) -> Self {
+    pub fn expect_match(mut self, request_matcher: MockMatcherClosure) -> Self {
         if self.mock.request.matchers.is_none() {
             self.mock.request.matchers = Some(Vec::new());
         }

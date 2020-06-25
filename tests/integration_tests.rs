@@ -5,8 +5,8 @@ use httpmock::{MockServer, Regex, MockServerRequest};
 use std::io::Read;
 
 /// This test asserts that mocks can be stored, served and deleted as designed.
-#[test]
-fn simple_test() {
+#[async_std::test]
+async fn simple_test() {
     let _ = env_logger::try_init();
     let mock_server = MockServer::new();
 
@@ -27,17 +27,16 @@ fn simple_test() {
 }
 
 /// Ensures that once explicitly deleting a mock, it will not be delivered by the server anymore.
-#[test]
-fn explicit_delete_test() {
+#[tokio::test]
+async fn explicit_delete_test() {
     let _ = env_logger::try_init();
     let mock_server = MockServer::new();
 
     let mut m = mock_server.mock(GET, "/health").return_status(205).create();
 
-    let response = reqwest::blocking::Client::new()
+    let response = reqwest::Client::new()
         .get(&format!("http://localhost:{}/health", mock_server.port()))
-        .send()
-        .unwrap();
+        .send().await.unwrap();
 
     assert_eq!(response.status(), 205);
     assert_eq!(m.times_called(), 1);
@@ -45,13 +44,13 @@ fn explicit_delete_test() {
     m.delete();
 
     let response =
-        reqwest::blocking::get(&format!("http://localhost:{}/health", mock_server.port())).unwrap();
+        reqwest::get(&format!("http://localhost:{}/health", mock_server.port())).await.unwrap();
     assert_eq!(response.status(), 500);
 }
 
 /// Tests and demonstrates body matching.
-#[test]
-fn exact_body_match_test() {
+#[async_std::test]
+async fn exact_body_match_test() {
     let _ = env_logger::try_init();
     let mock_server = MockServer::new();
 
@@ -101,8 +100,8 @@ fn exact_body_match_test() {
 }
 
 /// Tests and demonstrates matching features.
-#[test]
-fn matching_features_test() {
+#[async_std::test]
+async fn matching_features_test() {
     let _ = env_logger::try_init();
     let mock_server = MockServer::new();
 
@@ -123,7 +122,7 @@ fn matching_features_test() {
         .expect_body_contains("number")
         .expect_body_matches(Regex::new(r#"(\d+)"#).unwrap())
         .expect_json_body(&TransferItem { number: 5 })
-        .expect(|req: MockServerRequest| req.path.contains("ess"))
+        //.expect(|req: MockServerRequest| req.path.contains("ess"))
         .return_status(200)
         .create();
 
@@ -143,8 +142,8 @@ fn matching_features_test() {
 }
 
 /// Tests and demonstrates matching JSON body partials.
-#[test]
-fn body_partial_json_str_test() {
+#[tokio::test]
+async fn body_partial_json_str_test() {
     let _ = env_logger::try_init();
     let mock_server = MockServer::new();
 
@@ -177,7 +176,7 @@ fn body_partial_json_str_test() {
         .create();
 
     // Simulates application that makes the request to the mock.
-    let client = reqwest::blocking::Client::new();
+    let client = reqwest::Client::new();
     let response = client
         .post(&format!("http://{}/users", m.server_address()))
         .json(&ParentStructure {
@@ -186,8 +185,7 @@ fn body_partial_json_str_test() {
             },
             some_other_value: "Flintstone".to_string(),
         })
-        .send()
-        .expect("request failed");
+        .send().await.unwrap();
 
     // Assertions
     assert_eq!(response.status(), 201);
@@ -195,8 +193,8 @@ fn body_partial_json_str_test() {
 }
 
 /// This test asserts that mocks can be stored, served and deleted as designed.
-#[test]
-fn multiple_servers_test() {
+#[tokio::test]
+async fn multiple_servers_test() {
     let _ = env_logger::try_init();
     let mock_server = httpmock::MockServer::new();
 
@@ -206,12 +204,54 @@ fn multiple_servers_test() {
         .return_status(204)
         .create();
 
-    let response = reqwest::blocking::get(&format!(
+    let response = reqwest::get(&format!(
         "http://{}/search?query=metallica",
         search_mock.server_address()
-    ))
-    .unwrap();
+    )).await.unwrap();
 
     assert_eq!(response.status(), 204);
     assert_eq!(search_mock.times_called(), 1);
+}
+
+
+/// Tests and demonstrates matching features.
+#[async_std::test]
+async fn matching_features_test2() {
+    let _ = env_logger::try_init();
+    let mock_server = MockServer::new();
+
+    #[derive(serde::Serialize, serde::Deserialize)]
+    struct TransferItem {
+        number: usize,
+    }
+
+    let m = mock_server
+        .mock(POST, "/test")
+        .expect_path_contains("test")
+        .expect_query_param("myQueryParam", "überschall")
+        .expect_query_param_exists("myQueryParam")
+        .expect_path_matches(Regex::new(r#"test"#).unwrap())
+        .expect_header("Content-Type", "application/json")
+        .expect_header_exists("User-Agent")
+        .expect_body("{\"number\":5}")
+        .expect_body_contains("number")
+        .expect_body_matches(Regex::new(r#"(\d+)"#).unwrap())
+        .expect_json_body(&TransferItem { number: 5 })
+        //.expect(|req: MockServerRequest| req.path.contains("ess"))
+        .return_status(200)
+        .create();
+
+    let response = reqwest::blocking::Client::new()
+        .post(&format!(
+            "http://localhost:{}/test?myQueryParam=%C3%BCberschall",
+            mock_server.port()
+        ))
+        .header("Content-Type", "application/json")
+        .header("User-Agent", "rust-test")
+        .json(&TransferItem { number: 5 })
+        .send()
+        .expect("error sending request to mock server");
+
+    assert_eq!(response.status(), 200);
+    assert_eq!(m.times_called(), 1);
 }
