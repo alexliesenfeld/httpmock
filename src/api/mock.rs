@@ -82,7 +82,7 @@ use std::sync::Arc;
 pub struct Mock {
     id: Option<usize>,
     mock: MockDefinition,
-    server_adapter: Arc<Arc<dyn MockServerAdapter + Send + Sync>>,
+    server_adapter: Arc<dyn MockServerAdapter + Send + Sync>,
 }
 
 // TODO: Add possibility to limit mock server count (ulimit)
@@ -104,7 +104,7 @@ pub struct Mock {
 // TODO: Expect / return files
 impl Mock {
     /// Creates a new mock that automatically returns HTTP status code 200 if hit by an HTTP call.
-    pub(crate) fn new(server_adapter: Arc<Arc<dyn MockServerAdapter + Send + Sync>>) -> Self {
+    pub(crate) fn new(server_adapter: Arc<dyn MockServerAdapter + Send + Sync>) -> Self {
         Mock {
             id: None,
             server_adapter,
