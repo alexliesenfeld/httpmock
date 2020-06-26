@@ -1,6 +1,5 @@
 use std::ptr;
-use async_std::sync::{Mutex, Condvar};
-use std::sync::Arc;
+use async_std::sync::{Arc, Mutex, Condvar};
 
 #[derive(Debug)]
 struct ItemPoolState<T> {
@@ -49,8 +48,8 @@ impl<T> ItemPool<T> {
     }
 
     pub async fn get_or_create_from<F>(&self, create: F) -> Arc<T>
-        where
-            F: FnOnce() -> T,
+    where
+        F: FnOnce() -> T,
     {
         let &(ref lock, ref cvar) = &*self.sync_pair.clone();
         let mut state = lock.lock().await;

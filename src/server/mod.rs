@@ -30,15 +30,13 @@ type GenericError = Box<dyn std::error::Error + Send + Sync>;
 #[derive(Debug)]
 pub struct HttpMockConfig {
     pub port: u16,
-    pub workers: usize,
     pub expose: bool,
 }
 
 impl HttpMockConfig {
-    pub fn new(port: u16, workers: usize, expose: bool) -> Self {
+    pub fn new(port: u16, expose: bool) -> Self {
         Self {
             port,
-            workers,
             expose,
         }
     }
@@ -250,6 +248,13 @@ fn route_request(
 ) -> Result<ServerResponse, String> {
     log::trace!("Routing incoming request: {:?}", request_header);
 
+    if PING_PATH.is_match(&request_header.path) {
+        match request_header.method.as_str() {
+            "GET" => return routes::ping(),
+            _ => {}
+        }
+    }
+
     if MOCKS_PATH.is_match(&request_header.path) {
         match request_header.method.as_str() {
             "POST" => return routes::add(state, body),
@@ -313,6 +318,7 @@ fn error_response(body: String) -> HyperResponse<Body> {
 }
 
 lazy_static! {
+    static ref PING_PATH: Regex = Regex::new(r"/__ping$").unwrap();
     static ref MOCK_PATH: Regex = Regex::new(r"/__mocks/([0-9]+)$").unwrap();
     static ref MOCKS_PATH: Regex = Regex::new(r"/__mocks$").unwrap();
 }

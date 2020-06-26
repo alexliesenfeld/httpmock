@@ -1,13 +1,20 @@
+use crate::asynchronous::InternalHttpClient;
 use crate::server::data::{ActiveMock, MockDefinition, MockIdentification, MockServerState};
 use crate::server::handlers::{add_new_mock, delete_all, delete_one, read_one};
+use async_trait::async_trait;
 use hyper::body::Bytes;
 use hyper::client::connect::dns::GaiResolver;
 use hyper::client::HttpConnector;
 use hyper::{Body, Client, Error, Method as HyperMethod, Request, StatusCode};
+use isahc::prelude::Configurable;
+use isahc::ResponseFuture;
+use std::borrow::Borrow;
 use std::cell::RefCell;
 use std::fmt::Debug;
+use std::future::Future;
 use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 /// Refer to [regex::Regex](../regex/struct.Regex.html).
 pub type Regex = regex::Regex;
@@ -26,6 +33,7 @@ pub enum Method {
     PATCH,
 }
 
+#[async_trait]
 pub(crate) trait MockServerAdapter {
     fn host(&self) -> String;
     fn port(&self) -> u16;
@@ -34,6 +42,7 @@ pub(crate) trait MockServerAdapter {
     fn fetch_mock(&self, mock_id: usize) -> Result<ActiveMock, String>;
     fn delete_mock(&self, mock_id: usize) -> Result<(), String>;
     fn delete_all_mocks(&self) -> Result<(), String>;
+    async fn ping(&self) -> Result<(), String>;
 }
 
 /// This adapter allows to access the servers management functionality.
@@ -45,15 +54,30 @@ pub(crate) trait MockServerAdapter {
 pub struct RemoteMockServerAdapter {
     pub(crate) addr: SocketAddr,
     pub(crate) client: Arc<reqwest::blocking::Client>,
+    new_client: Arc<InternalHttpClient>,
 }
 
 impl RemoteMockServerAdapter {
     pub(crate) fn new(addr: SocketAddr) -> Self {
         let client = Arc::new(reqwest::blocking::Client::new());
-        Self { addr, client }
+        let new_client = build_client();
+        Self {
+            addr,
+            client,
+            new_client,
+        }
     }
 }
 
+fn build_client() -> Arc<InternalHttpClient> {
+    return Arc::new(
+        InternalHttpClient::builder()
+            .tcp_keepalive(Duration::from_secs(60 * 60 * 24))
+            .build()
+            .expect("Cannot build HTTP client"),
+    );
+}
+#[async_trait]
 impl MockServerAdapter for RemoteMockServerAdapter {
     fn host(&self) -> String {
         self.addr.ip().to_string()
@@ -194,19 +218,30 @@ impl MockServerAdapter for RemoteMockServerAdapter {
 
         return Ok(());
     }
+
+    async fn ping(&self) -> Result<(), String> {
+        http_ping(&self.addr, self.new_client.borrow()).await
+    }
 }
 
 pub struct LocalMockServerAdapter {
     pub(crate) addr: SocketAddr,
     local_state: Arc<MockServerState>,
+    client: Arc<InternalHttpClient>,
 }
 
 impl LocalMockServerAdapter {
     pub(crate) fn new(addr: SocketAddr, local_state: Arc<MockServerState>) -> Self {
-        LocalMockServerAdapter { addr, local_state }
+        let client = build_client();
+        LocalMockServerAdapter {
+            addr,
+            local_state,
+            client,
+        }
     }
 }
 
+#[async_trait]
 impl MockServerAdapter for LocalMockServerAdapter {
     fn host(&self) -> String {
         self.addr.ip().to_string()
@@ -244,6 +279,10 @@ impl MockServerAdapter for LocalMockServerAdapter {
         delete_all(&self.local_state)?;
         return Ok(());
     }
+
+    async fn ping(&self) -> Result<(), String> {
+        http_ping(&self.addr, self.client.borrow()).await
+    }
 }
 
 /// Enables enum to_string conversion
@@ -251,6 +290,27 @@ impl std::fmt::Display for Method {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         std::fmt::Debug::fmt(self, f)
     }
+}
+
+async fn http_ping(
+    server_addr: &SocketAddr,
+    http_client: &InternalHttpClient,
+) -> Result<(), String> {
+    let request_url = format!("http://{}/__ping", server_addr);
+
+    let status = match http_client.get_async(request_url).await {
+        Err(err) => return Err(format!("Cannot send request to mock server: {}", err)),
+        Ok(response) => response.status(),
+    };
+
+    if status.as_u16() != 200 {
+        return Err(format!(
+            "Could not create mock. Mock server response: status = {}",
+            status
+        ));
+    }
+
+    return Ok(());
 }
 
 /// Executes an HTTP request synchronously

@@ -22,39 +22,6 @@ pub struct MaxPassLatch {
     max: usize,
 }
 
-impl MaxPassLatch {
-    pub fn new(max: usize) -> MaxPassLatch {
-        MaxPassLatch {
-            pair: Arc::new((Arc::new(Mutex::new(0)), Condvar::new())),
-            max,
-        }
-    }
-
-    pub fn leave(&self) {
-        let &(ref lock, ref cvar) = &*self.pair.clone();
-        let mut started = lock.lock().unwrap();
-        if *started > 0 {
-            *started -= 1;
-        }
-        cvar.notify_one();
-    }
-
-    pub fn enter(&self) {
-        let &(ref lock, ref cvar) = &*self.pair.clone();
-        let mut started = lock.lock().unwrap();
-        while *started >= self.max {
-            let result = cvar.wait(started);
-
-            if result.is_err() {
-                started = result.err().unwrap().into_inner();
-            } else {
-                started = result.unwrap();
-            }
-        }
-        *started += 1;
-    }
-}
-
 pub fn read_env(name: &str, default: &str) -> String {
     return match std::env::var(name) {
         Ok(value) => value,
@@ -62,14 +29,12 @@ pub fn read_env(name: &str, default: &str) -> String {
     };
 }
 
-
-
 /// Extension trait for efficiently blocking on a future.
 use crossbeam_utils::sync::{Parker, Unparker};
 use futures_util::{pin_mut, task::ArcWake};
 use std::{
     future::Future,
-    net::{UdpSocket},
+    net::UdpSocket,
     task::{Context, Poll, Waker},
 };
 

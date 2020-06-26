@@ -1,7 +1,7 @@
 extern crate httpmock;
 
 use httpmock::Method::{GET, POST};
-use httpmock::{MockServer, Regex, MockServerRequest};
+use httpmock::{MockServer, MockServerRequest, Regex};
 use std::io::Read;
 
 /// This test asserts that mocks can be stored, served and deleted as designed.
@@ -36,15 +36,18 @@ async fn explicit_delete_test() {
 
     let response = reqwest::Client::new()
         .get(&format!("http://localhost:{}/health", mock_server.port()))
-        .send().await.unwrap();
+        .send()
+        .await
+        .unwrap();
 
     assert_eq!(response.status(), 205);
     assert_eq!(m.times_called(), 1);
 
     m.delete();
 
-    let response =
-        reqwest::get(&format!("http://localhost:{}/health", mock_server.port())).await.unwrap();
+    let response = reqwest::get(&format!("http://localhost:{}/health", mock_server.port()))
+        .await
+        .unwrap();
     assert_eq!(response.status(), 500);
 }
 
@@ -185,7 +188,9 @@ async fn body_partial_json_str_test() {
             },
             some_other_value: "Flintstone".to_string(),
         })
-        .send().await.unwrap();
+        .send()
+        .await
+        .unwrap();
 
     // Assertions
     assert_eq!(response.status(), 201);
@@ -207,12 +212,13 @@ async fn multiple_servers_test() {
     let response = reqwest::get(&format!(
         "http://{}/search?query=metallica",
         search_mock.server_address()
-    )).await.unwrap();
+    ))
+    .await
+    .unwrap();
 
     assert_eq!(response.status(), 204);
     assert_eq!(search_mock.times_called(), 1);
 }
-
 
 /// Tests and demonstrates matching features.
 #[async_std::test]
@@ -254,4 +260,236 @@ async fn matching_features_test2() {
 
     assert_eq!(response.status(), 200);
     assert_eq!(m.times_called(), 1);
+}
+
+/// This test asserts that mocks can be stored, served and deleted as designed.
+#[async_std::test]
+async fn simple_testwrewerwer() {
+    let _ = env_logger::try_init();
+    let mock_server = MockServer::new();
+
+    let search_mock = mock_server
+        .mock(GET, "/search")
+        .expect_query_param("query", "metallica")
+        .return_status(204)
+        .create();
+
+    let response = reqwest::blocking::get(&format!(
+        "http://localhost:{}/search?query=metallica",
+        search_mock.server_port()
+    ))
+    .unwrap();
+
+    assert_eq!(response.status(), 204);
+    assert_eq!(search_mock.times_called(), 1);
+}
+/// This test asserts that mocks can be stored, served and deleted as designed.
+#[test]
+fn simple_testtzuztu() {
+    let _ = env_logger::try_init();
+    let mock_server = MockServer::new();
+
+    let search_mock = mock_server
+        .mock(GET, "/search")
+        .expect_query_param("query", "metallica")
+        .return_status(204)
+        .create();
+
+    let response = reqwest::blocking::get(&format!(
+        "http://localhost:{}/search?query=metallica",
+        search_mock.server_port()
+    ))
+    .unwrap();
+
+    assert_eq!(response.status(), 204);
+    assert_eq!(search_mock.times_called(), 1);
+}
+/// This test asserts that mocks can be stored, served and deleted as designed.
+#[async_std::test]
+async fn simple_testghjghj() {
+    let _ = env_logger::try_init();
+    let mock_server = MockServer::new();
+
+    let search_mock = mock_server
+        .mock(GET, "/search")
+        .expect_query_param("query", "metallica")
+        .return_status(204)
+        .create();
+
+    let response = reqwest::blocking::get(&format!(
+        "http://localhost:{}/search?query=metallica",
+        search_mock.server_port()
+    ))
+    .unwrap();
+
+    assert_eq!(response.status(), 204);
+    assert_eq!(search_mock.times_called(), 1);
+}
+/// This test asserts that mocks can be stored, served and deleted as designed.
+#[async_std::test]
+async fn simple_testcvbcvb() {
+    let _ = env_logger::try_init();
+    let mock_server = MockServer::new();
+
+    let search_mock = mock_server
+        .mock(GET, "/search")
+        .expect_query_param("query", "metallica")
+        .return_status(204)
+        .create();
+
+    let response = reqwest::blocking::get(&format!(
+        "http://localhost:{}/search?query=metallica",
+        search_mock.server_port()
+    ))
+    .unwrap();
+
+    assert_eq!(response.status(), 204);
+    assert_eq!(search_mock.times_called(), 1);
+}
+/// This test asserts that mocks can be stored, served and deleted as designed.
+#[async_std::test]
+async fn simple_testcvbcbnvb() {
+    let _ = env_logger::try_init();
+    let mock_server = MockServer::new();
+
+    let search_mock = mock_server
+        .mock(GET, "/search")
+        .expect_query_param("query", "metallica")
+        .return_status(204)
+        .create();
+
+    let response = reqwest::blocking::get(&format!(
+        "http://localhost:{}/search?query=metallica",
+        search_mock.server_port()
+    ))
+    .unwrap();
+
+    assert_eq!(response.status(), 204);
+    assert_eq!(search_mock.times_called(), 1);
+}
+/// This test asserts that mocks can be stored, served and deleted as designed.
+#[async_std::test]
+async fn simple_testxcvxcv() {
+    let _ = env_logger::try_init();
+    let mock_server = MockServer::new();
+
+    let search_mock = mock_server
+        .mock(GET, "/search")
+        .expect_query_param("query", "metallica")
+        .return_status(204)
+        .create();
+
+    let response = reqwest::blocking::get(&format!(
+        "http://localhost:{}/search?query=metallica",
+        search_mock.server_port()
+    ))
+    .unwrap();
+
+    assert_eq!(response.status(), 204);
+    assert_eq!(search_mock.times_called(), 1);
+}
+/// This test asserts that mocks can be stored, served and deleted as designed.
+#[async_std::test]
+async fn simple_tesxcvxcvwerwert() {
+    let _ = env_logger::try_init();
+    let mock_server = MockServer::new();
+
+    let search_mock = mock_server
+        .mock(GET, "/search")
+        .expect_query_param("query", "metallica")
+        .return_status(204)
+        .create();
+
+    let response = reqwest::blocking::get(&format!(
+        "http://localhost:{}/search?query=metallica",
+        search_mock.server_port()
+    ))
+    .unwrap();
+
+    assert_eq!(response.status(), 204);
+    assert_eq!(search_mock.times_called(), 1);
+}
+/// This test asserts that mocks can be stored, served and deleted as designed.
+#[async_std::test]
+async fn simple_tesxcvxcvt() {
+    let _ = env_logger::try_init();
+    let mock_server = MockServer::new();
+
+    let search_mock = mock_server
+        .mock(GET, "/search")
+        .expect_query_param("query", "metallica")
+        .return_status(204)
+        .create();
+
+    let response = reqwest::blocking::get(&format!(
+        "http://localhost:{}/search?query=metallica",
+        search_mock.server_port()
+    ))
+    .unwrap();
+
+    assert_eq!(response.status(), 204);
+    assert_eq!(search_mock.times_called(), 1);
+}
+/// This test asserts that mocks can be stored, served and deleted as designed.
+#[async_std::test]
+async fn simple_testxyvcxv() {
+    let _ = env_logger::try_init();
+    let mock_server = MockServer::new();
+
+    let search_mock = mock_server
+        .mock(GET, "/search")
+        .expect_query_param("query", "metallica")
+        .return_status(204)
+        .create();
+
+    let response = reqwest::blocking::get(&format!(
+        "http://localhost:{}/search?query=metallica",
+        search_mock.server_port()
+    ))
+    .unwrap();
+
+    assert_eq!(response.status(), 204);
+    assert_eq!(search_mock.times_called(), 1);
+}
+/// This test asserts that mocks can be stored, served and deleted as designed.
+#[async_std::test]
+async fn simple_testyxc() {
+    let _ = env_logger::try_init();
+    let mock_server = MockServer::new();
+
+    let search_mock = mock_server
+        .mock(GET, "/search")
+        .expect_query_param("query", "metallica")
+        .return_status(204)
+        .create();
+
+    let response = reqwest::blocking::get(&format!(
+        "http://localhost:{}/search?query=metallica",
+        search_mock.server_port()
+    ))
+    .unwrap();
+
+    assert_eq!(response.status(), 204);
+    assert_eq!(search_mock.times_called(), 1);
+}
+/// This test asserts that mocks can be stored, served and deleted as designed.
+#[async_std::test]
+async fn simple_test11() {
+    let _ = env_logger::try_init();
+    let mock_server = MockServer::new();
+
+    let search_mock = mock_server
+        .mock(GET, "/search")
+        .expect_query_param("query", "metallica")
+        .return_status(204)
+        .create();
+
+    let response = reqwest::blocking::get(&format!(
+        "http://localhost:{}/search?query=metallica",
+        search_mock.server_port()
+    ))
+    .unwrap();
+
+    assert_eq!(response.status(), 204);
+    assert_eq!(search_mock.times_called(), 1);
 }

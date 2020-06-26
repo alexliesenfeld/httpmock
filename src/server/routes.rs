@@ -7,6 +7,11 @@ use serde::Serialize;
 use std::collections::BTreeMap;
 
 /// This route is responsible for adding a new mock
+pub(crate) fn ping() -> Result<ServerResponse, String> {
+    return create_response(200, None, None);
+}
+
+/// This route is responsible for adding a new mock
 pub(crate) fn add(state: &MockServerState, body: String) -> Result<ServerResponse, String> {
     let mock_def: serde_json::Result<MockDefinition> = serde_json::from_str(&body);
     if let Err(e) = mock_def {
