@@ -174,57 +174,116 @@ use std::{
 };
 
 mod api;
-pub mod asynchronous;
-pub mod pool;
 mod server;
 mod util;
-mod new_pool;
+mod pool;
 
 use isahc::prelude::Configurable;
 use tokio::task::LocalSet;
+use crate::pool::Pool;
 
 pub type MockServerRequest = Rc<MockServerHttpRequest>;
 
+// TODO: Move this to another place (it does belong to a place where it is actually used)
+pub(crate) type InternalHttpClient = isahc::HttpClient;
+
 pub struct MockServer {
-    async_server: asynchronous::MockServer,
+    server_adapter: Option<Arc<dyn MockServerAdapter + Send + Sync>>,
 }
 
 impl MockServer {
-    pub fn new_remote_from_address(addr: SocketAddr) -> Self {
-        Self {
-            async_server: asynchronous::MockServer::new_remote_from_address(addr).join(),
-        }
+    async fn from(server_adapter: Arc<dyn MockServerAdapter + Send + Sync>) -> Self {
+        // TODO: use with_retry
+        server_adapter
+            .ping()
+            .await
+            .expect("Cannot ping mock server.");
+        // TODO: use with_retry
+        server_adapter
+            .delete_all_mocks()
+            .expect("Cannot reset mock server.");
+        Self { server_adapter: Some(server_adapter) }
     }
 
-    pub fn new_remote() -> Self {
-        Self {
-            async_server: asynchronous::MockServer::new_remote().join(),
-        }
+    pub async fn connect_async(addr: SocketAddr) -> Self {
+        return Self::from(Arc::new(RemoteMockServerAdapter::new(addr))).await;
     }
 
-    pub fn new() -> Self {
-        Self {
-            async_server: asynchronous::MockServer::new().join(),
-        }
+    pub fn connect(addr: SocketAddr) -> Self {
+        return Self::connect_async(addr).join();
+    }
+
+    pub async fn start_async() -> Self {
+        let adapter = LOCAL_SERVER_POOL.take(LOCAL_SERVER_ADAPTER_GENERATOR).await;
+        Self::from(adapter).await
+    }
+
+    pub fn start() -> Self {
+        Self::start_async().join()
     }
 
     pub fn new_mock(&self) -> Mock {
-        self.async_server.new_mock()
+        Mock::new(self.server_adapter.clone().unwrap())
     }
 
     pub fn mock(&self, method: Method, path: &str) -> Mock {
-        self.async_server.mock(method, path)
+        Mock::new(self.server_adapter.clone().unwrap())
+            .expect_method(method)
+            .expect_path(path)
     }
 
     pub fn host(&self) -> String {
-        self.async_server.host()
+        self.server_adapter.as_ref().unwrap().host()
     }
 
     pub fn port(&self) -> u16 {
-        self.async_server.port()
+        self.server_adapter.as_ref().unwrap().port()
     }
 
     pub fn address(&self) -> &SocketAddr {
-        self.async_server.address()
+        self.server_adapter.as_ref().unwrap().address()
     }
+}
+
+impl Drop for MockServer {
+    fn drop(&mut self) {
+        let adapter = self.server_adapter.take().unwrap();
+        LOCAL_SERVER_POOL.put(adapter).join();
+    }
+}
+
+const LOCAL_SERVER_ADAPTER_GENERATOR: fn() -> Arc<dyn MockServerAdapter + Send + Sync> = || {
+    let (addr_sender, addr_receiver) = tokio::sync::oneshot::channel::<SocketAddr>();
+    let state = Arc::new(MockServerState::new());
+    let server_state = state.clone();
+
+    // TODO: Consider running inside an async runtime if one exists
+    thread::spawn(move || {
+        let config = HttpMockConfig::new(0, false);
+        let server_state = server_state.clone();
+
+        let srv = start_server(config, &server_state, None, Some(addr_sender));
+
+        let mut runtime = tokio::runtime::Builder::new()
+            .enable_all()
+            .basic_scheduler()
+            .build()
+            .expect("Cannot build local tokio runtime");
+
+        return LocalSet::new().block_on(&mut runtime, srv);
+    });
+
+    // TODO: replace this join by await
+    let addr = addr_receiver.join().expect("Cannot get server address");
+    return Arc::new(LocalMockServerAdapter::new(addr, state));
+
+};
+
+lazy_static! {
+    static ref LOCAL_SERVER_POOL: Arc<Pool<Arc<dyn MockServerAdapter + Send + Sync>>> = {
+        let max_servers = read_env("HTTPMOCK_MAX_SERVERS", "1")
+            .parse::<usize>()
+            .expect("Cannot parse environment variable HTTPMOCK_MAX_SERVERS to an integer");
+        return Arc::new(Pool::new(max_servers));
+    };
 }

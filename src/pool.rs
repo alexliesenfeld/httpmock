@@ -1,70 +1,45 @@
 use std::ptr;
-use async_std::sync::{Arc, Mutex, Condvar};
+use std::sync::Arc;
+
+use async_std::sync::{Condvar, Mutex};
 
 #[derive(Debug)]
-struct ItemPoolState<T> {
-    pub free: Vec<Arc<T>>,
-    pub taken: Vec<Arc<T>>,
-}
-
-impl<T> ItemPoolState<T> {
-    fn new() -> Self {
-        Self {
-            taken: Vec::new(),
-            free: Vec::new(),
-        }
-    }
-}
-
-#[derive(Debug)]
-pub struct ItemPool<T> {
-    sync_pair: Arc<(Arc<Mutex<ItemPoolState<T>>>, Condvar)>,
+pub struct Pool<T> {
+    sync_tuple: Mutex<(Vec<T>, usize)>,
+    cvar: Condvar,
     max: usize,
 }
 
-impl<T> ItemPool<T> {
-    pub fn new(max: usize) -> ItemPool<T> {
-        ItemPool {
-            sync_pair: Arc::new((Arc::new(Mutex::new(ItemPoolState::new())), Condvar::new())),
+impl<T> Pool<T> {
+    pub fn new(max: usize) -> Self {
+        Self {
+            sync_tuple: Mutex::new((Vec::new(), 0)),
+            cvar: Condvar::new(),
             max,
         }
     }
 
-    pub async fn put_back(&self, item: Arc<T>) {
-        let &(ref lock, ref cvar) = &*self.sync_pair.clone();
-        let mut state = lock.lock().await;
-
-        if let Some(idx) = (*state)
-            .taken
-            .iter()
-            .position(|e| ptr::eq(e.as_ref(), item.as_ref()))
-        {
-            (*state).taken.remove(idx);
-        }
-
-        (*state).free.push(item);
-
-        cvar.notify_one();
+    pub async fn put(&self, item: T) {
+        let mut lock_guard = (&self.sync_tuple).lock().await;
+        (*lock_guard).0.push(item);
+        self.cvar.notify_one();
     }
 
-    pub async fn get_or_create_from<F>(&self, create: F) -> Arc<T>
-    where
-        F: FnOnce() -> T,
+    pub async fn take<F>(&self, create: F) -> T
+        where
+            F: FnOnce() -> T,
     {
-        let &(ref lock, ref cvar) = &*self.sync_pair.clone();
-        let mut state = lock.lock().await;
+        let mut lock_guard = (&self.sync_tuple).lock().await;
 
-        while (*state).free.len() == 0 && (*state).taken.len() >= self.max {
-            state = cvar.wait(state).await;
+        while (*lock_guard).0.is_empty() && (*lock_guard).1 == self.max {
+            lock_guard = self.cvar.wait(lock_guard).await;
         }
 
-        if ((*state).free.len() + (*state).taken.len()) < self.max {
-            (*state).free.push(Arc::new(create()));
+        if (*lock_guard).1 < self.max {
+            (*lock_guard).0.push(create());
+            (*lock_guard).1 += 1;
         }
 
-        let free = (*state).free.pop().unwrap();
-        (*state).taken.push(free.clone());
-
-        return free;
+        return (*lock_guard).0.remove(0);
     }
 }

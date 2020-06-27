@@ -8,7 +8,7 @@ use std::io::Read;
 #[async_std::test]
 async fn simple_test() {
     let _ = env_logger::try_init();
-    let mock_server = MockServer::new();
+    let mock_server = MockServer::start();
 
     let search_mock = mock_server
         .mock(GET, "/search")
@@ -30,7 +30,7 @@ async fn simple_test() {
 #[tokio::test]
 async fn explicit_delete_test() {
     let _ = env_logger::try_init();
-    let mock_server = MockServer::new();
+    let mock_server = MockServer::start();
 
     let mut m = mock_server.mock(GET, "/health").return_status(205).create();
 
@@ -55,7 +55,7 @@ async fn explicit_delete_test() {
 #[async_std::test]
 async fn exact_body_match_test() {
     let _ = env_logger::try_init();
-    let mock_server = MockServer::new();
+    let mock_server = MockServer::start();
 
     #[derive(serde::Serialize, serde::Deserialize)]
     struct TestUser {
@@ -106,7 +106,7 @@ async fn exact_body_match_test() {
 #[async_std::test]
 async fn matching_features_test() {
     let _ = env_logger::try_init();
-    let mock_server = MockServer::new();
+    let mock_server = MockServer::start();
 
     #[derive(serde::Serialize, serde::Deserialize)]
     struct TransferItem {
@@ -148,7 +148,7 @@ async fn matching_features_test() {
 #[tokio::test]
 async fn body_partial_json_str_test() {
     let _ = env_logger::try_init();
-    let mock_server = MockServer::new();
+    let mock_server = MockServer::start();
 
     // This is the structure that needs to be included in the request
     #[derive(serde::Serialize, serde::Deserialize)]
@@ -201,7 +201,7 @@ async fn body_partial_json_str_test() {
 #[tokio::test]
 async fn multiple_servers_test() {
     let _ = env_logger::try_init();
-    let mock_server = httpmock::MockServer::new();
+    let mock_server = httpmock::MockServer::start();
 
     let search_mock = mock_server
         .mock(GET, "/search")
@@ -224,7 +224,7 @@ async fn multiple_servers_test() {
 #[async_std::test]
 async fn matching_features_test2() {
     let _ = env_logger::try_init();
-    let mock_server = MockServer::new();
+    let mock_server = MockServer::start();
 
     #[derive(serde::Serialize, serde::Deserialize)]
     struct TransferItem {
@@ -266,7 +266,7 @@ async fn matching_features_test2() {
 #[async_std::test]
 async fn simple_testwrewerwer() {
     let _ = env_logger::try_init();
-    let mock_server = MockServer::new();
+    let mock_server = MockServer::start();
 
     let search_mock = mock_server
         .mock(GET, "/search")
@@ -287,7 +287,7 @@ async fn simple_testwrewerwer() {
 #[test]
 fn simple_testtzuztu() {
     let _ = env_logger::try_init();
-    let mock_server = MockServer::new();
+    let mock_server = MockServer::start();
 
     let search_mock = mock_server
         .mock(GET, "/search")
@@ -304,11 +304,12 @@ fn simple_testtzuztu() {
     assert_eq!(response.status(), 204);
     assert_eq!(search_mock.times_called(), 1);
 }
+
 /// This test asserts that mocks can be stored, served and deleted as designed.
 #[async_std::test]
 async fn simple_testghjghj() {
     let _ = env_logger::try_init();
-    let mock_server = MockServer::new();
+    let mock_server = MockServer::start();
 
     let search_mock = mock_server
         .mock(GET, "/search")
@@ -329,7 +330,7 @@ async fn simple_testghjghj() {
 #[async_std::test]
 async fn simple_testcvbcvb() {
     let _ = env_logger::try_init();
-    let mock_server = MockServer::new();
+    let mock_server = MockServer::start();
 
     let search_mock = mock_server
         .mock(GET, "/search")
@@ -350,7 +351,7 @@ async fn simple_testcvbcvb() {
 #[async_std::test]
 async fn simple_testcvbcbnvb() {
     let _ = env_logger::try_init();
-    let mock_server = MockServer::new();
+    let mock_server = MockServer::start();
 
     let search_mock = mock_server
         .mock(GET, "/search")
@@ -371,7 +372,7 @@ async fn simple_testcvbcbnvb() {
 #[async_std::test]
 async fn simple_testxcvxcv() {
     let _ = env_logger::try_init();
-    let mock_server = MockServer::new();
+    let mock_server = MockServer::start();
 
     let search_mock = mock_server
         .mock(GET, "/search")
@@ -392,7 +393,7 @@ async fn simple_testxcvxcv() {
 #[async_std::test]
 async fn simple_tesxcvxcvwerwert() {
     let _ = env_logger::try_init();
-    let mock_server = MockServer::new();
+    let mock_server = MockServer::start();
 
     let search_mock = mock_server
         .mock(GET, "/search")
@@ -413,7 +414,7 @@ async fn simple_tesxcvxcvwerwert() {
 #[async_std::test]
 async fn simple_tesxcvxcvt() {
     let _ = env_logger::try_init();
-    let mock_server = MockServer::new();
+    let mock_server = MockServer::start();
 
     let search_mock = mock_server
         .mock(GET, "/search")
@@ -434,7 +435,7 @@ async fn simple_tesxcvxcvt() {
 #[async_std::test]
 async fn simple_testxyvcxv() {
     let _ = env_logger::try_init();
-    let mock_server = MockServer::new();
+    let mock_server = MockServer::start();
 
     let search_mock = mock_server
         .mock(GET, "/search")
@@ -455,7 +456,7 @@ async fn simple_testxyvcxv() {
 #[async_std::test]
 async fn simple_testyxc() {
     let _ = env_logger::try_init();
-    let mock_server = MockServer::new();
+    let mock_server = MockServer::start();
 
     let search_mock = mock_server
         .mock(GET, "/search")
@@ -476,7 +477,7 @@ async fn simple_testyxc() {
 #[async_std::test]
 async fn simple_test11() {
     let _ = env_logger::try_init();
-    let mock_server = MockServer::new();
+    let mock_server = MockServer::start();
 
     let search_mock = mock_server
         .mock(GET, "/search")

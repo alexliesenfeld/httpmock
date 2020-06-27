@@ -1,4 +1,4 @@
-use crate::asynchronous::InternalHttpClient;
+use crate::InternalHttpClient;
 use crate::server::data::{ActiveMock, MockDefinition, MockIdentification, MockServerState};
 use crate::server::handlers::{add_new_mock, delete_all, delete_one, read_one};
 use async_trait::async_trait;
@@ -60,7 +60,7 @@ pub struct RemoteMockServerAdapter {
 impl RemoteMockServerAdapter {
     pub(crate) fn new(addr: SocketAddr) -> Self {
         let client = Arc::new(reqwest::blocking::Client::new());
-        let new_client = build_client();
+        let new_client = build_http_client();
         Self {
             addr,
             client,
@@ -69,14 +69,7 @@ impl RemoteMockServerAdapter {
     }
 }
 
-fn build_client() -> Arc<InternalHttpClient> {
-    return Arc::new(
-        InternalHttpClient::builder()
-            .tcp_keepalive(Duration::from_secs(60 * 60 * 24))
-            .build()
-            .expect("Cannot build HTTP client"),
-    );
-}
+
 #[async_trait]
 impl MockServerAdapter for RemoteMockServerAdapter {
     fn host(&self) -> String {
@@ -232,7 +225,7 @@ pub struct LocalMockServerAdapter {
 
 impl LocalMockServerAdapter {
     pub(crate) fn new(addr: SocketAddr, local_state: Arc<MockServerState>) -> Self {
-        let client = build_client();
+        let client = build_http_client();
         LocalMockServerAdapter {
             addr,
             local_state,
@@ -331,6 +324,16 @@ fn execute_request(req: Request<Body>) -> Result<(StatusCode, String), Error> {
             Ok((status, body_str))
         });
     });
+}
+
+
+fn build_http_client() -> Arc<InternalHttpClient> {
+    return Arc::new(
+        InternalHttpClient::builder()
+            .tcp_keepalive(Duration::from_secs(60 * 60 * 24))
+            .build()
+            .expect("Cannot build HTTP client"),
+    );
 }
 
 thread_local!(
