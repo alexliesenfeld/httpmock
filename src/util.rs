@@ -21,7 +21,6 @@ pub fn with_delayed_retry<T, U>(
 }
 
 #[doc(hidden)]
-
 pub async fn with_retry_async<T, U, F, Fut>(retries: usize, f: F) -> Result<T, U>
 where
     F: Fn() -> Fut,

@@ -13,7 +13,7 @@ use hyper::{
 };
 use regex::Regex;
 
-use crate::server::data::MockServerState;
+pub use crate::server::data::MockServerState;
 use std::net::SocketAddr;
 
 pub(crate) mod data;

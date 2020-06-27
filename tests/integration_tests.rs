@@ -3,18 +3,21 @@ extern crate httpmock;
 use httpmock::Method::{GET, POST};
 use httpmock::{Mock, MockServer, MockServerRequest, Regex};
 use std::io::Read;
+use std::thread::sleep;
+use std::time::Duration;
+use std::net::{SocketAddr, IpAddr, ToSocketAddrs};
 
 /// This test asserts that mocks can be stored, served and deleted as designed.
 #[async_std::test]
 async fn simple_test() {
     let _ = env_logger::try_init();
-    let mock_server = MockServer::start();
+    let mock_server = MockServer::connect_from_env();
 
     let search_mock = Mock::new()
         .expect_path("/search")
         .expect_method(GET)
         .expect_query_param("query", "metallica")
-        .return_status(204)
+        .return_status(202)
         .create_on(&mock_server);
 
     let response = reqwest::blocking::get(&format!(
@@ -24,7 +27,7 @@ async fn simple_test() {
     .unwrap();
 
     assert_eq!(search_mock.times_called(), 1);
-    assert_eq!(response.status(), 204);
+    assert_eq!(response.status(), 202);
 }
 
 /*
