@@ -4,7 +4,11 @@ use std::{thread, time};
 #[doc(hidden)]
 /// Executes the provided function a given number of times with the given interval between
 /// the retries. This function swallows all results and only returns the last result.
-pub fn with_retry<T, U>(retries: usize, delay: u64, f: impl Fn() -> Result<T, U>) -> Result<T, U> {
+pub fn with_delayed_retry<T, U>(
+    retries: usize,
+    delay: u64,
+    f: impl Fn() -> Result<T, U>,
+) -> Result<T, U> {
     let mut result = (f)();
     for _ in 1..=retries {
         if result.is_ok() {
@@ -16,10 +20,21 @@ pub fn with_retry<T, U>(retries: usize, delay: u64, f: impl Fn() -> Result<T, U>
     result
 }
 
-#[derive(Debug, Clone)]
-pub struct MaxPassLatch {
-    pair: Arc<(Arc<Mutex<usize>>, Condvar)>,
-    max: usize,
+#[doc(hidden)]
+
+pub async fn with_retry_async<T, U, F, Fut>(retries: usize, f: F) -> Result<T, U>
+where
+    F: Fn() -> Fut,
+    Fut: Future<Output = Result<T, U>>,
+{
+    let mut result = (f)().await;
+    for _ in 1..=retries {
+        if result.is_ok() {
+            return result;
+        }
+        result = (f)().await;
+    }
+    result
 }
 
 pub fn read_env(name: &str, default: &str) -> String {

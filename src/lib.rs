@@ -152,7 +152,7 @@ use std::rc::Rc;
 use std::sync::{Arc, Condvar, Mutex, MutexGuard};
 use std::thread::{sleep, JoinHandle};
 use std::time::Duration;
-
+use puddle::Pool;
 use hyper::Body;
 use std::{fmt, thread};
 
@@ -161,7 +161,7 @@ pub use crate::api::{Method, Mock, Regex};
 
 use crate::server::data::{MockServerHttpRequest, MockServerState};
 use crate::server::{start_server, HttpMockConfig};
-use crate::util::{read_env, with_retry, MaxPassLatch};
+use crate::util::{read_env, with_delayed_retry, with_retry_async};
 use futures::executor::block_on;
 use util::Join;
 
@@ -174,11 +174,9 @@ use std::{
 };
 
 mod api;
-mod pool;
 mod server;
 mod util;
 
-use crate::pool::Pool;
 use isahc::prelude::Configurable;
 use tokio::task::LocalSet;
 
@@ -190,14 +188,11 @@ pub struct MockServer {
 
 impl MockServer {
     async fn from(server_adapter: Arc<dyn MockServerAdapter + Send + Sync>) -> Self {
-        // TODO: use with_retry
-        server_adapter
-            .ping()
+        with_retry_async(5, || server_adapter.ping())
             .await
             .expect("Cannot ping mock server.");
-        // TODO: use with_retry
-        server_adapter
-            .delete_all_mocks().await
+        with_retry_async(5, || server_adapter.delete_all_mocks())
+            .await
             .expect("Cannot reset mock server.");
         Self {
             server_adapter: Some(server_adapter),
@@ -246,7 +241,6 @@ const LOCAL_SERVER_ADAPTER_GENERATOR: fn() -> Arc<dyn MockServerAdapter + Send +
     let state = Arc::new(MockServerState::new());
     let server_state = state.clone();
 
-    // TODO: Consider running inside an async runtime if one exists
     thread::spawn(move || {
         let config = HttpMockConfig::new(0, false);
         let server_state = server_state.clone();

@@ -34,7 +34,6 @@ async fn simple_test() {
     search_mock.delete();
 
     assert_eq!(response.status(), 204);
-
 }
 
 /*

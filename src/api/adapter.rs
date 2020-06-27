@@ -81,7 +81,7 @@ impl MockServerAdapter for RemoteMockServerAdapter {
         // Serialize to JSON
         let json = match serde_json::to_string(mock) {
             Err(err) => return Err(format!("cannot serialize mock object to JSON: {}", err)),
-            Ok(json) => json
+            Ok(json) => json,
         };
 
         // Send the request to the mock server
@@ -95,7 +95,7 @@ impl MockServerAdapter for RemoteMockServerAdapter {
 
         let (status, body) = match execute_request(request, &self.http_client).await {
             Err(err) => return Err(format!("cannot send request to mock server: {}", err)),
-            Ok(sb) => sb
+            Ok(sb) => sb,
         };
 
         // Evaluate the response status
@@ -126,7 +126,7 @@ impl MockServerAdapter for RemoteMockServerAdapter {
 
         let (status, body) = match execute_request(request, &self.http_client).await {
             Err(err) => return Err(format!("cannot send request to mock server: {}", err)),
-            Ok(r) => r
+            Ok(r) => r,
         };
 
         // Evaluate response status code
@@ -157,7 +157,7 @@ impl MockServerAdapter for RemoteMockServerAdapter {
 
         let (status, body) = match execute_request(request, &self.http_client).await {
             Err(err) => return Err(format!("cannot send request to mock server: {}", err)),
-            Ok(sb) => sb
+            Ok(sb) => sb,
         };
 
         // Evaluate response status code
@@ -182,7 +182,7 @@ impl MockServerAdapter for RemoteMockServerAdapter {
 
         let (status, body) = match execute_request(request, &self.http_client).await {
             Err(err) => return Err(format!("cannot send request to mock server: {}", err)),
-            Ok(sb) => sb
+            Ok(sb) => sb,
         };
 
         // Evaluate response status code
@@ -282,7 +282,7 @@ async fn http_ping(
 
     let (status, _body) = match execute_request(request, http_client).await {
         Err(err) => return Err(format!("cannot send request to mock server: {}", err)),
-        Ok(sb) => sb
+        Ok(sb) => sb,
     };
 
     if status != 200 {
@@ -296,19 +296,22 @@ async fn http_ping(
 }
 
 /// Executes an HTTP request synchronously
-async fn execute_request(req: Request<String>, http_client: &InternalHttpClient) -> Result<(u16, String), String> {
+async fn execute_request(
+    req: Request<String>,
+    http_client: &InternalHttpClient,
+) -> Result<(u16, String), String> {
     let mut response = match http_client.send_async(req).await {
         Err(err) => return Err(format!("cannot send request to mock server: {}", err)),
-        Ok(r) => r
+        Ok(r) => r,
     };
 
     // Evaluate the response status
     let body = match response.text() {
         Err(err) => return Err(format!("cannot send request to mock server: {}", err)),
-        Ok(b) => b
+        Ok(b) => b,
     };
 
-    return Ok((response.status().as_u16(), body))
+    return Ok((response.status().as_u16(), body));
 }
 
 fn build_http_client() -> Arc<InternalHttpClient> {

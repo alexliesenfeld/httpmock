@@ -95,7 +95,7 @@ pub struct MockRef<'a> {
 // A problem was though that if a test is shutdown because of a panic (drop will be called)
 // and this "delete" operation also panics, the user gets an awkward message
 // "thread panicked while panicking. aborting."
-impl <'a> MockRef <'a> {
+impl<'a> MockRef<'a> {
     /// This method returns the number of times a mock has been called at the mock server.
     ///
     /// # Panics
@@ -126,7 +126,7 @@ impl <'a> MockRef <'a> {
     /// # Panics
     /// This method will panic if there is a problem to communicate with the server.
     pub fn delete(&self) {
-       self.delete_async().join();
+        self.delete_async().join();
     }
 
     pub async fn delete_async(&self) {
@@ -169,7 +169,7 @@ impl <'a> MockRef <'a> {
 // TODO: Series / Statefulnes simulation
 // TODO: Find the request with the most matches and show a diff on debug
 // TODO: Add redirect support
-impl Mock  {
+impl Mock {
     /// Creates a new mock that automatically returns HTTP status code 200 if hit by an HTTP call.
     pub fn new() -> Self {
         Mock {
@@ -525,16 +525,17 @@ impl Mock  {
     /// # Panics
     /// This method will panic if your test method was not marked using the the
     /// `httpmock::with_mock_server` annotation.
-    pub async fn create_async<'a>(mut self, mock_server: &'a MockServer) -> MockRef<'a> {
+    pub async fn create_on_async<'a>(mut self, mock_server: &'a MockServer) -> MockRef<'a> {
         let response = mock_server
             .server_adapter
             .as_ref()
             .unwrap()
-            .create_mock(&self.mock).await
+            .create_mock(&self.mock)
+            .await
             .expect("Cannot deserialize mock server response");
         MockRef {
             id: response.mock_id,
-            mock_server
+            mock_server,
         }
     }
 
@@ -545,7 +546,7 @@ impl Mock  {
     /// This method will panic if your test method was not marked using the the
     /// `httpmock::with_mock_server` annotation.
     pub fn create_on<'a>(mut self, mock_server: &'a MockServer) -> MockRef<'a> {
-        self.create_async(mock_server).join()
+        self.create_on_async(mock_server).join()
     }
 
     pub fn expect_match(mut self, request_matcher: MockMatcherClosure) -> Self {
