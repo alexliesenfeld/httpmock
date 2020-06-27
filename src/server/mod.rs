@@ -1,5 +1,3 @@
-extern crate async_std;
-
 use std::borrow::Borrow;
 use std::collections::BTreeMap;
 use std::str::FromStr;

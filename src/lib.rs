@@ -162,7 +162,6 @@ pub use crate::api::{Method, Mock, Regex};
 use crate::server::data::{MockServerHttpRequest, MockServerState};
 use crate::server::{start_server, HttpMockConfig};
 use crate::util::{read_env, with_delayed_retry, with_retry_async};
-use futures::executor::block_on;
 use util::Join;
 
 use crossbeam_utils::sync::{Parker, Unparker};
