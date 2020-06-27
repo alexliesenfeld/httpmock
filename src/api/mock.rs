@@ -115,6 +115,7 @@ impl <'a> MockRef <'a> {
             .as_ref()
             .unwrap()
             .fetch_mock(self.id)
+            .await
             .expect("cannot deserialize mock server response");
 
         return response.call_counter;
@@ -125,11 +126,16 @@ impl <'a> MockRef <'a> {
     /// # Panics
     /// This method will panic if there is a problem to communicate with the server.
     pub fn delete(&self) {
+       self.delete_async().join();
+    }
+
+    pub async fn delete_async(&self) {
         self.mock_server
             .server_adapter
             .as_ref()
             .unwrap()
             .delete_mock(self.id)
+            .await
             .expect("could not delete mock from server");
     }
 
@@ -524,7 +530,7 @@ impl Mock  {
             .server_adapter
             .as_ref()
             .unwrap()
-            .create_mock(&self.mock)
+            .create_mock(&self.mock).await
             .expect("Cannot deserialize mock server response");
         MockRef {
             id: response.mock_id,

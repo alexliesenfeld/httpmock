@@ -1,12 +1,7 @@
 use crate::server::data::{ActiveMock, MockDefinition, MockIdentification, MockServerState};
 use crate::server::handlers::{add_new_mock, delete_all, delete_one, read_one};
-use crate::InternalHttpClient;
 use async_trait::async_trait;
-use hyper::body::Bytes;
-use hyper::client::connect::dns::GaiResolver;
-use hyper::client::HttpConnector;
-use hyper::{Body, Client, Error, Method as HyperMethod, Request, StatusCode};
-use isahc::prelude::Configurable;
+use isahc::prelude::*;
 use isahc::ResponseFuture;
 use std::borrow::Borrow;
 use std::cell::RefCell;
@@ -18,6 +13,9 @@ use std::time::Duration;
 
 /// Refer to [regex::Regex](../regex/struct.Regex.html).
 pub type Regex = regex::Regex;
+
+// TODO: Move this to another place (it does belong to a place where it is actually used)
+pub(crate) type InternalHttpClient = isahc::HttpClient;
 
 /// Represents an HTTP method.
 #[derive(Debug)]
@@ -38,10 +36,10 @@ pub(crate) trait MockServerAdapter {
     fn host(&self) -> String;
     fn port(&self) -> u16;
     fn address(&self) -> &SocketAddr;
-    fn create_mock(&self, mock: &MockDefinition) -> Result<MockIdentification, String>;
-    fn fetch_mock(&self, mock_id: usize) -> Result<ActiveMock, String>;
-    fn delete_mock(&self, mock_id: usize) -> Result<(), String>;
-    fn delete_all_mocks(&self) -> Result<(), String>;
+    async fn create_mock(&self, mock: &MockDefinition) -> Result<MockIdentification, String>;
+    async fn fetch_mock(&self, mock_id: usize) -> Result<ActiveMock, String>;
+    async fn delete_mock(&self, mock_id: usize) -> Result<(), String>;
+    async fn delete_all_mocks(&self) -> Result<(), String>;
     async fn ping(&self) -> Result<(), String>;
 }
 
@@ -52,19 +50,15 @@ pub(crate) trait MockServerAdapter {
 /// need to.
 #[derive(Debug)]
 pub struct RemoteMockServerAdapter {
-    pub(crate) addr: SocketAddr,
-    pub(crate) client: Arc<reqwest::blocking::Client>,
-    new_client: Arc<InternalHttpClient>,
+    addr: SocketAddr,
+    http_client: Arc<InternalHttpClient>,
 }
 
 impl RemoteMockServerAdapter {
     pub(crate) fn new(addr: SocketAddr) -> Self {
-        let client = Arc::new(reqwest::blocking::Client::new());
-        let new_client = build_http_client();
         Self {
             addr,
-            client,
-            new_client,
+            http_client: build_http_client(),
         }
     }
 }
@@ -83,30 +77,26 @@ impl MockServerAdapter for RemoteMockServerAdapter {
         &self.addr
     }
 
-    fn create_mock(&self, mock: &MockDefinition) -> Result<MockIdentification, String> {
+    async fn create_mock(&self, mock: &MockDefinition) -> Result<MockIdentification, String> {
         // Serialize to JSON
-        let json = serde_json::to_string(mock);
-        if let Err(err) = json {
-            return Err(format!("cannot serialize mock object to JSON: {}", err));
-        }
-        let json = json.unwrap();
+        let json = match serde_json::to_string(mock) {
+            Err(err) => return Err(format!("cannot serialize mock object to JSON: {}", err)),
+            Ok(json) => json
+        };
 
         // Send the request to the mock server
         let request_url = format!("http://{}/__mocks", &self.address());
-
         let request = Request::builder()
-            .method(HyperMethod::POST)
+            .method("POST")
             .uri(request_url)
             .header("Content-Type", "application/json")
-            .body(Body::from(json))
-            .expect("Cannot build request");
+            .body(json)
+            .unwrap();
 
-        let response = execute_request(request);
-        if let Err(err) = response {
-            return Err(format!("cannot send request to mock server: {}", err));
-        }
-
-        let (status, body) = response.unwrap();
+        let (status, body) = match execute_request(request, &self.http_client).await {
+            Err(err) => return Err(format!("cannot send request to mock server: {}", err)),
+            Ok(sb) => sb
+        };
 
         // Evaluate the response status
         if status != 201 {
@@ -125,21 +115,19 @@ impl MockServerAdapter for RemoteMockServerAdapter {
         return Ok(response.unwrap());
     }
 
-    fn fetch_mock(&self, mock_id: usize) -> Result<ActiveMock, String> {
+    async fn fetch_mock(&self, mock_id: usize) -> Result<ActiveMock, String> {
         // Send the request to the mock server
         let request_url = format!("http://{}/__mocks/{}", &self.address(), mock_id);
         let request = Request::builder()
-            .method(HyperMethod::GET)
+            .method("GET")
             .uri(request_url)
-            .body(Body::empty())
-            .expect("Cannot build request");
+            .body("".to_string())
+            .unwrap();
 
-        let response = execute_request(request);
-        if let Err(err) = response {
-            return Err(format!("cannot send request to mock server: {}", err));
-        }
-
-        let (status, body) = response.unwrap();
+        let (status, body) = match execute_request(request, &self.http_client).await {
+            Err(err) => return Err(format!("cannot send request to mock server: {}", err)),
+            Ok(r) => r
+        };
 
         // Evaluate response status code
         if status != 200 {
@@ -158,20 +146,19 @@ impl MockServerAdapter for RemoteMockServerAdapter {
         return Ok(response.unwrap());
     }
 
-    fn delete_mock(&self, mock_id: usize) -> Result<(), String> {
+    async fn delete_mock(&self, mock_id: usize) -> Result<(), String> {
         // Send the request to the mock server
         let request_url = format!("http://{}/__mocks/{}", &self.address(), mock_id);
         let request = Request::builder()
-            .method(HyperMethod::DELETE)
+            .method("DELETE")
             .uri(request_url)
-            .body(Body::empty())
-            .expect("Cannot build request");
+            .body("".to_string())
+            .unwrap();
 
-        let response = execute_request(request);
-        if let Err(err) = response {
-            return Err(format!("cannot send request to mock server: {}", err));
-        }
-        let (status, body) = response.unwrap();
+        let (status, body) = match execute_request(request, &self.http_client).await {
+            Err(err) => return Err(format!("cannot send request to mock server: {}", err)),
+            Ok(sb) => sb
+        };
 
         // Evaluate response status code
         if status != 202 {
@@ -184,21 +171,19 @@ impl MockServerAdapter for RemoteMockServerAdapter {
         return Ok(());
     }
 
-    fn delete_all_mocks(&self) -> Result<(), String> {
+    async fn delete_all_mocks(&self) -> Result<(), String> {
         // Send the request to the mock server
         let request_url = format!("http://{}/__mocks", &self.address());
         let request = Request::builder()
-            .method(HyperMethod::DELETE)
+            .method("DELETE")
             .uri(request_url)
-            .body(Body::empty())
-            .expect("Cannot build request");
+            .body("".to_string())
+            .unwrap();
 
-        let response = execute_request(request);
-        if let Err(err) = response {
-            return Err(format!("cannot send request to mock server: {}", err));
-        }
-
-        let (status, body) = response.unwrap();
+        let (status, body) = match execute_request(request, &self.http_client).await {
+            Err(err) => return Err(format!("cannot send request to mock server: {}", err)),
+            Ok(sb) => sb
+        };
 
         // Evaluate response status code
         if status != 202 {
@@ -212,7 +197,7 @@ impl MockServerAdapter for RemoteMockServerAdapter {
     }
 
     async fn ping(&self) -> Result<(), String> {
-        http_ping(&self.addr, self.new_client.borrow()).await
+        http_ping(&self.addr, self.http_client.borrow()).await
     }
 }
 
@@ -247,19 +232,19 @@ impl MockServerAdapter for LocalMockServerAdapter {
         &self.addr
     }
 
-    fn create_mock(&self, mock: &MockDefinition) -> Result<MockIdentification, String> {
+    async fn create_mock(&self, mock: &MockDefinition) -> Result<MockIdentification, String> {
         let id = add_new_mock(&self.local_state, mock.clone())?;
         return Ok(MockIdentification::new(id));
     }
 
-    fn fetch_mock(&self, mock_id: usize) -> Result<ActiveMock, String> {
+    async fn fetch_mock(&self, mock_id: usize) -> Result<ActiveMock, String> {
         return match read_one(&self.local_state, mock_id)? {
             Some(mock) => Ok(mock),
             None => Err("Cannot find mock".to_string()),
         };
     }
 
-    fn delete_mock(&self, mock_id: usize) -> Result<(), String> {
+    async fn delete_mock(&self, mock_id: usize) -> Result<(), String> {
         let deleted = delete_one(&self.local_state, mock_id)?;
         return match deleted {
             false => Err("Mock could not deleted".to_string()),
@@ -267,7 +252,7 @@ impl MockServerAdapter for LocalMockServerAdapter {
         };
     }
 
-    fn delete_all_mocks(&self) -> Result<(), String> {
+    async fn delete_all_mocks(&self) -> Result<(), String> {
         delete_all(&self.local_state)?;
         return Ok(());
     }
@@ -289,13 +274,18 @@ async fn http_ping(
     http_client: &InternalHttpClient,
 ) -> Result<(), String> {
     let request_url = format!("http://{}/__ping", server_addr);
+    let request = Request::builder()
+        .method("GET")
+        .uri(request_url)
+        .body("".to_string())
+        .unwrap();
 
-    let status = match http_client.get_async(request_url).await {
-        Err(err) => return Err(format!("Cannot send request to mock server: {}", err)),
-        Ok(response) => response.status(),
+    let (status, _body) = match execute_request(request, http_client).await {
+        Err(err) => return Err(format!("cannot send request to mock server: {}", err)),
+        Ok(sb) => sb
     };
 
-    if status.as_u16() != 200 {
+    if status != 200 {
         return Err(format!(
             "Could not create mock. Mock server response: status = {}",
             status
@@ -306,23 +296,19 @@ async fn http_ping(
 }
 
 /// Executes an HTTP request synchronously
-fn execute_request(req: Request<Body>) -> Result<(StatusCode, String), Error> {
-    return TOKIO_RUNTIME.with(|runtime| {
-        let local = tokio::task::LocalSet::new();
-        let mut rt = &mut *runtime.borrow_mut();
-        return local.block_on(&mut rt, async {
-            let client = hyper::Client::new();
+async fn execute_request(req: Request<String>, http_client: &InternalHttpClient) -> Result<(u16, String), String> {
+    let mut response = match http_client.send_async(req).await {
+        Err(err) => return Err(format!("cannot send request to mock server: {}", err)),
+        Ok(r) => r
+    };
 
-            let resp = client.request(req).await.unwrap();
-            let status = resp.status();
+    // Evaluate the response status
+    let body = match response.text() {
+        Err(err) => return Err(format!("cannot send request to mock server: {}", err)),
+        Ok(b) => b
+    };
 
-            let body: Bytes = hyper::body::to_bytes(resp.into_body()).await.unwrap();
-
-            let body_str = String::from_utf8(body.to_vec()).unwrap();
-
-            Ok((status, body_str))
-        });
-    });
+    return Ok((response.status().as_u16(), body))
 }
 
 fn build_http_client() -> Arc<InternalHttpClient> {
@@ -333,14 +319,3 @@ fn build_http_client() -> Arc<InternalHttpClient> {
             .expect("Cannot build HTTP client"),
     );
 }
-
-thread_local!(
-    static TOKIO_RUNTIME: RefCell<tokio::runtime::Runtime> = {
-        let runtime = tokio::runtime::Builder::new()
-            .enable_all()
-            .basic_scheduler()
-            .build()
-            .expect("Cannot build thread local tokio tuntime");
-        RefCell::new(runtime)
-    };
-);

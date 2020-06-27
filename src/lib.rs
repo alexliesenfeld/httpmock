@@ -184,9 +184,6 @@ use tokio::task::LocalSet;
 
 pub type MockServerRequest = Rc<MockServerHttpRequest>;
 
-// TODO: Move this to another place (it does belong to a place where it is actually used)
-pub(crate) type InternalHttpClient = isahc::HttpClient;
-
 pub struct MockServer {
     pub(crate) server_adapter: Option<Arc<dyn MockServerAdapter + Send + Sync>>,
 }
@@ -200,7 +197,7 @@ impl MockServer {
             .expect("Cannot ping mock server.");
         // TODO: use with_retry
         server_adapter
-            .delete_all_mocks()
+            .delete_all_mocks().await
             .expect("Cannot reset mock server.");
         Self {
             server_adapter: Some(server_adapter),
