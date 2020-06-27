@@ -35,10 +35,7 @@ pub struct HttpMockConfig {
 
 impl HttpMockConfig {
     pub fn new(port: u16, expose: bool) -> Self {
-        Self {
-            port,
-            expose,
-        }
+        Self { port, expose }
     }
 }
 

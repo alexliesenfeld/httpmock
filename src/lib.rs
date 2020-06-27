@@ -154,7 +154,7 @@ use std::thread::{sleep, JoinHandle};
 use std::time::Duration;
 
 use hyper::Body;
-use std::{thread, fmt};
+use std::{fmt, thread};
 
 use crate::api::{LocalMockServerAdapter, MockServerAdapter, RemoteMockServerAdapter};
 pub use crate::api::{Method, Mock, Regex};
@@ -174,21 +174,26 @@ use std::{
 };
 
 mod api;
+mod pool;
 mod server;
 mod util;
-mod pool;
 
+use crate::pool::Pool;
 use isahc::prelude::Configurable;
 use tokio::task::LocalSet;
-use crate::pool::Pool;
 
 pub type MockServerRequest = Rc<MockServerHttpRequest>;
 
 // TODO: Move this to another place (it does belong to a place where it is actually used)
 pub(crate) type InternalHttpClient = isahc::HttpClient;
 
+// The rationale behind deriving Clone is that this MockServer struct is only a universal transfer
+// object for the actual reference to the server adapter, which is safe behind an Arc.
+// An alternative would have been to use a type def, but these are not very well supported in some
+// IDEs. It should be absolutely safe to use clone on this struct though.
+#[derive(Clone)]
 pub struct MockServer {
-    server_adapter: Option<Arc<dyn MockServerAdapter + Send + Sync>>,
+    pub(crate) server_adapter: Option<Arc<dyn MockServerAdapter + Send + Sync>>,
 }
 
 impl MockServer {
@@ -202,7 +207,9 @@ impl MockServer {
         server_adapter
             .delete_all_mocks()
             .expect("Cannot reset mock server.");
-        Self { server_adapter: Some(server_adapter) }
+        Self {
+            server_adapter: Some(server_adapter),
+        }
     }
 
     pub async fn connect_async(addr: SocketAddr) -> Self {
@@ -218,18 +225,8 @@ impl MockServer {
         Self::from(adapter).await
     }
 
-    pub fn start() -> Self {
+    pub fn start() -> MockServer {
         Self::start_async().join()
-    }
-
-    pub fn new_mock(&self) -> Mock {
-        Mock::new(self.server_adapter.clone().unwrap())
-    }
-
-    pub fn mock(&self, method: Method, path: &str) -> Mock {
-        Mock::new(self.server_adapter.clone().unwrap())
-            .expect_method(method)
-            .expect_path(path)
     }
 
     pub fn host(&self) -> String {
@@ -276,7 +273,6 @@ const LOCAL_SERVER_ADAPTER_GENERATOR: fn() -> Arc<dyn MockServerAdapter + Send +
     // TODO: replace this join by await
     let addr = addr_receiver.join().expect("Cannot get server address");
     return Arc::new(LocalMockServerAdapter::new(addr, state));
-
 };
 
 lazy_static! {

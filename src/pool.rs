@@ -26,8 +26,8 @@ impl<T> Pool<T> {
     }
 
     pub async fn take<F>(&self, create: F) -> T
-        where
-            F: FnOnce() -> T,
+    where
+        F: FnOnce() -> T,
     {
         let mut lock_guard = (&self.sync_tuple).lock().await;
 

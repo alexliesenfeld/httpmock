@@ -1,6 +1,6 @@
-use crate::InternalHttpClient;
 use crate::server::data::{ActiveMock, MockDefinition, MockIdentification, MockServerState};
 use crate::server::handlers::{add_new_mock, delete_all, delete_one, read_one};
+use crate::InternalHttpClient;
 use async_trait::async_trait;
 use hyper::body::Bytes;
 use hyper::client::connect::dns::GaiResolver;
@@ -68,7 +68,6 @@ impl RemoteMockServerAdapter {
         }
     }
 }
-
 
 #[async_trait]
 impl MockServerAdapter for RemoteMockServerAdapter {
@@ -325,7 +324,6 @@ fn execute_request(req: Request<Body>) -> Result<(StatusCode, String), Error> {
         });
     });
 }
-
 
 fn build_http_client() -> Arc<InternalHttpClient> {
     return Arc::new(

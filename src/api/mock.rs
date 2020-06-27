@@ -6,6 +6,8 @@ use crate::server::data::{
     RequestRequirements,
 };
 use crate::server::handlers::add_new_mock;
+use crate::util::Join;
+use crate::{MockServer};
 use serde::Serialize;
 use serde_json::Value;
 use std::borrow::BorrowMut;
@@ -80,9 +82,53 @@ use std::sync::Arc;
 /// Fore more examples, please refer to
 /// [this crates test directory](https://github.com/alexliesenfeld/httpmock/blob/master/tests/integration_tests.rs ).
 pub struct Mock {
-    id: Option<usize>,
     mock: MockDefinition,
-    server_adapter: Arc<dyn MockServerAdapter + Send + Sync>,
+}
+
+pub struct MockRef {
+    id: usize,
+    mock_server: MockServer
+}
+
+impl MockRef {
+    /// This method returns the number of times a mock has been called at the mock server.
+    ///
+    /// # Panics
+    /// This method will panic if there is a problem to communicate with the server.
+    pub fn times_called(&self) -> usize {
+        return self.times_called_async().join();
+    }
+
+    /// This method returns the number of times a mock has been called at the mock server.
+    ///
+    /// # Panics
+    /// This method will panic if there is a problem to communicate with the server.
+    pub async fn times_called_async(&self) -> usize {
+        let response = self
+            .mock_server.server_adapter.as_ref().unwrap()
+            .fetch_mock(self.id)
+            .expect("cannot deserialize mock server response");
+
+        return response.call_counter;
+    }
+
+    /// Deletes this mock from the mock server.
+    ///
+    /// # Panics
+    /// This method will panic if there is a problem to communicate with the server.
+    pub fn delete(&mut self) {
+        self.mock_server.server_adapter.as_ref().unwrap()
+            .delete_mock(self.id)
+            .expect("could not delete mock from server");
+    }
+
+    /// Returns the address of the mock server this mock is using. By default this is
+    /// "localhost:5000" if not set otherwise by the environment variables  HTTPMOCK_HOST and
+    /// HTTPMOCK_PORT.
+    pub fn server_address(&self) -> &SocketAddr {
+        self.mock_server.server_adapter.as_ref().unwrap().address()
+    }
+
 }
 
 // TODO: Add possibility to limit mock server count (ulimit)
@@ -102,12 +148,15 @@ pub struct Mock {
 // TODO: // MatchHost matches the HTTP host header field of the given request
 // TODO: Return bytes from mock as response body
 // TODO: Expect / return files
+// TODO: XPATH/JSONPATH
+// TODO: Cookies match
+// TODO: Series / Statefulnes simulation
+// TODO: Find the request with the most matches and show a diff on debug
+// TODO: Add redirect support
 impl Mock {
     /// Creates a new mock that automatically returns HTTP status code 200 if hit by an HTTP call.
-    pub(crate) fn new(server_adapter: Arc<dyn MockServerAdapter + Send + Sync>) -> Self {
+    pub fn new() -> Self {
         Mock {
-            id: None,
-            server_adapter,
             mock: MockDefinition {
                 request: RequestRequirements {
                     method: None,
@@ -460,63 +509,26 @@ impl Mock {
     /// # Panics
     /// This method will panic if your test method was not marked using the the
     /// `httpmock::with_mock_server` annotation.
-    pub fn create(mut self) -> Self {
-        let response = self
-            .server_adapter
+    pub async fn create_async(mut self, mock_server: &MockServer) -> MockRef {
+        let response = mock_server
+            .server_adapter.as_ref()
+            .unwrap()
             .create_mock(&self.mock)
             .expect("Cannot deserialize mock server response");
-        self.id = Some(response.mock_id);
-        self
+        MockRef {
+            id: response.mock_id,
+            mock_server: mock_server.clone()
+        }
     }
 
-    /// This method returns the number of times a mock has been called at the mock server.
+    /// This method creates the mock at the server side and returns a `Mock` object
+    /// representing the reference of the created mock at the server.
     ///
     /// # Panics
-    /// This method will panic if there is a problem to communicate with the server.
-    pub fn times_called(&self) -> usize {
-        if self.id.is_none() {
-            panic!("you cannot fetch the number of calls for a mock that has not yet been created")
-        }
-
-        let response = self
-            .server_adapter
-            .fetch_mock(self.id.unwrap())
-            .expect("cannot deserialize mock server response");
-
-        return response.call_counter;
-    }
-
-    /// Returns the port of the mock server this mock is using. By default this is port 5000 if
-    /// not set otherwise by the environment variable HTTPMOCK_PORT.
-    pub fn server_port(&self) -> u16 {
-        self.server_adapter.address().port()
-    }
-
-    /// Returns the host of the mock server this mock is using. By default this is localhost if
-    /// not set otherwise by the environment variable HTTPMOCK_HOST.
-    pub fn server_host(&self) -> String {
-        self.server_adapter.address().ip().to_string()
-    }
-
-    /// Returns the address of the mock server this mock is using. By default this is
-    /// "localhost:5000" if not set otherwise by the environment variables  HTTPMOCK_HOST and
-    /// HTTPMOCK_PORT.
-    pub fn server_address(&self) -> &SocketAddr {
-        self.server_adapter.address()
-    }
-
-    /// Deletes this mock from the mock server.
-    ///
-    /// # Panics
-    /// This method will panic if there is a problem to communicate with the server.
-    pub fn delete(&mut self) {
-        if let Some(id) = self.id {
-            self.server_adapter
-                .delete_mock(id)
-                .expect("could not delete mock from server");
-        } else {
-            panic!("Cannot delete mock, because it has not been created at the server yet.");
-        }
+    /// This method will panic if your test method was not marked using the the
+    /// `httpmock::with_mock_server` annotation.
+    pub fn create_on(mut self, mock_server: &MockServer) -> MockRef {
+        self.create_async(mock_server).join()
     }
 
     pub fn expect_match(mut self, request_matcher: MockMatcherClosure) -> Self {
