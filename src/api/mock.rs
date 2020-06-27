@@ -7,7 +7,7 @@ use crate::server::data::{
 };
 use crate::server::handlers::add_new_mock;
 use crate::util::Join;
-use crate::{MockServer};
+use crate::MockServer;
 use serde::Serialize;
 use serde_json::Value;
 use std::borrow::BorrowMut;
@@ -85,12 +85,17 @@ pub struct Mock {
     mock: MockDefinition,
 }
 
-pub struct MockRef {
+pub struct MockRef<'a> {
     id: usize,
-    mock_server: MockServer
+    mock_server: &'a MockServer,
 }
 
-impl MockRef {
+// TODO: implement Drop to delete the mock whenever this mock ref goes out of scope.
+// This is useful whenever a user wants to explicityl delete the mock by using drop(ref)
+// A problem was though that if a test is shutdown because of a panic (drop will be called)
+// and this "delete" operation also panics, the user gets an awkward message
+// "thread panicked while panicking. aborting."
+impl <'a> MockRef <'a> {
     /// This method returns the number of times a mock has been called at the mock server.
     ///
     /// # Panics
@@ -105,7 +110,10 @@ impl MockRef {
     /// This method will panic if there is a problem to communicate with the server.
     pub async fn times_called_async(&self) -> usize {
         let response = self
-            .mock_server.server_adapter.as_ref().unwrap()
+            .mock_server
+            .server_adapter
+            .as_ref()
+            .unwrap()
             .fetch_mock(self.id)
             .expect("cannot deserialize mock server response");
 
@@ -116,8 +124,11 @@ impl MockRef {
     ///
     /// # Panics
     /// This method will panic if there is a problem to communicate with the server.
-    pub fn delete(&mut self) {
-        self.mock_server.server_adapter.as_ref().unwrap()
+    pub fn delete(&self) {
+        self.mock_server
+            .server_adapter
+            .as_ref()
+            .unwrap()
             .delete_mock(self.id)
             .expect("could not delete mock from server");
     }
@@ -128,7 +139,6 @@ impl MockRef {
     pub fn server_address(&self) -> &SocketAddr {
         self.mock_server.server_adapter.as_ref().unwrap().address()
     }
-
 }
 
 // TODO: Add possibility to limit mock server count (ulimit)
@@ -153,7 +163,7 @@ impl MockRef {
 // TODO: Series / Statefulnes simulation
 // TODO: Find the request with the most matches and show a diff on debug
 // TODO: Add redirect support
-impl Mock {
+impl Mock  {
     /// Creates a new mock that automatically returns HTTP status code 200 if hit by an HTTP call.
     pub fn new() -> Self {
         Mock {
@@ -509,15 +519,16 @@ impl Mock {
     /// # Panics
     /// This method will panic if your test method was not marked using the the
     /// `httpmock::with_mock_server` annotation.
-    pub async fn create_async(mut self, mock_server: &MockServer) -> MockRef {
+    pub async fn create_async<'a>(mut self, mock_server: &'a MockServer) -> MockRef<'a> {
         let response = mock_server
-            .server_adapter.as_ref()
+            .server_adapter
+            .as_ref()
             .unwrap()
             .create_mock(&self.mock)
             .expect("Cannot deserialize mock server response");
         MockRef {
             id: response.mock_id,
-            mock_server: mock_server.clone()
+            mock_server
         }
     }
 
@@ -527,7 +538,7 @@ impl Mock {
     /// # Panics
     /// This method will panic if your test method was not marked using the the
     /// `httpmock::with_mock_server` annotation.
-    pub fn create_on(mut self, mock_server: &MockServer) -> MockRef {
+    pub fn create_on<'a>(mut self, mock_server: &'a MockServer) -> MockRef<'a> {
         self.create_async(mock_server).join()
     }
 

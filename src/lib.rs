@@ -187,11 +187,6 @@ pub type MockServerRequest = Rc<MockServerHttpRequest>;
 // TODO: Move this to another place (it does belong to a place where it is actually used)
 pub(crate) type InternalHttpClient = isahc::HttpClient;
 
-// The rationale behind deriving Clone is that this MockServer struct is only a universal transfer
-// object for the actual reference to the server adapter, which is safe behind an Arc.
-// An alternative would have been to use a type def, but these are not very well supported in some
-// IDEs. It should be absolutely safe to use clone on this struct though.
-#[derive(Clone)]
 pub struct MockServer {
     pub(crate) server_adapter: Option<Arc<dyn MockServerAdapter + Send + Sync>>,
 }

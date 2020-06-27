@@ -17,14 +17,24 @@ async fn simple_test() {
         .return_status(204)
         .create_on(&mock_server);
 
+    let search_mock2 = Mock::new()
+        .expect_path("/search")
+        .expect_method(GET)
+        .expect_query_param("query", "metallica")
+        .return_status(204)
+        .create_on(&mock_server);
+
     let response = reqwest::blocking::get(&format!(
         "http://localhost:{}/search?query=metallica",
         mock_server.port()
     ))
     .unwrap();
 
-    assert_eq!(response.status(), 204);
     assert_eq!(search_mock.times_called(), 1);
+    search_mock.delete();
+
+    assert_eq!(response.status(), 204);
+
 }
 
 /*
