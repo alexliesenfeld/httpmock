@@ -32,10 +32,13 @@ pub(crate) fn delete_one(state: &MockServerState, id: usize) -> Result<ServerRes
     let result = handlers::delete_one(state, id);
     return match result {
         Err(e) => create_json_response(500, None, ErrorResponse::new(&e)),
-        Ok(found) => match found {
-            true => create_response(202, None, None),
-            false => create_response(404, None, None),
-        },
+        Ok(found) => {
+            if found {
+                create_response(202, None, None)
+            } else {
+                create_response(404, None, None)
+            }
+        }
     };
 }
 
@@ -52,7 +55,7 @@ pub(crate) fn delete_all(state: &MockServerState) -> Result<ServerResponse, Stri
 pub(crate) fn read_one(state: &MockServerState, id: usize) -> Result<ServerResponse, String> {
     let handler_result = handlers::read_one(state, id);
     return match handler_result {
-        Err(e) => create_json_response(500, None, ErrorResponse { message: e.clone() }),
+        Err(e) => create_json_response(500, None, ErrorResponse { message: e }),
         Ok(mock_opt) => {
             return match mock_opt {
                 Some(mock) => create_json_response(200, None, mock),
@@ -85,7 +88,7 @@ fn to_route_response(
     handler_result: Result<Option<MockServerHttpResponse>, String>,
 ) -> Result<ServerResponse, String> {
     return match handler_result {
-        Err(e) => create_json_response(500 as u16, None, ErrorResponse { message: e.clone() }),
+        Err(e) => create_json_response(500 as u16, None, ErrorResponse { message: e }),
         Ok(res) => {
             return match res {
                 None => create_json_response(
@@ -112,7 +115,7 @@ where
         return Err(format!("Cannot serialize body: {}", e));
     }
 
-    let mut headers = headers.unwrap_or(BTreeMap::new());
+    let mut headers = headers.unwrap_or_default();
     headers.insert("Content-Type".to_string(), "application/json".to_string());
 
     create_response(status, Some(headers), Some(body.unwrap()))
@@ -123,8 +126,8 @@ fn create_response(
     headers: Option<BTreeMap<String, String>>,
     body: Option<String>,
 ) -> Result<ServerResponse, String> {
-    let headers = headers.unwrap_or(BTreeMap::new());
-    let body = body.unwrap_or(String::new());
+    let headers = headers.unwrap_or_default();
+    let body = body.unwrap_or_default();
     Ok(ServerResponse::new(status, headers, body))
 }
 
@@ -140,7 +143,7 @@ fn to_handler_request(
 
     let request = MockServerHttpRequest::new(req.method.to_string(), req.path.to_string())
         .with_headers(req.headers.clone())
-        .with_query_params(query_params.unwrap().clone())
+        .with_query_params(query_params.unwrap())
         .with_body(body);
 
     Ok(request)

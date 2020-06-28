@@ -61,6 +61,15 @@ impl RemoteMockServerAdapter {
             http_client: build_http_client(),
         }
     }
+
+    fn validate_mock(&self, mock: &MockDefinition) -> Result<(), String> {
+        if mock.request.matchers.is_some() {
+            return Err(
+                "Request matchers are not supported when using a remote mock server".to_string(),
+            );
+        }
+        Ok(())
+    }
 }
 
 #[async_trait]
@@ -78,6 +87,9 @@ impl MockServerAdapter for RemoteMockServerAdapter {
     }
 
     async fn create_mock(&self, mock: &MockDefinition) -> Result<MockIdentification, String> {
+        // Check if the request can be sent via HTTP
+        self.validate_mock(mock).expect("Cannot create mock");
+
         // Serialize to JSON
         let json = match serde_json::to_string(mock) {
             Err(err) => return Err(format!("cannot serialize mock object to JSON: {}", err)),

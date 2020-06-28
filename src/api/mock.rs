@@ -1,4 +1,3 @@
-use crate::api::adapter::MockServerAdapter;
 use crate::api::RemoteMockServerAdapter;
 use crate::api::{Method, Regex};
 use crate::server::data::{

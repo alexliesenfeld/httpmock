@@ -320,10 +320,6 @@ fn match_json(req: &Option<String>, mock: &Value, exact: bool) -> bool {
 
 /// Validates a mock request.
 fn validate_mock_definition(req: &MockDefinition) -> Result<(), String> {
-    if req.request.path.is_none() || req.request.path.as_ref().unwrap().trim().is_empty() {
-        return Err(String::from("You need to provide a path"));
-    }
-
     if let Some(_body) = &req.request.body {
         if let Some(method) = &req.request.method {
             if NON_BODY_METHODS.contains(&method.as_str()) {
@@ -333,7 +329,6 @@ fn validate_mock_definition(req: &MockDefinition) -> Result<(), String> {
             }
         }
     }
-
     Ok(())
 }
 

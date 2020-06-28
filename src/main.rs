@@ -1,8 +1,7 @@
-use httpmock::standalone::{start_standalone_server};
+use httpmock::standalone::start_standalone_server;
 use httpmock::HttpMockConfig;
 use std::sync::Arc;
 use structopt::StructOpt;
-
 
 /// Holds command line parameters provided by the user.
 #[derive(StructOpt, Debug)]

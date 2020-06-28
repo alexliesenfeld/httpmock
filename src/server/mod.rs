@@ -1,3 +1,5 @@
+#![allow(clippy::trivial_regex)]
+
 use std::borrow::Borrow;
 use std::collections::BTreeMap;
 use std::str::FromStr;
@@ -154,9 +156,10 @@ pub async fn start_server(
     socket_addr_sender: Option<tokio::sync::oneshot::Sender<SocketAddr>>,
 ) -> Result<(), String> {
     let port = http_mock_config.port;
-    let host = match http_mock_config.expose {
-        true => "0.0.0.0",    // allow traffic from all sources
-        false => "127.0.0.1", // allow traffic from localhost only
+    let host = if http_mock_config.expose {
+        "0.0.0.0"
+    } else {
+        "127.0.0.1"
     };
 
     let state = state.clone();
@@ -244,9 +247,8 @@ fn route_request(
     log::trace!("Routing incoming request: {:?}", request_header);
 
     if PING_PATH.is_match(&request_header.path) {
-        match request_header.method.as_str() {
-            "GET" => return routes::ping(),
-            _ => {}
+        if let "GET" = request_header.method.as_str() {
+            return routes::ping();
         }
     }
 
@@ -313,9 +315,9 @@ fn error_response(body: String) -> HyperResponse<Body> {
 }
 
 lazy_static! {
-    static ref PING_PATH: Regex = Regex::new(r"/__ping$").unwrap();
-    static ref MOCK_PATH: Regex = Regex::new(r"/__mocks/([0-9]+)$").unwrap();
-    static ref MOCKS_PATH: Regex = Regex::new(r"/__mocks$").unwrap();
+    static ref PING_PATH: Regex = Regex::new(r"^/__ping$").unwrap();
+    static ref MOCKS_PATH: Regex = Regex::new(r"^/__mocks$").unwrap();
+    static ref MOCK_PATH: Regex = Regex::new(r"^/__mocks/([0-9]+)$").unwrap();
 }
 
 #[cfg(test)]
