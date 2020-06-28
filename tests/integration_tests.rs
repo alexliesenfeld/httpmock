@@ -1,15 +1,10 @@
 extern crate httpmock;
 
-use std::io::Read;
-use std::net::{IpAddr, SocketAddr, ToSocketAddrs};
-use std::thread::sleep;
-use std::time::Duration;
-
 use isahc::prelude::*;
-use isahc::{get, post};
+use isahc::{get};
 
 use httpmock::Method::{GET, POST};
-use httpmock::{Mock, MockRef, MockServer, MockServerRequest, Regex};
+use httpmock::{Mock, MockServer, MockServerRequest, Regex};
 
 /// This test asserts that mocks can be stored, served and deleted as designed.
 #[test]
@@ -37,6 +32,7 @@ fn simple_test() {
 }
 
 /// Ensures that once explicitly deleting a mock, it will not be delivered by the server anymore.
+#[test]
 fn explicit_delete_test() {
     // Arrange
     let _ = env_logger::try_init();

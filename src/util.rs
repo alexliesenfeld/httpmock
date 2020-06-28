@@ -1,5 +1,4 @@
-use std::sync::{Arc, Condvar, Mutex};
-use std::{thread, time};
+use std::sync::{Arc};
 
 #[doc(hidden)]
 pub async fn with_retry<T, U, F, Fut>(retries: usize, f: F) -> Result<T, U>
@@ -18,10 +17,10 @@ where
 }
 
 pub fn read_env(name: &str, default: &str) -> String {
-    return match std::env::var(name) {
+    match std::env::var(name) {
         Ok(value) => value,
         Err(_) => default.to_string(),
-    };
+    }
 }
 
 /// Extension trait for efficiently blocking on a future.
@@ -29,8 +28,7 @@ use crossbeam_utils::sync::{Parker, Unparker};
 use futures_util::{pin_mut, task::ArcWake};
 use std::{
     future::Future,
-    net::UdpSocket,
-    task::{Context, Poll, Waker},
+    task::{Context, Poll},
 };
 
 pub(crate) trait Join: Future {

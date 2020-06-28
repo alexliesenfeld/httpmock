@@ -186,7 +186,7 @@ pub async fn start_server(
 
     log::info!("Listening on {}", server.local_addr());
 
-    return match shutdown_receiver {
+    match shutdown_receiver {
         Some(rx) => {
             let graceful = server.with_graceful_shutdown(async {
                 rx.await.ok();
@@ -202,7 +202,7 @@ pub async fn start_server(
             }
             Ok(())
         }
-    };
+    }
 }
 
 /// Maps a server response to a hyper response.
@@ -274,7 +274,7 @@ fn route_request(
         }
     }
 
-    return routes::serve(state, request_header, body);
+    routes::serve(state, request_header, body)
 }
 
 /// Get request path parameters.

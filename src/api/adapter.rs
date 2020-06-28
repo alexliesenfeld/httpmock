@@ -2,13 +2,10 @@ use crate::server::data::{ActiveMock, MockDefinition, MockIdentification, MockSe
 use crate::server::handlers::{add_new_mock, delete_all, delete_one, read_one};
 use async_trait::async_trait;
 use isahc::prelude::*;
-use isahc::ResponseFuture;
 use std::borrow::Borrow;
-use std::cell::RefCell;
 use std::fmt::Debug;
-use std::future::Future;
 use std::net::SocketAddr;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc};
 use std::time::Duration;
 
 /// Refer to [regex::Regex](../regex/struct.Regex.html).
@@ -124,7 +121,7 @@ impl MockServerAdapter for RemoteMockServerAdapter {
             return Err(format!("cannot deserialize mock server response: {}", err));
         }
 
-        return Ok(response.unwrap());
+        Ok(response.unwrap())
     }
 
     async fn fetch_mock(&self, mock_id: usize) -> Result<ActiveMock, String> {
@@ -155,7 +152,7 @@ impl MockServerAdapter for RemoteMockServerAdapter {
             return Err(format!("cannot deserialize mock server response: {}", err));
         }
 
-        return Ok(response.unwrap());
+        Ok(response.unwrap())
     }
 
     async fn delete_mock(&self, mock_id: usize) -> Result<(), String> {
@@ -180,7 +177,7 @@ impl MockServerAdapter for RemoteMockServerAdapter {
             ));
         }
 
-        return Ok(());
+        Ok(())
     }
 
     async fn delete_all_mocks(&self) -> Result<(), String> {
@@ -205,7 +202,7 @@ impl MockServerAdapter for RemoteMockServerAdapter {
             ));
         }
 
-        return Ok(());
+        Ok(())
     }
 
     async fn ping(&self) -> Result<(), String> {
@@ -246,28 +243,28 @@ impl MockServerAdapter for LocalMockServerAdapter {
 
     async fn create_mock(&self, mock: &MockDefinition) -> Result<MockIdentification, String> {
         let id = add_new_mock(&self.local_state, mock.clone())?;
-        return Ok(MockIdentification::new(id));
+        Ok(MockIdentification::new(id))
     }
 
     async fn fetch_mock(&self, mock_id: usize) -> Result<ActiveMock, String> {
-        return match read_one(&self.local_state, mock_id)? {
+        match read_one(&self.local_state, mock_id)? {
             Some(mock) => Ok(mock),
             None => Err("Cannot find mock".to_string()),
-        };
+        }
     }
 
     async fn delete_mock(&self, mock_id: usize) -> Result<(), String> {
         let deleted = delete_one(&self.local_state, mock_id)?;
-        return if deleted {
+        if deleted {
             Ok(())
         } else {
             Err("Mock could not deleted".to_string())
-        };
+        }
     }
 
     async fn delete_all_mocks(&self) -> Result<(), String> {
         delete_all(&self.local_state)?;
-        return Ok(());
+        Ok(())
     }
 
     async fn ping(&self) -> Result<(), String> {
@@ -305,7 +302,7 @@ async fn http_ping(
         ));
     }
 
-    return Ok(());
+    Ok(())
 }
 
 /// Executes an HTTP request synchronously
@@ -324,14 +321,14 @@ async fn execute_request(
         Ok(b) => b,
     };
 
-    return Ok((response.status().as_u16(), body));
+    Ok((response.status().as_u16(), body))
 }
 
 fn build_http_client() -> Arc<InternalHttpClient> {
-    return Arc::new(
+    Arc::new(
         InternalHttpClient::builder()
             .tcp_keepalive(Duration::from_secs(60 * 60 * 24))
             .build()
             .expect("Cannot build HTTP client"),
-    );
+    )
 }

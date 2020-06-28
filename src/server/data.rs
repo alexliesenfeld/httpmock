@@ -1,3 +1,5 @@
+// TODO: Remove this (requires adding some more tests to cover usage of some methods)
+#![allow(dead_code)]
 extern crate serde_regex;
 
 use regex::Regex;
@@ -9,7 +11,7 @@ use std::fmt::Debug;
 use std::rc::Rc;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::Relaxed;
-use std::sync::{Arc, RwLock};
+use std::sync::{RwLock};
 
 /// A general abstraction of an HTTP request for all handlers.
 #[derive(Serialize, Deserialize, Debug)]
@@ -57,14 +59,6 @@ pub struct MockServerHttpResponse {
 }
 
 impl MockServerHttpResponse {
-    pub fn new(status: u16) -> Self {
-        Self {
-            status,
-            headers: None,
-            body: None,
-        }
-    }
-
     pub fn with_headers(mut self, arg: BTreeMap<String, String>) -> Self {
         self.headers = Some(arg);
         self

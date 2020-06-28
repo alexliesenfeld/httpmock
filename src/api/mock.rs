@@ -1,19 +1,15 @@
-use crate::api::RemoteMockServerAdapter;
 use crate::api::{Method, Regex};
 use crate::server::data::{
-    MockDefinition, MockMatcherClosure, MockServerHttpResponse, MockServerState, Pattern,
+    MockDefinition, MockMatcherClosure, MockServerHttpResponse, Pattern,
     RequestRequirements,
 };
-use crate::server::handlers::add_new_mock;
 use crate::util::Join;
 use crate::MockServer;
 use serde::Serialize;
 use serde_json::Value;
-use std::borrow::BorrowMut;
 use std::collections::BTreeMap;
 use std::net::SocketAddr;
 use std::str::FromStr;
-use std::sync::Arc;
 
 /// Represents the primary interface to the mock server.
 ///
@@ -100,7 +96,7 @@ impl<'a> MockRef<'a> {
     /// # Panics
     /// This method will panic if there is a problem to communicate with the server.
     pub fn times_called(&self) -> usize {
-        return self.times_called_async().join();
+        self.times_called_async().join()
     }
 
     /// This method returns the number of times a mock has been called at the mock server.
@@ -117,14 +113,14 @@ impl<'a> MockRef<'a> {
             .await
             .expect("cannot deserialize mock server response");
 
-        return response.call_counter;
+        response.call_counter
     }
 
     /// Deletes this mock from the mock server.
     ///
     /// # Panics
     /// This method will panic if there is a problem to communicate with the server.
-    pub fn delete(&self) {
+    pub fn delete(&mut self) {
         self.delete_async().join();
     }
 
@@ -524,7 +520,7 @@ impl Mock {
     /// # Panics
     /// This method will panic if your test method was not marked using the the
     /// `httpmock::with_mock_server` annotation.
-    pub async fn create_on_async<'a>(mut self, mock_server: &'a MockServer) -> MockRef<'a> {
+    pub async fn create_on_async<'a>(self, mock_server: &'a MockServer) -> MockRef<'a> {
         let response = mock_server
             .server_adapter
             .as_ref()
@@ -544,7 +540,7 @@ impl Mock {
     /// # Panics
     /// This method will panic if your test method was not marked using the the
     /// `httpmock::with_mock_server` annotation.
-    pub fn create_on<'a>(mut self, mock_server: &'a MockServer) -> MockRef<'a> {
+    pub fn create_on<'a>(self, mock_server: &'a MockServer) -> MockRef<'a> {
         self.create_on_async(mock_server).join()
     }
 

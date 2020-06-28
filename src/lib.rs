@@ -147,32 +147,16 @@ use crate::api::{LocalMockServerAdapter, MockServerAdapter, RemoteMockServerAdap
 pub use crate::api::{Method, Mock, MockRef, Regex};
 pub use crate::server::HttpMockConfig;
 use crate::server::{start_server, MockServerState};
-use hyper::Body;
-use isahc::prelude::Configurable;
 use puddle::Pool;
-use std::any::Any;
-use std::borrow::BorrowMut;
 use std::net::{SocketAddr, ToSocketAddrs};
-use std::panic::catch_unwind;
 use std::rc::Rc;
-use std::sync::{Arc, Condvar, Mutex, MutexGuard};
-use std::thread::{sleep, JoinHandle};
-use std::time::Duration;
-use std::{fmt, thread};
+use std::sync::{Arc};
+use std::{thread};
 use tokio::task::LocalSet;
 
 use crate::server::data::MockServerHttpRequest;
 use crate::util::{read_env, with_retry};
 use util::Join;
-
-use crossbeam_utils::sync::{Parker, Unparker};
-use futures_util::{pin_mut, task::ArcWake};
-use std::str::FromStr;
-use std::{
-    future::Future,
-    net::UdpSocket,
-    task::{Context, Poll, Waker},
-};
 
 mod api;
 mod server;
@@ -217,11 +201,11 @@ impl MockServer {
         let adapter = REMOTE_SERVER_POOL_REF
             .take(|| Arc::new(RemoteMockServerAdapter::new(addr)))
             .await;
-        return Self::from(adapter, REMOTE_SERVER_POOL_REF.clone()).await;
+        Self::from(adapter, REMOTE_SERVER_POOL_REF.clone()).await
     }
 
     pub fn connect(addr: SocketAddr) -> Self {
-        return Self::connect_async(addr).join();
+        Self::connect_async(addr).join()
     }
 
     pub async fn connect_from_env_async() -> Self {
@@ -236,11 +220,11 @@ impl MockServer {
             .next()
             .expect("Cannot obtain a server address");
 
-        return Self::connect_async(addr).await;
+        Self::connect_async(addr).await
     }
 
     pub fn connect_from_env() -> Self {
-        return Self::connect_from_env_async().join();
+        Self::connect_from_env_async().join()
     }
 
     pub async fn start_async() -> Self {
@@ -291,12 +275,12 @@ const LOCAL_SERVER_ADAPTER_GENERATOR: fn() -> Arc<dyn MockServerAdapter + Send +
             .build()
             .expect("Cannot build local tokio runtime");
 
-        return LocalSet::new().block_on(&mut runtime, srv);
+        LocalSet::new().block_on(&mut runtime, srv)
     });
 
     // TODO: replace this join by await
     let addr = addr_receiver.join().expect("Cannot get server address");
-    return Arc::new(LocalMockServerAdapter::new(addr, state));
+    Arc::new(LocalMockServerAdapter::new(addr, state))
 };
 
 lazy_static! {
@@ -304,9 +288,7 @@ lazy_static! {
         let max_servers = read_env("HTTPMOCK_MAX_SERVERS", "50")
             .parse::<usize>()
             .expect("Cannot parse environment variable HTTPMOCK_MAX_SERVERS to an integer");
-        return Arc::new(Pool::new(max_servers));
+        Arc::new(Pool::new(max_servers))
     };
-    static ref REMOTE_SERVER_POOL_REF: Arc<Pool<Arc<dyn MockServerAdapter + Send + Sync>>> = {
-        return Arc::new(Pool::new(1));
-    };
+    static ref REMOTE_SERVER_POOL_REF: Arc<Pool<Arc<dyn MockServerAdapter + Send + Sync>>> = Arc::new(Pool::new(1));
 }

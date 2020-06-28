@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 
 /// This route is responsible for adding a new mock
 pub(crate) fn ping() -> Result<ServerResponse, String> {
-    return create_response(200, None, None);
+    create_response(200, None, None)
 }
 
 /// This route is responsible for adding a new mock
@@ -21,16 +21,16 @@ pub(crate) fn add(state: &MockServerState, body: String) -> Result<ServerRespons
 
     let result = handlers::add_new_mock(&state, mock_def);
 
-    return match result {
+    match result {
         Err(e) => create_json_response(500, None, ErrorResponse::new(&e)),
         Ok(mock_id) => create_json_response(201, None, MockIdentification { mock_id }),
-    };
+    }
 }
 
 /// This route is responsible for deleting mocks
 pub(crate) fn delete_one(state: &MockServerState, id: usize) -> Result<ServerResponse, String> {
     let result = handlers::delete_one(state, id);
-    return match result {
+    match result {
         Err(e) => create_json_response(500, None, ErrorResponse::new(&e)),
         Ok(found) => {
             if found {
@@ -39,30 +39,28 @@ pub(crate) fn delete_one(state: &MockServerState, id: usize) -> Result<ServerRes
                 create_response(404, None, None)
             }
         }
-    };
+    }
 }
 
 /// This route is responsible for deleting all mocks
 pub(crate) fn delete_all(state: &MockServerState) -> Result<ServerResponse, String> {
     let result = handlers::delete_all(state);
-    return match result {
+    match result {
         Err(e) => create_json_response(500, None, ErrorResponse::new(&e)),
         Ok(_) => create_response(202, None, None),
-    };
+    }
 }
 
 /// This route is responsible for deleting mocks
 pub(crate) fn read_one(state: &MockServerState, id: usize) -> Result<ServerResponse, String> {
     let handler_result = handlers::read_one(state, id);
-    return match handler_result {
+    match handler_result {
         Err(e) => create_json_response(500, None, ErrorResponse { message: e }),
-        Ok(mock_opt) => {
-            return match mock_opt {
-                Some(mock) => create_json_response(200, None, mock),
-                None => create_response(404, None, None),
-            }
-        }
-    };
+        Ok(mock_opt) => match mock_opt {
+            Some(mock) => create_json_response(200, None, mock),
+            None => create_response(404, None, None),
+        },
+    }
 }
 
 /// This route is responsible for finding a mock that matches the current request and serve a
@@ -73,33 +71,31 @@ pub(crate) fn serve(
     body: String,
 ) -> Result<ServerResponse, String> {
     let handler_request_result = to_handler_request(&req, body);
-    return match handler_request_result {
+    match handler_request_result {
         Ok(handler_request) => {
             let handler_response = handlers::find_mock(&state, handler_request);
-            return to_route_response(handler_response);
+            to_route_response(handler_response)
         }
         // TODO: Change status code 500 to something else. It is misleading to find a 500 when in fact the mock has not been found!
         Err(e) => create_json_response(500, None, ErrorResponse::new(&e)),
-    };
+    }
 }
 
 /// Maps the result of the serve handler to an HTTP response which the web framework understands
 fn to_route_response(
     handler_result: Result<Option<MockServerHttpResponse>, String>,
 ) -> Result<ServerResponse, String> {
-    return match handler_result {
+    match handler_result {
         Err(e) => create_json_response(500 as u16, None, ErrorResponse { message: e }),
-        Ok(res) => {
-            return match res {
-                None => create_json_response(
-                    500,
-                    None,
-                    ErrorResponse::new(&"Request did not match any route or mock"),
-                ),
-                Some(res) => create_response(res.status, res.headers, res.body),
-            }
-        }
-    };
+        Ok(res) => match res {
+            None => create_json_response(
+                500,
+                None,
+                ErrorResponse::new(&"Request did not match any route or mock"),
+            ),
+            Some(res) => create_response(res.status, res.headers, res.body),
+        },
+    }
 }
 
 fn create_json_response<T>(
