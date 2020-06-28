@@ -225,15 +225,6 @@ pub struct MockDefinition {
     pub response: MockServerHttpResponse,
 }
 
-impl MockDefinition {
-    pub fn new(req: RequestRequirements, mock: MockServerHttpResponse) -> Self {
-        Self {
-            request: req,
-            response: mock,
-        }
-    }
-}
-
 #[derive(Serialize, Deserialize)]
 pub struct MockIdentification {
     pub mock_id: usize,

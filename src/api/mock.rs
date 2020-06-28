@@ -563,3 +563,9 @@ impl Mock {
         self
     }
 }
+
+impl Default for Mock {
+    fn default() -> Self {
+        Self::new()
+    }
+}

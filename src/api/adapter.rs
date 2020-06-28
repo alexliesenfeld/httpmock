@@ -258,9 +258,10 @@ impl MockServerAdapter for LocalMockServerAdapter {
 
     async fn delete_mock(&self, mock_id: usize) -> Result<(), String> {
         let deleted = delete_one(&self.local_state, mock_id)?;
-        return match deleted {
-            false => Err("Mock could not deleted".to_string()),
-            true => Ok(()),
+        return if deleted {
+            Ok(())
+        } else {
+            Err("Mock could not deleted".to_string())
         };
     }
 

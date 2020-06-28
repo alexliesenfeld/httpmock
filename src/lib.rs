@@ -144,7 +144,7 @@
 extern crate lazy_static;
 
 use crate::api::{LocalMockServerAdapter, MockServerAdapter, RemoteMockServerAdapter};
-pub use crate::api::{Method, Mock, Regex};
+pub use crate::api::{Method, Mock, MockRef, Regex};
 pub use crate::server::HttpMockConfig;
 use crate::server::{start_server, MockServerState};
 use hyper::Body;
@@ -162,7 +162,7 @@ use std::{fmt, thread};
 use tokio::task::LocalSet;
 
 use crate::server::data::MockServerHttpRequest;
-use crate::util::{read_env, with_delayed_retry, with_retry_async};
+use crate::util::{read_env, with_retry};
 use util::Join;
 
 use crossbeam_utils::sync::{Parker, Unparker};
@@ -201,10 +201,10 @@ impl MockServer {
         server_adapter: Arc<dyn MockServerAdapter + Send + Sync>,
         pool: Arc<Pool<Arc<dyn MockServerAdapter + Send + Sync>>>,
     ) -> Self {
-        with_retry_async(5, || server_adapter.ping())
+        with_retry(5, || server_adapter.ping())
             .await
             .expect("Cannot ping mock server.");
-        with_retry_async(5, || server_adapter.delete_all_mocks())
+        with_retry(5, || server_adapter.delete_all_mocks())
             .await
             .expect("Cannot reset mock server.");
         Self {

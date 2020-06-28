@@ -74,15 +74,15 @@ pub fn find_mock(
     state: &MockServerState,
     req: MockServerHttpRequest,
 ) -> Result<Option<MockServerHttpResponse>, String> {
-    let a = Rc::new(req);
+    // TODO: Use reference instead of Rc
+    let req = Rc::new(req);
 
     let found_mock_id: Option<usize>;
     {
         let mocks = state.mocks.read().unwrap();
         let result = mocks
             .values()
-            .into_iter()
-            .find(|&mock| request_matches(a.clone(), &mock.definition.request));
+            .find(|&mock| request_matches(req.clone(), &mock.definition.request));
 
         found_mock_id = match result {
             Some(mock) => Some(mock.id),
@@ -94,7 +94,7 @@ pub fn find_mock(
         log::debug!(
             "Matched mock with id={} to the following request: {:?}",
             found_id,
-            a.clone()
+            req
         );
         let mut mocks = state.mocks.write().unwrap();
         let mock = mocks.get_mut(&found_id).unwrap();
@@ -104,7 +104,7 @@ pub fn find_mock(
 
     log::debug!(
         "Could not match any mock to the following request: {:?}",
-        a.clone()
+        req
     );
     return Result::Ok(None);
 }
@@ -297,9 +297,10 @@ fn match_json(req: &Option<String>, mock: &Value, exact: bool) -> bool {
             );
 
             // Compare JSON values
-            let result = match exact {
-                true => assert_json_eq_no_panic(&req_value, mock),
-                false => assert_json_include_no_panic(&req_value, mock),
+            let result = if exact {
+                assert_json_eq_no_panic(&req_value, mock)
+            } else {
+                assert_json_include_no_panic(&req_value, mock)
             };
 
             // Log and return the comparison result
