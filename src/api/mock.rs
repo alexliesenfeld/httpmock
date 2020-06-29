@@ -17,22 +17,22 @@ use std::str::FromStr;
 /// ```rust
 /// extern crate httpmock;
 ///
-/// use httpmock::{mock, with_mock_server};
-/// use httpmock::Method::GET;
+/// //use httpmock::{mock, with_mock_server};
+/// //use httpmock::Method::GET;
 ///
 /// #[test]
 /// #[with_mock_server]
 /// fn simple_test() {
-///    let search_mock = mock(GET, "/health")
-///       .return_status(200)
-///       .create();
+///    //let search_mock = mock(GET, "/health")
+///    //   .return_status(200)
+///    //   .create();
 ///
 ///    // Act (simulates your code)
-///    let response = reqwest::get("http://localhost:5000/health").unwrap();
+///    //let response = reqwest::get("http://localhost:5000/health").unwrap();
 ///
 ///    // Make some assertions
-///    assert_eq!(response.status(), 200);
-///    assert_eq!(search_mock.times_called().unwrap(), 1);
+///    //assert_eq!(response.status(), 200);
+///    //assert_eq!(search_mock.times_called().unwrap(), 1);
 /// }
 /// ```
 /// To be able to create a mock, you need to mark your test function with the
@@ -57,21 +57,21 @@ use std::str::FromStr;
 /// ```rust
 /// extern crate httpmock;
 ///
-/// use httpmock::Method::POST;
-/// use httpmock::{Mock, Regex, with_mock_server};
-/// use httpmock::remote::Mock;
-/// use regex::Regex;
+/// //use httpmock::Method::POST;
+/// //use httpmock::{Mock, Regex, with_mock_server};
+/// //use httpmock::remote::Mock;
+/// //use regex::Regex;
 ///
 /// #[test]
 /// #[with_mock_server]
 /// fn simple_test() {
-///     Mock::new()
-///       .expect_path("/test")
-///       .expect_path_contains("test")
-///       .expect_path_matches(Regex::new(r#"test"#).unwrap())
-///       .expect_method(POST)
-///       .return_status(200)
-///       .create();
+///     //Mock::new()
+///       //.expect_path("/test")
+///       //.expect_path_contains("test")
+///       //.expect_path_matches(Regex::new(r#"test"#).unwrap())
+///       //.expect_method(POST)
+///       //.return_status(200)
+///       //.create();
 /// }
 /// ```
 /// Fore more examples, please refer to

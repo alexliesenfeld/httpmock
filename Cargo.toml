@@ -37,6 +37,10 @@ tokio-test = "0.2.1"
 async-std = { version = "1", features = ["attributes", "unstable"] }
 reqwest = { version = "0.10.6", features = ["blocking", "json"] }
 isahc = {version = "0.9.5", features = [ "json"] }
+syn = { version = "1.0.5", features = ["full"] }
+quote = "1.0.2"
+httpmock-macros = { path = "./lib/macros", version = "0.3.0" }
+actix-rt = "1.1.1"
 
 [features]
 standalone = ["structopt", "env_logger"]
@@ -45,3 +49,7 @@ standalone = ["structopt", "env_logger"]
 name = "httpmock"
 required-features = ["standalone"]
 
+[workspace]
+members = [
+  "lib/macros"
+]

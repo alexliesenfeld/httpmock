@@ -6,8 +6,11 @@ use isahc::{get};
 use httpmock::Method::{GET, POST};
 use httpmock::{Mock, MockServer, MockServerRequest, Regex};
 
+use httpmock_macros::repeat_for_all_supported_executors;
+
 /// This test asserts that mocks can be stored, served and deleted as designed.
 #[test]
+#[repeat_for_all_supported_executors]
 fn simple_test() {
     // Arrange
     let _ = env_logger::try_init();
@@ -33,6 +36,7 @@ fn simple_test() {
 
 /// Ensures that once explicitly deleting a mock, it will not be delivered by the server anymore.
 #[test]
+#[repeat_for_all_supported_executors]
 fn explicit_delete_test() {
     // Arrange
     let _ = env_logger::try_init();
@@ -62,6 +66,7 @@ fn explicit_delete_test() {
 
 /// Tests and demonstrates body matching.
 #[test]
+#[repeat_for_all_supported_executors]
 fn exact_body_match_test() {
     // This is a temporary type that we will use for this test
     #[derive(serde::Serialize, serde::Deserialize)]
@@ -111,6 +116,7 @@ fn exact_body_match_test() {
 
 /// Tests and demonstrates matching features.
 #[test]
+#[repeat_for_all_supported_executors]
 fn matching_features_test() {
     // This is a temporary type that we will use for this test
     #[derive(serde::Serialize, serde::Deserialize)]
@@ -159,6 +165,7 @@ fn matching_features_test() {
 
 /// Tests and demonstrates matching JSON body partials.
 #[test]
+#[repeat_for_all_supported_executors]
 fn body_partial_json_str_test() {
     let _ = env_logger::try_init();
     let mock_server = MockServer::start();

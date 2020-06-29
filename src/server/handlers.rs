@@ -502,31 +502,6 @@ mod test {
         assert_eq!(true, does_match);
     }
 
-    /// This test makes sure that a request is considered "matched" when the request contains
-    /// exactly the same as the mock expects.
-    #[test]
-    fn request_matches_headers_exact_match() {
-        // Arrange
-        let mut h1 = BTreeMap::new();
-        h1.insert("h1".to_string(), "v1".to_string());
-        h1.insert("h2".to_string(), "v2".to_string());
-
-        let mut h2 = BTreeMap::new();
-        h2.insert("h1".to_string(), "v1".to_string());
-        h2.insert("h2".to_string(), "v2".to_string());
-
-        let req1 =
-            MockServerHttpRequest::new("GET".to_string(), "/test".to_string()).with_headers(h1);
-
-        let req2 = RequestRequirements::new().with_headers(h2);
-
-        // Act
-        let does_match = request_matches(Rc::new(req1), &req2);
-
-        // Assert
-        assert_eq!(true, does_match);
-    }
-
     /// This test makes sure that a request is considered "not matched" when the request misses
     /// headers.
     #[test]
@@ -635,8 +610,6 @@ mod test {
     /// This test ensures that mock request cannot contain an empty path.
     #[test]
     fn validate_mock_definition_no_path() {
-        // FIXME TODO: Why does this rule exist? If this rule exists, users cannot create mocks that for example only contains "expect_path_matches".
-
         // Arrange
         let req = RequestRequirements::new();
         let res = MockServerHttpResponse::new(418 as u16);
@@ -646,7 +619,6 @@ mod test {
         let result = validate_mock_definition(&smr);
 
         // Assert
-        assert_eq!(true, result.is_err());
-        assert_eq!(true, result.unwrap_err().eq("You need to provide a path"));
+        assert_eq!(true, result.is_ok());
     }
 }

@@ -1,0 +1,66 @@
+parameters:
+  nightly: false
+  version: 'latest'
+  doctests: false
+  setup: []
+  services: {}
+  env: {}
+  args: ''
+  dir: "."
+
+jobs:
+ - job: precheck
+   displayName: Check for code coverage token
+   pool:
+     vmImage: ubuntu-18.04
+   steps:
+     # workaround for https://github.com/MicrosoftDocs/vsts-docs/issues/4841
+     # note that we intentionally do not leak the secret itself
+     - bash: |
+         if [[ -n $CHECK ]] && [[ ! $CHECK == '$('* ]]; then
+           echo '##vso[task.setvariable variable=has_secret;isOutput=true]true'
+         else
+           echo '##vso[task.setvariable variable=has_secret;isOutput=true]false'
+         fi
+       name: secret_check
+       displayName: Is the token set?
+       env:
+         CHECK: ${{ parameters.token }}
+ - job: tarpaulin
+   dependsOn: precheck
+   displayName: tarpaulin
+   condition: and(succeeded(), eq(dependencies.precheck.outputs['secret_check.has_secret'], 'true'))
+   pool:
+     vmImage: ubuntu-18.04
+   services:
+     ${{ insert }}: ${{ parameters.services }}
+   continueOnError: ${{ parameters.nightly }}
+   container:
+     ${{ if ne('latest', parameters.version) }}:
+       image: ${{ format('xd009642/tarpaulin:{0}', parameters.version) }}
+     ${{ if eq('latest', parameters.version) }}:
+       ${{ if eq('true', parameters.nightly) }}:
+         image: 'xd009642/tarpaulin:latest-nightly'
+       ${{ if ne('true', parameters.nightly) }}:
+         image: 'xd009642/tarpaulin:latest'
+     options: --security-opt seccomp=unconfined
+   steps:
+     # Run any user-specific setup steps
+     - ${{ parameters.setup }}
+     - ${{ if eq('true', parameters.doctests) }}:
+       - script: cargo tarpaulin ${{ parameters.args }} --run-types Doctests --run-types Tests --out Xml
+         workingDirectory: ${{ parameters.dir }}
+         displayName: Run tarpaulin
+         env:
+           ${{ insert }}: ${{ parameters.env }}
+     - ${{ if ne('true', parameters.doctests) }}:
+       - script: cargo tarpaulin ${{ parameters.args }} --out Xml
+         workingDirectory: ${{ parameters.dir }}
+         displayName: Run tarpaulin
+         env:
+           ${{ insert }}: ${{ parameters.env }}
+     - script: bash <(curl -s https://codecov.io/bash)
+       workingDirectory: ${{ parameters.dir }}
+       displayName: Upload results to codecov
+       env:
+         CODECOV_TOKEN: ${{ parameters.token }}

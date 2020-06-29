@@ -1,0 +1,64 @@
+stages:
+  - stage: primary
+    jobs:
+      - template: .ci/default.yml
+        parameters:
+          minrust: 1.44.1 # integer atomics
+          codecov_token: $(CODECOV_TOKEN_SECRET)
+          env:
+            ENV_IS_SET: true
+          setup:
+            - script: touch src/setup.rs
+              displayName: touch src/setup.rs
+  - stage: subdir
+    jobs:
+      - template: .ci/default.yml
+        parameters:
+          minrust: 1.44.1 # integer atomics
+          codecov_token: $(CODECOV_TOKEN_SECRET)
+          dir: sub
+          env:
+            SUBENV_IS_SET: true
+          setup:
+            - script: touch sub/src/setup.rs
+              displayName: touch sub/src/setup.rs
+  # should work without code coverage token
+  - stage: bad_coverage_token
+    dependsOn: []
+    jobs:
+      - template: .ci/default.yml
+        parameters:
+          minrust: 1.44.1
+          codecov_token: $(DOES_NOT_EXIST)
+          env:
+            ENV_IS_SET: true
+          setup:
+            - script: touch src/setup.rs
+              displayName: touch src/setup.rs
+  # visual check that cross: false is indeed Linux-only
+  - stage: no_cross
+    dependsOn: []
+    jobs:
+      - template: .ci/default.yml
+        parameters:
+          minrust: 1.44.1
+          cross: false
+          env:
+            ENV_IS_SET: true
+          setup:
+            - script: touch src/setup.rs
+              displayName: touch src/setup.rs
+  # visual check that the develop-nightly image is used for tarpaulin
+  - stage: ci_image
+    dependsOn: []
+    jobs:
+      - template: .ci/coverage.yml
+        parameters:
+          token: $(CODECOV_TOKEN_SECRET)
+          version: develop
+          nightly: true # check that even with this set to true, image is still develop
+          env:
+            ENV_IS_SET: true
+          setup:
+            - script: touch src/setup.rs
+              displayName: touch src/setup.rs

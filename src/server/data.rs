@@ -59,6 +59,14 @@ pub struct MockServerHttpResponse {
 }
 
 impl MockServerHttpResponse {
+    pub fn new(status: u16) -> Self {
+        Self {
+            status,
+            headers: None,
+            body: None,
+        }
+    }
+
     pub fn with_headers(mut self, arg: BTreeMap<String, String>) -> Self {
         self.headers = Some(arg);
         self
@@ -217,6 +225,15 @@ impl RequestRequirements {
 pub struct MockDefinition {
     pub request: RequestRequirements,
     pub response: MockServerHttpResponse,
+}
+
+impl MockDefinition {
+    pub fn new(req: RequestRequirements, mock: MockServerHttpResponse) -> Self {
+        Self {
+            request: req,
+            response: mock,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize)]
