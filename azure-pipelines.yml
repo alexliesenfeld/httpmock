@@ -1,6 +1,8 @@
 jobs:
   - template: default.yml@templates
-
+    parameters:
+      codecov_token: $(CODECOV_TOKEN_SECRET)
+      minrust: 1.39.0
 resources:
   repositories:
     - repository: templates
