@@ -11,7 +11,7 @@ use std::fmt::Debug;
 use std::rc::Rc;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::Relaxed;
-use std::sync::{RwLock};
+use std::sync::RwLock;
 
 /// A general abstraction of an HTTP request for all handlers.
 #[derive(Serialize, Deserialize, Debug)]

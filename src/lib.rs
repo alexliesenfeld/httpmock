@@ -150,8 +150,8 @@ use crate::server::{start_server, MockServerState};
 use puddle::Pool;
 use std::net::{SocketAddr, ToSocketAddrs};
 use std::rc::Rc;
-use std::sync::{Arc};
-use std::{thread};
+use std::sync::Arc;
+use std::thread;
 use tokio::task::LocalSet;
 
 use crate::server::data::MockServerHttpRequest;
@@ -290,5 +290,6 @@ lazy_static! {
             .expect("Cannot parse environment variable HTTPMOCK_MAX_SERVERS to an integer");
         Arc::new(Pool::new(max_servers))
     };
-    static ref REMOTE_SERVER_POOL_REF: Arc<Pool<Arc<dyn MockServerAdapter + Send + Sync>>> = Arc::new(Pool::new(1));
+    static ref REMOTE_SERVER_POOL_REF: Arc<Pool<Arc<dyn MockServerAdapter + Send + Sync>>> =
+        Arc::new(Pool::new(1));
 }

@@ -1,4 +1,4 @@
-use std::sync::{Arc};
+use std::sync::Arc;
 
 #[doc(hidden)]
 pub async fn with_retry<T, U, F, Fut>(retries: usize, f: F) -> Result<T, U>

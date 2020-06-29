@@ -5,7 +5,7 @@ use isahc::prelude::*;
 use std::borrow::Borrow;
 use std::fmt::Debug;
 use std::net::SocketAddr;
-use std::sync::{Arc};
+use std::sync::Arc;
 use std::time::Duration;
 
 /// Refer to [regex::Regex](../regex/struct.Regex.html).

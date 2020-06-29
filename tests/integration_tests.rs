@@ -1,7 +1,7 @@
 extern crate httpmock;
 
+use isahc::get;
 use isahc::prelude::*;
-use isahc::{get};
 
 use httpmock::Method::{GET, POST};
 use httpmock::{Mock, MockServer, MockServerRequest, Regex};

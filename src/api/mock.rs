@@ -1,7 +1,6 @@
 use crate::api::{Method, Regex};
 use crate::server::data::{
-    MockDefinition, MockMatcherClosure, MockServerHttpResponse, Pattern,
-    RequestRequirements,
+    MockDefinition, MockMatcherClosure, MockServerHttpResponse, Pattern, RequestRequirements,
 };
 use crate::util::Join;
 use crate::MockServer;
