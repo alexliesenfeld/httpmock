@@ -1,7 +1,10 @@
 <p align="center"><img height="150" src="https://raw.githubusercontent.com/alexliesenfeld/httpmock/master/banner.png"></p>
 <p align="center">
+    <a href="https://dev.azure.com/alexliesenfeld/httpmock/_apis/build/status/alexliesenfeld.httpmock?branchName=multiserver"><img src="https://dev.azure.com/alexliesenfeld/httpmock/_apis/build/status/alexliesenfeld.httpmock?branchName=multiserver"></a>
+    <a href="https://codecov.io/gh/alexliesenfeld/httpmock"><img src="https://codecov.io/github/alexliesenfeld/httpmock/coverage.svg?branch=multiserver"></a>
     <a href="https://crates.io/crates/httpmock"><img src="https://img.shields.io/crates/v/httpmock.svg"></a>
     <a href="https://docs.rs/httpmock"><img src="https://docs.rs/httpmock/badge.svg"></a>
+        
 </p>
 <p align="center"><b>HTTP mocking library for Rust</b></p>
 
