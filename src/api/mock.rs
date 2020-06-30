@@ -223,9 +223,7 @@ impl Mock {
         self
     }
 
-    fn get_adapter(&mut self) {
-
-    }
+    fn get_adapter(&mut self) {}
     /// Sets an expected path regex. If the path of an HTTP request at the server matches this,
     /// regex the request will be considered a match for this mock to respond (given all other
     /// criteria are met).
@@ -570,15 +568,8 @@ impl Default for Mock {
     }
 }
 
-
-
-
 #[cfg(test)]
 mod test {
-    use crate::server::data::{RequestRequirements, Pattern};
-    use regex::Regex;
-    use serde_json::json;
-    use std::collections::BTreeMap;
     use crate::Mock;
 
     /// This test makes sure that a mock has a successful response code (200) by default.
@@ -588,4 +579,3 @@ mod test {
         assert_eq!(mock.mock.response.status, 200);
     }
 }
-
