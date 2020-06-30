@@ -1,11 +1,21 @@
 <p align="center"><img height="150" src="https://raw.githubusercontent.com/alexliesenfeld/httpmock/master/banner.png"></p>
 <p align="center">
-    <a href="https://dev.azure.com/alexliesenfeld/httpmock/_apis/build/status/alexliesenfeld.httpmock?branchName=multiserver"><img src="https://dev.azure.com/alexliesenfeld/httpmock/_apis/build/status/alexliesenfeld.httpmock?branchName=multiserver"></a>
-    <a href="https://codecov.io/gh/alexliesenfeld/httpmock"><img src="https://codecov.io/github/alexliesenfeld/httpmock/coverage.svg?branch=multiserver"></a>
-    <a href="https://crates.io/crates/httpmock"><img src="https://img.shields.io/crates/v/httpmock.svg"></a>
-    <a href="https://docs.rs/httpmock"><img src="https://docs.rs/httpmock/badge.svg"></a>
-    <a href="https://cloud.docker.com/repository/docker/alexliesenfeld/httpmock/"><img src="https://img.shields.io/docker/pulls/alexliesenfeld/httpmock.svg"></a>
+    <a href=""><img src=""></a>
+    <a href=""><img src=""></a>
+    <a href=""><img src=""></a>
+    <a href=""><img src=""></a>
+    <a href=""><img src=""></a>
 </p>
+
+<div align="center">
+[![Build Status](https://dev.azure.com/alexliesenfeld/httpmock/_apis/build/status/alexliesenfeld.httpmock?branchName=master)](https://dev.azure.com/alexliesenfeld/httpmock/_build/latest?definitionId=2&branchName=master)
+
+[![Coverage](https://codecov.io/github/alexliesenfeld/httpmock/coverage.svg?branch=multiserver)](https://crates.io/crates/httpmock)
+[![crates.io](https://img.shields.io/crates/v/httpmock.svg)](https://cloud.docker.com/repository/docker/dessalines/lemmy/)
+[![docs.rs status](https://docs.rs/httpmock/badge.svg)](https://docs.rs/httpmock)
+[![docs.rs status](https://img.shields.io/docker/pulls/alexliesenfeld/httpmock.svg)](https://cloud.docker.com/repository/docker/alexliesenfeld/httpmock/)
+[![License](https://img.shields.io/github/license/alexliesenfeld/httpmock.svg)](LICENSE)
+</div>
 <p align="center"><b>HTTP mocking library for Rust</b></p>
 
 
