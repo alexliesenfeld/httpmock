@@ -223,6 +223,9 @@ impl Mock {
         self
     }
 
+    fn get_adapter(&mut self) {
+
+    }
     /// Sets an expected path regex. If the path of an HTTP request at the server matches this,
     /// regex the request will be considered a match for this mock to respond (given all other
     /// criteria are met).

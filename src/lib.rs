@@ -172,7 +172,7 @@ pub mod standalone {
 
     pub async fn start_standalone_server(config: HttpMockConfig) -> Result<(), String> {
         let state = Arc::new(MockServerState::new());
-        start_server(config, &state, None, None).await
+        start_server(config, &state, None).await
     }
 }
 
@@ -269,7 +269,7 @@ const LOCAL_SERVER_ADAPTER_GENERATOR: fn() -> Arc<dyn MockServerAdapter + Send +
         let config = HttpMockConfig::new(0, false);
         let server_state = server_state.clone();
 
-        let srv = start_server(config, &server_state, None, Some(addr_sender));
+        let srv = start_server(config, &server_state, Some(addr_sender));
 
         let mut runtime = tokio::runtime::Builder::new()
             .enable_all()

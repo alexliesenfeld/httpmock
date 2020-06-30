@@ -152,7 +152,6 @@ async fn handle_server_request(
 pub async fn start_server(
     http_mock_config: HttpMockConfig,
     state: &Arc<MockServerState>,
-    shutdown_receiver: Option<tokio::sync::oneshot::Receiver<()>>,
     socket_addr_sender: Option<tokio::sync::oneshot::Sender<SocketAddr>>,
 ) -> Result<(), String> {
     let port = http_mock_config.port;
@@ -185,24 +184,11 @@ pub async fn start_server(
     }
 
     log::info!("Listening on {}", server.local_addr());
-
-    match shutdown_receiver {
-        Some(rx) => {
-            let graceful = server.with_graceful_shutdown(async {
-                rx.await.ok();
-            });
-            if let Err(e) = graceful.await {
-                return Err(format!("Err: {}", e));
-            }
-            Ok(())
-        }
-        None => {
-            if let Err(e) = server.await {
-                return Err(format!("Err: {}", e));
-            }
-            Ok(())
-        }
+    if let Err(e) = server.await {
+        return Err(format!("Err: {}", e));
     }
+
+    Ok(())
 }
 
 /// Maps a server response to a hyper response.
