@@ -5,6 +5,7 @@
 [![Build Status](https://dev.azure.com/alexliesenfeld/httpmock/_apis/build/status/alexliesenfeld.httpmock?branchName=multiserver)](https://dev.azure.com/alexliesenfeld/httpmock/_build/latest?definitionId=2&branchName=multiserver)
 [![Coverage](https://codecov.io/github/alexliesenfeld/httpmock/coverage.svg?branch=multiserver)](https://codecov.io/gh/alexliesenfeld/httpmock/)
 [![crates.io](https://img.shields.io/crates/v/httpmock.svg)](https://cloud.docker.com/repository/docker/dessalines/lemmy/)
+[![docs.rs](https://docs.rs/httpmock/badge.svg)](https://docs.rs/httpmock)
 [![License](https://img.shields.io/github/license/alexliesenfeld/httpmock.svg)](LICENSE)
 
 </div>
