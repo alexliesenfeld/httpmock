@@ -53,9 +53,9 @@ async fn simple_standalone_test_async() {
     // Arrange
     let _ = env_logger::try_init();
 
-    // Instead of creating a new MockServer using new(), we connect by reading the host and port
-    // from the environment (HTTPMOCK_HOST / HTTPMOCK_PORT) or falling back to defaults
-    // (localhost on port 5000)
+    // Instead of creating a new MockServer using connect_from_env_async(), we connect by
+    // reading the host and port from the environment (HTTPMOCK_HOST / HTTPMOCK_PORT) or
+    // falling back to defaults (localhost on port 5000)
     let mock_server = MockServer::connect_from_env_async().await;
 
     let mut search_mock = Mock::new()
@@ -100,9 +100,9 @@ fn unsupported_features() {
     // This starts up a standalone server in the background running on port 5000
     simulate_standalone_server();
 
-    // Arrange: Instead of creating a new MockServer using new(), we connect to an existing
-    // remote instance.
-    let mock_server = MockServer::connect("localhost:5000");
+    // Instead of creating a new MockServer using connect_from_env(), we connect by reading the
+    // host and port from the environment (HTTPMOCK_HOST / HTTPMOCK_PORT) or falling back to defaults
+    let mock_server = MockServer::connect_from_env();
 
     // Creating this mock will panic because expect_match is not supported when using
     // a remote mock server.
