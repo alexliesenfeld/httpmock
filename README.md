@@ -5,19 +5,11 @@
 [![Build Status](https://dev.azure.com/alexliesenfeld/httpmock/_apis/build/status/alexliesenfeld.httpmock?branchName=master)](https://dev.azure.com/alexliesenfeld/httpmock/_build/latest?definitionId=2&branchName=master)
 [![Coverage](https://codecov.io/github/alexliesenfeld/httpmock/coverage.svg?branch=multiserver)](https://crates.io/crates/httpmock)
 [![License](https://img.shields.io/github/license/alexliesenfeld/httpmock.svg)](LICENSE)
-
-</div>
-
-<div align="center">
-    
 [![crates.io](https://img.shields.io/crates/v/httpmock.svg)](https://cloud.docker.com/repository/docker/dessalines/lemmy/)
 [![docs.rs status](https://docs.rs/httpmock/badge.svg)](https://docs.rs/httpmock)
 [![docker pulls](https://img.shields.io/docker/pulls/alexliesenfeld/httpmock.svg)](https://cloud.docker.com/repository/docker/alexliesenfeld/httpmock/)
 
 </div>
-
-
-
 
 <p align="center">
     <a href="https://docs.rs/httpmock/">Documentation</a>
