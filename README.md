@@ -6,6 +6,7 @@
 [![Coverage](https://codecov.io/github/alexliesenfeld/httpmock/coverage.svg?branch=multiserver)](https://codecov.io/gh/alexliesenfeld/httpmock/)
 [![crates.io](https://img.shields.io/crates/v/httpmock.svg)](https://cloud.docker.com/repository/docker/dessalines/lemmy/)
 [![docs.rs status](https://docs.rs/httpmock/badge.svg)](https://docs.rs/httpmock)
+[![Docker](https://img.shields.io/docker/automated/alexliesenfeld/httpmock.svg)](https://hub.docker.com/r/alexliesenfeld/httpmock/)
 [![License](https://img.shields.io/github/license/alexliesenfeld/httpmock.svg)](LICENSE)
 
 </div>
