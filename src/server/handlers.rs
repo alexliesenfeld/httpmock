@@ -18,7 +18,7 @@ pub fn add_new_mock(state: &MockServerState, mock_def: MockDefinition) -> Result
     let result = validate_mock_definition(&mock_def);
 
     if let Err(error_msg) = result {
-        let error_msg = format!("validation error: {}", error_msg);
+        let error_msg = format!("Validation error: {}", error_msg);
         return Err(error_msg);
     }
 
@@ -337,10 +337,11 @@ mod test {
     use std::collections::BTreeMap;
     use std::rc::Rc;
 
-    use crate::server::data::{
-        MockDefinition, MockServerHttpRequest, MockServerHttpResponse, RequestRequirements,
-    };
-    use crate::server::handlers::{request_matches, validate_mock_definition};
+    use crate::server::data::{MockDefinition, MockServerHttpRequest, MockServerHttpResponse, RequestRequirements, Pattern};
+    use crate::server::handlers::{request_matches, validate_mock_definition, add_new_mock, read_one};
+    use crate::server::MockServerState;
+    use crate::MockServerRequest;
+    use regex::Regex;
 
     /// TODO
     #[test]
@@ -624,4 +625,79 @@ mod test {
         // Assert
         assert_eq!(true, result.is_ok());
     }
+
+    /// This test ensures that mock validation is being invoked.
+    #[test]
+    fn add_new_mock_validation_error() {
+        // Arrange
+        let state = MockServerState::new();
+        let mut req = RequestRequirements::new();
+        req.method = Some("GET".into());
+        req.body = Some("body".into());
+
+        let res = MockServerHttpResponse::new(200);
+        let mock_def = MockDefinition::new(req, res);
+
+        // Act
+        let result = add_new_mock(&state, mock_def);
+
+        // Assert
+        assert_eq!(result.is_err(), true);
+        assert_eq!(result.err().unwrap().contains("Validation error"), true);
+    }
+
+    /// This test ensures that reading a non-existent mock does not result in an error but an
+    /// empty result.
+    #[test]
+    fn read_one_returns_none_test() {
+        // Arrange
+        let state = MockServerState::new();
+
+        // Act
+        let result = read_one(&state, 6);
+
+        // Assert
+        assert_eq!(result.is_ok(), true);
+        assert_eq!(result.unwrap().is_none(), true);
+    }
+
+    /// This test checks if matching "path_contains" is working as expected.
+    #[test]
+    fn not_match_path_contains_test() {
+        // Arrange
+        let msr = Rc::new(MockServerHttpRequest::new("GET".into(), "test".into()));
+        let mut mock1 = RequestRequirements::new();
+        mock1.path_contains = Some(vec!("x".into()));
+        let mut mock2 = RequestRequirements::new();
+        mock2.path_contains = Some(vec!("es".into()));
+
+        // Act
+        let result1 = request_matches(msr.clone(), &mock1);
+        let result2 = request_matches(msr.clone(), &mock2);
+
+        // Assert
+        assert_eq!(result1, false);
+        assert_eq!(result2, true);
+    }
+
+    /// This test checks if matching "path_matches" is working as expected.
+    #[test]
+    fn not_match_path_matches_test() {
+        // Arrange
+        let msr = Rc::new(MockServerHttpRequest::new("GET".into(), "test".into()));
+        let mut mock1 = RequestRequirements::new();
+        mock1.path_matches = Some(vec!(Pattern::from_regex(Regex::new(r#"x"#).unwrap())));
+        let mut mock2 = RequestRequirements::new();
+        mock2.path_matches = Some(vec!(Pattern::from_regex(Regex::new(r#"test"#).unwrap())));
+
+        // Act
+        let result1 = request_matches(msr.clone(), &mock1);
+        let result2 = request_matches(msr.clone(), &mock2);
+
+        // Assert
+        assert_eq!(result1, false);
+        assert_eq!(result2, true);
+    }
+
+    
 }
