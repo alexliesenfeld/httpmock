@@ -341,6 +341,9 @@ mod test {
             })
         });
 
-        assert_eq!(String::from_utf8(body.unwrap()).unwrap(), "test".to_string())
+        assert_eq!(
+            String::from_utf8(body.unwrap()).unwrap(),
+            "test".to_string()
+        )
     }
 }
