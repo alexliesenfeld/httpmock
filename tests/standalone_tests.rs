@@ -1,16 +1,16 @@
+extern crate httpmock;
 #[macro_use]
 extern crate lazy_static;
-extern crate httpmock;
+
+use std::sync::Mutex;
+use std::thread::{spawn, JoinHandle};
 
 use isahc::{get, get_async};
+use tokio::task::LocalSet;
 
 use httpmock::standalone::start_standalone_server;
 use httpmock::{HttpMockConfig, Mock, MockServer};
 use httpmock_macros::test_executors;
-
-use std::sync::Mutex;
-use std::thread::{spawn, JoinHandle};
-use tokio::task::LocalSet;
 
 /// This test asserts that mocks can be stored, served and deleted as designed.
 // Ignore this "test_executors" macro. It runs tests in multiple async runtimes for quality assurance.
@@ -58,7 +58,7 @@ async fn simple_standalone_test_async() {
     // (localhost on port 5000)
     let mock_server = MockServer::connect_from_env_async().await;
 
-    let search_mock = Mock::new()
+    let mut search_mock = Mock::new()
         .expect_path_contains("/search")
         .expect_query_param("query", "metallica")
         .return_status(202)
@@ -73,9 +73,22 @@ async fn simple_standalone_test_async() {
     .await
     .unwrap();
 
-    // Assert
+    // Assert 1
     assert_eq!(response.status(), 202);
     assert_eq!(search_mock.times_called_async().await, 1);
+
+    // Act 2: Delete the mock and send a request to show that it is not present on the server anymore
+    search_mock.delete();
+    let response = get_async(&format!(
+        "http://{}:{}/search?query=metallica",
+        mock_server.host(),
+        mock_server.port()
+    ))
+    .await
+    .unwrap();
+
+    // Assert: The mock was not found
+    assert_eq!(response.status(), 404);
 }
 
 /// This test asserts that mocks can be stored, served and deleted as designed.

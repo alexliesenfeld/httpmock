@@ -115,7 +115,12 @@ fn explicit_delete_test() {
         .create_on(&mock_server);
 
     // Act: Send the HTTP request
-    let response = get(&format!("http://{}/health", mock_server.address())).unwrap();
+    let response = get(&format!(
+        "http://{}:{}/health",
+        mock_server.host(),
+        mock_server.port()
+    ))
+    .unwrap();
 
     // Assert
     assert_eq!(response.status(), 205);
@@ -127,7 +132,7 @@ fn explicit_delete_test() {
     let response = get(&format!("http://{}/health", mock_server.address())).unwrap();
 
     // Assert that the request failed, because the mock has been deleted
-    assert_eq!(response.status(), 500);
+    assert_eq!(response.status(), 404);
 }
 
 /// Tests and demonstrates body matching.

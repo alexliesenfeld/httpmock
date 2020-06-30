@@ -76,7 +76,6 @@ pub(crate) fn serve(
             let handler_response = handlers::find_mock(&state, handler_request);
             to_route_response(handler_response)
         }
-        // TODO: Change status code 500 to something else. It is misleading to find a 500 when in fact the mock has not been found!
         Err(e) => create_json_response(500, None, ErrorResponse::new(&e)),
     }
 }
@@ -89,7 +88,7 @@ fn to_route_response(
         Err(e) => create_json_response(500 as u16, None, ErrorResponse { message: e }),
         Ok(res) => match res {
             None => create_json_response(
-                500,
+                404,
                 None,
                 ErrorResponse::new(&"Request did not match any route or mock"),
             ),

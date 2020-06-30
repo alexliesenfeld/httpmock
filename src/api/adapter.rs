@@ -63,7 +63,7 @@ impl RemoteMockServerAdapter {
     fn validate_mock(&self, mock: &MockDefinition) -> Result<(), String> {
         if mock.request.matchers.is_some() {
             return Err(
-                "Request matchers are not supported when using a remote mock server".to_string(),
+                "Anonymous function request matchers are not supported when using a remote mock server".to_string(),
             );
         }
         Ok(())
