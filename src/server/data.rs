@@ -1,10 +1,5 @@
-// TODO: Remove this (requires adding some more tests to cover usage of some methods)
-#![allow(dead_code)]
 extern crate serde_regex;
 
-use regex::Regex;
-use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use std::cmp::Ordering;
 use std::collections::BTreeMap;
 use std::fmt::Debug;
@@ -12,6 +7,10 @@ use std::rc::Rc;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::Relaxed;
 use std::sync::RwLock;
+
+use regex::Regex;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 /// A general abstraction of an HTTP request for all handlers.
 #[derive(Serialize, Deserialize, Debug)]
@@ -282,6 +281,7 @@ impl ActiveMock {
         }
     }
 }
+
 #[derive(Serialize, Deserialize)]
 pub struct ErrorResponse {
     pub message: String,

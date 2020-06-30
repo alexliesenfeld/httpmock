@@ -65,8 +65,9 @@ impl StringTreeMapExtension for BTreeMap<String, String> {
 
 #[cfg(test)]
 mod test {
-    use crate::server::util::{StringTreeMapExtension, TreeMapExtension};
     use std::collections::BTreeMap;
+
+    use crate::server::util::{StringTreeMapExtension, TreeMapExtension};
 
     #[test]
     fn tree_map_fully_contains_other() {

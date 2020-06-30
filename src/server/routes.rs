@@ -1,10 +1,10 @@
-use crate::server::{handlers, ServerRequestHeader, ServerResponse};
-
-use crate::server::data::*;
+use std::collections::BTreeMap;
 
 use qstring::QString;
 use serde::Serialize;
-use std::collections::BTreeMap;
+
+use crate::server::data::*;
+use crate::server::{handlers, ServerRequestHeader, ServerResponse};
 
 /// This route is responsible for adding a new mock
 pub(crate) fn ping() -> Result<ServerResponse, String> {

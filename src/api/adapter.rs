@@ -1,17 +1,18 @@
-use crate::server::data::{ActiveMock, MockDefinition, MockIdentification, MockServerState};
-use crate::server::handlers::{add_new_mock, delete_all, delete_one, read_one};
-use async_trait::async_trait;
-use isahc::prelude::*;
 use std::borrow::Borrow;
 use std::fmt::Debug;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 
+use async_trait::async_trait;
+use isahc::prelude::*;
+
+use crate::server::data::{ActiveMock, MockDefinition, MockIdentification, MockServerState};
+use crate::server::handlers::{add_new_mock, delete_all, delete_one, read_one};
+
 /// Refer to [regex::Regex](../regex/struct.Regex.html).
 pub type Regex = regex::Regex;
 
-// TODO: Move this to another place (it does belong to a place where it is actually used)
 pub(crate) type InternalHttpClient = isahc::HttpClient;
 
 /// Represents an HTTP method.

@@ -143,29 +143,32 @@
 #[macro_use]
 extern crate lazy_static;
 
-use crate::api::{LocalMockServerAdapter, MockServerAdapter, RemoteMockServerAdapter};
-pub use crate::api::{Method, Mock, MockRef, Regex};
-pub use crate::server::HttpMockConfig;
-use crate::server::{start_server, MockServerState};
-use puddle::Pool;
 use std::net::{SocketAddr, ToSocketAddrs};
 use std::rc::Rc;
 use std::sync::Arc;
 use std::thread;
+
+use puddle::Pool;
 use tokio::task::LocalSet;
 
-use crate::server::data::MockServerHttpRequest;
-use crate::util::{read_env, with_retry};
 use util::Join;
+
+use crate::api::{LocalMockServerAdapter, MockServerAdapter, RemoteMockServerAdapter};
+pub use crate::api::{Method, Mock, MockRef, Regex};
+use crate::server::data::MockServerHttpRequest;
+pub use crate::server::HttpMockConfig;
+use crate::server::{start_server, MockServerState};
+use crate::util::{read_env, with_retry};
 
 mod api;
 mod server;
 mod util;
 
 pub mod standalone {
+    use std::sync::Arc;
+
     use crate::server::HttpMockConfig;
     use crate::server::{start_server, MockServerState};
-    use std::sync::Arc;
 
     pub async fn start_standalone_server(config: HttpMockConfig) -> Result<(), String> {
         let state = Arc::new(MockServerState::new());
@@ -197,15 +200,21 @@ impl MockServer {
         }
     }
 
-    pub async fn connect_async(addr: SocketAddr) -> Self {
+    pub async fn connect_async(address: &str) -> Self {
+        let addr = address
+            .to_socket_addrs()
+            .expect("Cannot parse address")
+            .find(|addr| addr.is_ipv4())
+            .expect("Not able to resolve the provided host name to an IPv4 address");
+
         let adapter = REMOTE_SERVER_POOL_REF
             .take(|| Arc::new(RemoteMockServerAdapter::new(addr)))
             .await;
         Self::from(adapter, REMOTE_SERVER_POOL_REF.clone()).await
     }
 
-    pub fn connect(addr: SocketAddr) -> Self {
-        Self::connect_async(addr).join()
+    pub fn connect(address: &str) -> Self {
+        Self::connect_async(address).join()
     }
 
     pub async fn connect_from_env_async() -> Self {
@@ -213,14 +222,7 @@ impl MockServer {
         let port = read_env("HTTPMOCK_PORT", "5000")
             .parse::<u16>()
             .expect("Cannot parse environment variable HTTPMOCK_PORT to an integer");
-
-        let addr = format!("{}:{}", host, port)
-            .to_socket_addrs()
-            .expect("Cannot parse server address")
-            .next()
-            .expect("Cannot obtain a server address");
-
-        Self::connect_async(addr).await
+        Self::connect_async(&format!("{}:{}", host, port)).await
     }
 
     pub fn connect_from_env() -> Self {

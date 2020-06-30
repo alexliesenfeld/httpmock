@@ -1,16 +1,16 @@
 extern crate httpmock;
 
-use isahc::get;
 use isahc::prelude::*;
+use isahc::{get, get_async, HttpClientBuilder};
 
 use httpmock::Method::{GET, POST};
 use httpmock::{Mock, MockServer, MockServerRequest, Regex};
-
-use httpmock_macros::repeat_for_all_supported_executors;
+use httpmock_macros::test_executors;
+use isahc::config::RedirectPolicy;
 
 /// This test asserts that mocks can be stored, served and deleted as designed.
 #[test]
-#[repeat_for_all_supported_executors]
+#[test_executors] // Internal macro that executes this test in different async executors. Ignore it.
 fn simple_test() {
     // Arrange
     let _ = env_logger::try_init();
@@ -34,9 +34,75 @@ fn simple_test() {
     assert_eq!(search_mock.times_called(), 1);
 }
 
+/// This test shows how to use multiple mock servers in one test.
+#[test]
+#[test_executors] // Internal macro that executes this test in different async executors. Ignore it.
+fn multiple_mock_servers_test() {
+    // Arrange
+    let _ = env_logger::try_init();
+    let mock_server1 = MockServer::start();
+    let mock_server2 = MockServer::start();
+
+    let redirect_mock = Mock::new()
+        .expect_path("/redirectTest")
+        .return_status(302)
+        .return_header(
+            "Location",
+            &format!("http://{}/finalTarget", mock_server2.address()),
+        )
+        .create_on(&mock_server1);
+
+    let target_mock = Mock::new()
+        .expect_path("/finalTarget")
+        .return_status(200)
+        .create_on(&mock_server2);
+
+    // Act: Send the HTTP request
+    let http_client = HttpClientBuilder::new()
+        .redirect_policy(RedirectPolicy::Follow)
+        .build()
+        .unwrap();
+
+    let response = http_client
+        .get(&format!("http://{}/redirectTest", mock_server1.address()))
+        .unwrap();
+
+    // Assert
+    assert_eq!(response.status(), 200);
+    assert_eq!(redirect_mock.times_called(), 1);
+    assert_eq!(target_mock.times_called(), 1);
+}
+
+/// Demonstrates how to use async structures
+#[async_std::test]
+async fn simple_test_async() {
+    // Arrange
+    let _ = env_logger::try_init();
+    let mock_server = MockServer::start_async().await;
+
+    let search_mock = Mock::new()
+        .expect_path_contains("/search")
+        .expect_query_param("query", "metallica")
+        .return_status(202)
+        .create_on_async(&mock_server)
+        .await;
+
+    // Act: Send the HTTP request
+    let response = get_async(&format!(
+        "http://{}/search?query=metallica",
+        mock_server.address()
+    ))
+    .await
+    .unwrap();
+
+    // Assert
+    assert_eq!(response.status(), 202);
+    assert_eq!(search_mock.times_called_async().await, 1);
+}
+
 /// Ensures that once explicitly deleting a mock, it will not be delivered by the server anymore.
 #[test]
-#[repeat_for_all_supported_executors]
+#[test_executors] // Internal macro that executes this test in different async executors. Ignore it.
 fn explicit_delete_test() {
     // Arrange
     let _ = env_logger::try_init();
@@ -66,7 +132,7 @@ fn explicit_delete_test() {
 
 /// Tests and demonstrates body matching.
 #[test]
-#[repeat_for_all_supported_executors]
+#[test_executors] // Internal macro that executes this test in different async executors. Ignore it.
 fn exact_body_match_test() {
     // This is a temporary type that we will use for this test
     #[derive(serde::Serialize, serde::Deserialize)]
@@ -116,7 +182,7 @@ fn exact_body_match_test() {
 
 /// Tests and demonstrates matching features.
 #[test]
-#[repeat_for_all_supported_executors]
+#[test_executors] // Internal macro that executes this test in different async executors. Ignore it.
 fn matching_features_test() {
     // This is a temporary type that we will use for this test
     #[derive(serde::Serialize, serde::Deserialize)]
@@ -165,7 +231,7 @@ fn matching_features_test() {
 
 /// Tests and demonstrates matching JSON body partials.
 #[test]
-#[repeat_for_all_supported_executors]
+#[test_executors] // Internal macro that executes this test in different async executors. Ignore it.
 fn body_partial_json_str_test() {
     let _ = env_logger::try_init();
     let mock_server = MockServer::start();

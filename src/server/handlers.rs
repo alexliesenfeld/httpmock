@@ -1,12 +1,14 @@
+use std::rc::Rc;
+use std::str::FromStr;
+
+use assert_json_diff::{assert_json_eq_no_panic, assert_json_include_no_panic};
+use serde_json::Value;
+
 use crate::server::data::{
     ActiveMock, MockDefinition, MockServerHttpRequest, MockServerHttpResponse, MockServerState,
     RequestRequirements,
 };
 use crate::server::util::{StringTreeMapExtension, TreeMapExtension};
-use assert_json_diff::{assert_json_eq_no_panic, assert_json_include_no_panic};
-use serde_json::Value;
-use std::rc::Rc;
-use std::str::FromStr;
 
 /// Contains HTTP methods which cannot have a body.
 const NON_BODY_METHODS: &[&str] = &["GET", "HEAD", "DELETE"];
@@ -332,12 +334,13 @@ fn validate_mock_definition(req: &MockDefinition) -> Result<(), String> {
 
 #[cfg(test)]
 mod test {
+    use std::collections::BTreeMap;
+    use std::rc::Rc;
+
     use crate::server::data::{
         MockDefinition, MockServerHttpRequest, MockServerHttpResponse, RequestRequirements,
     };
     use crate::server::handlers::{request_matches, validate_mock_definition};
-    use std::collections::BTreeMap;
-    use std::rc::Rc;
 
     /// TODO
     #[test]

@@ -2,6 +2,7 @@
 
 use std::borrow::Borrow;
 use std::collections::BTreeMap;
+use std::net::SocketAddr;
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -16,7 +17,6 @@ use hyper::{
 use regex::Regex;
 
 pub use crate::server::data::MockServerState;
-use std::net::SocketAddr;
 
 pub(crate) mod data;
 pub(crate) mod handlers;

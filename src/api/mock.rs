@@ -1,14 +1,16 @@
+use std::collections::BTreeMap;
+use std::net::SocketAddr;
+use std::str::FromStr;
+
+use serde::Serialize;
+use serde_json::Value;
+
 use crate::api::{Method, Regex};
 use crate::server::data::{
     MockDefinition, MockMatcherClosure, MockServerHttpResponse, Pattern, RequestRequirements,
 };
 use crate::util::Join;
 use crate::MockServer;
-use serde::Serialize;
-use serde_json::Value;
-use std::collections::BTreeMap;
-use std::net::SocketAddr;
-use std::str::FromStr;
 
 /// Represents the primary interface to the mock server.
 ///
