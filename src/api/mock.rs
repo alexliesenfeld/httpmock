@@ -569,3 +569,23 @@ impl Default for Mock {
         Self::new()
     }
 }
+
+
+
+
+#[cfg(test)]
+mod test {
+    use crate::server::data::{RequestRequirements, Pattern};
+    use regex::Regex;
+    use serde_json::json;
+    use std::collections::BTreeMap;
+    use crate::Mock;
+
+    /// This test makes sure that a mock has a successful response code (200) by default.
+    #[test]
+    fn fill_mock_requirements() {
+        let mock = Mock::default();
+        assert_eq!(mock.mock.response.status, 200);
+    }
+}
+
