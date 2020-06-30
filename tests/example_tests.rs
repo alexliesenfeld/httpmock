@@ -7,6 +7,7 @@ use httpmock::Method::{GET, POST};
 use httpmock::{Mock, MockServer, MockServerRequest, Regex};
 use httpmock_macros::test_executors;
 use isahc::config::RedirectPolicy;
+use std::fs::read_to_string;
 
 /// This test asserts that mocks can be stored, served and deleted as designed.
 #[test]
@@ -268,11 +269,12 @@ fn body_partial_json_str_test() {
         "#,
         )
         .return_status(201)
+        .return_body(r#"{"result":"success"}"#)
         .create_on(&mock_server);
 
     // Simulates application that makes the request to the mock.
     let uri = format!("http://{}/users", m.server_address());
-    let response = Request::post(&uri)
+    let mut response = Request::post(&uri)
         .header("Content-Type", "application/json")
         .header("User-Agent", "rust-test")
         .body(
