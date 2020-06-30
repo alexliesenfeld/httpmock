@@ -4,9 +4,18 @@
     <a href="https://codecov.io/gh/alexliesenfeld/httpmock"><img src="https://codecov.io/github/alexliesenfeld/httpmock/coverage.svg?branch=multiserver"></a>
     <a href="https://crates.io/crates/httpmock"><img src="https://img.shields.io/crates/v/httpmock.svg"></a>
     <a href="https://docs.rs/httpmock"><img src="https://docs.rs/httpmock/badge.svg"></a>
-        
+    <a href="https://cloud.docker.com/repository/docker/alexliesenfeld/httpmock/"><img src="https://img.shields.io/docker/pulls/alexliesenfeld/httpmock.svg"></a>
 </p>
 <p align="center"><b>HTTP mocking library for Rust</b></p>
+
+
+<p align="center">
+    <a href="https://docs.rs/httpmock/">Documentation</a>
+    ·
+    <a href="https://github.com/alexliesenfeld/httpmock/issues">Report Bug</a>
+    ·
+    <a href="https://github.com/alexliesenfeld/httpmock/issues">Request Feature</a>
+</p>
 
 ---
 `httpmock` is a Rust crate that allows you to mock HTTP responses in your tests. It contains two major components:

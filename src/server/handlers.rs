@@ -337,8 +337,12 @@ mod test {
     use std::collections::BTreeMap;
     use std::rc::Rc;
 
-    use crate::server::data::{MockDefinition, MockServerHttpRequest, MockServerHttpResponse, RequestRequirements, Pattern};
-    use crate::server::handlers::{request_matches, validate_mock_definition, add_new_mock, read_one};
+    use crate::server::data::{
+        MockDefinition, MockServerHttpRequest, MockServerHttpResponse, Pattern, RequestRequirements,
+    };
+    use crate::server::handlers::{
+        add_new_mock, read_one, request_matches, validate_mock_definition,
+    };
     use crate::server::MockServerState;
     use crate::MockServerRequest;
     use regex::Regex;
@@ -667,9 +671,9 @@ mod test {
         // Arrange
         let msr = Rc::new(MockServerHttpRequest::new("GET".into(), "test".into()));
         let mut mock1 = RequestRequirements::new();
-        mock1.path_contains = Some(vec!("x".into()));
+        mock1.path_contains = Some(vec!["x".into()]);
         let mut mock2 = RequestRequirements::new();
-        mock2.path_contains = Some(vec!("es".into()));
+        mock2.path_contains = Some(vec!["es".into()]);
 
         // Act
         let result1 = request_matches(msr.clone(), &mock1);
@@ -686,9 +690,9 @@ mod test {
         // Arrange
         let msr = Rc::new(MockServerHttpRequest::new("GET".into(), "test".into()));
         let mut mock1 = RequestRequirements::new();
-        mock1.path_matches = Some(vec!(Pattern::from_regex(Regex::new(r#"x"#).unwrap())));
+        mock1.path_matches = Some(vec![Pattern::from_regex(Regex::new(r#"x"#).unwrap())]);
         let mut mock2 = RequestRequirements::new();
-        mock2.path_matches = Some(vec!(Pattern::from_regex(Regex::new(r#"test"#).unwrap())));
+        mock2.path_matches = Some(vec![Pattern::from_regex(Regex::new(r#"test"#).unwrap())]);
 
         // Act
         let result1 = request_matches(msr.clone(), &mock1);
@@ -698,6 +702,4 @@ mod test {
         assert_eq!(result1, false);
         assert_eq!(result2, true);
     }
-
-    
 }
