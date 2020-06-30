@@ -297,3 +297,65 @@ impl ErrorResponse {
         }
     }
 }
+
+
+
+#[cfg(test)]
+mod test {
+    use crate::server::data::{RequestRequirements, Pattern};
+    use regex::Regex;
+    use serde_json::json;
+    use std::collections::BTreeMap;
+
+    /// This test makes sure that adding the matching rules to a mock fills the struct as expected.
+    #[test]
+    fn fill_mock_requirements() {
+        // Arrange
+        let with_path = "with_path";
+        let with_path_contains = vec!("with_path_contains".into());
+        let with_path_matches = vec!(Pattern::from_regex(Regex::new(r#"with_path_matches"#).unwrap()));
+        let mut with_headers = BTreeMap::new();
+        with_headers.insert("test".into(), "value".into());
+        let with_method = "GET";
+        let with_body = "with_body";
+        let with_body_contains = vec!("body_contains".into());
+        let with_body_matches = vec!(Pattern::from_regex(Regex::new(r#"with_body_matches"#).unwrap()));
+        let with_json_body = json!(12.5);
+        let with_json_body_includes = vec!(json!(12.5));
+        let with_query_param_exists = vec!("with_query_param_exists".into());
+        let mut with_query_param = BTreeMap::new();
+        with_query_param.insert("with_query_param".into(), "value".into());
+        let with_header_exists = vec!("with_header_exists".into());
+
+        // Act
+        let rr = RequestRequirements::new()
+            .with_path(with_path.clone().into())
+            .with_path_contains(with_path_contains.clone())
+            .with_path_matches(with_path_matches.clone())
+            .with_headers(with_headers.clone())
+            .with_method(with_method.clone().into())
+            .with_body(with_body.clone().into())
+            .with_body_contains(with_body_contains.clone())
+            .with_body_matches(with_body_matches.clone())
+            .with_json_body(with_json_body.clone())
+            .with_json_body_includes(with_json_body_includes.clone())
+            .with_query_param_exists(with_query_param_exists.clone())
+            .with_query_param(with_query_param.clone())
+            .with_header_exists(with_header_exists.clone());
+
+        // Assert
+        assert_eq!(rr.path.as_ref().unwrap(), with_path.clone());
+        assert_eq!(rr.path_contains.as_ref().unwrap(), &with_path_contains.clone());
+        assert_eq!(rr.path_matches.as_ref().unwrap(), &with_path_matches.clone());
+        assert_eq!(rr.headers.as_ref().unwrap(), &with_headers.clone());
+        assert_eq!(rr.body.as_ref().unwrap(), with_body.clone());
+        assert_eq!(rr.body_contains.as_ref().unwrap(), &with_body_contains.clone());
+        assert_eq!(rr.body_matches.as_ref().unwrap(), &with_body_matches.clone());
+        assert_eq!(rr.json_body.as_ref().unwrap(), &with_json_body.clone());
+        assert_eq!(rr.json_body_includes.as_ref().unwrap(), &with_json_body_includes.clone());
+        assert_eq!(rr.query_param_exists.as_ref().unwrap(), &with_query_param_exists.clone());
+        assert_eq!(rr.query_param.as_ref().unwrap(), &with_query_param.clone());
+        assert_eq!(rr.header_exists.as_ref().unwrap(), &with_header_exists.clone());
+    }
+}
+
