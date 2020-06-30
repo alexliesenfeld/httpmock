@@ -1,4 +1,5 @@
 <p align="center"><img height="150" src="https://raw.githubusercontent.com/alexliesenfeld/httpmock/master/banner.png"></p>
+<p align="center"><b>HTTP mocking library for Rust</b></p>
 <div align="center">
     
 [![Build Status](https://dev.azure.com/alexliesenfeld/httpmock/_apis/build/status/alexliesenfeld.httpmock?branchName=master)](https://dev.azure.com/alexliesenfeld/httpmock/_build/latest?definitionId=2&branchName=master)
@@ -15,7 +16,7 @@
 
 </div>
 
-<p align="center"><b>HTTP mocking library for Rust</b></p>
+
 
 
 <p align="center">
