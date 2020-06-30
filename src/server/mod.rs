@@ -308,7 +308,10 @@ lazy_static! {
 
 #[cfg(test)]
 mod test {
-    use crate::server::{MOCKS_PATH, MOCK_PATH};
+    use crate::server::{error_response, MOCKS_PATH, MOCK_PATH};
+    use futures_util::TryStreamExt;
+    use hyper::Body;
+    use std::borrow::Borrow;
 
     #[test]
     fn route_regex_test() {
@@ -323,5 +326,21 @@ mod test {
         assert_eq!(MOCKS_PATH.is_match("/__mocks/5"), false);
         assert_eq!(MOCKS_PATH.is_match("test/__mocks/5"), false);
         assert_eq!(MOCKS_PATH.is_match("test/__mocks/567"), false);
+    }
+
+    /// Make sure passing an empty string to the error response does not result in an error.
+    #[test]
+    fn error_response_test() {
+        let res = error_response("test".into());
+        let (parts, body) = res.into_parts();
+
+        let body = async_std::task::block_on({
+            body.try_fold(Vec::new(), |mut data, chunk| async move {
+                data.extend_from_slice(&chunk);
+                Ok(data)
+            })
+        });
+
+        assert_eq!(String::from_utf8(body.unwrap()).unwrap(), "test".to_string())
     }
 }
