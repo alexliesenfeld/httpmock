@@ -251,6 +251,10 @@ impl MockServer {
     pub fn address(&self) -> &SocketAddr {
         self.server_adapter.as_ref().unwrap().address()
     }
+
+    pub fn url(&self, path: &str) -> String {
+        format!("http://{}{}", self.address(), path)
+    }
 }
 
 impl Drop for MockServer {

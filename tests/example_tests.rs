@@ -83,18 +83,16 @@ async fn simple_test_async() {
 
     let search_mock = Mock::new()
         .expect_path_contains("/search")
-        .expect_query_param("query", "metallica")
         .return_status(202)
         .create_on_async(&mock_server)
         .await;
 
     // Act: Send the HTTP request
-    let response = get_async(&format!(
-        "http://{}/search?query=metallica",
-        mock_server.address()
-    ))
-    .await
-    .unwrap();
+
+    // mock_server.url will create a full URL for the path on the server. In this case it will be
+    // http://localhost:<port>/search
+    let url = mock_server.url("/search");
+    let response = get_async(url).await.unwrap();
 
     // Assert
     assert_eq!(response.status(), 202);

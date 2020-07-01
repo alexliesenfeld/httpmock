@@ -143,7 +143,6 @@ impl<'a> MockRef<'a> {
     }
 }
 
-// TODO: Add possibility to limit mock server count (ulimit)
 // TODO: Add matching a mock a few times and then not (countdown). Each mock request counts down 1.
 // Add the following matchers that are able to extract the following info from Content-Type (potentially containing encoding, etc.)
 // TODO: - add Content Type matcher that is able to determine if body is an XML type
