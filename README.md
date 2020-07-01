@@ -4,8 +4,6 @@
     
 [![Build Status](https://dev.azure.com/alexliesenfeld/httpmock/_apis/build/status/alexliesenfeld.httpmock?branchName=multiserver)](https://dev.azure.com/alexliesenfeld/httpmock/_build/latest?definitionId=2&branchName=multiserver)
 [![Coverage](https://codecov.io/github/alexliesenfeld/httpmock/coverage.svg?branch=multiserver)](https://codecov.io/gh/alexliesenfeld/httpmock/)
-[![crates.io](https://img.shields.io/crates/v/httpmock.svg)](https://crates.io/crates/httpmock)
-[![docs.rs](https://docs.rs/httpmock/badge.svg)](https://docs.rs/httpmock)
 [![crates.io](https://img.shields.io/crates/d/httpmock.svg)](https://docs.rs/httpmock)
 [![License](https://img.shields.io/github/license/alexliesenfeld/httpmock.svg)](LICENSE)
 
@@ -13,6 +11,8 @@
 
 <p align="center">
     <a href="https://docs.rs/httpmock/">Documentation</a>
+    ·
+    <a href="https://crates.io/crates/httpmock">Crate</a>
     ·
     <a href="https://github.com/alexliesenfeld/httpmock/issues">Report Bug</a>
     ·
