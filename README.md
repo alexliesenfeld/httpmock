@@ -62,7 +62,7 @@ fn simple_test() {
         .create_on(&mock_server);
 
     // Act: Send an HTTP request to the mock server (simulates your software)
-    let url = format!("http://{}/search", mock_server.address())).unwrap();
+    let url = format!("http://{}/search", mock_server.address());
     let response = http_get(&url).unwrap();
 
     // Assert: Ensure there was a response from the mock server
