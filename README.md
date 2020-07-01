@@ -51,8 +51,8 @@ use httpmock::{Mock, MockServer, MockServerRequest, Regex};
 // ...
 
 #[test]
-fn simple_test() {
-    // Arrange: Create a mock on a test local mock server 
+fn example_test() {
+    // Arrange: Create a mock on a local mock server 
     let mock_server = MockServer::start();
 
     let search_mock = Mock::new()
@@ -63,7 +63,7 @@ fn simple_test() {
 
     // Act: Send an HTTP request to the mock server (simulates your software)
     let url = format!("http://{}/search", mock_server.address());
-    let response = http_get(&url).unwrap();
+    let response = http_get(&url);
 
     // Assert: Ensure there was a response from the mock server
     assert_eq!(response.status(), 200);
