@@ -7,7 +7,7 @@ use serde_json::Value;
 
 use crate::api::{Method, Regex};
 use crate::server::data::{
-    MockDefinition, MockMatcherClosure, MockServerHttpResponse, Pattern, RequestRequirements,
+    MockDefinition, MockMatcherFunction, MockServerHttpResponse, Pattern, RequestRequirements,
 };
 use crate::util::Join;
 use crate::MockServer;
@@ -18,69 +18,83 @@ use crate::MockServer;
 /// ```rust
 /// extern crate httpmock;
 ///
-/// //use httpmock::{mock, with_mock_server};
-/// //use httpmock::Method::GET;
+/// use httpmock::Method::{GET};
+/// use httpmock::{Mock, MockServer};
 ///
 /// #[test]
-/// #[with_mock_server]
-/// fn simple_test() {
-///    //let search_mock = mock(GET, "/health")
-///    //   .return_status(200)
-///    //   .create();
+/// fn example_test() {
+///     // Arrange
+///     let mock_server = MockServer::start();
+///     let search_mock = Mock::new()
+///         .expect_path_contains("/search")
+///         .expect_query_param("query", "metallica")
+///         .return_status(202)
+///         .create_on(&mock_server);
 ///
-///    // Act (simulates your code)
-///    //let response = reqwest::get("http://localhost:5000/health").unwrap();
+///     // Act: Send the HTTP request
+///     let response = isahc::get(&format!(
+///         "http://{}/search?query=metallica",
+///         mock_server.address()
+///     )).unwrap();
 ///
-///    // Make some assertions
-///    //assert_eq!(response.status(), 200);
-///    //assert_eq!(search_mock.times_called().unwrap(), 1);
+///     // Assert
+///     assert_eq!(response.status(), 202);
+///     assert_eq!(search_mock.times_called(), 1);
 /// }
 /// ```
-/// To be able to create a mock, you need to mark your test function with the
-/// [httpmock::with_mock_server](../httpmock/attr.with_mock_server.html) attribute. If you try to
-/// create a mock by calling [Mock::create](struct.Mock.html#method.create) without marking your
-/// test function with [httpmock::with_mock_server](../httpmock/attr.with_mock_server.html),
-/// you will receive a panic during runtime telling you about this fact.
+/// Make sure to create the mock using [Mock::create_on](struct.Mock.html#method.create_on)
+/// or [Mock::create_on_async](struct.Mock.html#method.create_on_async). This will create the mock on
+/// the server. Thereafter, the mock will be served whenever clients send HTTP requests that match
+/// all mock requirements.
 ///
-/// Note that you need to call the [Mock::create](struct.Mock.html#method.create) method once you
-/// are finished configuring your mock. This will create the mock on the server. Thereafter, the
-/// mock will be served whenever clients send HTTP requests that match all requirements of your mock.
-///
-/// The [Mock::create](struct.Mock.html#method.create) method returns a reference that
-/// identifies the mock at the server side. The reference can be used to fetch
+/// The [Mock::create_on](struct.Mock.html#method.create_on) and
+/// [Mock::create_on_async](struct.Mock.html#method.create_on_async) methods return a mock reference
+/// object that identifies the mock on the server side. The reference can be used to fetch
 /// mock related information from the server, such as the number of times it has been called or to
-/// explicitly delete the mock from the server.
-///
-/// While [httpmock::mock](struct.Mock.html#method.create) is a convenience function, you can
-/// have more control over matching the path by directly creating a new [Mock](struct.Mock.html)
-/// object yourself using the [Mock::new](struct.Mock.html#method.new) method.
-/// # Example
-/// ```rust
-/// extern crate httpmock;
-///
-/// //use httpmock::Method::POST;
-/// //use httpmock::{Mock, Regex, with_mock_server};
-/// //use httpmock::remote::Mock;
-/// //use regex::Regex;
-///
-/// #[test]
-/// #[with_mock_server]
-/// fn simple_test() {
-///     //Mock::new()
-///       //.expect_path("/test")
-///       //.expect_path_contains("test")
-///       //.expect_path_matches(Regex::new(r#"test"#).unwrap())
-///       //.expect_method(POST)
-///       //.return_status(200)
-///       //.create();
-/// }
-/// ```
+/// explicitly delete the mock from the server
+/// (see [MockRef::delete](struct.MockRef.html#method.delete)).
 /// Fore more examples, please refer to
 /// [this crates test directory](https://github.com/alexliesenfeld/httpmock/blob/master/tests/integration_tests.rs ).
 pub struct Mock {
     mock: MockDefinition,
 }
 
+/// Represents a reference to the mock object on a [MockServer](struct.MockServer.html).
+/// It can be used to spy on the mock and also perform some management operations, such as
+/// deleting the mock from the [MockServer](struct.MockServer.html).
+///
+/// # Example
+/// ```rust
+/// extern crate httpmock;
+///
+/// use httpmock::Method::{GET};
+/// use httpmock::{Mock, MockServer};
+///
+/// #[test]
+/// fn delete_mock_test() {
+///     // Arrange: Create mock server and a mock
+///     let mock_server = MockServer::start();
+///     let mut mock = Mock::new()
+///         .expect_path_contains("/test")
+///         .return_status(202)
+///         .create_on(&mock_server);
+///
+///     // Send a first request, then delete the mock from the mock and send another request.
+///     let response1 = isahc::get(mock_server.url("/test")).unwrap();
+///
+///     // Fetch how often this mock has been called from the server until now
+///     assert_eq!(search_mock.times_called(), 1);
+///     // Delete the mock from the mock server
+///     mock.delete();
+///
+///     let response2 = isahc::get(mock_server.url("/test")).unwrap();
+///
+///     // Assert that the mock worked for the first request, but not for the second request,
+///     // because it was deleted before the second request was sent.
+///     assert_eq!(response1.status(), 202);
+///     assert_eq!(response2.status(), 404);
+/// }
+/// ```
 pub struct MockRef<'a> {
     id: usize,
     mock_server: &'a MockServer,
@@ -94,14 +108,64 @@ pub struct MockRef<'a> {
 impl<'a> MockRef<'a> {
     /// This method returns the number of times a mock has been called at the mock server.
     ///
+    /// # Example
+    /// ```rust
+    /// extern crate httpmock;
+    ///
+    /// use httpmock::Method::{GET};
+    /// use httpmock::{Mock, MockServer};
+    ///
+    /// #[test]
+    /// fn times_called_test() {
+    ///     // Arrange: Create mock server and a mock
+    ///     let mock_server = MockServer::start();
+    ///     let mut mock = Mock::new()
+    ///         .expect_path_contains("/times_called")
+    ///         .return_status(200)
+    ///         .create_on(&mock_server);
+    ///
+    ///     // Send a first request, then delete the mock from the mock and send another request.
+    ///     let response1 = isahc::get(mock_server.url("/times_called")).unwrap();
+    ///
+    ///     // Fetch how often this mock has been called from the server until now
+    ///     assert_eq!(search_mock.times_called(), 1);
+    /// }
+    /// ```
     /// # Panics
-    /// This method will panic if there is a problem to communicate with the server.
+    /// This method will panic if there is a problem with the (remote) server.
     pub fn times_called(&self) -> usize {
         self.times_called_async().join()
     }
 
     /// This method returns the number of times a mock has been called at the mock server.
+    /// This method is the asynchronous equivalent of
+    /// [MockRef::times_called](struct.MockRef.html#method.times_called).
     ///
+    /// # Example
+    /// ```rust
+    /// extern crate httpmock;
+    ///
+    /// use httpmock::Method::{GET};
+    /// use httpmock::{Mock, MockServer};
+    ///
+    /// #[test]
+    /// #[tokio::test]
+    /// fn times_called_test() {
+    ///     // Arrange: Create mock server and a mock
+    ///     let mock_server = MockServer::start_async().await;
+    ///     let mut mock = Mock::new()
+    ///         .expect_path_contains("/times_called")
+    ///         .return_status(200)
+    ///         .create_on_async(&mock_server)
+    ///         .await;
+    ///
+    ///     // Send a first request, then delete the mock from the mock and send another request.
+    ///     let response1 = isahc::get_async(mock_server.url("/times_called")).await.unwrap();
+    ///
+    ///     // Fetch how often this mock has been called from the server until now
+    ///     assert_eq!(search_mock.times_called_async().await, 1);
+    /// }
+    /// ```
     /// # Panics
     /// This method will panic if there is a problem to communicate with the server.
     pub async fn times_called_async(&self) -> usize {
@@ -119,12 +183,77 @@ impl<'a> MockRef<'a> {
 
     /// Deletes this mock from the mock server.
     ///
+    /// # Example
+    /// ```rust
+    /// extern crate httpmock;
+    ///
+    /// use httpmock::Method::{GET};
+    /// use httpmock::{Mock, MockServer};
+    ///
+    /// #[test]
+    /// fn delete_mock_test() {
+    ///     // Arrange: Create mock server and a mock
+    ///     let mock_server = MockServer::start();
+    ///     let mut mock = Mock::new()
+    ///         .expect_path_contains("/test")
+    ///         .return_status(202)
+    ///         .create_on(&mock_server);
+    ///
+    ///     // Send a first request, then delete the mock from the mock and send another request.
+    ///     let response1 = isahc::get(mock_server.url("/test")).unwrap();
+    ///
+    ///     // Delete the mock from the mock server
+    ///     mock.delete();
+    ///
+    ///     let response2 = isahc::get(mock_server.url("/test")).unwrap();
+    ///
+    ///     // Assert that the mock worked for the first request, but not for the second request,
+    ///     // because it was deleted before the second request was sent.
+    ///     assert_eq!(response1.status(), 202);
+    ///     assert_eq!(response2.status(), 404);
+    /// }
+    /// ```
     /// # Panics
     /// This method will panic if there is a problem to communicate with the server.
     pub fn delete(&mut self) {
         self.delete_async().join();
     }
 
+    /// Deletes this mock from the mock server. This method is the asynchronous equivalent of
+    /// [MockRef::delete](struct.MockRef.html#method.delete).
+    ///
+    /// # Example
+    /// ```rust
+    /// extern crate httpmock;
+    ///
+    /// use httpmock::Method::{GET};
+    /// use httpmock::{Mock, MockServer};
+    ///
+    /// #[test]
+    /// fn delete_mock_test() {
+    ///     // Arrange: Create mock server and a mock
+    ///     let mock_server = MockServer::start();
+    ///     let mut mock = Mock::new()
+    ///         .expect_path_contains("/test")
+    ///         .return_status(202)
+    ///         .create_on(&mock_server);
+    ///
+    ///     // Send a first request, then delete the mock from the mock and send another request.
+    ///     let response1 = isahc::get(mock_server.url("/test")).unwrap();
+    ///
+    ///     // Delete the mock from the mock server
+    ///     mock.delete();
+    ///
+    ///     let response2 = isahc::get(mock_server.url("/test")).unwrap();
+    ///
+    ///     // Assert that the mock worked for the first request, but not for the second request,
+    ///     // because it was deleted before the second request was sent.
+    ///     assert_eq!(response1.status(), 202);
+    ///     assert_eq!(response2.status(), 404);
+    /// }
+    /// ```
+    /// # Panics
+    /// This method will panic if there is a problem to communicate with the server.
     pub async fn delete_async(&self) {
         self.mock_server
             .server_adapter
@@ -136,7 +265,7 @@ impl<'a> MockRef<'a> {
     }
 
     /// Returns the address of the mock server this mock is using. By default this is
-    /// "localhost:5000" if not set otherwise by the environment variables  HTTPMOCK_HOST and
+    /// "localhost:5000" if not set otherwise by the environment variables HTTPMOCK_HOST and
     /// HTTPMOCK_PORT.
     pub fn server_address(&self) -> &SocketAddr {
         self.mock_server.server_adapter.as_ref().unwrap().address()
@@ -332,7 +461,9 @@ impl Mock {
     /// partial, the request will be considered a match for
     /// this mock to respond (given all other criteria are met).
     ///
-    /// # Important Notice
+    /// * `partial` - The JSON partial.
+    ///
+    /// # Important
     /// The partial string needs to contain the full JSON object path from the root.
     ///
     /// ## Example
@@ -349,13 +480,17 @@ impl Mock {
     /// and you only want to make sure that `target_attribute` has the value
     /// `Target value`, you need to provide a partial JSON string to this method, that starts from
     /// the root of the JSON object, but may leave out unimportant values:
-    /// ```
-    /// use httpmock::Method::POST;
+    /// ```rust
+    /// extern crate httpmock;
+    ///
+    /// use httpmock::Method::{GET};
+    /// use httpmock::{Mock, MockServer};
     ///
     /// #[test]
-    /// #[with_mock_server]
-    /// fn partial_json_test() {
-    ///     mock(POST, "/path")
+    /// fn delete_mock_test() {
+    ///     // Arrange: Create mock server and a mock
+    ///     let mock_server = MockServer::start();
+    ///     let mut mock = Mock::new()
     ///         .expect_json_body_partial(r#"
     ///             {
     ///                 "child" : {
@@ -363,14 +498,14 @@ impl Mock {
     ///                 }
     ///             }
     ///         "#)
-    ///         .return_status(200)
-    ///         .create();
-    /// }
+    ///         .return_status(202)
+    ///         .create_on(&mock_server);
     ///
+    ///     // ...
+    /// }
     /// ```
     /// String format and attribute order will be ignored.
-    ///
-    /// * `partial` - The JSON partial.
+
     pub fn expect_json_body_partial(mut self, partial: &str) -> Self {
         if self.mock.request.json_body_includes.is_none() {
             self.mock.request.json_body_includes = Some(Vec::new());
@@ -462,6 +597,49 @@ impl Mock {
         self
     }
 
+    /// Sets a custom matcher for expected HTTP request. If this function returns true, the request
+    /// is considered a match and the mock server will respond to the request
+    /// (given all other criteria are also met).
+    /// * `request_matcher` - The matcher function.
+    ///
+    /// ## Example:
+    /// ```
+    /// use httpmock::{MockServerRequest, MockServer, Mock};
+    ///
+    /// #[test]
+    /// fn custom_matcher_test() {
+    ///     // Arrange
+    ///     let mock_server = MockServer::start();
+    ///     let m = Mock::new()
+    ///         .expect_match(|req: MockServerRequest| {
+    ///             req.path.contains("es")
+    ///         })
+    ///         .return_status(200)
+    ///         .create_on(&mock_server);
+    ///
+    ///     // Act: Send the HTTP request
+    ///     let response = isahc::get(mock_server.url("/test")).unwrap();
+    ///
+    ///     // Assert
+    ///     assert_eq!(response.status(), 200);
+    ///     assert_eq!(m.times_called(), 1);
+    /// }
+    /// ```
+    pub fn expect_match(mut self, request_matcher: MockMatcherFunction) -> Self {
+        if self.mock.request.matchers.is_none() {
+            self.mock.request.matchers = Some(Vec::new());
+        }
+
+        self.mock
+            .request
+            .matchers
+            .as_mut()
+            .unwrap()
+            .push(request_matcher);
+
+        self
+    }
+
     /// Sets the HTTP status that the mock will return, if an HTTP request fulfills all of
     /// the mocks requirements.
     /// * `status` - The HTTP status that the mock server will return.
@@ -519,8 +697,17 @@ impl Mock {
     /// representing the reference of the created mock at the server.
     ///
     /// # Panics
-    /// This method will panic if your test method was not marked using the the
-    /// `httpmock::with_mock_server` annotation.
+    /// This method will panic if there is a problem communicating with the server.
+    pub fn create_on<'a>(self, mock_server: &'a MockServer) -> MockRef<'a> {
+        self.create_on_async(mock_server).join()
+    }
+
+    /// This method creates the mock at the server side and returns a `Mock` object
+    /// representing the reference of the created mock at the server. This method
+    /// is the asynchronous counterpart of [Mock::create_on](struct.Mock.html#method.create_on).
+    ///
+    /// # Panics
+    /// This method will panic if there is a problem communicating with the server.
     pub async fn create_on_async<'a>(self, mock_server: &'a MockServer) -> MockRef<'a> {
         let response = mock_server
             .server_adapter
@@ -533,31 +720,6 @@ impl Mock {
             id: response.mock_id,
             mock_server,
         }
-    }
-
-    /// This method creates the mock at the server side and returns a `Mock` object
-    /// representing the reference of the created mock at the server.
-    ///
-    /// # Panics
-    /// This method will panic if your test method was not marked using the the
-    /// `httpmock::with_mock_server` annotation.
-    pub fn create_on<'a>(self, mock_server: &'a MockServer) -> MockRef<'a> {
-        self.create_on_async(mock_server).join()
-    }
-
-    pub fn expect_match(mut self, request_matcher: MockMatcherClosure) -> Self {
-        if self.mock.request.matchers.is_none() {
-            self.mock.request.matchers = Some(Vec::new());
-        }
-
-        self.mock
-            .request
-            .matchers
-            .as_mut()
-            .unwrap()
-            .push(request_matcher);
-
-        self
     }
 }
 

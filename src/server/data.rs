@@ -110,7 +110,7 @@ impl PartialEq for Pattern {
 
 impl Eq for Pattern {}
 
-pub type MockMatcherClosure = fn(Rc<MockServerHttpRequest>) -> bool;
+pub type MockMatcherFunction = fn(Rc<MockServerHttpRequest>) -> bool;
 
 /// A general abstraction of an HTTP request for all handlers.
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -130,7 +130,7 @@ pub struct RequestRequirements {
     pub query_param: Option<BTreeMap<String, String>>,
 
     #[serde(skip_serializing, skip_deserializing)]
-    pub matchers: Option<Vec<MockMatcherClosure>>,
+    pub matchers: Option<Vec<MockMatcherFunction>>,
 }
 
 impl RequestRequirements {

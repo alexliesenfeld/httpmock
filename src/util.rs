@@ -24,6 +24,7 @@ where
     result
 }
 
+#[doc(hidden)]
 pub fn read_env(name: &str, default: &str) -> String {
     match std::env::var(name) {
         Ok(value) => value,
@@ -31,6 +32,7 @@ pub fn read_env(name: &str, default: &str) -> String {
     }
 }
 
+#[doc(hidden)]
 pub(crate) trait Join: Future {
     fn join(self) -> <Self as Future>::Output;
 }
