@@ -62,3 +62,22 @@ impl<F: Future> Join for F {
         }
     }
 }
+
+
+
+#[cfg(test)]
+mod test {
+    use crate::util::{with_retry, Join};
+
+    #[test]
+    fn with_retry_error_test() {
+        let result: Result<(), &str> = with_retry(1, || async {
+            return Err("test error");
+        }).join();
+
+        assert_eq!(result.is_err(), true);
+        assert_eq!(result.err().unwrap(), "test error")
+
+    }
+
+}
