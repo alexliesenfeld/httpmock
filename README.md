@@ -63,7 +63,7 @@ fn example_test() {
 
     // Act: Send an HTTP request to the mock server (simulates your software)
     let url = format!("http://{}/search", mock_server.address());
-    let response = http_get(&url);
+    let response = isahc::get(&url).unwrap();
 
     // Assert: Ensure there was a response from the mock server
     assert_eq!(response.status(), 200);
