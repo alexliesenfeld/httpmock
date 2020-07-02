@@ -371,13 +371,51 @@ mod test {
     #[test]
     fn path_pattern_test() {}
 
-    /// TODO
     #[test]
-    fn body_contains_test() {}
+    fn body_contains_test() {
+        // Arrange
+        let request1 = MockServerHttpRequest::new("GET".to_string(), "/test-path".to_string())
+            .with_body("test".to_string());
+        let request2 = MockServerHttpRequest::new("GET".to_string(), "/test-path".to_string())
+            .with_body("test".to_string());
 
-    /// TODO
+        let requirements1 = RequestRequirements::new().with_body_contains(vec!["xxx".to_string()]);
+        let requirements2 = RequestRequirements::new().with_body_contains(vec!["es".to_string()]);
+
+        // Act
+        let does_match1 = request_matches(Rc::new(request1), &requirements1);
+        let does_match2 = request_matches(Rc::new(request2), &requirements2);
+
+        // Assert
+        assert_eq!(false, does_match1);
+        assert_eq!(true, does_match2);
+    }
+
     #[test]
-    fn body_matches_regex_test() {}
+    fn body_matches_query_params_exact_test() {
+        // Arrange
+        let mut params1 = BTreeMap::new();
+        params1.insert("k".to_string(), "v".to_string());
+
+        let mut params2 = BTreeMap::new();
+        params2.insert("h".to_string(), "o".to_string());
+
+        let request1 = MockServerHttpRequest::new("GET".to_string(), "/test-path".to_string())
+            .with_query_params(params1.clone());
+        let request2 = MockServerHttpRequest::new("GET".to_string(), "/test-path".to_string())
+            .with_query_params(params1.clone());
+
+        let requirements1 = RequestRequirements::new().with_query_param(params2);
+        let requirements2 = RequestRequirements::new().with_query_param(params1.clone());
+
+        // Act
+        let does_match1 = request_matches(Rc::new(request1), &requirements1);
+        let does_match2 = request_matches(Rc::new(request2), &requirements2);
+
+        // Assert
+        assert_eq!(false, does_match1);
+        assert_eq!(true, does_match2);
+    }
 
     /// TODO
     #[test]

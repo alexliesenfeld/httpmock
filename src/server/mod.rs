@@ -308,12 +308,14 @@ lazy_static! {
 
 #[cfg(test)]
 mod test {
-    use crate::server::{error_response, map_response, ServerResponse, MOCKS_PATH, MOCK_PATH, get_path_param};
+    use crate::server::{
+        error_response, get_path_param, map_response, ServerResponse, MOCKS_PATH, MOCK_PATH,
+    };
+    use crate::Regex;
     use futures_util::TryStreamExt;
     use hyper::Body;
     use std::borrow::Borrow;
     use std::collections::BTreeMap;
-    use crate::Regex;
 
     #[test]
     fn route_regex_test() {
@@ -405,7 +407,10 @@ mod test {
 
         // Assert
         assert_eq!(result.is_err(), true);
-        assert_eq!("Error capturing resource id in request path: /__mocks/5", result.err().unwrap());
+        assert_eq!(
+            "Error capturing resource id in request path: /__mocks/5",
+            result.err().unwrap()
+        );
     }
 
     #[test]
@@ -418,6 +423,9 @@ mod test {
 
         // Assert
         assert_eq!(result.is_err(), true);
-        assert_eq!("Error parsing id as a number: invalid digit found in string", result.err().unwrap());
+        assert_eq!(
+            "Error parsing id as a number: invalid digit found in string",
+            result.err().unwrap()
+        );
     }
 }
