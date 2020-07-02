@@ -308,11 +308,12 @@ lazy_static! {
 
 #[cfg(test)]
 mod test {
-    use crate::server::{error_response, map_response, ServerResponse, MOCKS_PATH, MOCK_PATH};
+    use crate::server::{error_response, map_response, ServerResponse, MOCKS_PATH, MOCK_PATH, get_path_param};
     use futures_util::TryStreamExt;
     use hyper::Body;
     use std::borrow::Borrow;
     use std::collections::BTreeMap;
+    use crate::Regex;
 
     #[test]
     fn route_regex_test() {
@@ -373,5 +374,50 @@ mod test {
                 .contains("Cannot create header from name"),
             true
         );
+    }
+
+    #[test]
+    fn get_path_param_regex_error_test() {
+        // Arrange
+        let re = Regex::new(r"^/__mocks/([0-9]+)$").unwrap();
+
+        // Act
+        let result = get_path_param(&re, 0, "");
+
+        // Assert
+        assert_eq!(result.is_err(), true);
+        assert_eq!(
+            result
+                .err()
+                .unwrap()
+                .contains("Error capturing parameter from request path"),
+            true
+        );
+    }
+
+    #[test]
+    fn get_path_param_index_error_test() {
+        // Arrange
+        let re = Regex::new(r"^/__mocks/([0-9]+)$").unwrap();
+
+        // Act
+        let result = get_path_param(&re, 5, "/__mocks/5");
+
+        // Assert
+        assert_eq!(result.is_err(), true);
+        assert_eq!("Error capturing resource id in request path: /__mocks/5", result.err().unwrap());
+    }
+
+    #[test]
+    fn get_path_param_number_error_test() {
+        // Arrange
+        let re = Regex::new(r"^/__mocks/([0-9]+)$").unwrap();
+
+        // Act
+        let result = get_path_param(&re, 0, "/__mocks/9999999999999999999999999");
+
+        // Assert
+        assert_eq!(result.is_err(), true);
+        assert_eq!("Error parsing id as a number: invalid digit found in string", result.err().unwrap());
     }
 }
