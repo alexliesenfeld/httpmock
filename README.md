@@ -28,7 +28,7 @@
 
 * Provides a full-blown HTTP mock server with HTTP/1 and HTTP/2 support.
 * Fully asynchronous core with a synchornous and asynchronous API.
-* Support for all major asynchronous executors and runtimes.
+* Compatible with all major asynchronous executors and runtimes.
 * Built-in request matchers with support for custom request matchers.
 * Parallel test execution by default.
 * Standalone mode with an accompanying [Docker image](https://hub.docker.com/r/alexliesenfeld/httpmock).
