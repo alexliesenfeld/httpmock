@@ -76,12 +76,12 @@
 //!
 //! ## Sync / Async
 //! Note that the blocking API (as presented in the `Getting Started` section) can be used in
-//! both, synchronous and asynchronous environments. Usually this should be the preferred
+//! both, synchronous and asynchronous environments. It is recommended to prefer the synchronous
 //! style of using `httpmock` because it keeps tests simple and you don't need to change the
-//! style of usage when switching from a synchronous to an asynchronous environment or vice
-//! versa. Internally, `httpmock` always runs asynchronously. If you want to schedule awaiting
+//! style of usage when switching from synchronous to asynchronous environments or vice
+//! versa. `httpmock` always runs asynchronously internally. If you want to schedule awaiting
 //! operations manually, then there are `async` variants for every potentially blocking operation
-//! that you can use (e.g.: [MockServer::start_async](struct.MockServer.html#method.start_async), or
+//! that you can use (such as [MockServer::start_async](struct.MockServer.html#method.start_async) or
 //! [Mock::create_on_async](struct.Mock.html#method.create_on_async)).
 //!
 //! # Parallelism
