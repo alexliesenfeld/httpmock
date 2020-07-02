@@ -81,9 +81,9 @@
 //! both, synchronous and asynchronous environments. Usually this should be the preferred
 //! style of using `httpmock` because it keeps tests simple and you don't need to change the
 //! style of usage when switching from a synchronous to an asynchronous environment or vice
-//! versa. If you absolutely need to schedule awaiting operations manually, then there are
-//! `async` counterparts for every potentially blocking operation that you can use
-//! (e.g.: [MockServer::start_async](struct.MockServer.html#method.start_async), or
+//! versa. Internally, `httpmock` always runs asynchronously. If you want to schedule awaiting
+//! operations manually, then there are `async` variants for every potentially blocking operation
+//! that you can use (e.g.: [MockServer::start_async](struct.MockServer.html#method.start_async), or
 //! [Mock::create_on_async](struct.Mock.html#method.create_on_async)).
 //!
 //! # Parallelism
