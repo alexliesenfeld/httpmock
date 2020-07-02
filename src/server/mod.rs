@@ -308,10 +308,11 @@ lazy_static! {
 
 #[cfg(test)]
 mod test {
-    use crate::server::{error_response, MOCKS_PATH, MOCK_PATH};
+    use crate::server::{error_response, MOCKS_PATH, MOCK_PATH, map_response, ServerResponse};
     use futures_util::TryStreamExt;
     use hyper::Body;
     use std::borrow::Borrow;
+    use std::collections::BTreeMap;
 
     #[test]
     fn route_regex_test() {
@@ -346,4 +347,26 @@ mod test {
             "test".to_string()
         )
     }
+
+    /// Makes sure an error is return if there is a header parsing error
+    #[test]
+    fn response_header_key_parsing_error_test() {
+        // Arrange
+        let mut headers = BTreeMap::new();
+        headers.insert(";;;".to_string(), ";;;".to_string());
+
+        let res = ServerResponse{
+            body: "".to_string(),
+            status: 500,
+            headers,
+        };
+
+        // Act
+        let result = map_response(res);
+
+        // Assert
+        assert_eq!(result.is_err(), true);
+        assert_eq!(result.err().unwrap().contains("Cannot create header from name"), true);
+    }
+
 }
