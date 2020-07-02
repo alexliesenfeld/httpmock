@@ -149,6 +149,10 @@
 //! blocking all tests from further execution whenever a test requires to connect to a
 //! busy mock server.
 //!
+//! ## Limitations
+//! At this time, it is not possible to use custom request matchers in combination with remote
+//! mock servers. It is planned to add this functionality in future though.
+//!
 //! ## Examples
 //! Fore more examples on how to use a remote server, please refer to
 //! [this crates test directory](https://github.com/alexliesenfeld/httpmock/blob/master/tests/standalone_tests.rs ).
