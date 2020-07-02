@@ -74,18 +74,25 @@ fn example_test() {
 Each test usually creates its own local `MockServer` using `MockServer::start()`. This creates a lightweight HTTP
 server that runs on its own random port. This way tests do not conflict with each other.
 
-You can use the `Mock`  structure to specify and create mocks on the mock server. `Mock` structure provides you all 
-supported mocking functionality.
+You can use the `Mock`  structure to specify and create mocks on the mock server. It provides you all supported mocking 
+functionality.
 
 ### Request Matching and Responses
-Other than many other libraries `httpmock` does not require you to learn a DSL-like API to specify `Mock` behaviour. Instead, `httpmock` provides you a fluent builder-like API that clearly separates request matching and response attributes by using the following naming scheme:
+Other than many other libraries `httpmock` does not require you to learn a DSL-like API to
+specify mock behaviour. Instead, `httpmock` provides you a fluent builder-like API that
+clearly separates request matching and response attributes by using the following naming scheme:
 
-- All methods starting with `expect` place a requirement on the HTTP request (e.g. `expect_method`, `expect_path`, or `expect_body`).
-- All methods starting with `return` define what the mock server will return in response to a matching HTTP request (e.g. `return_status`, `return_body`, etc.).  
+- All `Mock` methods that start with `expect` in their name set a requirement
+for HTTP requests (e.g. `Mock::expect_method`, `Mock::expect_path`, or `Mock::expect_body`).
+- All `Mock` methods that start with `return` in their name define what the
+mock server will return in response to an HTTP request that matched all mock requirements (e.g.
+`Mock::return_status`, `Mock::return_body`, etc.).
 
-With this naming scheme users can benefit from IDE autocompletion to find request matchers and response attributes without even looking into documentation. 
+With this naming scheme users can benefit from IDE autocompletion to find request matchers and
+response attributes mostly without even looking into documentation.
 
-An HTTP request is only considered to match a mock if it matches all of the mocks request requirements. If a request does not match at least one mock, the server will respond with an error message and HTTP status code 404 (Not Found).
+If a request does not match at least one mock, the server will respond with
+an error message and HTTP status code 404 (Not Found).
 
 ### Sync / Async
 

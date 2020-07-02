@@ -52,28 +52,26 @@
 //! server that runs on its own random port. This way tests do not conflict with each other.
 //!
 //! You can use the [Mock](struct.Mock.html) structure to specify and create mocks on the
-//! mock server. The [Mock](struct.Mock.html) structure provides you all supported mocking
-//! functionality.
+//! mock server. It provides you all supported mocking functionality.
 //!
 //! ## Request Matching and Responses
 //! Other than many other libraries `httpmock` does not require you to learn a DSL-like API to
 //! specify mock behaviour. Instead, `httpmock` provides you a fluent builder-like API that
 //! clearly separates request matching and response attributes by using the following naming scheme:
 //!
-//! - All [Mock](struct.Mock.html) methods starting with `expect` place a requirement on the
-//! HTTP request (e.g. [Mock::expect_method](struct.Mock.html#method.expect_method),
+//! - All [Mock](struct.Mock.html) methods that start with `expect` in their name set a requirement
+//! for HTTP requests (e.g. [Mock::expect_method](struct.Mock.html#method.expect_method),
 //! [Mock::expect_path](struct.Mock.html#method.expect_path), or
 //! [Mock::expect_body](struct.Mock.html#method.expect_body)).
-//! - All [Mock](struct.Mock.html) methods starting with `return` define what the mock server
-//! will return in response to a matching HTTP request (e.g.
+//! - All [Mock](struct.Mock.html) methods that start with `return` in their name define what the
+//! mock server will return in response to an HTTP request that matched all mock requirements (e.g.
 //! [Mock::return_status](struct.Mock.html#method.return_status),
 //! [Mock::return_body](struct.Mock.html#method.return_body), etc.).
 //!
-//! With this naming scheme users can benefit from IDE autocompletion to find request matchers and response
-//! attributes without even looking into documentation.
+//! With this naming scheme users can benefit from IDE autocompletion to find request matchers and
+//! response attributes mostly without even looking into documentation.
 //!
-//! An HTTP request is only considered to match a mock if it matches all of the mocks request
-//! requirements. If a request does not match at least one mock, the server will respond with
+//! If a request does not match at least one mock, the server will respond with
 //! an error message and HTTP status code 404 (Not Found).
 //!
 //! ## Sync / Async
