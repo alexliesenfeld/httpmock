@@ -75,14 +75,14 @@
 //! an error message and HTTP status code 404 (Not Found).
 //!
 //! ## Sync / Async
-//! Note that the blocking API (as presented in the `Getting Started` section) can be used in
-//! both, synchronous and asynchronous environments. It is recommended to prefer the synchronous
-//! style of using `httpmock` because it keeps tests simple and you don't need to change the
-//! style of usage when switching from synchronous to asynchronous environments or vice
-//! versa. `httpmock` always runs asynchronously internally. If you want to schedule awaiting
-//! operations manually, then there are `async` variants for every potentially blocking operation
-//! that you can use (such as [MockServer::start_async](struct.MockServer.html#method.start_async) or
-//! [Mock::create_on_async](struct.Mock.html#method.create_on_async)).
+//!
+//! The internal implementation of `httpmock` is fully asynchronous. It provides you a synchronous
+//! and an asynchronous API though. If you want to schedule awaiting operations manually, then
+//! you can use the `async` variants that exist for every potentially blocking operation. For
+//! example, there is [MockServer::start_async](struct.MockServer.html#method.start_async) as an
+//! asynchronous counterpart to [MockServer::start](struct.MockServer.html#method.start) and
+//! [Mock::create_on_async](struct.Mock.html#method.create_on_async) for
+//! [Mock::create_on](struct.Mock.html#method.create_on).
 //!
 //! # Parallelism
 //! To balance execution speed and resource consumption, `MockServer`s are kept in a server pool
