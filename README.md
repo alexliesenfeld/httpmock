@@ -87,13 +87,13 @@ An HTTP request is only considered to match a mock if it matches all of the mock
 
 ### Sync / Async
 
-//! Note that the blocking API (as presented in the `Getting Started` section) can be used in
-//! both, synchronous and asynchronous environments. It is recommended to prefer the synchronous
-//! style of using `httpmock` because it keeps tests simple and you don't need to change the
-//! style of usage when switching from synchronous to asynchronous environments or vice
-//! versa. `httpmock` always runs asynchronously internally. If you want to schedule awaiting
-//! operations manually, then there are `async` variants for every potentially blocking operation
-//! that you can use (such as `MockServer::start_async` or `Mock::create_on_async`).
+Note that the blocking API (as presented in the `Getting Started` section) can be used in
+both, synchronous and asynchronous environments. It is recommended to prefer the synchronous
+style of using `httpmock` because it keeps tests simple and you don't need to change the
+style of usage when switching from synchronous to asynchronous environments or vice
+versa. `httpmock` always runs asynchronously internally. If you want to schedule awaiting
+operations manually, then there are `async` variants for every potentially blocking operation
+that you can use (such as `MockServer::start_async` or `Mock::create_on_async`).
 
 ## Parallelism
 To balance execution speed and resource consumption, `MockServer`s are kept in a server pool internally. This allows to run multiple tests in parallel without overwhelming the executing machine by creating too many HTTP servers. A test will be blocked if it tries to use a `MockServer` (e.g. by calling `MockServer::new()`) while the server pool is empty (i.e. all servers are occupied by other tests). To avoid TCP port binding issues, `MockServers` are never recreated but recycled/resetted. The pool is filled on demand up to a predefined maximum number of 25 servers. You can change this number by setting the environment variable `HTTPMOCK_MAX_SERVERS`. 
