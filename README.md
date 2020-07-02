@@ -81,9 +81,9 @@ Other than many other libraries `httpmock` does not require you to learn a DSL-l
 - All methods starting with `expect` place a requirement on the HTTP request (e.g. `expect_method`, `expect_path`, or `expect_body`).
 - All methods starting with `return` define what the mock server will return in response to a matching HTTP request (e.g. `return_status`, `return_body`, etc.).  
 
-An HTTP request is only considered to match a mock if it matches all of the mocks request requirements. If a request does not match at least one mock, the server will respond with an error message and HTTP status code 404 (Not Found).
-
 With this naming scheme users can benefit from IDE autocompletion to find request matchers and response attributes without even looking into documentation. 
+
+An HTTP request is only considered to match a mock if it matches all of the mocks request requirements. If a request does not match at least one mock, the server will respond with an error message and HTTP status code 404 (Not Found).
 
 ### Sync / Async
 
