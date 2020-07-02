@@ -71,9 +71,11 @@ fn example_test() {
 
 ## API Usage
 
-Each test usually creates its own local `MockServer` that runs a lightweight HTTP server by using `MockServer::new()`. Each local `MockServer` runs on its own random port so that tests do not conflict with each other.
+Each test usually creates its own local `MockServer` using `MockServer::start()`. This creates a lightweight HTTP
+server that runs on its own random port. This way tests do not conflict with each other.
 
-You can use the `Mock` structure to specify and create a mock on the `MockServer`. The `Mock` structure provides you all supported mocking functionality.
+You can use the `Mock`  structure to specify and create mocks on the mock server. `Mock` structure provides you all 
+supported mocking functionality.
 
 ### Request Matching and Responses
 Other than many other libraries `httpmock` does not require you to learn a DSL-like API to specify `Mock` behaviour. Instead, `httpmock` provides you a fluent builder-like API that clearly separates request matching and response attributes by using the following naming scheme:

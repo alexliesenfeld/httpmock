@@ -47,11 +47,13 @@
 //!
 //! # API Usage
 //!
-//! Each test usually creates its own local [MockServer](struct.MockServer.html) that runs a
-//! lightweight HTTP server by using [MockServer::start](struct.MockServer.html#method.start).
-//! Each local mock server runs on its own random port so that tests do not conflict with each other.
+//! Each test usually creates its own local [MockServer](struct.MockServer.html) using
+//! [MockServer::start](struct.MockServer.html#method.start). This creates a lightweight HTTP
+//! server that runs on its own random port. This way tests do not conflict with each other.
+//!
 //! You can use the [Mock](struct.Mock.html) structure to specify and create mocks on the
-//! mokc server. The [Mock](struct.Mock.html) structure provides you all supported mocking functionality.
+//! mock server. The [Mock](struct.Mock.html) structure provides you all supported mocking
+//! functionality.
 //!
 //! ## Request Matching and Responses
 //! Other than many other libraries `httpmock` does not require you to learn a DSL-like API to
