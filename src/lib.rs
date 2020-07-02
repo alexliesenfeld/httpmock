@@ -93,7 +93,7 @@
 //! `MockServer` (e.g. by calling `MockServer::new()`) while the server pool is empty (i.e. all
 //! servers are occupied by other tests). To avoid TCP port binding issues, `MockServers` are
 //! never recreated but recycled/resetted. The pool is filled on demand up to a predefined
-//! maximum number of 20 servers. You can change this number by setting the environment
+//! maximum number of 25 servers. You can change this number by setting the environment
 //! variable `HTTPMOCK_MAX_SERVERS`.
 //!
 //! # Examples
@@ -314,7 +314,7 @@ const LOCAL_SERVER_ADAPTER_GENERATOR: fn() -> Arc<dyn MockServerAdapter + Send +
 
 lazy_static! {
     static ref LOCAL_SERVER_POOL_REF: Arc<Pool<Arc<dyn MockServerAdapter + Send + Sync>>> = {
-        let max_servers = read_env("HTTPMOCK_MAX_SERVERS", "50")
+        let max_servers = read_env("HTTPMOCK_MAX_SERVERS", "25")
             .parse::<usize>()
             .expect("Cannot parse environment variable HTTPMOCK_MAX_SERVERS to an integer");
         Arc::new(Pool::new(max_servers))
