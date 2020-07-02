@@ -4,8 +4,8 @@
     
 [![Build Status](https://dev.azure.com/alexliesenfeld/httpmock/_apis/build/status/alexliesenfeld.httpmock?branchName=multiserver)](https://dev.azure.com/alexliesenfeld/httpmock/_build/latest?definitionId=2&branchName=multiserver)
 [![Coverage](https://codecov.io/github/alexliesenfeld/httpmock/coverage.svg?branch=multiserver)](https://codecov.io/gh/alexliesenfeld/httpmock/)
-[![crates.io](https://img.shields.io/crates/d/httpmock.svg)](https://docs.rs/httpmock)
-[![crates.io](https://img.shields.io/docker/cloud/build/alexliesenfeld/httpmock)](https://hub.docker.com/r/alexliesenfeld/httpmock)
+[![crates.io](https://img.shields.io/crates/d/httpmock.svg)](https://crates.io/crates/httpmock)
+[![Docker](https://img.shields.io/docker/cloud/build/alexliesenfeld/httpmock)](https://hub.docker.com/r/alexliesenfeld/httpmock)
 [![License](https://img.shields.io/github/license/alexliesenfeld/httpmock.svg)](LICENSE)
 	
 </div>
@@ -26,7 +26,7 @@
 
 ## Features
 
-* Provides a full-blown HTTP mock server with HTTP/1.1 and HTTP/2 support.
+* Provides a full-blown HTTP mock server with HTTP/1 and HTTP/2 support.
 * Fully asynchronous core with a synchornous and asynchronous API.
 * Support for all major asynchronous executors and runtimes.
 * Wide range of built-in request matchers and support for custom request matchers.
@@ -78,17 +78,17 @@ Each test usually creates its own local `MockServer` that runs a lightweight HTT
 You can use the `Mock` structure to specify and create a mock on the `MockServer`. The `Mock` structure provides you all supported mocking functionality.
 
 ### Request Matching and HTTP Responses
-Other than many other libraries, `httpmock` does not require you to learn a DSL-like API to specify `Mock` behaviour. Instead, `httpmock` provides you a fluent builder-like API that clearly separates request matching and response attributes by using the following naming scheme:
+Other than many other libraries `httpmock` does not require you to learn a DSL-like API to specify `Mock` behaviour. Instead, `httpmock` provides you a fluent builder-like API that clearly separates request matching and response attributes by using the following naming scheme:
 
 - All methods starting with `expect` place a requirement on the HTTP request (e.g. `expect_method`, `expect_path`, or `expect_body`).
 - All methods starting with `return` define what the mock server will return in response to a matching HTTP request (e.g. `return_status`, `return_body`, etc.).  
 
-This way, users can benefit from IDE autocompletion to find request matchers and response attributes without even looking into documentation. 
-
 An HTTP request is only considered to match a mock if it matches all of the mocks request requirements. If a request does not match at least one mock, the server will respond with an error message and HTTP status code 404 (Not Found).
 
+With this naming scheme users can benefit from IDE autocompletion to find request matchers and response attributes without even looking into documentation. 
+
 ### Sync / Async
-Note that the blocking API (as presented in the `Getting Started` section) can be used in both, a synchronous and an asynchronous environment. Usually this should be the preferred style of using `httpmock` because it keeps tests simple and you don't need to change the style of usage when switching from a synchronous to an asynchronous environment or vice versa. If you absolutely need to schedule awaiting operations manually, then there are `async` counterparts for every potentially blocking operation that you can use (e.g.: `MockServer::start_async().await`, or `Mock::new().create_on_async(&mock_server).await`). 
+Note that the blocking API (as presented in the `Getting Started` section) can be used in both, synchronous and asynchronous environments. Usually this should be the preferred style of using `httpmock` because it keeps tests simple and you don't need to change the style of usage when switching from a synchronous to an asynchronous environment or vice versa. If you absolutely need to schedule awaiting operations manually, then there are `async` counterparts for every potentially blocking operation that you can use (e.g.: `MockServer::start_async().await`, or `Mock::new().create_on_async(&mock_server).await`). 
 
 ## Parallelism
 To balance execution speed and resource consumption, `MockServer`s are kept in a server pool internally. This allows to run multiple tests in parallel without overwhelming the executing machine by creating too many HTTP servers. A test will be blocked if it tries to use a `MockServer` (e.g. by calling `MockServer::new()`) while the server pool is empty (i.e. all servers are occupied by other tests). To avoid TCP port binding issues, `MockServers` are never recreated but recycled/resetted. The pool is filled on demand up to a predefined maximum number of 20 servers. You can change this number by setting the environment variable `HTTPMOCK_MAX_SERVERS`. 

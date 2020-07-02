@@ -2,7 +2,7 @@
 //!
 //!  # Features
 //!
-//! * Provides a full-blown HTTP mock server with HTTP/1.1 and HTTP/2 support.
+//! * Provides a full-blown HTTP mock server with HTTP/1 and HTTP/2 support.
 //! * Fully asynchronous core with a synchornous and asynchronous API.
 //! * Support for all major asynchronous executors and runtimes.
 //! * Wide range of built-in request matchers and support for custom request matchers.
@@ -39,7 +39,7 @@
 //!
 //!     // Act: Send an HTTP request to the mock server (simulates your software)
 //!     let url = format!("http://{}/search", mock_server.address());
-//!     let response = http_get(&url);
+//!     let response = isahc::get(&url).unwrap();
 //!
 //!     // Assert: Ensure there was a response from the mock server
 //!     assert_eq!(response.status(), 200);
@@ -49,36 +49,44 @@
 //!
 //! # API Usage
 //!
-//! Each test usually creates its own local `MockServer` that runs a lightweight HTTP server by
-//! using `MockServer::new()`. Each local `MockServer` runs on its own random port so that tests
-//! do not conflict with each other. You can use the `Mock` structure to specify and create a
-//! mock on the `MockServer`. The `Mock` structure provides you all supported mocking functionality.
+//! Each test usually creates its own local [MockServer](struct.MockServer.html) that runs a
+//! lightweight HTTP server by using [MockServer::start](struct.MockServer.html#method.start).
+//! Each local mock server runs on its own random port so that tests do not conflict with each other.
+//! You can use the [Mock](struct.Mock.html) structure to specify and create mocks on the
+//! mokc server. The [Mock](struct.Mock.html) structure provides you all supported mocking functionality.
 //!
-//! ## Request Matching and HTTP Responses
-//! Other than many other libraries, `httpmock` does not require you to learn a DSL-like API to
-//! specify `Mock` behaviour. Instead, `httpmock` provides you a fluent builder-like API that
+//! ## Request Matching and Responses
+//! Other than many other libraries `httpmock` does not require you to learn a DSL-like API to
+//! specify mock behaviour. Instead, `httpmock` provides you a fluent builder-like API that
 //! clearly separates request matching and response attributes by using the following naming scheme:
 //!
-//! - All methods starting with `expect` place a requirement on the HTTP request
-//! (e.g. `expect_method`, `expect_path`, or `expect_body`).
-//! - All methods starting with `return` define what the mock server will return in response
-//! to a matching HTTP request (e.g. `return_status`, `return_body`, etc.).
-//!
-//! This way, users can benefit from IDE autocompletion to find request matchers and response
-//! attributes without even looking into documentation.
+//! - All [Mock](struct.Mock.html) methods starting with `expect` place a requirement on the
+//! HTTP request (e.g. [Mock::expect_method](struct.Mock.html#method.expect_method),
+//! [Mock::expect_path](struct.Mock.html#method.expect_path), or
+//! [Mock::expect_body](struct.Mock.html#method.expect_body)).
+//! - All [Mock](struct.Mock.html) methods starting with `return` define what the mock server
+//! will return in response to a matching HTTP request (e.g.
+//! [Mock::return_status](struct.Mock.html#method.return_status),
+//! [Mock::return_body](struct.Mock.html#method.return_body), etc.).
 //!
 //! An HTTP request is only considered to match a mock if it matches all of the mocks request
 //! requirements. If a request does not match at least one mock, the server will respond with
 //! an error message and HTTP status code 404 (Not Found).
 //!
+//! With this naming scheme users can benefit from IDE autocompletion to find request matchers and response
+//! attributes without even looking into documentation.
+//!
+
+//!
 //! ## Sync / Async
 //! Note that the blocking API (as presented in the `Getting Started` section) can be used in
-//! both, a synchronous and an asynchronous environment. Usually this should be the preferred
+//! both, synchronous and asynchronous environments. Usually this should be the preferred
 //! style of using `httpmock` because it keeps tests simple and you don't need to change the
 //! style of usage when switching from a synchronous to an asynchronous environment or vice
 //! versa. If you absolutely need to schedule awaiting operations manually, then there are
 //! `async` counterparts for every potentially blocking operation that you can use
-//! (e.g.: `MockServer::start_async().await`, or `Mock::new().create_on_async(&mock_server).await`).
+//! (e.g.: [MockServer::start_async](struct.MockServer.html#method.start_async), or
+//! [Mock::create_on_async](struct.Mock.html#method.create_on_async)).
 //!
 //! # Parallelism
 //! To balance execution speed and resource consumption, `MockServer`s are kept in a server pool
@@ -89,7 +97,6 @@
 //! never recreated but recycled/resetted. The pool is filled on demand up to a predefined
 //! maximum number of 20 servers. You can change this number by setting the environment
 //! variable `HTTPMOCK_MAX_SERVERS`.
-//!
 //!
 //! # Examples
 //! Fore more examples, please refer to
@@ -150,7 +157,7 @@
 //! Fore more examples on how to use a remote server, please refer to
 //! [this crates test directory](https://github.com/alexliesenfeld/httpmock/blob/master/tests/standalone_tests.rs ).
 //!
-//! ## License
+//! # License
 //! `httpmock` is free software: you can redistribute it and/or modify it under the terms
 //! of the MIT Public License.
 //!
