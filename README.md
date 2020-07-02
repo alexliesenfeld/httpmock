@@ -48,8 +48,6 @@ extern crate httpmock;
 use httpmock::Method::{GET};
 use httpmock::{Mock, MockServer, MockServerRequest, Regex};
 
-// ...
-
 #[test]
 fn example_test() {
     // Arrange: Create a mock on a local mock server 
