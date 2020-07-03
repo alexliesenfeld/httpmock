@@ -24,8 +24,6 @@
     <a href="https://github.com/alexliesenfeld/httpmock/issues">Request Feature</a>
 </p>
 
----
-
 `httpmock` is a Rust library that allows you to mock HTTP services in your tests. 
 
 ## Features
