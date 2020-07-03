@@ -1,43 +1,41 @@
-use crate::server::data::ApplicationState;
+#![allow(clippy::trivial_regex)]
 
-use regex::Regex;
+use std::borrow::Borrow;
+use std::collections::BTreeMap;
+use std::net::SocketAddr;
+use std::str::FromStr;
+use std::sync::Arc;
 
-use futures::{future, Future, Stream};
-
-use hyper::service::service_fn;
-use hyper::{
-    http::response::Builder as HyperResponseBuilder, Body, Chunk, HeaderMap,
-    Request as HyperRequest, Response as HyperResponse, Server, StatusCode,
-};
-
+use hyper::body::Buf;
 use hyper::header::HeaderValue;
 use hyper::http::header::HeaderName;
-use std::collections::BTreeMap;
-use std::str::FromStr;
+use hyper::service::{make_service_fn, service_fn};
+use hyper::{
+    Body, HeaderMap, Request as HyperRequest, Response as HyperResponse, Result as HyperResult,
+    Server, StatusCode,
+};
+use regex::Regex;
+
+pub use crate::server::data::MockServerState;
 
 pub(crate) mod data;
-mod handlers;
+pub(crate) mod handlers;
+
 mod routes;
 mod util;
 
 type GenericError = Box<dyn std::error::Error + Send + Sync>;
-type ResponseFuture = Box<dyn Future<Item = HyperResponse<Body>, Error = GenericError> + Send>;
 
 /// Holds server configuration properties.
 #[derive(Debug)]
 pub struct HttpMockConfig {
     pub port: u16,
-    pub workers: usize,
     pub expose: bool,
 }
 
 impl HttpMockConfig {
-    pub fn new(port: u16, workers: usize, expose: bool) -> Self {
-        Self {
-            port,
-            workers,
-            expose,
-        }
+    pub fn new(port: u16, expose: bool) -> Self {
+        Self { port, expose }
     }
 }
 
@@ -112,72 +110,110 @@ fn extract_headers(header_map: &HeaderMap) -> Result<BTreeMap<String, String>, S
     Ok(headers)
 }
 
+async fn handle_server_request(
+    req: HyperRequest<Body>,
+    state: Arc<MockServerState>,
+) -> HyperResult<HyperResponse<Body>> {
+    let request_header = ServerRequestHeader::from(&req);
+
+    if let Err(e) = request_header {
+        return Ok(error_response(format!("Cannot parse request: {}", e)));
+    }
+
+    let entire_body = hyper::body::aggregate(req.into_body()).await;
+    if let Err(e) = entire_body {
+        return Ok(error_response(format!("Cannot read request body: {}", e)));
+    }
+
+    let the_body = entire_body.unwrap();
+    let body_bytes = the_body.bytes();
+    let body = String::from_utf8(body_bytes.to_vec());
+
+    if let Err(e) = body {
+        return Ok(error_response(format!("Cannot read body: {}", e)));
+    }
+
+    let routing_result = route_request(state.borrow(), &request_header.unwrap(), body.unwrap());
+    if let Err(e) = routing_result {
+        return Ok(error_response(format!("Request handler error: {}", e)));
+    }
+
+    let response = map_response(routing_result.unwrap());
+    if let Err(e) = response {
+        return Ok(error_response(format!("Cannot build response: {}", e)));
+    }
+
+    Ok(response.unwrap())
+}
+
 /// Starts a new instance of an HTTP mock server. You should never need to use this function
 /// directly. Use it if you absolutely need to manage the low-level details of how the mock
 /// server operates.
-pub fn start_server(http_mock_config: HttpMockConfig) {
+pub async fn start_server(
+    http_mock_config: HttpMockConfig,
+    state: &Arc<MockServerState>,
+    socket_addr_sender: Option<tokio::sync::oneshot::Sender<SocketAddr>>,
+) -> Result<(), String> {
     let port = http_mock_config.port;
-    let host = match http_mock_config.expose {
-        true => "0.0.0.0",    // allow traffic from all sources
-        false => "127.0.0.1", // allow traffic from localhost only
+    let host = if http_mock_config.expose {
+        "0.0.0.0"
+    } else {
+        "127.0.0.1"
     };
 
-    hyper::rt::run(future::lazy(move || {
-        let new_service = move || {
-            service_fn(|req: HyperRequest<Body>| {
-                let request_header = ServerRequestHeader::from(&req);
-                Box::new(
-                    req.into_body()
-                        .concat2()
-                        .from_err()
-                        .and_then(|entire_body: Chunk| {
-                            if let Err(e) = request_header {
-                                return Ok(error_response(format!("Cannot parse request: {}", e)));
-                            }
+    let state = state.clone();
+    let new_service = make_service_fn(move |_| {
+        let state = state.clone();
+        async move {
+            Ok::<_, GenericError>(service_fn(move |req: HyperRequest<Body>| {
+                let state = state.clone();
+                handle_server_request(req, state)
+            }))
+        }
+    });
 
-                            let body = String::from_utf8(entire_body.to_vec());
-                            if let Err(e) = body {
-                                return Ok(error_response(format!("Cannot read body: {}", e)));
-                            }
+    let server = Server::bind(&format!("{}:{}", host, port).parse().unwrap()).serve(new_service);
 
-                            let routing_result =
-                                route_request(&STATE, &request_header.unwrap(), body.unwrap());
-                            if let Err(e) = routing_result {
-                                return Ok(error_response(format!("Request handler error: {}", e)));
-                            }
+    if let Some(socket_addr_sender) = socket_addr_sender {
+        if let Err(e) = socket_addr_sender.send(server.local_addr()) {
+            return Err(format!(
+                "Cannot send socket information to the test thread: {:?}",
+                e
+            ));
+        }
+    }
 
-                            let response = map_response(routing_result.unwrap());
-                            if let Err(e) = response {
-                                return Ok(error_response(format!("Cannot build response: {}", e)));
-                            }
+    log::info!("Listening on {}", server.local_addr());
+    if let Err(e) = server.await {
+        return Err(format!("Err: {}", e));
+    }
 
-                            Ok(response.unwrap())
-                        }),
-                ) as ResponseFuture
-            })
-        };
-
-        let addr = &format!("{}:{}", host, port).parse().unwrap();
-        let server = Server::bind(&addr)
-            .serve(new_service)
-            .map_err(|e| log::error!("server error: {}", e));
-
-        log::info!("Listening on {}", addr);
-
-        server
-    }));
+    Ok(())
 }
 
 /// Maps a server response to a hyper response.
 fn map_response(route_response: ServerResponse) -> Result<HyperResponse<Body>, String> {
     let mut builder = HyperResponse::builder();
-    builder.status(route_response.status);
+    builder = builder.status(route_response.status);
 
-    for (k, v) in route_response.headers {
-        let value = add_header(&mut builder, &k, &v);
+    for (key, value) in route_response.headers {
+        let name = HeaderName::from_str(&key);
+        if let Err(e) = name {
+            return Err(format!("Cannot create header from name: {}", e));
+        }
+
+        let value = HeaderValue::from_str(&value);
+        if let Err(e) = value {
+            return Err(format!("Cannot create header from value: {}", e));
+        }
+
+        let value = value.unwrap();
+        let value = value.to_str();
         if let Err(e) = value {
             return Err(format!("Cannot create header from value string: {}", e));
         }
+
+        builder = builder.header(name.unwrap(), value.unwrap());
     }
 
     let result = builder.body(Body::from(route_response.body));
@@ -188,36 +224,19 @@ fn map_response(route_response: ServerResponse) -> Result<HyperResponse<Body>, S
     Ok(result.unwrap())
 }
 
-/// Adds a header to a hyper response.
-fn add_header(builder: &mut HyperResponseBuilder, key: &str, value: &str) -> Result<(), String> {
-    let name = HeaderName::from_str(key);
-    if let Err(e) = name {
-        return Err(format!("Cannot create header from name: {}", e));
-    }
-
-    let value = HeaderValue::from_str(value);
-    if let Err(e) = value {
-        return Err(format!("Cannot create header from value: {}", e));
-    }
-
-    let value = value.unwrap();
-    let value = value.to_str();
-    if let Err(e) = value {
-        return Err(format!("Cannot create header from value string: {}", e));
-    }
-
-    builder.header(name.unwrap(), value.unwrap());
-
-    Ok(())
-}
-
 /// Routes a request to the appropriate route handler.
 fn route_request(
-    state: &ApplicationState,
+    state: &MockServerState,
     request_header: &ServerRequestHeader,
     body: String,
 ) -> Result<ServerResponse, String> {
     log::trace!("Routing incoming request: {:?}", request_header);
+
+    if PING_PATH.is_match(&request_header.path) {
+        if let "GET" = request_header.method.as_str() {
+            return routes::ping();
+        }
+    }
 
     if MOCKS_PATH.is_match(&request_header.path) {
         match request_header.method.as_str() {
@@ -241,7 +260,7 @@ fn route_request(
         }
     }
 
-    return routes::serve(state, request_header, body);
+    routes::serve(state, request_header, body)
 }
 
 /// Get request path parameters.
@@ -282,14 +301,21 @@ fn error_response(body: String) -> HyperResponse<Body> {
 }
 
 lazy_static! {
-    static ref MOCK_PATH: Regex = Regex::new(r"/__mocks/([0-9]+)$").unwrap();
-    static ref MOCKS_PATH: Regex = Regex::new(r"/__mocks$").unwrap();
-    static ref STATE: ApplicationState = ApplicationState::new();
+    static ref PING_PATH: Regex = Regex::new(r"^/__ping$").unwrap();
+    static ref MOCKS_PATH: Regex = Regex::new(r"^/__mocks$").unwrap();
+    static ref MOCK_PATH: Regex = Regex::new(r"^/__mocks/([0-9]+)$").unwrap();
 }
 
 #[cfg(test)]
 mod test {
-    use crate::server::{MOCKS_PATH, MOCK_PATH};
+    use crate::server::{
+        error_response, get_path_param, map_response, ServerResponse, MOCKS_PATH, MOCK_PATH,
+    };
+    use crate::Regex;
+    use futures_util::TryStreamExt;
+    use hyper::Body;
+    use std::borrow::Borrow;
+    use std::collections::BTreeMap;
 
     #[test]
     fn route_regex_test() {
@@ -304,5 +330,102 @@ mod test {
         assert_eq!(MOCKS_PATH.is_match("/__mocks/5"), false);
         assert_eq!(MOCKS_PATH.is_match("test/__mocks/5"), false);
         assert_eq!(MOCKS_PATH.is_match("test/__mocks/567"), false);
+    }
+
+    /// Make sure passing an empty string to the error response does not result in an error.
+    #[test]
+    fn error_response_test() {
+        let res = error_response("test".into());
+        let (parts, body) = res.into_parts();
+
+        let body = async_std::task::block_on({
+            body.try_fold(Vec::new(), |mut data, chunk| async move {
+                data.extend_from_slice(&chunk);
+                Ok(data)
+            })
+        });
+
+        assert_eq!(
+            String::from_utf8(body.unwrap()).unwrap(),
+            "test".to_string()
+        )
+    }
+
+    /// Makes sure an error is return if there is a header parsing error
+    #[test]
+    fn response_header_key_parsing_error_test() {
+        // Arrange
+        let mut headers = BTreeMap::new();
+        headers.insert(";;;".to_string(), ";;;".to_string());
+
+        let res = ServerResponse {
+            body: "".to_string(),
+            status: 500,
+            headers,
+        };
+
+        // Act
+        let result = map_response(res);
+
+        // Assert
+        assert_eq!(result.is_err(), true);
+        assert_eq!(
+            result
+                .err()
+                .unwrap()
+                .contains("Cannot create header from name"),
+            true
+        );
+    }
+
+    #[test]
+    fn get_path_param_regex_error_test() {
+        // Arrange
+        let re = Regex::new(r"^/__mocks/([0-9]+)$").unwrap();
+
+        // Act
+        let result = get_path_param(&re, 0, "");
+
+        // Assert
+        assert_eq!(result.is_err(), true);
+        assert_eq!(
+            result
+                .err()
+                .unwrap()
+                .contains("Error capturing parameter from request path"),
+            true
+        );
+    }
+
+    #[test]
+    fn get_path_param_index_error_test() {
+        // Arrange
+        let re = Regex::new(r"^/__mocks/([0-9]+)$").unwrap();
+
+        // Act
+        let result = get_path_param(&re, 5, "/__mocks/5");
+
+        // Assert
+        assert_eq!(result.is_err(), true);
+        assert_eq!(
+            "Error capturing resource id in request path: /__mocks/5",
+            result.err().unwrap()
+        );
+    }
+
+    #[test]
+    fn get_path_param_number_error_test() {
+        // Arrange
+        let re = Regex::new(r"^/__mocks/([0-9]+)$").unwrap();
+
+        // Act
+        let result = get_path_param(&re, 0, "/__mocks/9999999999999999999999999");
+
+        // Assert
+        assert_eq!(result.is_err(), true);
+        assert_eq!(
+            "Error parsing id as a number: invalid digit found in string",
+            result.err().unwrap()
+        );
     }
 }

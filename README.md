@@ -1,149 +1,160 @@
-<p align="center"><img height="150" src="https://raw.githubusercontent.com/alexliesenfeld/httpmock/master/banner.png"></p>
+<div align="center">
+<img height="120" src="https://raw.githubusercontent.com/alexliesenfeld/httpmock/multiserver/banner.png">
+<h1>httpmock</h1>
+</div>
+
+<p align="center">HTTP mocking library for Rust.</p>
+<div align="center">
+    
+[![Build Status](https://dev.azure.com/alexliesenfeld/httpmock/_apis/build/status/alexliesenfeld.httpmock?branchName=multiserver)](https://dev.azure.com/alexliesenfeld/httpmock/_build/latest?definitionId=2&branchName=multiserver)
+[![Coverage](https://codecov.io/github/alexliesenfeld/httpmock/coverage.svg?branch=multiserver)](https://codecov.io/gh/alexliesenfeld/httpmock/)
+[![crates.io](https://img.shields.io/crates/d/httpmock.svg)](https://crates.io/crates/httpmock)
+[![Docker](https://img.shields.io/docker/cloud/build/alexliesenfeld/httpmock)](https://hub.docker.com/r/alexliesenfeld/httpmock)
+[![License](https://img.shields.io/github/license/alexliesenfeld/httpmock.svg)](LICENSE)
+	
+</div>
+
 <p align="center">
-    <a href="https://crates.io/crates/httpmock"><img src="https://img.shields.io/crates/v/httpmock.svg"></a>
-    <a href="https://docs.rs/httpmock"><img src="https://docs.rs/httpmock/badge.svg"></a>
+    <a href="https://docs.rs/httpmock/">Documentation</a>
+    ·
+    <a href="https://crates.io/crates/httpmock">Crate</a>
+    ·
+    <a href="https://github.com/alexliesenfeld/httpmock/issues">Report Bug</a>
+    ·
+    <a href="https://github.com/alexliesenfeld/httpmock/issues">Request Feature</a>
 </p>
-<p align="center"><b>HTTP mocking library for Rust</b></p>
 
----
-`httpmock` is a Rust crate that allows you to mock HTTP responses in your tests. It contains two major components:
+## Features
 
-* a **mock server** that is automatically started in the background of your tests, and
-* a **test library** to create HTTP mocks on the server.
+* Provides a full-blown HTTP mock server with HTTP/1 and HTTP/2 support.
+* Fully asynchronous core with a synchornous and asynchronous API.
+* Compatible with all major asynchronous executors and runtimes.
+* Built-in request matchers with support for custom request matchers.
+* Parallel test execution by default.
+* Standalone mode with an accompanying [Docker image](https://hub.docker.com/r/alexliesenfeld/httpmock).
 
-All interaction with the mock server happens through the provided library. Therefore, you do
-not need to interact with the mock server directly.
-
-By default, an HTTP mock server instance will be started in the background of
-your tests. It will be created when your tests need the mock server for the first
-time and will be shut down at the end of the test run. The mock server is executed in a
-separate thread, so it does not conflict with your tests.
-
-The mock server can also be started in **standalone mode** (more information below).
-
-# Getting Started
+## Getting Started
 Add `httpmock` to `Cargo.toml`:
 
 ```toml
 [dev-dependencies]
-httpmock = "0.3.5"
+httpmock = "0.4.0"
 ```
 
-You can then use `httpmock` in your tests like shown in the following example:
+You can then use `httpmock` in your tests like shown in the example below:
 ```rust
 extern crate httpmock;
 
-use httpmock::Method::GET;
-use httpmock::{mock, with_mock_server};
+use httpmock::Method::{GET};
+use httpmock::{Mock, MockServer, MockServerRequest, Regex};
 
 #[test]
-#[with_mock_server]
-fn simple_test() {
-   let search_mock = mock(GET, "/search")
-       .expect_query_param("query", "metallica")
-       .return_status(204)
-       .create();
+fn example_test() {
+    // Arrange: Create a mock on a local mock server 
+    let mock_server = MockServer::start();
 
-   let response = reqwest::get("http://localhost:5000/search?query=metallica").unwrap();
+    let search_mock = Mock::new()
+        .expect_method(GET)         
+        .expect_path("/search")
+        .return_status(200)
+        .create_on(&mock_server);
 
-   assert_eq!(response.status(), 204);
-   assert_eq!(search_mock.times_called(), 1);
+    // Act: Send an HTTP request to the mock server (simulates your software)
+    let url = format!("http://{}/search", mock_server.address());
+    let response = isahc::get(&url).unwrap();
+
+    // Assert: Ensure there was a response from the mock server
+    assert_eq!(response.status(), 200);
+    assert_eq!(search_mock.times_called(), 1);
 }
 ```
-In the above example, a mock server is automatically created when the test launches.
-This is ensured by the `with_mock_server`
-annotation. It wraps the test with an initializer function that is performing several important
-preparation steps, such as starting the mock server if none yet exists
-and cleaning up old mock server state, so that each test can start with
-a clean server. The annotation also sequentializes tests, so
-they do not conflict with each other when using the mock server.
 
-If you try to create a mock without having annotated your test function
-with the `with_mock_server` annotation,
-you will receive a panic at runtime pointing you to this problem.
+## API Usage
 
-# Usage
-Interaction with the mock server happens via the `Mock` structure.
-It provides you all mocking functionality that is supported by the mock server.
+Each test usually creates its own local `MockServer` using `MockServer::start()`. This creates a lightweight HTTP
+server that runs on its own random port. This way tests do not conflict with each other.
 
-The expected style of usage is as follows:
-* Create a `Mock` object using the
-`Mock::create` method
-(or `Mock::new` for slightly more control).
-* Set your mock requirements using the provided `expect`-methods, such as `expect_header`, `expect_body`, etc. These
-methods describe what attributes an HTTP request needs to have to be considered a "match" for the mock you are creating.
-* use the provided `return`-methods to describe what the mock server should return when it receives
-an HTTP request that matches all mock requirements. Some example `return`-methods are `return_status` and `return_body`.
-If the server does not find any matching mocks for an incoming HTTP request, it will return a response with an empty
-body and HTTP status code 500.
-* create the mock using the `Mock::create` method. If you do
-not call this method when you are finished configuring it, it will not be created at the mock
-server and your test will not receive the expected response.
-* using the mock object returned by the `Mock::create` method
-to assert that a mock has been called by your code under test (please refer to any example).
+You can use the `Mock`  structure to specify and create mocks on the mock server. It provides you all supported mocking 
+functionality.
 
-# Responses
-For any HTTP request sent to the mock server by your application, the request is only
-considered to match a mock if it fulfills all of the mocks request requirements.
-If a request does not match any mock, the server will respond with an empty response body
-and an HTTP status code 500 (Internal Server Error).
+### Request Matching and Responses
+Other than many other libraries `httpmock` does not require you to learn a DSL-like API to
+specify mock behaviour. Instead, `httpmock` provides you a fluent builder-like API that
+clearly separates request matching and response attributes by using the following naming scheme:
 
-# Examples
+- All `Mock` methods that start with `expect` in their name set a requirement
+for HTTP requests (e.g. `Mock::expect_method`, `Mock::expect_path`, or `Mock::expect_body`).
+- All `Mock` methods that start with `return` in their name define what the
+mock server will return in response to an HTTP request that matched all mock requirements (e.g.
+`Mock::return_status`, `Mock::return_body`, etc.).
+
+With this naming scheme users can benefit from IDE autocompletion to find request matchers and
+response attributes mostly without even looking into documentation.
+
+If a request does not match at least one mock, the server will respond with
+an error message and HTTP status code 404 (Not Found).
+
+### Sync / Async
+
+The internal implementation of `httpmock` is fully asynchronous. It provides you a synchronous and an asynchronous API 
+though. If you want to schedule awaiting operations manually, then you can use the `async` variants that exist for every 
+potentially blocking operation. For example, there is `MockServer::start_async` as an asynchronous 
+counterpart to `MockServer::start` and `Mock::create_on_async` for `Mock::create_on`. 
+
+## Parallelism
+To balance execution speed and resource consumption, `MockServer`s are kept in a server pool internally. This allows to run multiple tests in parallel without overwhelming the executing machine by creating too many HTTP servers. A test will be blocked if it tries to use a `MockServer` (e.g. by calling `MockServer::new()`) while the server pool is empty (i.e. all servers are occupied by other tests). To avoid TCP port binding issues, `MockServers` are never recreated but recycled/resetted. The pool is filled on demand up to a predefined maximum number of 25 servers. You can change this number by setting the environment variable `HTTPMOCK_MAX_SERVERS`. 
+
+
+## Examples
 Fore more examples, please refer to
 [this crates test directory](https://github.com/alexliesenfeld/httpmock/blob/master/tests/integration_tests.rs ).
 
-# Debugging
-`httpmock` logs against the `log` crate. For example, if you use the `env_logger` logging backend, you can activate
-debug logging by setting `RUST_LOG` environment variable to `debug` and then calling
-`env_logger::try_init()`:
-```rust
+## Debugging
+`httpmock` logs against the `log` crate. For example, if you use the `env_logger` backend, you can activate debug logging by setting the `RUST_LOG` environment variable to `httpmock=debug`.
+
+## Standalone Mode
+You can use `httpmock` to run a standalone mock server that is available to multiple applications. This can be useful if you are running integration tests that involve both, real and mocked applications. 
+
+### Docker
+Altough you can build the mock server in standalone mode yourself, it is easiest to use the Docker image from the accompanying [Docker image](https://hub.docker.com/r/alexliesenfeld/httpmock). Please refer to the documentation on Docker repository. 
+
+### API Usage
+To be able to use a standalone server from your tests, you need to change how an instance of the `MockServer` structure is created. Instead of using `MockServer::new()`, you need to connect to a remote server by using one of the `connect` methods (such as `MockServer::connect("localhost:5000")` or `MockServer::connect_from_env()`). Therefore, tests that use a local mock server do only differ in one line of code from tests that use a remote server. Otherwise, both variants are identical. 
+
+```Rust
 #[test]
-#[with_mock_server]
-fn your_test() {
-    let _ = env_logger::try_init();
-    // ...
+fn simple_test() {
+    // Arrange: Create a mock on a test local mock server 
+    let mock_server = MockServer::connect("some-host:5000");
+
+    let search_mock = Mock::new()
+        .expect_method(GET)         
+        .expect_path("/search")
+        .return_status(200)
+        .create_on(&mock_server);
+
+    // Act: Send an HTTP request to the mock server (simulates your software)
+    let url = format!("http://{}/search", mock_server.address())).unwrap();
+    let response = http_get(&url).unwrap();
+
+    // Assert: Ensure there was a response from the mock server
+    assert_eq!(response.status(), 200);
+    assert_eq!(search_mock.times_called(), 1);
 }
 ```
 
-# Standalone Mode
-You can use `httpmock` to provide a standalone mock server that is available to multiple
-applications. This can be useful if you are running integration tests that involve
-multiple applications and you want to mock only a subset of them.
+### Parallelism
+Tests that use a remote mock server are executed sequentially by default. This is in contrast to tests that use a local mock server. Sequential execution is achieved by blocking all tests from further execution whenever a test requires to connect to a busy mock server. 
 
-To activate standalone mode, you need to do the following steps:
-* Start the mock server in standalone mode by running `cargo run --features="standalone" --release` from the sources
-(or by using a binary that you can build with `cargo build --features="standalone" --release`).
-* On the host that is executing the tests, provide a host name by setting the environment variable
-`HTTPMOCK_HOST`. If set, tests are assuming a mock server is being executed elsewhere,
-so no local mock server will be started for your tests anymore. Instead, this library will be using
-the remote server to create mocks.
+### Limitations
+At this time, it is not possible to use custom request matchers in combination with remote
+mock servers. It is planned to add this functionality in future though.
 
-By default, if a server port is not provided by the environment variable
-`HTTPMOCK_PORT`, port `5000` will be used.
+### Examples
+Fore more examples on how to use a remote server, please refer to
+[this crates test directory](https://github.com/alexliesenfeld/httpmock/blob/master/tests/standalone_tests.rs ).
 
-## Exposing the mock server to the network
-If you want to expose the server to machines other than localhost, you need to provide the
-`--expose` parameter:
-* using cargo: `cargo run --features="standalone" --release -- --expose`
-* using the binary: `httpmock --expose`
-
-## Docker container
-As an alternative to building the mock server yourself, you can use the Docker image from
-the sources to run a mock server in standalone mode:
-```shell
-docker build -t httpmock .
-docker run -it --rm -p 5000:5000 --name httpmock httpmock
-```
-
-To enable extended logging, you can run the docker container with the `RUST_LOG` environment
-variable set to the log level of your choice:
-```shell
-docker run -it --rm -e RUST_LOG=httpmock=debug -p 5000:5000 --name httpmock httpmock
-```
-Please refer to the [log](https://docs.rs/crate/log) and [env_logger](https://docs.rs/crate/env_logger) crates
-for more information about logging.
-
-# License
+## License
 `httpmock` is free software: you can redistribute it and/or modify it under the terms of the MIT Public License.
  
 This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied 

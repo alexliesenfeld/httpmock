@@ -21,13 +21,12 @@ where
     V: std::cmp::Ord,
 {
     fn contains(&self, other: &BTreeMap<K, V>) -> bool {
-        return other.iter().all(|(k, v)| self.contains_entry(k, v));
+        other.iter().all(|(k, v)| self.contains_entry(k, v))
     }
 
     fn contains_entry(&self, key: &K, value: &V) -> bool {
-        return self
-            .iter()
-            .any(|(k, v)| k.cmp(key) == Ordering::Equal && v.cmp(value) == Ordering::Equal);
+        self.iter()
+            .any(|(k, v)| k.cmp(key) == Ordering::Equal && v.cmp(value) == Ordering::Equal)
     }
 }
 
@@ -37,40 +36,38 @@ pub trait StringTreeMapExtension {
     fn contains_with_case_insensitive_key(&self, other: &BTreeMap<String, String>) -> bool;
 
     /// Checks if a tree map contains a certain pair of values while ignoring the case of the key.
-    fn contains_entry_with_case_insensitive_key(&self, key: &String, value: &String) -> bool;
+    fn contains_entry_with_case_insensitive_key(&self, key: &str, value: &str) -> bool;
 
     /// Checks if a tree map contains a key while ignoring the case of the key.
-    fn contains_case_insensitive_key(&self, key: &String) -> bool;
+    fn contains_case_insensitive_key(&self, key: &str) -> bool;
 }
 
 /// Implements [`StringTreeMapExtension`].
 impl StringTreeMapExtension for BTreeMap<String, String> {
     fn contains_with_case_insensitive_key(&self, other: &BTreeMap<String, String>) -> bool {
-        return other
+        other
             .iter()
-            .all(|(k, v)| self.contains_entry_with_case_insensitive_key(k, v));
+            .all(|(k, v)| self.contains_entry_with_case_insensitive_key(k, v))
     }
 
-    fn contains_entry_with_case_insensitive_key(&self, key: &String, value: &String) -> bool {
-        return self.iter().any(|(k, v)| {
+    fn contains_entry_with_case_insensitive_key(&self, key: &str, value: &str) -> bool {
+        self.iter().any(|(k, v)| {
             k.to_lowercase().cmp(&key.to_lowercase()) == Ordering::Equal
-                && v.cmp(value) == Ordering::Equal
-        });
+                && v.as_str().cmp(value) == Ordering::Equal
+        })
     }
 
-    fn contains_case_insensitive_key(&self, key: &String) -> bool {
+    fn contains_case_insensitive_key(&self, key: &str) -> bool {
         let key_lc = key.to_lowercase();
-        return self
-            .keys()
-            .into_iter()
-            .any(|k| k.to_lowercase().eq(&key_lc));
+        self.keys().any(|k| k.to_lowercase().eq(&key_lc))
     }
 }
 
 #[cfg(test)]
 mod test {
-    use crate::server::util::{StringTreeMapExtension, TreeMapExtension};
     use std::collections::BTreeMap;
+
+    use crate::server::util::{StringTreeMapExtension, TreeMapExtension};
 
     #[test]
     fn tree_map_fully_contains_other() {

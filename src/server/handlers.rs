@@ -1,21 +1,24 @@
+use std::rc::Rc;
+use std::str::FromStr;
+
+use assert_json_diff::{assert_json_eq_no_panic, assert_json_include_no_panic};
+use serde_json::Value;
+
 use crate::server::data::{
-    ActiveMock, ApplicationState, MockDefinition, MockServerHttpRequest, MockServerHttpResponse,
+    ActiveMock, MockDefinition, MockServerHttpRequest, MockServerHttpResponse, MockServerState,
     RequestRequirements,
 };
 use crate::server::util::{StringTreeMapExtension, TreeMapExtension};
-use assert_json_diff::{assert_json_eq_no_panic, assert_json_include_no_panic};
-use serde_json::Value;
-use std::str::FromStr;
 
 /// Contains HTTP methods which cannot have a body.
-const NON_BODY_METHODS: &'static [&str] = &["GET", "HEAD", "DELETE"];
+const NON_BODY_METHODS: &[&str] = &["GET", "HEAD", "DELETE"];
 
 /// Adds a new mock to the internal state.
-pub fn add_new_mock(state: &ApplicationState, mock_def: MockDefinition) -> Result<usize, String> {
+pub fn add_new_mock(state: &MockServerState, mock_def: MockDefinition) -> Result<usize, String> {
     let result = validate_mock_definition(&mock_def);
 
     if let Err(error_msg) = result {
-        let error_msg = format!("validation error: {}", error_msg);
+        let error_msg = format!("Validation error: {}", error_msg);
         return Err(error_msg);
     }
 
@@ -26,23 +29,23 @@ pub fn add_new_mock(state: &ApplicationState, mock_def: MockDefinition) -> Resul
         mocks.insert(mock_id, ActiveMock::new(mock_id, mock_def));
     }
 
-    return Result::Ok(mock_id);
+    Result::Ok(mock_id)
 }
 
 /// Reads exactly one mock object.
-pub fn read_one(state: &ApplicationState, id: usize) -> Result<Option<ActiveMock>, String> {
+pub fn read_one(state: &MockServerState, id: usize) -> Result<Option<ActiveMock>, String> {
     {
         let mocks = state.mocks.read().unwrap();
         let result = mocks.get(&id);
-        return match result {
+        match result {
             Some(found) => Ok(Some(found.clone())),
             None => Ok(None),
-        };
+        }
     }
 }
 
 /// Deletes one mock by id. Returns the number of deleted elements.
-pub fn delete_one(state: &ApplicationState, id: usize) -> Result<bool, String> {
+pub fn delete_one(state: &MockServerState, id: usize) -> Result<bool, String> {
     let result;
     {
         let mut mocks = state.mocks.write().unwrap();
@@ -50,11 +53,11 @@ pub fn delete_one(state: &ApplicationState, id: usize) -> Result<bool, String> {
     }
 
     log::debug!("Deleted mock with id={}", id);
-    return Result::Ok(result.is_some());
+    Result::Ok(result.is_some())
 }
 
 /// Deletes all mocks. Returns the number of deleted elements.
-pub fn delete_all(state: &ApplicationState) -> Result<usize, String> {
+pub fn delete_all(state: &MockServerState) -> Result<usize, String> {
     let result;
     {
         let mut mocks = state.mocks.write().unwrap();
@@ -63,22 +66,24 @@ pub fn delete_all(state: &ApplicationState) -> Result<usize, String> {
     }
 
     log::debug!("Deleted all mocks");
-    return Result::Ok(result);
+    Result::Ok(result)
 }
 
 /// Finds a mock that matches the current request and serve a response according to the mock
 /// specification. If no mock is found, an empty result is being returned.
 pub fn find_mock(
-    state: &ApplicationState,
+    state: &MockServerState,
     req: MockServerHttpRequest,
 ) -> Result<Option<MockServerHttpResponse>, String> {
+    // TODO: Use reference instead of Rc
+    let req = Rc::new(req);
+
     let found_mock_id: Option<usize>;
     {
         let mocks = state.mocks.read().unwrap();
         let result = mocks
             .values()
-            .into_iter()
-            .find(|&mock| request_matches(&req, &mock.definition.request));
+            .find(|&mock| request_matches(req.clone(), &mock.definition.request));
 
         found_mock_id = match result {
             Some(mock) => Some(mock.id),
@@ -102,11 +107,11 @@ pub fn find_mock(
         "Could not match any mock to the following request: {:?}",
         req
     );
-    return Result::Ok(None);
+    Result::Ok(None)
 }
 
 /// Checks if a request matches a mock.
-fn request_matches(req: &MockServerHttpRequest, mock: &RequestRequirements) -> bool {
+fn request_matches(req: Rc<MockServerHttpRequest>, mock: &RequestRequirements) -> bool {
     log::trace!(
         "Matching incoming HTTP request {:?} against mock {:?}",
         req,
@@ -115,14 +120,14 @@ fn request_matches(req: &MockServerHttpRequest, mock: &RequestRequirements) -> b
 
     if let Some(path) = &mock.path {
         if !&req.path.eq(path) {
-            log::trace!("Request does not match the mock (attribute: path)");
+            log::debug!("Request does not match the mock (attribute: path)");
             return false;
         }
     }
 
     if let Some(path_contains) = &mock.path_contains {
         if !path_contains.iter().all(|pc| req.path.contains(pc)) {
-            log::trace!("Request does not match the mock (attribute: path contains)");
+            log::debug!("Request does not match the mock (attribute: path contains)");
             return false;
         }
     }
@@ -132,23 +137,21 @@ fn request_matches(req: &MockServerHttpRequest, mock: &RequestRequirements) -> b
             .iter()
             .all(|pat| pat.regex.is_match(&req.path))
         {
-            log::trace!("Request does not match the mock (attribute: path regex)");
+            log::debug!("Request does not match the mock (attribute: path regex)");
             return false;
         }
     }
 
     if let Some(method) = &mock.method {
         if !&req.method.eq(method) {
-            log::trace!("Request does not match the mock (attribute: request method)");
+            log::debug!("Request does not match the mock (attribute: request method)");
             return false;
         }
     }
 
-    if mock.body.is_some() {
-        if !match_body_exact(&req, &mock) {
-            log::trace!("Request does not match the mock (attribute: body)");
-            return false;
-        }
+    if mock.body.is_some() && !match_body_exact(&req, &mock) {
+        log::debug!("Request does not match the mock (attribute: body)");
+        return false;
     }
 
     if let Some(substrings) = &mock.body_contains {
@@ -158,7 +161,7 @@ fn request_matches(req: &MockServerHttpRequest, mock: &RequestRequirements) -> b
         };
 
         if !matches {
-            log::trace!("Request does not match the mock (attribute: body contains)");
+            log::debug!("Request does not match the mock (attribute: body contains)");
             return false;
         }
     }
@@ -170,14 +173,14 @@ fn request_matches(req: &MockServerHttpRequest, mock: &RequestRequirements) -> b
         };
 
         if !matches {
-            log::trace!("Request does not match the mock (attribute: body regex)");
+            log::debug!("Request does not match the mock (attribute: body regex)");
             return false;
         }
     }
 
     if let Some(expected_json_body) = &mock.json_body {
         if !match_json(&req.body, expected_json_body, true) {
-            log::trace!("Request does not match the mock (attribute: body)");
+            log::debug!("Request does not match the mock (attribute: body)");
             return false;
         }
     }
@@ -185,7 +188,7 @@ fn request_matches(req: &MockServerHttpRequest, mock: &RequestRequirements) -> b
     if let Some(expected_json_includes) = &mock.json_body_includes {
         for expected_include_value in expected_json_includes {
             if !match_json(&req.body, expected_include_value, false) {
-                log::trace!("Request does not match the mock (attribute: body)");
+                log::debug!("Request does not match the mock (attribute: body)");
                 return false;
             }
         }
@@ -200,13 +203,13 @@ fn request_matches(req: &MockServerHttpRequest, mock: &RequestRequirements) -> b
         };
 
         if !matches {
-            log::trace!("Request does not match the mock (attribute: header exists)");
+            log::debug!("Request does not match the mock (attribute: header exists)");
             return false;
         }
     }
 
     if !match_headers_exact(&req, &mock) {
-        log::trace!("Request does not match the mock (attribute: headers)");
+        log::debug!("Request does not match the mock (attribute: headers)");
         return false;
     }
 
@@ -219,14 +222,23 @@ fn request_matches(req: &MockServerHttpRequest, mock: &RequestRequirements) -> b
         };
 
         if !matches {
-            log::trace!("Request does not match the mock (attribute: query param exists)");
+            log::debug!("Request does not match the mock (attribute: query param exists)");
             return false;
         }
     }
 
     if !match_query_params_exact(&req, &mock) {
-        log::trace!("Request does not match the mock (attribute: query param)");
+        log::debug!("Request does not match the mock (attribute: query param)");
         return false;
+    }
+
+    if let Some(matchers) = &mock.matchers {
+        for (idx, matcher) in matchers.iter().enumerate() {
+            if !(matcher)(req.clone()) {
+                log::debug!("Request does not match the mock (attribute: custom closure/matcher, index: {})", idx);
+                return false;
+            }
+        }
     }
 
     true
@@ -237,40 +249,37 @@ fn request_matches(req: &MockServerHttpRequest, mock: &RequestRequirements) -> b
 /// "Each header field consists of a name followed by a colon (":") and the field value.
 /// Field names are case-insensitive."
 fn match_headers_exact(req: &MockServerHttpRequest, mock: &RequestRequirements) -> bool {
-    return match (&req.headers, &mock.headers) {
+    match (&req.headers, &mock.headers) {
         (Some(m1), Some(m2)) => m1.contains_with_case_insensitive_key(m2),
         (Some(_), None) => true,
         (None, Some(m2)) => m2.is_empty(),
         (None, None) => true,
-    };
+    }
 }
 
 /// Matches query params from a request and a mock
 fn match_query_params_exact(req: &MockServerHttpRequest, mock: &RequestRequirements) -> bool {
-    return match (&req.query_params, &mock.query_param) {
+    match (&req.query_params, &mock.query_param) {
         (Some(m1), Some(m2)) => m1.contains(m2),
         (Some(_), None) => true,
         (None, Some(m2)) => m2.is_empty(),
         (None, None) => true,
-    };
+    }
 }
 
 /// Matches body
 fn match_body_exact(req: &MockServerHttpRequest, mock: &RequestRequirements) -> bool {
-    return match (&req.body, &mock.body) {
-        (Some(rb), Some(mb)) => {
-            log::debug!("{} --> {}", rb, mb);
-            rb.eq(mb)
-        }
+    match (&req.body, &mock.body) {
+        (Some(rb), Some(mb)) => rb.eq(mb),
         (None, Some(mb)) => mb.is_empty(),
         (Some(rb), None) => rb.is_empty(),
         (None, None) => true,
-    };
+    }
 }
 
 /// Matches JSON
 fn match_json(req: &Option<String>, mock: &Value, exact: bool) -> bool {
-    return match req {
+    match req {
         Some(req_string) => {
             // Parse the request body as JSON string
             let result = serde_json::Value::from_str(req_string);
@@ -287,13 +296,14 @@ fn match_json(req: &Option<String>, mock: &Value, exact: bool) -> bool {
             );
 
             // Compare JSON values
-            let result = match exact {
-                true => assert_json_eq_no_panic(&req_value, mock),
-                false => assert_json_include_no_panic(&req_value, mock),
+            let result = if exact {
+                assert_json_eq_no_panic(&req_value, mock)
+            } else {
+                assert_json_include_no_panic(&req_value, mock)
             };
 
             // Log and return the comparison result
-            return match result {
+            match result {
                 Err(e) => {
                     log::trace!("Request body does not match mock JSON body: {}", e);
                     false
@@ -302,18 +312,14 @@ fn match_json(req: &Option<String>, mock: &Value, exact: bool) -> bool {
                     log::trace!("Request body matched mock JSON body");
                     true
                 }
-            };
+            }
         }
         None => false,
-    };
+    }
 }
 
 /// Validates a mock request.
 fn validate_mock_definition(req: &MockDefinition) -> Result<(), String> {
-    if req.request.path.is_none() || req.request.path.as_ref().unwrap().trim().is_empty() {
-        return Err(String::from("You need to provide a path"));
-    }
-
     if let Some(_body) = &req.request.body {
         if let Some(method) = &req.request.method {
             if NON_BODY_METHODS.contains(&method.as_str()) {
@@ -323,17 +329,23 @@ fn validate_mock_definition(req: &MockDefinition) -> Result<(), String> {
             }
         }
     }
-
     Ok(())
 }
 
 #[cfg(test)]
 mod test {
-    use crate::server::data::{
-        MockDefinition, MockServerHttpRequest, MockServerHttpResponse, RequestRequirements,
-    };
-    use crate::server::handlers::{request_matches, validate_mock_definition};
     use std::collections::BTreeMap;
+    use std::rc::Rc;
+
+    use crate::server::data::{
+        MockDefinition, MockServerHttpRequest, MockServerHttpResponse, Pattern, RequestRequirements,
+    };
+    use crate::server::handlers::{
+        add_new_mock, read_one, request_matches, validate_mock_definition,
+    };
+    use crate::server::MockServerState;
+    use crate::MockServerRequest;
+    use regex::Regex;
 
     /// TODO
     #[test]
@@ -359,13 +371,51 @@ mod test {
     #[test]
     fn path_pattern_test() {}
 
-    /// TODO
     #[test]
-    fn body_contains_test() {}
+    fn body_contains_test() {
+        // Arrange
+        let request1 = MockServerHttpRequest::new("GET".to_string(), "/test-path".to_string())
+            .with_body("test".to_string());
+        let request2 = MockServerHttpRequest::new("GET".to_string(), "/test-path".to_string())
+            .with_body("test".to_string());
 
-    /// TODO
+        let requirements1 = RequestRequirements::new().with_body_contains(vec!["xxx".to_string()]);
+        let requirements2 = RequestRequirements::new().with_body_contains(vec!["es".to_string()]);
+
+        // Act
+        let does_match1 = request_matches(Rc::new(request1), &requirements1);
+        let does_match2 = request_matches(Rc::new(request2), &requirements2);
+
+        // Assert
+        assert_eq!(false, does_match1);
+        assert_eq!(true, does_match2);
+    }
+
     #[test]
-    fn body_matches_regex_test() {}
+    fn body_matches_query_params_exact_test() {
+        // Arrange
+        let mut params1 = BTreeMap::new();
+        params1.insert("k".to_string(), "v".to_string());
+
+        let mut params2 = BTreeMap::new();
+        params2.insert("h".to_string(), "o".to_string());
+
+        let request1 = MockServerHttpRequest::new("GET".to_string(), "/test-path".to_string())
+            .with_query_params(params1.clone());
+        let request2 = MockServerHttpRequest::new("GET".to_string(), "/test-path".to_string())
+            .with_query_params(params1.clone());
+
+        let requirements1 = RequestRequirements::new().with_query_param(params2);
+        let requirements2 = RequestRequirements::new().with_query_param(params1.clone());
+
+        // Act
+        let does_match1 = request_matches(Rc::new(request1), &requirements1);
+        let does_match2 = request_matches(Rc::new(request2), &requirements2);
+
+        // Assert
+        assert_eq!(false, does_match1);
+        assert_eq!(true, does_match2);
+    }
 
     /// TODO
     #[test]
@@ -385,7 +435,7 @@ mod test {
         let req2 = RequestRequirements::new().with_path("/test-path".to_string());
 
         // Act
-        let does_match = request_matches(&req1, &req2);
+        let does_match = request_matches(Rc::new(req1), &req2);
 
         // Assert
         assert_eq!(true, does_match);
@@ -401,7 +451,7 @@ mod test {
         let req2 = RequestRequirements::new().with_path("/another-path".to_string());
 
         // Act
-        let does_match = request_matches(&req1, &req2);
+        let does_match = request_matches(Rc::new(req1), &req2);
 
         // Assert
         assert_eq!(false, does_match);
@@ -417,7 +467,7 @@ mod test {
         let req2 = RequestRequirements::new().with_method("GET".to_string());
 
         // Act
-        let does_match = request_matches(&req1, &req2);
+        let does_match = request_matches(Rc::new(req1), &req2);
 
         // Assert
         assert_eq!(true, does_match);
@@ -433,7 +483,7 @@ mod test {
         let req2 = RequestRequirements::new().with_method("POST".to_string());
 
         // Act
-        let does_match = request_matches(&req1, &req2);
+        let does_match = request_matches(Rc::new(req1), &req2);
 
         // Assert
         assert_eq!(false, does_match);
@@ -450,7 +500,7 @@ mod test {
         let req2 = RequestRequirements::new().with_body("test".to_string());
 
         // Act
-        let does_match = request_matches(&req1, &req2);
+        let does_match = request_matches(Rc::new(req1), &req2);
 
         // Assert
         assert_eq!(true, does_match);
@@ -467,7 +517,7 @@ mod test {
         let req2 = RequestRequirements::new().with_body("some other text".to_string());
 
         // Act
-        let does_match = request_matches(&req1, &req2);
+        let does_match = request_matches(Rc::new(req1), &req2);
 
         // Assert
         assert_eq!(false, does_match);
@@ -492,7 +542,7 @@ mod test {
         let req2 = RequestRequirements::new().with_headers(h2);
 
         // Act
-        let does_match = request_matches(&req1, &req2);
+        let does_match = request_matches(Rc::new(req1), &req2);
 
         // Assert
         assert_eq!(true, does_match);
@@ -501,25 +551,18 @@ mod test {
     /// This test makes sure that a request is considered "not matched" when the request misses
     /// headers.
     #[test]
-    fn request_matches_headers_no_match() {
+    fn request_matches_query_param() {
         // Arrange
-        let mut h1 = BTreeMap::new();
-        h1.insert("h1".to_string(), "v1".to_string());
+        let req1 = MockServerHttpRequest::new("GET".to_string(), "/test".to_string())
+            .with_body("test".to_string());
 
-        let mut h2 = BTreeMap::new();
-        h2.insert("h1".to_string(), "v1".to_string());
-        h2.insert("h2".to_string(), "v2".to_string());
-
-        let req1 =
-            MockServerHttpRequest::new("GET".to_string(), "/test".to_string()).with_headers(h1);
-
-        let req2 = RequestRequirements::new().with_headers(h2);
+        let req2 = RequestRequirements::new().with_body("test".to_string());
 
         // Act
-        let does_match = request_matches(&req1, &req2);
+        let does_match = request_matches(Rc::new(req1), &req2);
 
         // Assert
-        assert_eq!(false, does_match); // Request misses header "h2"
+        assert_eq!(true, does_match);
     }
 
     /// This test makes sure that even the headers of a mock and a request differ,
@@ -541,7 +584,7 @@ mod test {
         let req2 = RequestRequirements::new().with_headers(h2);
 
         // Act
-        let does_match = request_matches(&req1, &req2);
+        let does_match = request_matches(Rc::new(req1), &req2);
 
         // Assert
         assert_eq!(true, does_match); // matches, because request contains more headers than the mock expects
@@ -563,7 +606,7 @@ mod test {
         let mock = RequestRequirements::new();
 
         // Act
-        let does_match_1 = request_matches(&req, &mock);
+        let does_match_1 = request_matches(Rc::new(req), &mock);
 
         // Assert
         assert_eq!(true, does_match_1); // effectively empty because mock does not expect any headers
@@ -578,7 +621,7 @@ mod test {
         let req2 = RequestRequirements::new();
 
         // Act
-        let does_match = request_matches(&req1, &req2);
+        let does_match = request_matches(Rc::new(req1), &req2);
 
         // Assert
         assert_eq!(true, does_match);
@@ -622,7 +665,79 @@ mod test {
         let result = validate_mock_definition(&smr);
 
         // Assert
-        assert_eq!(true, result.is_err());
-        assert_eq!(true, result.unwrap_err().eq("You need to provide a path"));
+        assert_eq!(true, result.is_ok());
+    }
+
+    /// This test ensures that mock validation is being invoked.
+    #[test]
+    fn add_new_mock_validation_error() {
+        // Arrange
+        let state = MockServerState::new();
+        let mut req = RequestRequirements::new();
+        req.method = Some("GET".into());
+        req.body = Some("body".into());
+
+        let res = MockServerHttpResponse::new(200);
+        let mock_def = MockDefinition::new(req, res);
+
+        // Act
+        let result = add_new_mock(&state, mock_def);
+
+        // Assert
+        assert_eq!(result.is_err(), true);
+        assert_eq!(result.err().unwrap().contains("Validation error"), true);
+    }
+
+    /// This test ensures that reading a non-existent mock does not result in an error but an
+    /// empty result.
+    #[test]
+    fn read_one_returns_none_test() {
+        // Arrange
+        let state = MockServerState::new();
+
+        // Act
+        let result = read_one(&state, 6);
+
+        // Assert
+        assert_eq!(result.is_ok(), true);
+        assert_eq!(result.unwrap().is_none(), true);
+    }
+
+    /// This test checks if matching "path_contains" is working as expected.
+    #[test]
+    fn not_match_path_contains_test() {
+        // Arrange
+        let msr = Rc::new(MockServerHttpRequest::new("GET".into(), "test".into()));
+        let mut mock1 = RequestRequirements::new();
+        mock1.path_contains = Some(vec!["x".into()]);
+        let mut mock2 = RequestRequirements::new();
+        mock2.path_contains = Some(vec!["es".into()]);
+
+        // Act
+        let result1 = request_matches(msr.clone(), &mock1);
+        let result2 = request_matches(msr.clone(), &mock2);
+
+        // Assert
+        assert_eq!(result1, false);
+        assert_eq!(result2, true);
+    }
+
+    /// This test checks if matching "path_matches" is working as expected.
+    #[test]
+    fn not_match_path_matches_test() {
+        // Arrange
+        let msr = Rc::new(MockServerHttpRequest::new("GET".into(), "test".into()));
+        let mut mock1 = RequestRequirements::new();
+        mock1.path_matches = Some(vec![Pattern::from_regex(Regex::new(r#"x"#).unwrap())]);
+        let mut mock2 = RequestRequirements::new();
+        mock2.path_matches = Some(vec![Pattern::from_regex(Regex::new(r#"test"#).unwrap())]);
+
+        // Act
+        let result1 = request_matches(msr.clone(), &mock1);
+        let result2 = request_matches(msr.clone(), &mock2);
+
+        // Assert
+        assert_eq!(result1, false);
+        assert_eq!(result2, true);
     }
 }

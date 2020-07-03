@@ -5,38 +5,38 @@ use proc_macro::*;
 use quote::quote;
 use syn::{parse_macro_input, parse_quote, ItemFn};
 
-/// This attribute macro must be applied to test functions that require a running mock server.
-/// This macro will wrap the actual test function and perform some initialization tasks at the
-/// mock server before the test starts (such as removing all existing mocks from the server so the
-/// test finds a clean environment when it starts).
 #[proc_macro_attribute]
-pub fn with_mock_server(args: TokenStream, function: TokenStream) -> TokenStream {
+pub fn test_executors(args: TokenStream, function: TokenStream) -> TokenStream {
     assert!(args.is_empty());
 
     let mut function = parse_macro_input!(function as ItemFn);
     let block = function.block;
 
     function.block = Box::new(parse_quote!({
-        let mut server = httpmock::internal_server_management_lock();
+        // Blocking
+        // println!("Running without an executor");
+        #block
 
-        httpmock::util::with_retry(10, 1000, || server.delete_all_mocks())
-            .expect("Cannot initialize mock server");
-
-        httpmock::internal_thread_local_test_init_status(true);
-
-        let test_result = std::panic::catch_unwind(move || {
+        // With Tokio Runtime
+        // println!("Running with Tokio executor");
+        let mut trt = tokio::runtime::Runtime::new().unwrap();
+        trt.block_on(async {
             #block
         });
 
-        httpmock::internal_thread_local_test_init_status(false);
+         // With actix Runtime
+        // println!("Running with actix Runtime");
+        let mut art = actix_rt::Runtime::new().unwrap();
+        art.block_on(async {
+            #block
+        });
 
-        match std::panic::catch_unwind(move || match server.delete_all_mocks() {
-            _ => {}
-        }) {
-            _ => {}
-        }
+        // With async_std executor
+        // println!("Running with std_async executor");
+        async_std::task::block_on(async {
+            #block
+        })
 
-        test_result.unwrap();
     }));
 
     TokenStream::from(quote!(#function))

@@ -1,6 +1,6 @@
 [package]
 name = "httpmock-macros"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Alexander Liesenfeld <alexander.liesenfeld@outlook.com>"]
 edition = "2018"
 description = "an HTTP mock server library for your tests"
@@ -14,5 +14,5 @@ repository = "https://github.com/alexliesenfeld/httpmock"
 proc-macro = true
 
 [dependencies]
-syn = { version = "1.0.5", features = ["full"] }
-quote = "1.0.2"
+syn = { version = "1.0.33", features = ["full"] }
+quote = "1.0.7"
