@@ -1,4 +1,8 @@
-<p align="center"><img height="150" src="https://raw.githubusercontent.com/alexliesenfeld/httpmock/master/banner.png"></p>
+<div align="center">
+<img height="150" src="https://raw.githubusercontent.com/alexliesenfeld/httpmock/multiserver/banner2.png">
+<h1>httpmock</h1>
+</div>
+
 <p align="center"><b>HTTP mocking library for Rust</b></p>
 <div align="center">
     
