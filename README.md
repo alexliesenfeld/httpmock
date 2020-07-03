@@ -1,5 +1,5 @@
 <div align="center">
-<img height="120" src="https://raw.githubusercontent.com/alexliesenfeld/httpmock/multiserver/banner3.png">
+<img height="120" src="https://raw.githubusercontent.com/alexliesenfeld/httpmock/multiserver/banner.png">
 <h1>httpmock</h1>
 </div>
 
