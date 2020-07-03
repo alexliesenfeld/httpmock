@@ -3,7 +3,7 @@
 <h1>httpmock</h1>
 </div>
 
-<p align="center">A Rust library that allows you to mock HTTP services in your tests.</p>
+<p align="center">HTTP mocking library for Rust.</p>
 <div align="center">
     
 [![Build Status](https://dev.azure.com/alexliesenfeld/httpmock/_apis/build/status/alexliesenfeld.httpmock?branchName=multiserver)](https://dev.azure.com/alexliesenfeld/httpmock/_build/latest?definitionId=2&branchName=multiserver)
