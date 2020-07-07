@@ -56,7 +56,7 @@ pub struct MockServerHttpResponse {
     pub status: u16,
     pub headers: Option<BTreeMap<String, String>>,
     pub body: Option<String>,
-    pub duration: Option<Duration>
+    pub duration: Option<Duration>,
 }
 
 impl MockServerHttpResponse {

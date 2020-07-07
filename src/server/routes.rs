@@ -74,7 +74,8 @@ pub(crate) fn serve(
     let handler_request_result = to_handler_request(&req, body);
     match handler_request_result {
         Ok(handler_request) => {
-            let handler_response: Result<Option<MockServerHttpResponse>, String> = handlers::find_mock(&state, handler_request);
+            let handler_response: Result<Option<MockServerHttpResponse>, String> =
+                handlers::find_mock(&state, handler_request);
             await_delay(&handler_response);
             to_route_response(handler_response)
         }
@@ -163,6 +164,7 @@ fn await_delay(result: &Result<Option<MockServerHttpResponse>, String>) {
     if let Ok(response) = result {
         if let Some(def) = response {
             if let Some(duration) = def.duration {
+                // TODO: await!
                 tokio::time::delay_for(duration);
             }
         }
