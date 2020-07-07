@@ -11,6 +11,7 @@ use crate::server::data::{
 };
 use crate::util::Join;
 use crate::MockServer;
+use std::time::Duration;
 
 /// Represents the primary interface to the mock server.
 ///
@@ -318,6 +319,7 @@ impl Mock {
                     status: 200,
                     headers: None,
                     body: None,
+                    duration: None,
                 },
             },
         }
@@ -690,6 +692,13 @@ impl Mock {
             .unwrap()
             .insert(name.to_string(), value.to_string());
 
+        self
+    }
+
+    /// Sets a duration that will delay the mock server response.
+    /// * `duration` - The delay.
+    pub fn return_with_delay(mut self, duration: Duration) -> Self {
+        self.mock.response.duration = Some(duration);
         self
     }
 

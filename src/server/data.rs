@@ -11,6 +11,7 @@ use std::sync::RwLock;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::time::Duration;
 
 /// A general abstraction of an HTTP request for all handlers.
 #[derive(Serialize, Deserialize, Debug)]
@@ -55,6 +56,7 @@ pub struct MockServerHttpResponse {
     pub status: u16,
     pub headers: Option<BTreeMap<String, String>>,
     pub body: Option<String>,
+    pub duration: Option<Duration>
 }
 
 impl MockServerHttpResponse {
@@ -63,6 +65,7 @@ impl MockServerHttpResponse {
             status,
             headers: None,
             body: None,
+            duration: None,
         }
     }
 

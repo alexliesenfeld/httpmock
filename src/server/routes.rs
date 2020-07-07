@@ -5,6 +5,7 @@ use serde::Serialize;
 
 use crate::server::data::*;
 use crate::server::{handlers, ServerRequestHeader, ServerResponse};
+use std::alloc::handle_alloc_error;
 
 /// This route is responsible for adding a new mock
 pub(crate) fn ping() -> Result<ServerResponse, String> {
@@ -73,7 +74,8 @@ pub(crate) fn serve(
     let handler_request_result = to_handler_request(&req, body);
     match handler_request_result {
         Ok(handler_request) => {
-            let handler_response = handlers::find_mock(&state, handler_request);
+            let handler_response: Result<Option<MockServerHttpResponse>, String> = handlers::find_mock(&state, handler_request);
+            await_delay(&handler_response);
             to_route_response(handler_response)
         }
         Err(e) => create_json_response(500, None, ErrorResponse::new(&e)),
@@ -153,4 +155,16 @@ fn extract_query_params(query_string: &str) -> Result<BTreeMap<String, String>, 
     }
 
     Ok(query_params)
+}
+
+/// Sleeps for a duration that is specified in the response mock definition. If no delay is defined,
+/// this function returns directly.
+fn await_delay(result: &Result<Option<MockServerHttpResponse>, String>) {
+    if let Ok(response) = result {
+        if let Some(def) = response {
+            if let Some(duration) = def.duration {
+                tokio::time::delay_for(duration);
+            }
+        }
+    }
 }
