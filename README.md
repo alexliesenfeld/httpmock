@@ -1,5 +1,4 @@
 <div align="center">
-<img height="120" src="https://raw.githubusercontent.com/alexliesenfeld/httpmock/master/banner.png">
 <h1>httpmock</h1>
 </div>
 
