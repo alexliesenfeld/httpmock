@@ -157,7 +157,9 @@ fn extract_query_params(query_string: &str) -> Result<BTreeMap<String, String>, 
 }
 
 /// Processes the response
-async fn postprocess_response(result: Result<Option<MockServerHttpResponse>, String>) -> Result<Option<MockServerHttpResponse>, String>{
+async fn postprocess_response(
+    result: Result<Option<MockServerHttpResponse>, String>,
+) -> Result<Option<MockServerHttpResponse>, String> {
     if let Ok(Some(response_def)) = &result {
         if let Some(duration) = response_def.duration {
             tokio::time::delay_for(duration).await;

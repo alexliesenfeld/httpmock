@@ -60,7 +60,6 @@ fn exact_body_match_test() {
     assert_eq!(m.times_called(), 1);
 }
 
-
 /// Tests and demonstrates matching JSON body partials.
 #[test]
 #[test_executors] // Internal macro that executes this test in different async executors. Ignore it.
@@ -110,7 +109,7 @@ fn body_partial_json_str_test() {
                 },
                 some_other_value: "Flintstone".to_string(),
             })
-                .unwrap(),
+            .unwrap(),
         )
         .unwrap()
         .send()
