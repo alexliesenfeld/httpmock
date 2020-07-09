@@ -54,7 +54,7 @@ fn example_test() {
 
     // Create a mock on the mock server. The mock will return HTTP status code 200 whenever
     // the mock server receives a GET-request with path "/hello".
-    let search_mock = Mock::new()
+    let hello_mock = Mock::new()
         .expect_method(GET)
         .expect_path("/hello")
         .return_status(200)
@@ -67,7 +67,7 @@ fn example_test() {
     // Ensure the mock server did respond as specified above.
     assert_eq!(response.status(), 200);
     // Ensure the specified mock responded exactly one time.
-    assert_eq!(search_mock.times_called(), 1);
+    assert_eq!(hello_mock.times_called(), 1);
 }
 ```
 

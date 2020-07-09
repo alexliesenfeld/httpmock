@@ -133,7 +133,7 @@
 //!     // Arrange: Create a mock on a test local mock server
 //!     let mock_server = MockServer::connect("some-host:5000");
 //!
-//!     let search_mock = Mock::new()
+//!     let hello_mock = Mock::new()
 //!         .expect_method(GET)
 //!         .expect_path("/hello")
 //!         .return_status(200)
@@ -144,7 +144,7 @@
 //!
 //!     // Assert: Ensure there was a response from the mock server
 //!     assert_eq!(response.status(), 200);
-//!     assert_eq!(search_mock.times_called(), 1);
+//!     assert_eq!(hello_mock.times_called(), 1);
 //! }
 //! ```
 //!
