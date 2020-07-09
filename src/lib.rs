@@ -39,7 +39,7 @@
 //!         .create_on(&mock_server);
 //!
 //!     // Send an HTTP request to the mock server. This simulates your code.
-//!     // The mock_server variable tis being used to generate a mock server URL for path "/hello".
+//!     // The mock_server variable is being used to generate a mock server URL for path "/hello".
 //!     let response = get(mock_server.url("/hello")).unwrap();
 //!
 //!     // Ensure the mock server did respond as specified above.
