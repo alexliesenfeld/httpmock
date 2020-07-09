@@ -66,7 +66,7 @@ pub(crate) fn read_one(state: &MockServerState, id: usize) -> Result<ServerRespo
 
 /// This route is responsible for finding a mock that matches the current request and serve a
 /// response according to the mock specification
-pub(crate) fn serve(
+pub(crate) async fn serve(
     state: &MockServerState,
     req: &ServerRequestHeader,
     body: String,
@@ -74,9 +74,8 @@ pub(crate) fn serve(
     let handler_request_result = to_handler_request(&req, body);
     match handler_request_result {
         Ok(handler_request) => {
-            let handler_response: Result<Option<MockServerHttpResponse>, String> =
-                handlers::find_mock(&state, handler_request);
-            await_delay(&handler_response);
+            let handler_response = handlers::find_mock(&state, handler_request);
+            let handler_response = postprocess_response(handler_response).await;
             to_route_response(handler_response)
         }
         Err(e) => create_json_response(500, None, ErrorResponse::new(&e)),
@@ -158,15 +157,12 @@ fn extract_query_params(query_string: &str) -> Result<BTreeMap<String, String>, 
     Ok(query_params)
 }
 
-/// Sleeps for a duration that is specified in the response mock definition. If no delay is defined,
-/// this function returns directly.
-fn await_delay(result: &Result<Option<MockServerHttpResponse>, String>) {
-    if let Ok(response) = result {
-        if let Some(def) = response {
-            if let Some(duration) = def.duration {
-                // TODO: await!
-                tokio::time::delay_for(duration);
-            }
+/// Processes the response
+async fn postprocess_response(result: Result<Option<MockServerHttpResponse>, String>) -> Result<Option<MockServerHttpResponse>, String>{
+    if let Ok(Some(response_def)) = &result {
+        if let Some(duration) = response_def.duration {
+            tokio::time::delay_for(duration).await;
         }
     }
+    result
 }

@@ -133,7 +133,7 @@ async fn handle_server_request(
         return Ok(error_response(format!("Cannot read body: {}", e)));
     }
 
-    let routing_result = route_request(state.borrow(), &request_header.unwrap(), body.unwrap());
+    let routing_result = route_request(state.borrow(), &request_header.unwrap(), body.unwrap()).await;
     if let Err(e) = routing_result {
         return Ok(error_response(format!("Request handler error: {}", e)));
     }
@@ -225,7 +225,7 @@ fn map_response(route_response: ServerResponse) -> Result<HyperResponse<Body>, S
 }
 
 /// Routes a request to the appropriate route handler.
-fn route_request(
+async fn route_request(
     state: &MockServerState,
     request_header: &ServerRequestHeader,
     body: String,
@@ -260,7 +260,7 @@ fn route_request(
         }
     }
 
-    routes::serve(state, request_header, body)
+    routes::serve(state, request_header, body).await
 }
 
 /// Get request path parameters.

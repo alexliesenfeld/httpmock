@@ -197,6 +197,7 @@ pub mod standalone {
 
     pub async fn start_standalone_server(config: HttpMockConfig) -> Result<(), String> {
         let state = Arc::new(MockServerState::new());
+        println!("test1");
         start_server(config, &state, None).await
     }
 }

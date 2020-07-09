@@ -11,6 +11,7 @@ use tokio::task::LocalSet;
 use httpmock::standalone::start_standalone_server;
 use httpmock::{HttpMockConfig, Mock, MockServer};
 use httpmock_macros::test_executors;
+use actix_rt::Builder;
 
 /// This test asserts that mocks can be stored, served and deleted as designed.
 // Ignore this "test_executors" macro. It runs tests in multiple async runtimes for quality assurance.
@@ -112,6 +113,7 @@ fn unsupported_features() {
 /// The rest of this file is only required to simulate that a standalone mock server is
 /// running somewhere else. The tests above will is.
 fn simulate_standalone_server() {
+    println!("test");
     let _ = STANDALONE_SERVER.lock().unwrap_or_else(|e| e.into_inner());
 }
 
