@@ -101,11 +101,6 @@ pub struct MockRef<'a> {
     mock_server: &'a MockServer,
 }
 
-// TODO: implement Drop to delete the mock whenever this mock ref goes out of scope.
-// This is useful whenever a user wants to explicityl delete the mock by using drop(ref)
-// A problem was though that if a test is shutdown because of a panic (drop will be called)
-// and this "delete" operation also panics, the user gets an awkward message
-// "thread panicked while panicking. aborting."
 impl<'a> MockRef<'a> {
     /// This method returns the number of times a mock has been called at the mock server.
     ///
@@ -273,27 +268,6 @@ impl<'a> MockRef<'a> {
     }
 }
 
-// TODO: Add matching a mock a few times and then not (countdown). Each mock request counts down 1.
-// Add the following matchers that are able to extract the following info from Content-Type (potentially containing encoding, etc.)
-// TODO: - add Content Type matcher that is able to determine if body is an XML type
-// TODO: - add Content Type matcher that is able to determine if body is an JSON type
-// TODO: - add Content Type matcher that is able to determine if body is an HTML type
-// TODO: - add Content Type matcher that is able to determine if body is an text/plain type
-// TODO: - add Content Type matcher that is able to determine if body is multipart form data ("multipart/form-data")
-// TODO: - add Content Type matcher that is able to determine if body is "application/x-www-form-urlencoded"
-// something like expect_content_type(ContentType::XML)
-// TODO: Add HTTPS support and add matching the scheme
-// TODO: like expect_json_body(struct) but for XML ?
-// Add matchers for the following info:
-// TODO: - CompressionSchemes (gzip)
-// TODO: // MatchHost matches the HTTP host header field of the given request
-// TODO: Return bytes from mock as response body
-// TODO: Expect / return files
-// TODO: XPATH/JSONPATH
-// TODO: Cookies match
-// TODO: Series / Statefulnes simulation
-// TODO: Find the request with the most matches and show a diff on debug
-// TODO: Add redirect support
 impl Mock {
     /// Creates a new mock that automatically returns HTTP status code 200 if hit by an HTTP call.
     pub fn new() -> Self {
