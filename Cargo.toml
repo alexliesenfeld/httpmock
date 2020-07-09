@@ -1,6 +1,6 @@
 [package]
 name = "httpmock"
-version = "0.4.1"
+version = "0.4.2"
 authors = ["Alexander Liesenfeld <alexander.liesenfeld@outlook.com>"]
 edition = "2018"
 description = "HTTP mocking library for Rust"
