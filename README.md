@@ -26,11 +26,11 @@
 ## Features
 
 * Provides a full-blown HTTP mock server with HTTP/1 and HTTP/2 support.
-* Fully asynchronous core with a synchornous and asynchronous API.
+* A fully asynchronous core with synchronous and asynchronous APIs.
 * Compatible with all major asynchronous executors and runtimes.
 * Built-in request matchers with support for custom request matchers.
 * Parallel test execution by default.
-* Standalone mode with an accompanying [Docker image](https://hub.docker.com/r/alexliesenfeld/httpmock).
+* A standalone mode with an accompanying [Docker image](https://hub.docker.com/r/alexliesenfeld/httpmock).
 
 ## Getting Started
 Add `httpmock` to `Cargo.toml`:
@@ -71,14 +71,14 @@ fn example_test() {
 ## API Usage
 
 Each test usually creates its own local `MockServer` using `MockServer::start()`. This creates a lightweight HTTP
-server that runs on its own random port. This way tests do not conflict with each other.
+server that runs on its own port. This way tests do not conflict with each other.
 
 You can use the `Mock`  structure to specify and create mocks on the mock server. It provides you all supported mocking 
 functionality.
 
 ### Request Matching and Responses
 Other than many other libraries `httpmock` does not require you to learn a DSL-like API to
-specify mock behaviour. Instead, `httpmock` provides you a fluent builder-like API that
+specify mock behaviour. Instead, `httpmock` provides you a fluent builder API that
 clearly separates request matching and response attributes by using the following naming scheme:
 
 - All `Mock` methods that start with `expect` in their name set a requirement

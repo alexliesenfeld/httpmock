@@ -13,50 +13,49 @@ use std::time::{Duration, SystemTime};
 /// This test asserts that mocks can be stored, served and deleted as designed.
 #[test]
 #[test_executors] // Internal macro that executes this test in different async executors. Ignore it.
-fn simple_test() {
-    // Arrange
-    let _ = env_logger::try_init();
+fn example_test() {
+    // Start a local mock server for exclusive use by this test function.
     let mock_server = MockServer::start();
 
+    // Create a mock on the mock server. The mock will return HTTP status code 200 whenever
+    // the mock server receives a GET-request with path "/hello".
     let search_mock = Mock::new()
-        .expect_path_contains("/search")
-        .expect_query_param("query", "metallica")
-        .return_status(202)
+        .expect_method(GET)
+        .expect_path("/hello")
+        .return_status(200)
         .create_on(&mock_server);
 
-    // Act: Send the HTTP request
-    let response = get(&format!(
-        "http://{}/search?query=metallica",
-        mock_server.address()
-    ))
-    .unwrap();
+    // Send an HTTP request to the mock server. This simulates your code.
+    // The mock_server variable tis being used to generate a mock server URL for path "/hello".
+    let response = get(mock_server.url("/hello")).unwrap();
 
-    // Assert
-    assert_eq!(response.status(), 202);
+    // Ensure the mock server did respond as specified above.
+    assert_eq!(response.status(), 200);
+    // Ensure the specified mock responded exactly one time.
     assert_eq!(search_mock.times_called(), 1);
 }
 
 /// Demonstrates how to use async structures
 #[async_std::test]
 async fn simple_test_async() {
-    // Arrange
-    let _ = env_logger::try_init();
+    // Start a local mock server for exclusive use by this test function.
     let mock_server = MockServer::start_async().await;
 
+    // Create a mock on the mock server. The mock will return HTTP status code 200 whenever
+    // the mock server receives a GET-request with path "/hello".
     let search_mock = Mock::new()
-        .expect_path_contains("/search")
-        .return_status(202)
+        .expect_method(GET)
+        .expect_path("/hello")
+        .return_status(200)
         .create_on_async(&mock_server)
         .await;
 
-    // Act: Send the HTTP request
+    // Send an HTTP request to the mock server. This simulates your code.
+    let url = format!("http://{}/hello", mock_server.address());
+    let response = get_async(&url).await.unwrap();
 
-    // mock_server.url will create a full URL for the path on the server. In this case it will be
-    // http://localhost:<port>/search
-    let url = mock_server.url("/search");
-    let response = get_async(url).await.unwrap();
-
-    // Assert
-    assert_eq!(response.status(), 202);
+    // Ensure the mock server did respond as specified above.
+    assert_eq!(response.status(), 200);
+    // Ensure the specified mock responded exactly one time.
     assert_eq!(search_mock.times_called_async().await, 1);
 }

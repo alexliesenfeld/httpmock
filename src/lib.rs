@@ -3,12 +3,12 @@
 //!  # Features
 //!
 //! * Provides a full-blown HTTP mock server with HTTP/1 and HTTP/2 support.
-//! * Fully asynchronous core with a synchornous and asynchronous API.
+//! * A fully asynchronous core with synchronous and asynchronous APIs.
 //! * Compatible with all major asynchronous executors and runtimes.
 //! * Built-in request matchers with support for custom request matchers.
 //! * Parallel test execution by default.
-//! * Standalone mode with an accompanying [Docker image](https://hub.docker.com/r/alexliesenfeld/httpmock).
-//!
+//! * A standalone mode with an accompanying [Docker image](https://hub.docker.com/r/alexliesenfeld/httpmock).
+
 //! # Getting Started
 //! Add `httpmock` to `Cargo.toml`:
 //!
@@ -23,24 +23,28 @@
 //!
 //! use httpmock::Method::{GET};
 //! use httpmock::{Mock, MockServer, MockServerRequest, Regex};
+//! use isahc::{get};
 //!
 //! #[test]
 //! fn example_test() {
-//!     // Arrange: Create a mock on a local mock server
+//!     // Start a local mock server for exclusive use by this test function.
 //!     let mock_server = MockServer::start();
 //!
+//!     // Create a mock on the mock server. The mock will return HTTP status code 200 whenever
+//!     // the mock server receives a GET-request with path "/hello".
 //!     let search_mock = Mock::new()
 //!         .expect_method(GET)
-//!         .expect_path("/search")
+//!         .expect_path("/hello")
 //!         .return_status(200)
 //!         .create_on(&mock_server);
 //!
-//!     // Act: Send an HTTP request to the mock server (simulates your software)
-//!     let url = format!("http://{}/search", mock_server.address());
-//!     let response = isahc::get(&url).unwrap();
+//!     // Send an HTTP request to the mock server. This simulates your code.
+//!     // The mock_server variable tis being used to generate a mock server URL for path "/hello".
+//!     let response = get(mock_server.url("/hello")).unwrap();
 //!
-//!     // Assert: Ensure there was a response from the mock server
+//!     // Ensure the mock server did respond as specified above.
 //!     assert_eq!(response.status(), 200);
+//!     // Ensure the specified mock responded exactly one time.
 //!     assert_eq!(search_mock.times_called(), 1);
 //! }
 //! ```
@@ -49,14 +53,14 @@
 //!
 //! Each test usually creates its own local [MockServer](struct.MockServer.html) using
 //! [MockServer::start](struct.MockServer.html#method.start). This creates a lightweight HTTP
-//! server that runs on its own random port. This way tests do not conflict with each other.
+//! server that runs on its own port. This way tests do not conflict with each other.
 //!
 //! You can use the [Mock](struct.Mock.html) structure to specify and create mocks on the
 //! mock server. It provides you all supported mocking functionality.
 //!
 //! ## Request Matching and Responses
 //! Other than many other libraries `httpmock` does not require you to learn a DSL-like API to
-//! specify mock behaviour. Instead, `httpmock` provides you a fluent builder-like API that
+//! specify mock behaviour. Instead, `httpmock` provides you a fluent builder API that
 //! clearly separates request matching and response attributes by using the following naming scheme:
 //!
 //! - All [Mock](struct.Mock.html) methods that start with `expect` in their name set a requirement
@@ -122,6 +126,7 @@
 //!
 //! ```rust
 //! use httpmock::{MockServer, Mock};
+//! use isahc::get;
 //!
 //! #[test]
 //! fn simple_test() {
@@ -130,12 +135,12 @@
 //!
 //!     let search_mock = Mock::new()
 //!         .expect_method(GET)
-//!         .expect_path("/search")
+//!         .expect_path("/hello")
 //!         .return_status(200)
 //!         .create_on(&mock_server);
 //!
 //!     // Act: Send an HTTP request to the mock server (simulates your software)
-//!     let response = isahc::get(mock_server.url("/search")).unwrap();
+//!     let response = get(mock_server.url("/hello")).unwrap();
 //!
 //!     // Assert: Ensure there was a response from the mock server
 //!     assert_eq!(response.status(), 200);
