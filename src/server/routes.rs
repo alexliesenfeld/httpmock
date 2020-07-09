@@ -5,7 +5,6 @@ use serde::Serialize;
 
 use crate::server::data::*;
 use crate::server::{handlers, ServerRequestHeader, ServerResponse};
-use std::alloc::handle_alloc_error;
 
 /// This route is responsible for adding a new mock
 pub(crate) fn ping() -> Result<ServerResponse, String> {
