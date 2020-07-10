@@ -103,16 +103,13 @@ though. If you want to schedule awaiting operations manually, then you can use t
 potentially blocking operation. For example, there is `MockServer::start_async` as an asynchronous 
 counterpart to `MockServer::start` and `Mock::create_on_async` for `Mock::create_on`. 
 
-## Parallelism
-To balance execution speed and resource consumption, `MockServer`s are kept in a server pool internally. This allows to run multiple tests in parallel without overwhelming the executing machine by creating too many HTTP servers. A test will be blocked if it tries to use a `MockServer` (e.g. by calling `MockServer::new()`) while the server pool is empty (i.e. all servers are occupied by other tests). To avoid TCP port binding issues, `MockServers` are never recreated but recycled/resetted. The pool is filled on demand up to a predefined maximum number of 25 servers. You can change this number by setting the environment variable `HTTPMOCK_MAX_SERVERS`. 
-
 ## Examples
 Fore more examples, please refer to
 [this crates test directory](https://github.com/alexliesenfeld/httpmock/blob/master/tests ).
 
 ## Debugging
 `httpmock` logs against the `log` crate. For example, if you use the `env_logger` backend, you can activate debug 
-logging by setting the `RUST_LOG` environment variable to `httpmock=debug`.
+logging by setting the `RUST_LOG` environment variable to `httpmock=debug`. 
 
 ## Standalone Mode
 You can use `httpmock` to run a standalone mock server that is available to multiple applications. This can be useful 
