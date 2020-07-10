@@ -103,9 +103,9 @@
 //! [this crates test directory](https://github.com/alexliesenfeld/httpmock/blob/master/tests/integration_tests.rs ).
 //!
 //! # Debugging
-//! `httpmock` logs against the `log` crate. For example, if you use the `env_logger` backend,
-//! you can activate debug logging by setting the `RUST_LOG` environment variable to `httpmock=debug`.
-//! This will allow you to see detailed information about `httpmock`s behaviour.
+//! `httpmock` logs against the `log` crate. This allows you to see detailed information about
+//! `httpmock`s behaviour. For example, if you use the `env_logger` backend, you can activate debug
+//! logging by setting the `RUST_LOG` environment variable to `httpmock=debug`.
 //!
 //! # Standalone Mode
 //! You can use `httpmock` to run a standalone mock server that is available to multiple
