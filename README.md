@@ -106,51 +106,22 @@ counterpart to `MockServer::start` and `Mock::create_on_async` for `Mock::create
 ## Parallelism
 To balance execution speed and resource consumption, `MockServer`s are kept in a server pool internally. This allows to run multiple tests in parallel without overwhelming the executing machine by creating too many HTTP servers. A test will be blocked if it tries to use a `MockServer` (e.g. by calling `MockServer::new()`) while the server pool is empty (i.e. all servers are occupied by other tests). To avoid TCP port binding issues, `MockServers` are never recreated but recycled/resetted. The pool is filled on demand up to a predefined maximum number of 25 servers. You can change this number by setting the environment variable `HTTPMOCK_MAX_SERVERS`. 
 
-
 ## Examples
 Fore more examples, please refer to
-[this crates test directory](https://github.com/alexliesenfeld/httpmock/blob/master/tests/integration_tests.rs ).
+[this crates test directory](https://github.com/alexliesenfeld/httpmock/blob/master/tests ).
 
 ## Debugging
-`httpmock` logs against the `log` crate. For example, if you use the `env_logger` backend, you can activate debug logging by setting the `RUST_LOG` environment variable to `httpmock=debug`.
+`httpmock` logs against the `log` crate. For example, if you use the `env_logger` backend, you can activate debug 
+logging by setting the `RUST_LOG` environment variable to `httpmock=debug`.
 
 ## Standalone Mode
-You can use `httpmock` to run a standalone mock server that is available to multiple applications. This can be useful if you are running integration tests that involve both, real and mocked applications. 
+You can use `httpmock` to run a standalone mock server that is available to multiple applications. This can be useful 
+if you are running integration tests that involve both, real and mocked applications. 
 
 ### Docker
-Altough you can build the mock server in standalone mode yourself, it is easiest to use the Docker image from the accompanying [Docker image](https://hub.docker.com/r/alexliesenfeld/httpmock). Please refer to the documentation on Docker repository. 
-
-### API Usage
-To be able to use a standalone server from your tests, you need to change how an instance of the `MockServer` structure is created. Instead of using `MockServer::new()`, you need to connect to a remote server by using one of the `connect` methods (such as `MockServer::connect("localhost:5000")` or `MockServer::connect_from_env()`). Therefore, tests that use a local mock server do only differ in one line of code from tests that use a remote server. Otherwise, both variants are identical. 
-
-```Rust
-#[test]
-fn simple_test() {
-    // Arrange: Create a mock on a test local mock server 
-    let mock_server = MockServer::connect("some-host:5000");
-
-    let search_mock = Mock::new()
-        .expect_method(GET)         
-        .expect_path("/search")
-        .return_status(200)
-        .create_on(&mock_server);
-
-    // Act: Send an HTTP request to the mock server (simulates your software)
-    let url = format!("http://{}/search", mock_server.address())).unwrap();
-    let response = http_get(&url).unwrap();
-
-    // Assert: Ensure there was a response from the mock server
-    assert_eq!(response.status(), 200);
-    assert_eq!(search_mock.times_called(), 1);
-}
-```
-
-### Parallelism
-Tests that use a remote mock server are executed sequentially by default. This is in contrast to tests that use a local mock server. Sequential execution is achieved by blocking all tests from further execution whenever a test requires to connect to a busy mock server. 
-
-### Limitations
-At this time, it is not possible to use custom request matchers in combination with remote
-mock servers. It is planned to add this functionality in future though.
+Although you can build the mock server in standalone mode yourself, it is easiest to use the Docker image 
+from the accompanying [Docker image](https://hub.docker.com/r/alexliesenfeld/httpmock). Please refer to the 
+documentation on Docker repository. 
 
 ### Examples
 Fore more examples on how to use a remote server, please refer to
