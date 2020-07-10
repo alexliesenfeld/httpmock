@@ -114,8 +114,7 @@
 //!
 //! ## Docker
 //! Altough you can build the mock server in standalone mode yourself, it is easiest to use
-//! the Docker image from the accompanying [Docker image](https://hub.docker.com/r/alexliesenfeld/httpmock).
-//! Please refer to the documentation on Docker repository.
+//! the accompanying [Docker image](https://hub.docker.com/r/alexliesenfeld/httpmock).
 //!
 //! ## API Usage
 //! To be able to use a standalone server from your tests, you need to change how an instance

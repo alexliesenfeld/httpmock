@@ -117,9 +117,8 @@ You can use `httpmock` to run a standalone mock server that is available to mult
 if you are running integration tests that involve both, real and mocked applications. 
 
 ### Docker
-Although you can build the mock server in standalone mode yourself, it is easiest to use the Docker image 
-from the accompanying [Docker image](https://hub.docker.com/r/alexliesenfeld/httpmock). Please refer to the 
-documentation on Docker repository. 
+Altough you can build the mock server in standalone mode yourself, it is easiest to use the accompanying 
+[Docker image](https://hub.docker.com/r/alexliesenfeld/httpmock).
 
 ## License
 `httpmock` is free software: you can redistribute it and/or modify it under the terms of the MIT Public License.
