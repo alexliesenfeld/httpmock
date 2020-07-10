@@ -116,8 +116,7 @@ variable to `httpmock=debug`.
 You can use `httpmock` to run a standalone mock server that is available to multiple applications. This can be useful 
 if you are running integration tests that involve both, real and mocked applications. 
 
-### Docker
-Altough you can build the mock server in standalone mode yourself, it is easiest to use the accompanying 
+Although you can build the mock server in standalone mode yourself, it is easiest to use the accompanying 
 [Docker image](https://hub.docker.com/r/alexliesenfeld/httpmock).
 
 ## License

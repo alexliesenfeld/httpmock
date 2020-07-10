@@ -108,13 +108,12 @@
 //! logging by setting the `RUST_LOG` environment variable to `httpmock=debug`.
 //!
 //! # Standalone Mode
-//! You can use `httpmock` to run a standalone mock server that is available to multiple
-//! applications. This can be useful if you are running integration tests that involve both,
-//! real and mocked applications.
+//! You can use `httpmock` to run a standalone mock server that is available to multiple applications.
+//! This can be useful if you are running integration tests that involve both, real and mocked
+//! applications.
 //!
-//! ## Docker
-//! Altough you can build the mock server in standalone mode yourself, it is easiest to use
-//! the accompanying [Docker image](https://hub.docker.com/r/alexliesenfeld/httpmock).
+//! Although you can build the mock server in standalone mode yourself, it is easiest to use the
+//! accompanying [Docker image](https://hub.docker.com/r/alexliesenfeld/httpmock).
 //!
 //! ## API Usage
 //! To be able to use a standalone server from your tests, you need to change how an instance
