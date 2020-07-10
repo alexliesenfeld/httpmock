@@ -120,10 +120,6 @@ Although you can build the mock server in standalone mode yourself, it is easies
 from the accompanying [Docker image](https://hub.docker.com/r/alexliesenfeld/httpmock). Please refer to the 
 documentation on Docker repository. 
 
-### Examples
-Fore more examples on how to use a remote server, please refer to
-[this crates test directory](https://github.com/alexliesenfeld/httpmock/blob/master/tests/standalone_tests.rs ).
-
 ## License
 `httpmock` is free software: you can redistribute it and/or modify it under the terms of the MIT Public License.
  
