@@ -113,7 +113,6 @@ fn unsupported_features() {
 /// The rest of this file is only required to simulate that a standalone mock server is
 /// running somewhere else. The tests above will is.
 fn simulate_standalone_server() {
-    println!("test");
     let _ = STANDALONE_SERVER.lock().unwrap_or_else(|e| e.into_inner());
 }
 
