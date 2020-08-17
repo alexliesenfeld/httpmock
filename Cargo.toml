@@ -1,6 +1,6 @@
 [package]
 name = "httpmock"
-version = "0.4.2"
+version = "0.4.3"
 authors = ["Alexander Liesenfeld <alexander.liesenfeld@outlook.com>"]
 edition = "2018"
 description = "HTTP mocking library for Rust"
@@ -25,7 +25,7 @@ async-trait = "0.1.36"
 puddle = "0.1.0"
 crossbeam-utils = "0.7.2"
 futures-util = "0.3.5"
-isahc = "0.9.5"
+isahc = "=0.9.5"
 
 structopt = { version = "0.3.15", optional = true }
 env_logger = { version = "0.7.1", optional = true }
@@ -34,7 +34,7 @@ env_logger = { version = "0.7.1", optional = true }
 env_logger = "0.7.1"
 tokio-test = "0.2.1"
 async-std = { version = "1", features = ["attributes", "unstable"] }
-isahc = {version = "0.9.5", features = [ "json"] }
+isahc = {version = "=0.9.5", features = [ "json"] }
 syn = { version = "1.0.5", features = ["full"] }
 quote = "1.0.2"
 httpmock-macros = { path = "./lib/macros", version = "0.3.0" }
