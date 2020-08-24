@@ -104,7 +104,7 @@ potentially blocking operation. For example, there is `MockServer::start_async` 
 counterpart to `MockServer::start` and `Mock::create_on_async` for `Mock::create_on`. 
 
 ## Examples
-Fore more examples, please refer to
+For more examples, please refer to
 [this crates test directory](https://github.com/alexliesenfeld/httpmock/blob/master/tests ).
 
 ## Debugging
