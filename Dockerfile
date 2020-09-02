@@ -1,8 +1,14 @@
-FROM rust:1.40 as builder
+# ================================================================================
+# Builder
+# ================================================================================
+FROM rust:latest as builder
 WORKDIR /usr/src/httpmock
 COPY . .
 RUN cargo install --features="standalone" --path .
 
+# ================================================================================
+# Runner
+# ================================================================================
 FROM debian:buster-slim
 RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /usr/local/cargo/bin/httpmock /usr/local/bin/httpmock
