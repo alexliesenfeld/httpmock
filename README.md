@@ -107,11 +107,6 @@ counterpart to `MockServer::start` and `Mock::create_on_async` for `Mock::create
 For more examples, please refer to
 [this crates test directory](https://github.com/alexliesenfeld/httpmock/blob/master/tests ).
 
-## Debugging
-`httpmock` logs against the `log` crate. This allows you to see detailed information about `httpmock`s behaviour.   
-For example, if you use the `env_logger` backend, you can activate debug logging by setting the `RUST_LOG` environment 
-variable to `httpmock=debug`. 
-
 ## Standalone Mode
 You can use `httpmock` to run a standalone mock server that is available to multiple applications. This can be useful 
 if you are running integration tests that involve both, real and mocked applications. 
