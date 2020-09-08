@@ -106,6 +106,7 @@
 //! `httpmock` logs against the `log` crate. This allows you to see detailed information about
 //! `httpmock`s behaviour. For example, if you use the `env_logger` backend, you can activate debug
 //! logging by setting the `RUST_LOG` environment variable to `httpmock=debug`.
+//!
 //! Attention: To be able to see the log output, you nee to add the `--nocapture` argument
 //! when starting test execution!
 //!
