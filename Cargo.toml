@@ -33,7 +33,7 @@ env_logger = { version = "0.7.1", optional = true }
 [dev-dependencies]
 env_logger = "0.7.1"
 tokio-test = "0.2.1"
-async-std = { version = "1", features = ["attributes", "unstable"] }
+async-std = { version = "=1.6.2", features = ["attributes", "unstable"] }
 isahc = {version = "=0.9.5", features = [ "json"] }
 syn = { version = "1.0.5", features = ["full"] }
 quote = "1.0.2"
