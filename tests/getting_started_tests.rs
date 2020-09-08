@@ -14,6 +14,8 @@ use std::time::{Duration, SystemTime};
 #[test]
 #[test_executors] // Internal macro that executes this test in different async executors. Ignore it.
 fn example_test() {
+    let _ = env_logger::try_init();
+
     // Start a local mock server for exclusive use by this test function.
     let mock_server = MockServer::start();
 
@@ -38,6 +40,8 @@ fn example_test() {
 /// Demonstrates how to use async structures
 #[async_std::test]
 async fn simple_test_async() {
+    let _ = env_logger::try_init();
+
     // Start a local mock server for exclusive use by this test function.
     let mock_server = MockServer::start_async().await;
 
