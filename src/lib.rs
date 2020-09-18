@@ -210,6 +210,7 @@ pub mod standalone {
 
 pub type MockServerRequest = Rc<MockServerHttpRequest>;
 
+/// A mock server that is able to receive and respond to HTTP requests.
 pub struct MockServer {
     pub(crate) server_adapter: Option<Arc<dyn MockServerAdapter + Send + Sync>>,
     pool: Arc<Pool<Arc<dyn MockServerAdapter + Send + Sync>>>,
@@ -232,6 +233,9 @@ impl MockServer {
         }
     }
 
+    /// Asynchronously connects to a remote mock server that is running in standalone mode using
+    /// the provided address of the form <host>:<port> (e.g. "127.0.0.1:8080") to establish
+    /// the connection.
     pub async fn connect_async(address: &str) -> Self {
         let addr = address
             .to_socket_addrs()
@@ -245,10 +249,15 @@ impl MockServer {
         Self::from(adapter, REMOTE_SERVER_POOL_REF.clone()).await
     }
 
+    /// Synchronously connects to a remote mock server that is running in standalone mode using
+    /// the provided address of the form <host>:<port> (e.g. "127.0.0.1:8080") to establish
+    /// the connection.
     pub fn connect(address: &str) -> Self {
         Self::connect_async(address).join()
     }
 
+    /// Asynchronously connects to a remote mock server that is running in standalone mode using
+    /// connection parameters stored in `HTTPMOCK_HOST` and `HTTPMOCK_PORT` environment variables.
     pub async fn connect_from_env_async() -> Self {
         let host = read_env("HTTPMOCK_HOST", "127.0.0.1");
         let port = read_env("HTTPMOCK_PORT", "5000")
@@ -257,10 +266,26 @@ impl MockServer {
         Self::connect_async(&format!("{}:{}", host, port)).await
     }
 
+    /// Synchronously connects to a remote mock server that is running in standalone mode using
+    /// connection parameters stored in `HTTPMOCK_HOST` and `HTTPMOCK_PORT` environment variables.
     pub fn connect_from_env() -> Self {
         Self::connect_from_env_async().join()
     }
 
+    /// Starts a new `MockServer` asynchronously.
+    ///
+    /// Attention: This library manages a pool of `MockServer` instances in the background.
+    /// Instead of always starting a new mock server, a `MockServer` instance is only created
+    /// on demand if there is no free `MockServer` instance in the pool and the pool has not
+    /// reached a maximum size yet. Otherwise, *THIS METHOD WILL BLOCK* the executing function
+    /// until a free mock server is available.
+    ///
+    /// This allows to run many tests in parallel, but will prevent exhaust the executing
+    /// machine by creating too many mock servers.
+    ///
+    /// A `MockServer` instance is automatically taken from the pool whenever this method is called.
+    /// The instance is put back into the pool automatically when the corresponding
+    /// 'MockServer' variable gets out of scope.
     pub async fn start_async() -> Self {
         let adapter = LOCAL_SERVER_POOL_REF
             .take(LOCAL_SERVER_ADAPTER_GENERATOR)
@@ -268,24 +293,88 @@ impl MockServer {
         Self::from(adapter, LOCAL_SERVER_POOL_REF.clone()).await
     }
 
+    /// Starts a new `MockServer` synchronously.
+    ///
+    /// Attention: This library manages a pool of `MockServer` instances in the background.
+    /// Instead of always starting a new mock server, a `MockServer` instance is only created
+    /// on demand if there is no free `MockServer` instance in the pool and the pool has not
+    /// reached a maximum size yet. Otherwise, *THIS METHOD WILL BLOCK* the executing function
+    /// until a free mock server is available.
+    ///
+    /// This allows to run many tests in parallel, but will prevent exhaust the executing
+    /// machine by creating too many mock servers.
+    ///
+    /// A `MockServer` instance is automatically taken from the pool whenever this method is called.
+    /// The instance is put back into the pool automatically when the corresponding
+    /// 'MockServer' variable gets out of scope.
     pub fn start() -> MockServer {
         Self::start_async().join()
     }
 
+    /// The hostname of the `MockServer`. By default, this is always `127.0.0.1`.
+    /// In standalone mode, the hostname will be the one where the remote mock server is
+    /// running.
     pub fn host(&self) -> String {
         self.server_adapter.as_ref().unwrap().host()
     }
 
+    /// The TCP port that the mock server is listening on.
     pub fn port(&self) -> u16 {
         self.server_adapter.as_ref().unwrap().port()
     }
 
+    /// Builds the address for a specific path on the mock server.
+    ///
+    /// **Example**:
+    /// ```rust
+    /// // Start a local mock server for exclusive use by this test function.
+    /// let mock_server = httpmock::MockServer::start();
+    /// let expected_addr_str = format!("127.0.0.1:{}", mock_server.port());
+    ///
+    /// // Get the address of the MockServer.
+    /// let addr = mock_server.address();
+    ///
+    /// // Ensure the returned URL is as expected
+    /// assert_eq!(expected_addr_str, addr.to_string());
+    /// ```
     pub fn address(&self) -> &SocketAddr {
         self.server_adapter.as_ref().unwrap().address()
     }
 
+    /// Builds the URL for a specific path on the mock server.
+    ///
+    /// **Example**:
+    /// ```rust
+    /// // Start a local mock server for exclusive use by this test function.
+    /// let mock_server = httpmock::MockServer::start();
+    /// let expected_url = format!("http://127.0.0.1:{}/hello", mock_server.port());
+    ///
+    /// // Get the URL for path "/hello".
+    /// let url = mock_server.url("/hello");
+    ///
+    /// // Ensure the returned URL is as expected
+    /// assert_eq!(expected_url, url);
+    /// ```
     pub fn url(&self, path: &str) -> String {
         format!("http://{}{}", self.address(), path)
+    }
+
+    /// Builds the base URL for the mock server.
+    ///
+    /// **Example**:
+    /// ```rust
+    /// // Start a local mock server for exclusive use by this test function.
+    /// let mock_server = httpmock::MockServer::start();
+    /// let expected_url = format!("http://127.0.0.1:{}", mock_server.port());
+    ///
+    /// // Get the URL for path "/hello".
+    /// let url = mock_server.base_url();
+    ///
+    /// // Ensure the returned URL is as expected
+    /// assert_eq!(expected_url, url);
+    /// ```
+    pub fn base_url(&self) -> String {
+        self.url("")
     }
 }
 

@@ -17,31 +17,25 @@ use std::time::Duration;
 ///
 /// # Example
 /// ```rust
-/// extern crate httpmock;
+/// // Arrange
+/// use httpmock::{MockServer, Mock};
 ///
-/// use httpmock::Method::{GET};
-/// use httpmock::{Mock, MockServer};
+/// let mock_server = MockServer::start();
+/// let search_mock = Mock::new()
+///     .expect_path_contains("/search")
+///     .expect_query_param("query", "metallica")
+///     .return_status(202)
+///     .create_on(&mock_server);
 ///
-/// #[test]
-/// fn example_test() {
-///     // Arrange
-///     let mock_server = MockServer::start();
-///     let search_mock = Mock::new()
-///         .expect_path_contains("/search")
-///         .expect_query_param("query", "metallica")
-///         .return_status(202)
-///         .create_on(&mock_server);
+/// // Act: Send the HTTP request
+/// let response = isahc::get(&format!(
+///     "http://{}/search?query=metallica",
+///     mock_server.address()
+/// )).unwrap();
 ///
-///     // Act: Send the HTTP request
-///     let response = isahc::get(&format!(
-///         "http://{}/search?query=metallica",
-///         mock_server.address()
-///     )).unwrap();
-///
-///     // Assert
-///     assert_eq!(response.status(), 202);
-///     assert_eq!(search_mock.times_called(), 1);
-/// }
+/// // Assert
+/// assert_eq!(response.status(), 202);
+/// assert_eq!(search_mock.times_called(), 1);
 /// ```
 /// Make sure to create the mock using [Mock::create_on](struct.Mock.html#method.create_on)
 /// or [Mock::create_on_async](struct.Mock.html#method.create_on_async). This will create the mock on
@@ -66,35 +60,30 @@ pub struct Mock {
 ///
 /// # Example
 /// ```rust
-/// extern crate httpmock;
+/// // Arrange: Create mock server and a mock
+/// use httpmock::{MockServer, Mock};
 ///
-/// use httpmock::Method::{GET};
-/// use httpmock::{Mock, MockServer};
+/// let mock_server = MockServer::start();
+/// let mut mock = Mock::new()
+///     .expect_path_contains("/test")
+///     .return_status(202)
+///     .create_on(&mock_server);
 ///
-/// #[test]
-/// fn delete_mock_test() {
-///     // Arrange: Create mock server and a mock
-///     let mock_server = MockServer::start();
-///     let mut mock = Mock::new()
-///         .expect_path_contains("/test")
-///         .return_status(202)
-///         .create_on(&mock_server);
+/// // Send a first request, then delete the mock from the mock and send another request.
+/// let response1 = isahc::get(mock_server.url("/test")).unwrap();
 ///
-///     // Send a first request, then delete the mock from the mock and send another request.
-///     let response1 = isahc::get(mock_server.url("/test")).unwrap();
+/// // Fetch how often this mock has been called from the server until now
+/// assert_eq!(mock.times_called(), 1);
 ///
-///     // Fetch how often this mock has been called from the server until now
-///     assert_eq!(search_mock.times_called(), 1);
-///     // Delete the mock from the mock server
-///     mock.delete();
+/// // Delete the mock from the mock server
+/// mock.delete();
 ///
-///     let response2 = isahc::get(mock_server.url("/test")).unwrap();
+/// let response2 = isahc::get(mock_server.url("/test")).unwrap();
 ///
-///     // Assert that the mock worked for the first request, but not for the second request,
-///     // because it was deleted before the second request was sent.
-///     assert_eq!(response1.status(), 202);
-///     assert_eq!(response2.status(), 404);
-/// }
+/// // Assert that the mock worked for the first request, but not for the second request,
+/// // because it was deleted before the second request was sent.
+///  assert_eq!(response1.status(), 202);
+///  assert_eq!(response2.status(), 404);
 /// ```
 pub struct MockRef<'a> {
     id: usize,
@@ -106,26 +95,20 @@ impl<'a> MockRef<'a> {
     ///
     /// # Example
     /// ```rust
-    /// extern crate httpmock;
+    /// // Arrange: Create mock server and a mock
+    /// use httpmock::{MockServer, Mock};
     ///
-    /// use httpmock::Method::{GET};
-    /// use httpmock::{Mock, MockServer};
+    /// let mock_server = MockServer::start();
+    /// let mut mock = Mock::new()
+    ///     .expect_path_contains("/times_called")
+    ///     .return_status(200)
+    ///     .create_on(&mock_server);
     ///
-    /// #[test]
-    /// fn times_called_test() {
-    ///     // Arrange: Create mock server and a mock
-    ///     let mock_server = MockServer::start();
-    ///     let mut mock = Mock::new()
-    ///         .expect_path_contains("/times_called")
-    ///         .return_status(200)
-    ///         .create_on(&mock_server);
+    /// // Send a first request, then delete the mock from the mock and send another request.
+    /// let response1 = isahc::get(mock_server.url("/times_called")).unwrap();
     ///
-    ///     // Send a first request, then delete the mock from the mock and send another request.
-    ///     let response1 = isahc::get(mock_server.url("/times_called")).unwrap();
-    ///
-    ///     // Fetch how often this mock has been called from the server until now
-    ///     assert_eq!(search_mock.times_called(), 1);
-    /// }
+    /// // Fetch how often this mock has been called from the server until now
+    /// assert_eq!(mock.times_called(), 1);
     /// ```
     /// # Panics
     /// This method will panic if there is a problem with the (remote) server.
@@ -139,15 +122,12 @@ impl<'a> MockRef<'a> {
     ///
     /// # Example
     /// ```rust
-    /// extern crate httpmock;
+    /// use httpmock::{MockServer, Mock};
+    /// use tokio_test::block_on;
     ///
-    /// use httpmock::Method::{GET};
-    /// use httpmock::{Mock, MockServer};
-    ///
-    /// #[test]
-    /// #[tokio::test]
-    /// fn times_called_test() {
-    ///     // Arrange: Create mock server and a mock
+    /// #[async_std::test]
+    /// async fn example_test() -> std::io::Result<()> {
+    ///     // Arrange
     ///     let mock_server = MockServer::start_async().await;
     ///     let mut mock = Mock::new()
     ///         .expect_path_contains("/times_called")
@@ -155,11 +135,11 @@ impl<'a> MockRef<'a> {
     ///         .create_on_async(&mock_server)
     ///         .await;
     ///
-    ///     // Send a first request, then delete the mock from the mock and send another request.
+    ///     // Act
     ///     let response1 = isahc::get_async(mock_server.url("/times_called")).await.unwrap();
     ///
-    ///     // Fetch how often this mock has been called from the server until now
-    ///     assert_eq!(search_mock.times_called_async().await, 1);
+    ///     // Assert
+    ///     assert_eq!(mock.times_called_async().await, 1);
     /// }
     /// ```
     /// # Panics
@@ -181,33 +161,27 @@ impl<'a> MockRef<'a> {
     ///
     /// # Example
     /// ```rust
-    /// extern crate httpmock;
+    /// use httpmock::{MockServer, Mock};
     ///
-    /// use httpmock::Method::{GET};
-    /// use httpmock::{Mock, MockServer};
+    /// // Arrange: Create mock server and a mock
+    /// let mock_server = MockServer::start();
+    /// let mut mock = Mock::new()
+    ///     .expect_path_contains("/test")
+    ///     .return_status(202)
+    ///     .create_on(&mock_server);
     ///
-    /// #[test]
-    /// fn delete_mock_test() {
-    ///     // Arrange: Create mock server and a mock
-    ///     let mock_server = MockServer::start();
-    ///     let mut mock = Mock::new()
-    ///         .expect_path_contains("/test")
-    ///         .return_status(202)
-    ///         .create_on(&mock_server);
+    /// // Send a first request, then delete the mock from the mock and send another request.
+    /// let response1 = isahc::get(mock_server.url("/test")).unwrap();
     ///
-    ///     // Send a first request, then delete the mock from the mock and send another request.
-    ///     let response1 = isahc::get(mock_server.url("/test")).unwrap();
+    /// // Delete the mock from the mock server
+    /// mock.delete();
     ///
-    ///     // Delete the mock from the mock server
-    ///     mock.delete();
+    /// let response2 = isahc::get(mock_server.url("/test")).unwrap();
     ///
-    ///     let response2 = isahc::get(mock_server.url("/test")).unwrap();
-    ///
-    ///     // Assert that the mock worked for the first request, but not for the second request,
-    ///     // because it was deleted before the second request was sent.
-    ///     assert_eq!(response1.status(), 202);
-    ///     assert_eq!(response2.status(), 404);
-    /// }
+    /// // Assert that the mock worked for the first request, but not for the second request,
+    /// // because it was deleted before the second request was sent.
+    /// assert_eq!(response1.status(), 202);
+    /// assert_eq!(response2.status(), 404);
     /// ```
     /// # Panics
     /// This method will panic if there is a problem to communicate with the server.
@@ -220,33 +194,27 @@ impl<'a> MockRef<'a> {
     ///
     /// # Example
     /// ```rust
-    /// extern crate httpmock;
+    /// // Arrange: Create mock server and a mock
+    /// use httpmock::{MockServer, Mock};
     ///
-    /// use httpmock::Method::{GET};
-    /// use httpmock::{Mock, MockServer};
+    /// let mock_server = MockServer::start();
+    /// let mut mock = Mock::new()
+    ///     .expect_path_contains("/test")
+    ///     .return_status(202)
+    ///     .create_on(&mock_server);
     ///
-    /// #[test]
-    /// fn delete_mock_test() {
-    ///     // Arrange: Create mock server and a mock
-    ///     let mock_server = MockServer::start();
-    ///     let mut mock = Mock::new()
-    ///         .expect_path_contains("/test")
-    ///         .return_status(202)
-    ///         .create_on(&mock_server);
+    /// // Send a first request, then delete the mock from the mock and send another request.
+    /// let response1 = isahc::get(mock_server.url("/test")).unwrap();
     ///
-    ///     // Send a first request, then delete the mock from the mock and send another request.
-    ///     let response1 = isahc::get(mock_server.url("/test")).unwrap();
+    /// // Delete the mock from the mock server
+    /// mock.delete();
     ///
-    ///     // Delete the mock from the mock server
-    ///     mock.delete();
+    /// let response2 = isahc::get(mock_server.url("/test")).unwrap();
     ///
-    ///     let response2 = isahc::get(mock_server.url("/test")).unwrap();
-    ///
-    ///     // Assert that the mock worked for the first request, but not for the second request,
-    ///     // because it was deleted before the second request was sent.
-    ///     assert_eq!(response1.status(), 202);
-    ///     assert_eq!(response2.status(), 404);
-    /// }
+    /// // Assert that the mock worked for the first request, but not for the second request,
+    /// // because it was deleted before the second request was sent.
+    /// assert_eq!(response1.status(), 202);
+    /// assert_eq!(response2.status(), 404);
     /// ```
     /// # Panics
     /// This method will panic if there is a problem to communicate with the server.
@@ -261,8 +229,8 @@ impl<'a> MockRef<'a> {
     }
 
     /// Returns the address of the mock server this mock is using. By default this is
-    /// "localhost:5000" if not set otherwise by the environment variables HTTPMOCK_HOST and
-    /// HTTPMOCK_PORT.
+    /// "localhost:5000" if not set otherwise by the environment variables `HTTPMOCK_HOST` and
+    /// `HTTPMOCK_PORT`.
     pub fn server_address(&self) -> &SocketAddr {
         self.mock_server.server_adapter.as_ref().unwrap().address()
     }
@@ -417,8 +385,8 @@ impl Mock {
     ///
     /// * `body` - The HTTP body object that will be serialized to JSON using serde.
     pub fn expect_json_body<T>(mut self, body: &T) -> Self
-    where
-        T: Serialize,
+        where
+            T: Serialize,
     {
         let serialized_body =
             serde_json::to_string(body).expect("cannot serialize json body to JSON string ");
@@ -456,28 +424,20 @@ impl Mock {
     /// `Target value`, you need to provide a partial JSON string to this method, that starts from
     /// the root of the JSON object, but may leave out unimportant values:
     /// ```rust
-    /// extern crate httpmock;
+    /// // Arrange: Create mock server and a mock
+    /// use httpmock::{MockServer, Mock};
     ///
-    /// use httpmock::Method::{GET};
-    /// use httpmock::{Mock, MockServer};
-    ///
-    /// #[test]
-    /// fn delete_mock_test() {
-    ///     // Arrange: Create mock server and a mock
-    ///     let mock_server = MockServer::start();
-    ///     let mut mock = Mock::new()
-    ///         .expect_json_body_partial(r#"
-    ///             {
-    ///                 "child" : {
-    ///                     "target_attribute" : "Target value"
-    ///                 }
+    /// let mock_server = MockServer::start();
+    /// let mut mock = Mock::new()
+    ///     .expect_json_body_partial(r#"
+    ///         {
+    ///             "child" : {
+    ///                 "target_attribute" : "Target value"
     ///             }
-    ///         "#)
-    ///         .return_status(202)
-    ///         .create_on(&mock_server);
-    ///
-    ///     // ...
-    /// }
+    ///          }
+    ///     "#)
+    ///     .return_status(202)
+    ///     .create_on(&mock_server);
     /// ```
     /// String format and attribute order will be ignored.
 
@@ -578,27 +538,24 @@ impl Mock {
     /// * `request_matcher` - The matcher function.
     ///
     /// ## Example:
-    /// ```
-    /// use httpmock::{MockServerRequest, MockServer, Mock};
+    /// ```rust
+    /// use httpmock::{MockServer, Mock, MockServerRequest};
     ///
-    /// #[test]
-    /// fn custom_matcher_test() {
-    ///     // Arrange
-    ///     let mock_server = MockServer::start();
-    ///     let m = Mock::new()
-    ///         .expect_match(|req: MockServerRequest| {
-    ///             req.path.contains("es")
-    ///         })
-    ///         .return_status(200)
-    ///         .create_on(&mock_server);
+    /// // Arrange
+    /// let mock_server = MockServer::start();
+    /// let m = Mock::new()
+    ///     .expect_match(|req: MockServerRequest| {
+    ///         req.path.contains("es")
+    ///     })
+    ///     .return_status(200)
+    ///     .create_on(&mock_server);
     ///
-    ///     // Act: Send the HTTP request
-    ///     let response = isahc::get(mock_server.url("/test")).unwrap();
+    /// // Act: Send the HTTP request
+    /// let response = isahc::get(mock_server.url("/test")).unwrap();
     ///
-    ///     // Assert
-    ///     assert_eq!(response.status(), 200);
-    ///     assert_eq!(m.times_called(), 1);
-    /// }
+    /// // Assert
+    /// assert_eq!(response.status(), 200);
+    /// assert_eq!(m.times_called(), 1);
     /// ```
     pub fn expect_match(mut self, request_matcher: MockMatcherFunction) -> Self {
         if self.mock.request.matchers.is_none() {
@@ -640,8 +597,8 @@ impl Mock {
     ///
     /// * `body` - The HTTP response body the mock server will return in the form of a JSON string.
     pub fn return_json_body<T>(mut self, body: &T) -> Self
-    where
-        T: Serialize,
+        where
+            T: Serialize,
     {
         let serialized_body =
             serde_json::to_string(body).expect("cannot serialize json body to JSON string ");
