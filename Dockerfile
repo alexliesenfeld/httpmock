@@ -1,7 +1,7 @@
 # ================================================================================
 # Builder
 # ================================================================================
-FROM rust:1.40 as builder
+FROM rust:1.41 as builder
 WORKDIR /usr/src/httpmock
 COPY . .
 RUN cargo install --features="standalone" --path .
