@@ -25,7 +25,7 @@
 
 ## Features
 
-* Provides a full-blown HTTP mock server with HTTP/1 and HTTP/2 support.
+* Provides an HTTP mock server with HTTP/1 and HTTP/2 support.
 * A fully asynchronous core with synchronous and asynchronous APIs.
 * Compatible with all major asynchronous executors and runtimes.
 * Built-in request matchers with support for custom request matchers.
@@ -37,7 +37,7 @@ Add `httpmock` to `Cargo.toml`:
 
 ```toml
 [dev-dependencies]
-httpmock = "0.4.3"
+httpmock = "0.4.4"
 ```
 
 You can then use `httpmock` in your tests like shown in the example below:
