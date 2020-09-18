@@ -385,8 +385,8 @@ impl Mock {
     ///
     /// * `body` - The HTTP body object that will be serialized to JSON using serde.
     pub fn expect_json_body<T>(mut self, body: &T) -> Self
-        where
-            T: Serialize,
+    where
+        T: Serialize,
     {
         let serialized_body =
             serde_json::to_string(body).expect("cannot serialize json body to JSON string ");
@@ -597,8 +597,8 @@ impl Mock {
     ///
     /// * `body` - The HTTP response body the mock server will return in the form of a JSON string.
     pub fn return_json_body<T>(mut self, body: &T) -> Self
-        where
-            T: Serialize,
+    where
+        T: Serialize,
     {
         let serialized_body =
             serde_json::to_string(body).expect("cannot serialize json body to JSON string ");
