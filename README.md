@@ -18,7 +18,7 @@
     ·
     <a href="https://crates.io/crates/httpmock">Crate</a>
     ·
-    <a href="https://github.com/alexliesenfeld/httpmock/issues">Changelog</a>
+    <a href="https://github.com/alexliesenfeld/httpmock/blob/develop/RELEASES.md">Changelog</a>
     ·
     <a href="https://github.com/alexliesenfeld/httpmock/issues">Report Bug</a>
     ·
