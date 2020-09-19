@@ -2,11 +2,13 @@ extern crate httpmock;
 
 use isahc::prelude::*;
 use isahc::{get, get_async, HttpClientBuilder};
+use isahc::config::RedirectPolicy;
+use serde_json::{json};
 
 use httpmock::Method::{GET, POST};
 use httpmock::{Mock, MockServer, MockServerRequest, Regex};
 use httpmock_macros::test_executors;
-use isahc::config::RedirectPolicy;
+
 use std::fs::read_to_string;
 use std::time::{Duration, SystemTime};
 
@@ -36,7 +38,7 @@ fn matching_features_test() {
         .expect_body("{\"number\":5}")
         .expect_body_contains("number")
         .expect_body_matches(Regex::new(r#"(\d+)"#).unwrap())
-        .expect_json_body(&TransferItem { number: 5 })
+        .expect_json_body(json!({ "number": 5 }))
         .expect_match(|req: MockServerRequest| req.path.contains("es"))
         .return_status(200)
         .create_on(&mock_server);

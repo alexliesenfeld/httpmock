@@ -2,13 +2,50 @@ extern crate httpmock;
 
 use isahc::prelude::*;
 use isahc::{get, get_async, HttpClientBuilder};
-
+use serde_json::{json, Value};
 use httpmock::Method::{GET, POST};
 use httpmock::{Mock, MockServer, MockServerRequest, Regex};
 use httpmock_macros::test_executors;
 use isahc::config::RedirectPolicy;
 use std::fs::read_to_string;
 use std::time::{Duration, SystemTime};
+
+
+/// Tests and demonstrates body matching.
+#[test]
+#[test_executors] // Internal macro that executes this test in different async executors. Ignore it.
+fn json_value_body_match_test() {
+    // Arrange
+    let _ = env_logger::try_init();
+    let mock_server = MockServer::start();
+
+    let m = Mock::new()
+        .expect_method(POST)
+        .expect_path("/users")
+        .expect_header("Content-Type", "application/json")
+        .expect_json_body(json!({ "name": "Fred" }))
+        .return_status(201)
+        .return_header("Content-Type", "application/json")
+        .return_json_body(json!({ "name": "Hans" }))
+        .create_on(&mock_server);
+
+    // Act: Send the request and deserialize the response to JSON
+    let mut response = Request::post(&format!("http://{}/users", mock_server.address()))
+        .header("Content-Type", "application/json")
+        .body(json!({ "name": "Fred" }).to_string())
+        .unwrap()
+        .send()
+        .unwrap();
+
+    let user: Value =
+        serde_json::from_str(&response.text().unwrap()).expect("cannot deserialize JSON");
+
+    // Assert
+    assert_eq!(response.status(), 201);
+    assert_eq!(m.times_called(), 1);
+    assert_eq!(user.as_object().unwrap().get("name").unwrap(), "Hans");
+}
+
 
 /// Tests and demonstrates body matching.
 #[test]
@@ -28,12 +65,12 @@ fn exact_body_match_test() {
         .expect_method(POST)
         .expect_path("/users")
         .expect_header("Content-Type", "application/json")
-        .expect_json_body(&TestUser {
+        .expect_json_body_obj(&TestUser {
             name: String::from("Fred"),
         })
         .return_status(201)
         .return_header("Content-Type", "application/json")
-        .return_json_body(&TestUser {
+        .return_json_body_obj(&TestUser {
             name: String::from("Hans"),
         })
         .create_on(&mock_server);
@@ -41,12 +78,7 @@ fn exact_body_match_test() {
     // Act: Send the request and deserialize the response to JSON
     let mut response = Request::post(&format!("http://{}/users", mock_server.address()))
         .header("Content-Type", "application/json")
-        .body(
-            serde_json::to_string(&TestUser {
-                name: String::from("Fred"),
-            })
-            .unwrap(),
-        )
+        .body(json!(&TestUser { name: "Fred".to_string() }).to_string())
         .unwrap()
         .send()
         .unwrap();
