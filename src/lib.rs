@@ -14,7 +14,7 @@
 //!
 //! ```toml
 //! [dev-dependencies]
-//! httpmock = "0.4.5"
+//! httpmock = "0.5.0"
 //! ```
 //!
 //! You can then use `httpmock` in your tests like shown in the example below:

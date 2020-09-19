@@ -18,6 +18,8 @@
     ·
     <a href="https://crates.io/crates/httpmock">Crate</a>
     ·
+    <a href="https://github.com/alexliesenfeld/httpmock/issues">Changelog</a>
+    ·
     <a href="https://github.com/alexliesenfeld/httpmock/issues">Report Bug</a>
     ·
     <a href="https://github.com/alexliesenfeld/httpmock/issues">Request Feature</a>
@@ -37,7 +39,7 @@ Add `httpmock` to `Cargo.toml`:
 
 ```toml
 [dev-dependencies]
-httpmock = "0.4.5"
+httpmock = "0.5.0"
 ```
 
 You can then use `httpmock` in your tests like shown in the example below:
