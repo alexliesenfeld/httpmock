@@ -1,15 +1,14 @@
 extern crate httpmock;
 
-use isahc::prelude::*;
-use isahc::{get, get_async, HttpClientBuilder};
-use serde_json::{json, Value};
 use httpmock::Method::{GET, POST};
 use httpmock::{Mock, MockServer, MockServerRequest, Regex};
 use httpmock_macros::test_executors;
 use isahc::config::RedirectPolicy;
+use isahc::prelude::*;
+use isahc::{get, get_async, HttpClientBuilder};
+use serde_json::{json, Value};
 use std::fs::read_to_string;
 use std::time::{Duration, SystemTime};
-
 
 /// Tests and demonstrates body matching.
 #[test]
@@ -46,7 +45,6 @@ fn json_value_body_match_test() {
     assert_eq!(user.as_object().unwrap().get("name").unwrap(), "Hans");
 }
 
-
 /// Tests and demonstrates body matching.
 #[test]
 #[test_executors] // Internal macro that executes this test in different async executors. Ignore it.
@@ -78,7 +76,12 @@ fn exact_body_match_test() {
     // Act: Send the request and deserialize the response to JSON
     let mut response = Request::post(&format!("http://{}/users", mock_server.address()))
         .header("Content-Type", "application/json")
-        .body(json!(&TestUser { name: "Fred".to_string() }).to_string())
+        .body(
+            json!(&TestUser {
+                name: "Fred".to_string()
+            })
+            .to_string(),
+        )
         .unwrap()
         .send()
         .unwrap();

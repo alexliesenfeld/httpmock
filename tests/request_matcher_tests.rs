@@ -1,9 +1,9 @@
 extern crate httpmock;
 
+use isahc::config::RedirectPolicy;
 use isahc::prelude::*;
 use isahc::{get, get_async, HttpClientBuilder};
-use isahc::config::RedirectPolicy;
-use serde_json::{json};
+use serde_json::json;
 
 use httpmock::Method::{GET, POST};
 use httpmock::{Mock, MockServer, MockServerRequest, Regex};
