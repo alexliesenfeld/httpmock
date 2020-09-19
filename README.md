@@ -18,11 +18,11 @@
     ·
     <a href="https://crates.io/crates/httpmock">Crate</a>
     ·
-    <a href="https://github.com/alexliesenfeld/httpmock/blob/develop/RELEASES.md">Changelog</a>
-    ·
     <a href="https://github.com/alexliesenfeld/httpmock/issues">Report Bug</a>
     ·
     <a href="https://github.com/alexliesenfeld/httpmock/issues">Request Feature</a>
+    ·
+    <a href="https://github.com/alexliesenfeld/httpmock/blob/develop/RELEASES.md">Changelog</a>
 </p>
 
 ## Features
