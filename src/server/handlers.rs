@@ -9,6 +9,7 @@ use crate::server::data::{
     RequestRequirements,
 };
 use crate::server::util::{StringTreeMapExtension, TreeMapExtension};
+use basic_cookies::Cookie;
 
 /// Contains HTTP methods which cannot have a body.
 const NON_BODY_METHODS: &[&str] = &["GET", "HEAD", "DELETE"];
@@ -65,7 +66,7 @@ pub fn delete_all(state: &MockServerState) -> Result<usize, String> {
         mocks.clear();
     }
 
-    log::debug!("Deleted all mocks");
+    log::trace!("Deleted all mocks");
     Result::Ok(result)
 }
 
@@ -194,12 +195,12 @@ fn request_matches(req: Rc<MockServerHttpRequest>, mock: &RequestRequirements) -
         }
     }
 
-    if let Some(header_names) = &mock.header_exists {
+    if let Some(expected_headers) = &mock.header_exists {
         let matches = match &req.headers {
             None => false,
-            Some(request_headers) => header_names
+            Some(request_headers) => expected_headers
                 .iter()
-                .all(|h| request_headers.contains_case_insensitive_key(h)),
+                .all(|eh| request_headers.contains_case_insensitive_key(eh)),
         };
 
         if !matches {
@@ -211,6 +212,28 @@ fn request_matches(req: Rc<MockServerHttpRequest>, mock: &RequestRequirements) -
     if !match_headers_exact(&req, &mock) {
         log::debug!("Request does not match the mock (attribute: headers)");
         return false;
+    }
+
+    if let Some(expected_cookie_names) = &mock.cookie_exists {
+        let matches = expected_cookie_names
+            .iter()
+            .all(|name| contains_cookie(&req, name, None));
+
+        if !matches {
+            log::debug!("Request does not match the mock (attribute: cookie exists)");
+            return false;
+        }
+    }
+
+    if let Some(expected_cookies) = &mock.cookies {
+        let matches = expected_cookies
+            .iter()
+            .all(|(name, value)| contains_cookie(&req, name, Some(value)));
+
+        if !matches {
+            log::debug!("Request does not match the mock (attribute: cookie name with value)");
+            return false;
+        }
     }
 
     if let Some(query_param_names) = &mock.query_param_exists {
@@ -316,6 +339,44 @@ fn match_json(req: &Option<String>, mock: &Value, exact: bool) -> bool {
         }
         None => false,
     }
+}
+
+fn contains_cookie(
+    req: &MockServerHttpRequest,
+    expected_cookie_name: &str,
+    expected_cookie_value: Option<&str>,
+) -> bool {
+    let expected_cookie_name = expected_cookie_name.to_lowercase();
+    return match &req.headers {
+        None => false,
+        Some(request_headers) => {
+            let cookie_header = request_headers
+                .iter()
+                .find(|(k, _)| k.to_lowercase().eq("cookie"));
+            return match cookie_header {
+                None => false,
+                Some((_, val)) => {
+                    let cookie_parse_result = Cookie::parse(val);
+                    return match cookie_parse_result {
+                        Err(e) => {
+                            log::warn!("Cannot parse request cookie: {}", e);
+                            false
+                        }
+                        Ok(req_cookies) => {
+                            let found_cookie = req_cookies
+                                .iter()
+                                .find(|e| e.get_name().to_lowercase().eq(&expected_cookie_name));
+                            match (found_cookie, expected_cookie_value) {
+                                (None, _) => false,
+                                (Some(_), None) => true,
+                                (Some(cookie), Some(val)) => return cookie.get_value().eq(val),
+                            }
+                        }
+                    };
+                }
+            };
+        }
+    };
 }
 
 /// Validates a mock request.

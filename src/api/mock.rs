@@ -247,6 +247,8 @@ impl Mock {
                     path_contains: None,
                     headers: None,
                     header_exists: None,
+                    cookies: None,
+                    cookie_exists: None,
                     body: None,
                     json_body: None,
                     json_body_includes: None,
@@ -362,6 +364,44 @@ impl Mock {
         self
     }
 
+    /// Sets the cookie that needs to exist in the HTTP request.
+    /// Cookie parsing follows RFC-6265 (https://tools.ietf.org/html/rfc6265.html).
+    ///
+    /// * `name` - The cookie name.
+    /// * `value` - The expected cookie value.
+    pub fn expect_cookie(mut self, name: &str, value: &str) -> Self {
+        if self.mock.request.cookies.is_none() {
+            self.mock.request.cookies = Some(BTreeMap::new());
+        }
+
+        self.mock
+            .request
+            .cookies
+            .as_mut()
+            .unwrap()
+            .insert(name.to_string(), value.to_string());
+
+        self
+    }
+
+    /// Sets the cookie that needs to exist in the HTTP request.
+    /// Cookie parsing follows RFC-6265 (https://tools.ietf.org/html/rfc6265.html).
+    ///
+    /// * `name` - The cookie name
+    pub fn expect_cookie_exists(mut self, name: &str) -> Self {
+        if self.mock.request.cookie_exists.is_none() {
+            self.mock.request.cookie_exists = Some(Vec::new());
+        }
+
+        self.mock
+            .request
+            .cookie_exists
+            .as_mut()
+            .unwrap()
+            .push(name.to_string());
+        self
+    }
+
     /// Sets the expected HTTP body. If the body of an HTTP request at the server matches the
     /// provided body, the request will be considered a match for this mock to respond
     /// (given all other criteria are met). This is an exact match, so all characters are taken
@@ -389,35 +429,8 @@ impl Mock {
     where
         T: Serialize,
     {
-        let serialized_body =
-            serde_json::to_string(body).expect("cannot serialize json body to JSON string ");
-
-        self.expect_json_body_str(&serialized_body)
-    }
-
-    /// Sets the expected JSON body. This method expects a JSON string. If the body of an HTTP
-    /// request at the server matches the body according to the provided JSON string,
-    /// the request will be considered a match for this mock to respond (given all other
-    /// criteria are met).
-    ///
-    /// This is an exact match, so all elements are taken into account.
-    ///
-    /// Note that this method does not set the "Content-Type" header automatically, so you
-    /// need to provide one yourself!
-    ///
-    /// * `body` - The HTTP body string.
-    ///
-    /// ## Example
-    /// You can use this method conveniently as follows:
-    /// ```rust
-    /// use serde_json::{json};
-    /// httpmock::Mock::new()
-    ///     .expect_json_body(json!({ "name": "Fred" }));
-    /// ```
-    pub fn expect_json_body_str(mut self, body: &str) -> Self {
-        let value = Value::from_str(body).expect("cannot convert JSON string to serde value");
-
-        self.expect_json_body(value)
+        let json_value = serde_json::to_value(body).expect("Cannot serialize json body to JSON");
+        self.expect_json_body(json_value)
     }
 
     /// Sets the expected JSON body. This method expects a serde_json::Value object.
@@ -637,21 +650,9 @@ impl Mock {
     where
         T: Serialize,
     {
-        let serialized_body =
-            serde_json::to_string(body).expect("cannot serialize json body to JSON string ");
-        self.return_json_body_str(&serialized_body)
-    }
-
-    /// Sets the JSON body for the HTTP response that will be returned by the mock server.
-    ///
-    /// The provided JSON object needs to be both, a deserializable and
-    /// serializable serde object. Note that this method does not set the "Content-Type" header
-    /// automatically, so you need to provide one yourself!
-    ///
-    /// * `body` - The HTTP response body the mock server will return in the form of a JSON string.
-    pub fn return_json_body_str(mut self, body: &str) -> Self {
-        self.mock.response.body = Some(body.to_string());
-        self
+        let json_body =
+            serde_json::to_value(body).expect("cannot serialize json body to JSON string ");
+        self.return_json_body(json_body)
     }
 
     /// Sets the JSON body for the HTTP response that will be returned by the mock server.

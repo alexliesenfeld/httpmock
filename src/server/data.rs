@@ -124,6 +124,8 @@ pub struct RequestRequirements {
     pub method: Option<String>,
     pub headers: Option<BTreeMap<String, String>>,
     pub header_exists: Option<Vec<String>>,
+    pub cookies: Option<BTreeMap<String, String>>,
+    pub cookie_exists: Option<Vec<String>>,
     pub body: Option<String>,
     pub json_body: Option<Value>,
     pub json_body_includes: Option<Vec<Value>>,
@@ -145,6 +147,8 @@ impl RequestRequirements {
             method: None,
             headers: None,
             header_exists: None,
+            cookies: None,
+            cookie_exists: None,
             body: None,
             json_body: None,
             json_body_includes: None,
@@ -193,6 +197,16 @@ impl RequestRequirements {
 
     pub fn with_header_exists(mut self, arg: Vec<String>) -> Self {
         self.header_exists = Some(arg);
+        self
+    }
+
+    pub fn with_cookies(mut self, arg: BTreeMap<String, String>) -> Self {
+        self.cookies = Some(arg);
+        self
+    }
+
+    pub fn with_cookie_exists(mut self, arg: Vec<String>) -> Self {
+        self.cookie_exists = Some(arg);
         self
     }
 
