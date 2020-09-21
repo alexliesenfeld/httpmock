@@ -12,7 +12,7 @@ use std::time::{Duration, SystemTime};
 
 /// Tests and demonstrates cookie matching.
 #[test]
-#[test_executors] // Internal macro that executes this test in different async executors. Ignore it.
+#[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
 fn cookie_matching_test() {
     // Arrange
     let _ = env_logger::try_init();

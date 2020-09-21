@@ -160,77 +160,77 @@ impl RequestRequirements {
         }
     }
 
-    pub fn with_path(mut self, arg: String) -> Self {
+    pub fn with_path(&mut self, arg: String) -> &mut Self {
         self.path = Some(arg);
         self
     }
 
-    pub fn with_method(mut self, arg: String) -> Self {
+    pub fn with_method(&mut self, arg: String) -> &mut Self {
         self.method = Some(arg);
         self
     }
 
-    pub fn with_body(mut self, arg: String) -> Self {
+    pub fn with_body(&mut self, arg: String) -> &mut Self {
         self.body = Some(arg);
         self
     }
 
-    pub fn with_json_body(mut self, arg: Value) -> Self {
+    pub fn with_json_body(&mut self, arg: Value) -> &mut Self {
         self.json_body = Some(arg);
         self
     }
 
-    pub fn with_path_contains(mut self, arg: Vec<String>) -> Self {
+    pub fn with_path_contains(&mut self, arg: Vec<String>) -> &mut Self {
         self.path_contains = Some(arg);
         self
     }
 
-    pub fn with_path_matches(mut self, arg: Vec<Pattern>) -> Self {
+    pub fn with_path_matches(&mut self, arg: Vec<Pattern>) -> &mut Self {
         self.path_matches = Some(arg);
         self
     }
 
-    pub fn with_headers(mut self, arg: BTreeMap<String, String>) -> Self {
+    pub fn with_headers(&mut self, arg: BTreeMap<String, String>) -> &mut Self {
         self.headers = Some(arg);
         self
     }
 
-    pub fn with_header_exists(mut self, arg: Vec<String>) -> Self {
+    pub fn with_header_exists(&mut self, arg: Vec<String>) -> &mut Self {
         self.header_exists = Some(arg);
         self
     }
 
-    pub fn with_cookies(mut self, arg: BTreeMap<String, String>) -> Self {
+    pub fn with_cookies(&mut self, arg: BTreeMap<String, String>) -> &mut Self {
         self.cookies = Some(arg);
         self
     }
 
-    pub fn with_cookie_exists(mut self, arg: Vec<String>) -> Self {
+    pub fn with_cookie_exists(&mut self, arg: Vec<String>) -> &mut Self {
         self.cookie_exists = Some(arg);
         self
     }
 
-    pub fn with_json_body_includes(mut self, arg: Vec<Value>) -> Self {
+    pub fn with_json_body_includes(&mut self, arg: Vec<Value>) -> &mut Self {
         self.json_body_includes = Some(arg);
         self
     }
 
-    pub fn with_body_contains(mut self, arg: Vec<String>) -> Self {
+    pub fn with_body_contains(&mut self, arg: Vec<String>) -> &mut Self {
         self.body_contains = Some(arg);
         self
     }
 
-    pub fn with_body_matches(mut self, arg: Vec<Pattern>) -> Self {
+    pub fn with_body_matches(&mut self, arg: Vec<Pattern>) -> &mut Self {
         self.body_matches = Some(arg);
         self
     }
 
-    pub fn with_query_param_exists(mut self, arg: Vec<String>) -> Self {
+    pub fn with_query_param_exists(&mut self, arg: Vec<String>) -> &mut Self {
         self.query_param_exists = Some(arg);
         self
     }
 
-    pub fn with_query_param(mut self, arg: BTreeMap<String, String>) -> Self {
+    pub fn with_query_param(&mut self, arg: BTreeMap<String, String>) -> &mut Self {
         self.query_param = Some(arg);
         self
     }

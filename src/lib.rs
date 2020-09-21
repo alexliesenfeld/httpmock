@@ -187,10 +187,16 @@ use util::Join;
 
 use crate::api::{LocalMockServerAdapter, MockServerAdapter, RemoteMockServerAdapter};
 pub use crate::api::{Method, Mock, MockRef, Regex};
-use crate::server::data::MockServerHttpRequest;
+use crate::server::data::{MockMatcherFunction, MockServerHttpRequest};
 pub use crate::server::HttpMockConfig;
 use crate::server::{start_server, MockServerState};
 use crate::util::{read_env, with_retry};
+use futures_util::core_reexport::time::Duration;
+use serde::Serialize;
+use serde_json::Value;
+use std::borrow::{Borrow, BorrowMut};
+use std::cell::Cell;
+use std::mem::replace;
 
 mod api;
 mod server;
@@ -375,6 +381,156 @@ impl MockServer {
     /// ```
     pub fn base_url(&self) -> String {
         self.url("")
+    }
+
+    /// Builds the base URL for the mock server.
+    ///
+    /// ```
+    pub fn mock<F>(&self, mut config_fn: F) -> MockRef
+    where
+        F: FnOnce(When, Then),
+    {
+        let mock = Rc::new(Cell::new(Mock::new()));
+        config_fn(When { mock: mock.clone() }, Then { mock: mock.clone() });
+        mock.take().create_on(self)
+    }
+}
+
+pub struct When {
+    pub(crate) mock: Rc<Cell<Mock>>,
+}
+
+impl When {
+    pub fn method(self, method: Method) -> Self {
+        self.mock.set(self.mock.take().expect_method(method));
+        self
+    }
+
+    pub fn path(self, path: &str) -> Self {
+        self.mock.set(self.mock.take().expect_path(path));
+        self
+    }
+
+    pub fn path_contains(self, substring: &str) -> Self {
+        self.mock
+            .set(self.mock.take().expect_path_contains(substring));
+        self
+    }
+
+    pub fn path_matches(self, regex: Regex) -> Self {
+        self.mock.set(self.mock.take().expect_path_matches(regex));
+        self
+    }
+
+    pub fn query_param(self, name: &str, value: &str) -> Self {
+        self.mock
+            .set(self.mock.take().expect_query_param(name, value));
+        self
+    }
+
+    pub fn query_param_exists(self, name: &str) -> Self {
+        self.mock
+            .set(self.mock.take().expect_query_param_exists(name));
+        self
+    }
+
+    pub fn body(self, body: &str) -> Self {
+        self.mock.set(self.mock.take().expect_body(body));
+        self
+    }
+
+    pub fn body_matches(self, regex: Regex) -> Self {
+        self.mock.set(self.mock.take().expect_body_matches(regex));
+        self
+    }
+
+    pub fn body_contains(self, substring: &str) -> Self {
+        self.mock
+            .set(self.mock.take().expect_body_contains(substring));
+        self
+    }
+
+    pub fn json_body(self, value: serde_json::Value) -> Self {
+        self.mock.set(self.mock.take().expect_json_body(value));
+        self
+    }
+
+    pub fn json_body_obj<T>(self, body: &T) -> Self
+    where
+        T: Serialize,
+    {
+        self.mock.set(self.mock.take().expect_json_body_obj(body));
+        self
+    }
+
+    pub fn json_body_partial(self, partial: &str) -> Self {
+        self.mock
+            .set(self.mock.take().expect_json_body_partial(partial));
+        self
+    }
+
+    pub fn header(self, name: &str, value: &str) -> Self {
+        self.mock.set(self.mock.take().expect_header(name, value));
+        self
+    }
+
+    pub fn header_exists(self, name: &str) -> Self {
+        self.mock.set(self.mock.take().expect_header_exists(name));
+        self
+    }
+
+    pub fn cookie(self, name: &str, value: &str) -> Self {
+        self.mock.set(self.mock.take().expect_cookie(name, value));
+        self
+    }
+
+    pub fn cookie_exists(self, name: &str) -> Self {
+        self.mock.set(self.mock.take().expect_cookie_exists(name));
+        self
+    }
+
+    pub fn matches(self, matcher: MockMatcherFunction) -> Self {
+        self.mock.set(self.mock.take().expect_match(matcher));
+        self
+    }
+}
+
+pub struct Then {
+    pub(crate) mock: Rc<Cell<Mock>>,
+}
+
+impl Then {
+    pub fn status(self, status: usize) -> Self {
+        self.mock.set(self.mock.take().return_status(status));
+        self
+    }
+
+    pub fn body(self, body: &str) -> Self {
+        self.mock.set(self.mock.take().return_body(body));
+        self
+    }
+
+    pub fn json_body(self, value: Value) -> Self {
+        self.mock.set(self.mock.take().return_json_body(value));
+        self
+    }
+
+    pub fn json_body_obj<T>(self, body: &T) -> Self
+    where
+        T: Serialize,
+    {
+        self.mock.set(self.mock.take().return_json_body_obj(body));
+        self
+    }
+
+    pub fn header(self, name: &str, value: &str) -> Self {
+        self.mock.set(self.mock.take().return_header(name, value));
+        self
+    }
+
+    pub fn delay(self, duration: Duration) -> Self {
+        self.mock.set(self.mock.take().return_with_delay(duration));
+        self
     }
 }
 

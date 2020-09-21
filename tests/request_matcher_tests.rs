@@ -14,7 +14,7 @@ use std::time::{Duration, SystemTime};
 
 /// Tests and demonstrates matching features.
 #[test]
-#[test_executors] // Internal macro that executes this test in different async executors. Ignore it.
+#[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
 fn matching_features_test() {
     // This is a temporary type that we will use for this test
     #[derive(serde::Serialize, serde::Deserialize)]

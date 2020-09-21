@@ -6,7 +6,7 @@ use quote::quote;
 use syn::{parse_macro_input, parse_quote, ItemFn};
 
 #[proc_macro_attribute]
-pub fn test_executors(args: TokenStream, function: TokenStream) -> TokenStream {
+pub fn httpmock_example_test(args: TokenStream, function: TokenStream) -> TokenStream {
     assert!(args.is_empty());
 
     let mut function = parse_macro_input!(function as ItemFn);

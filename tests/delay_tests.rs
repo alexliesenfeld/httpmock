@@ -12,7 +12,7 @@ use std::time::{Duration, SystemTime};
 
 /// This test asserts that mocks can be stored, served and deleted as designed.
 #[test]
-#[test_executors] // Internal macro that executes this test in different async executors. Ignore it.
+#[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
 fn delay_test() {
     // Arrange
     let _ = env_logger::try_init();
@@ -23,7 +23,7 @@ fn delay_test() {
 
     let search_mock = Mock::new()
         .expect_path("/delay")
-        .return_with_delay(delay)
+        .return_delay(delay)
         .create_on(&mock_server);
 
     // Act: Send the HTTP request

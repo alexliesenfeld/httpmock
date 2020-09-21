@@ -38,7 +38,7 @@ async-std = { version = "1.6.4", features = ["attributes", "unstable"] }
 isahc = {version = "0.9.8", features = [ "json"] }
 syn = { version = "1.0.41", features = ["full"] }
 quote = "1.0.7"
-httpmock-macros = { path = "./lib/macros", version = "0.3.0" }
+httpmock-macros = { path = "./lib/macros", version = "0.4.0" }
 actix-rt = "1.1.1"
 
 [features]

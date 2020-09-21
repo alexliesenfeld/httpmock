@@ -12,7 +12,7 @@ use std::time::{Duration, SystemTime};
 
 /// This test asserts that mocks can be stored, served and deleted as designed.
 #[test]
-#[test_executors] // Internal macro that executes this test in different async executors. Ignore it.
+#[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
 fn example_test() {
     let _ = env_logger::try_init();
 

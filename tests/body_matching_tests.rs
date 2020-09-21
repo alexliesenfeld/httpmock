@@ -12,7 +12,7 @@ use std::time::{Duration, SystemTime};
 
 /// Tests and demonstrates body matching.
 #[test]
-#[test_executors] // Internal macro that executes this test in different async executors. Ignore it.
+#[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
 fn json_value_body_match_test() {
     // Arrange
     let _ = env_logger::try_init();
@@ -47,7 +47,7 @@ fn json_value_body_match_test() {
 
 /// Tests and demonstrates body matching.
 #[test]
-#[test_executors] // Internal macro that executes this test in different async executors. Ignore it.
+#[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
 fn exact_body_match_test() {
     // This is a temporary type that we will use for this test
     #[derive(serde::Serialize, serde::Deserialize)]
@@ -97,7 +97,7 @@ fn exact_body_match_test() {
 
 /// Tests and demonstrates matching JSON body partials.
 #[test]
-#[test_executors] // Internal macro that executes this test in different async executors. Ignore it.
+#[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
 fn body_partial_json_str_test() {
     let _ = env_logger::try_init();
     let mock_server = MockServer::start();

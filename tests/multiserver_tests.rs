@@ -12,7 +12,7 @@ use std::time::{Duration, SystemTime};
 
 /// This test shows how to use multiple mock servers in one test.
 #[test]
-#[test_executors] // Internal macro that executes this test in different async executors. Ignore it.
+#[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
 fn multiple_mock_servers_test() {
     // Arrange
     let _ = env_logger::try_init();
