@@ -23,28 +23,6 @@ fn explicit_delete_test() {
         then.status(205);
     });
 
-    let server = MockServer::start();
-
-    server.mock(|when, then| {
-        when.method(GET)
-            .path("/health")
-            .header("Content-Type", "application/json");
-        then.status(205).body("Ehlo!!");
-    });
-
-    server.mock(|when, then| {
-        when.method(GET).path("/health");
-        then.status(205);
-    });
-
-    server.mock_with_options(|when, then, options| {
-        when.method(GET)
-            .path("/health")
-            .header("Content-Type", "application/json");
-        then.status(205).body("Ehlo!!");
-        options.metadata("Testik1");
-    });
-
     /*let mut m = Mock::new()
             .expect_method(GET)
             .expect_path("/health")
