@@ -654,12 +654,13 @@ pub struct Responders {
 
 impl Responders {
     /// Sets the HTTP status that the mock will return, if an HTTP request fulfills all of
-/// the mocks requirements.
-/// * `status` - The HTTP status that the mock server will return.
+    /// the mocks requirements.
+    /// * `status` - The HTTP status that the mock server will return.
     pub fn status(self, status: usize) -> Self {
         self.mock.set(self.mock.take().return_status(status));
         self
     }
+
     /// Sets the HTTP response body that the mock will return, if an HTTP request fulfills all of
     /// the mocks requirements.
     /// * `body` - The HTTP response body that the mock server will return.
@@ -667,15 +668,16 @@ impl Responders {
         self.mock.set(self.mock.take().return_body(body));
         self
     }
+
     /// Sets the JSON body for the HTTP response that will be returned by the mock server.
-     ///
-     /// The provided JSON object needs to be both, a deserializable and
-     /// serializable serde object. Note that this method does not set the "Content-Type" header
-     /// automatically, so you need to provide one yourself!
-     ///
-     /// * `body` -  The HTTP response body the mock server will return in the form of a
-     ///             serde_json::Value object.
-     /// ```
+    ///
+    /// The provided JSON object needs to be both, a deserializable and
+    /// serializable serde object. Note that this method does not set the "Content-Type" header
+    /// automatically, so you need to provide one yourself!
+    ///
+    /// * `body` -  The HTTP response body the mock server will return in the form of a
+    ///             serde_json::Value object.
+    /// ```
     pub fn json_body(self, value: Value) -> Self {
         self.mock.set(self.mock.take().return_json_body(value));
         self

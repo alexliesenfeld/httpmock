@@ -1,7 +1,7 @@
 extern crate httpmock;
 
 use httpmock::Method::GET;
-use httpmock::{MockServer};
+use httpmock::MockServer;
 use httpmock_macros::httpmock_example_test;
 use isahc::prelude::*;
 

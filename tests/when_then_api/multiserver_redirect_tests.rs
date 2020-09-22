@@ -3,7 +3,7 @@ extern crate httpmock;
 use isahc::prelude::*;
 use isahc::HttpClientBuilder;
 
-use httpmock::{MockServer};
+use httpmock::MockServer;
 use httpmock_macros::httpmock_example_test;
 use isahc::config::RedirectPolicy;
 
