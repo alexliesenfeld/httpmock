@@ -15,7 +15,7 @@ use std::time::{Duration, SystemTime};
 /// Tests and demonstrates matching features.
 #[test]
 #[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
-fn matching_features_test() {
+fn showcase_test() {
     // This is a temporary type that we will use for this test
     #[derive(serde::Serialize, serde::Deserialize)]
     struct TransferItem {

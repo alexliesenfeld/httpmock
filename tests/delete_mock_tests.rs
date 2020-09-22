@@ -13,7 +13,7 @@ use std::time::{Duration, SystemTime};
 /// Ensures that once explicitly deleting a mock, it will not be delivered by the server anymore.
 #[test]
 #[httpmock_example_test] // Internal macro that executes this test in different async executors. Ignore it.
-fn explicit_delete_test() {
+fn explicit_delete_mock_test() {
     // Arrange
     let _ = env_logger::try_init();
     let server = MockServer::start();

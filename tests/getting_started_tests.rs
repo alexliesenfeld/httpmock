@@ -13,7 +13,7 @@ use std::time::{Duration, SystemTime};
 /// This test asserts that mocks can be stored, served and deleted as designed.
 #[test]
 #[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
-fn example_test() {
+fn getting_started_test() {
     let _ = env_logger::try_init();
 
     // Start a local mock server for exclusive use by this test function.
@@ -39,7 +39,7 @@ fn example_test() {
 
 /// Demonstrates how to use async structures
 #[async_std::test]
-async fn simple_test_async() {
+async fn async_getting_started_test() {
     let _ = env_logger::try_init();
 
     // Start a local mock server for exclusive use by this test function.

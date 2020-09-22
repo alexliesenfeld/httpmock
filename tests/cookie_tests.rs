@@ -21,6 +21,7 @@ fn cookie_matching_test() {
     let mock = Mock::new()
         .expect_method(GET)
         .expect_path("/")
+        .expect_cookie_exists("SESSIONID")
         .expect_cookie("SESSIONID", "298zf09hf012fh2")
         .return_status(200)
         .create_on(&mock_server);

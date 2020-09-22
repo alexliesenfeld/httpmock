@@ -13,7 +13,7 @@ use std::time::{Duration, SystemTime};
 /// Tests and demonstrates body matching.
 #[test]
 #[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
-fn json_value_body_match_test() {
+fn json_value_body_test() {
     // Arrange
     let _ = env_logger::try_init();
     let mock_server = MockServer::start();
@@ -48,7 +48,7 @@ fn json_value_body_match_test() {
 /// Tests and demonstrates body matching.
 #[test]
 #[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
-fn exact_body_match_test() {
+fn json_body_object_serde_test() {
     // This is a temporary type that we will use for this test
     #[derive(serde::Serialize, serde::Deserialize)]
     struct TestUser {
@@ -80,7 +80,7 @@ fn exact_body_match_test() {
             json!(&TestUser {
                 name: "Fred".to_string()
             })
-            .to_string(),
+                .to_string(),
         )
         .unwrap()
         .send()
@@ -95,10 +95,11 @@ fn exact_body_match_test() {
     assert_eq!(m.times_called(), 1);
 }
 
+
 /// Tests and demonstrates matching JSON body partials.
 #[test]
 #[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
-fn body_partial_json_str_test() {
+fn partial_json_body_test() {
     let _ = env_logger::try_init();
     let mock_server = MockServer::start();
 
@@ -144,7 +145,7 @@ fn body_partial_json_str_test() {
                 },
                 some_other_value: "Flintstone".to_string(),
             })
-            .unwrap(),
+                .unwrap(),
         )
         .unwrap()
         .send()

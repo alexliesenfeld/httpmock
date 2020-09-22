@@ -17,7 +17,7 @@ use httpmock_macros::test_executors;
 // Ignore this "test_executors" macro. It runs tests in multiple async runtimes for quality assurance.
 #[test_executors]
 #[test]
-fn simple_standalone_test() {
+fn standalone_test() {
     // This starts up a standalone server in the background running on port 5000
     simulate_standalone_server();
 
@@ -47,7 +47,7 @@ fn simple_standalone_test() {
 
 /// Demonstrates how to use async structures
 #[async_std::test]
-async fn simple_standalone_test_async() {
+async fn async_standalone_test() {
     // This starts up a standalone server in the background running on port 5000
     simulate_standalone_server();
 
