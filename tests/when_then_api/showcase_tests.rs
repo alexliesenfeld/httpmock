@@ -4,7 +4,7 @@ use isahc::prelude::*;
 use serde_json::json;
 
 use httpmock::Method::POST;
-use httpmock::{Mock, MockServer, MockServerRequest, Regex};
+use httpmock::{MockServer, MockServerRequest, Regex};
 use httpmock_macros::httpmock_example_test;
 
 #[test]

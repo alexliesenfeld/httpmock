@@ -1,6 +1,6 @@
 extern crate httpmock;
 
-use httpmock::{Mock, MockServer, Regex};
+use httpmock::{MockServer, Regex};
 use httpmock_macros::httpmock_example_test;
 use isahc::get;
 

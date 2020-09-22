@@ -412,60 +412,119 @@ pub struct Expectations {
 }
 
 impl Expectations {
+    /// Sets the expected HTTP method. If the path of an HTTP request at the server matches this regex,
+    /// the request will be considered a match for this mock to respond (given all other
+    /// criteria are met).
+    /// * `method` - The HTTP method to match against.
     pub fn method(self, method: Method) -> Self {
         self.mock.set(self.mock.take().expect_method(method));
         self
     }
 
+    /// Sets the expected path. If the path of an HTTP request at the server is equal to the
+    /// provided path, the request will be considered a match for this mock to respond (given all
+    /// other criteria are met).
+    /// * `path` - The exact path to match against.
     pub fn path(self, path: &str) -> Self {
         self.mock.set(self.mock.take().expect_path(path));
         self
     }
 
+    /// Sets an expected path substring. If the path of an HTTP request at the server contains t,
+    /// his substring the request will be considered a match for this mock to respond (given all
+    /// other criteria are met).
+    /// * `substring` - The substring to match against.
     pub fn path_contains(self, substring: &str) -> Self {
         self.mock
             .set(self.mock.take().expect_path_contains(substring));
         self
     }
 
+    /// Sets an expected path regex. If the path of an HTTP request at the server matches this,
+    /// regex the request will be considered a match for this mock to respond (given all other
+    /// criteria are met).
+    /// * `regex` - The regex to match against.
     pub fn path_matches(self, regex: Regex) -> Self {
         self.mock.set(self.mock.take().expect_path_matches(regex));
         self
     }
 
+    /// Sets an expected query parameter. If the query parameters of an HTTP request at the server
+    /// contains the provided query parameter name and value, the request will be considered a
+    /// match for this mock to respond (given all other criteria are met).
+    /// * `name` - The query parameter name that will matched against.
+    /// * `value` - The value parameter name that will matched against.
     pub fn query_param(self, name: &str, value: &str) -> Self {
         self.mock
             .set(self.mock.take().expect_query_param(name, value));
         self
     }
 
+    /// Sets an expected query parameter name. If the query parameters of an HTTP request at the server
+    /// contains the provided query parameter name (not considering the value), the request will be
+    /// considered a match for this mock to respond (given all other criteria are met).
+    /// * `name` - The query parameter name that will matched against.
     pub fn query_param_exists(self, name: &str) -> Self {
         self.mock
             .set(self.mock.take().expect_query_param_exists(name));
         self
     }
 
+    /// Sets the expected HTTP body. If the body of an HTTP request at the server matches the
+    /// provided body, the request will be considered a match for this mock to respond
+    /// (given all other criteria are met). This is an exact match, so all characters are taken
+    /// into account, such as whitespace, tabs, etc.
+    ///  * `contents` - The HTTP body to match against.
     pub fn body(self, body: &str) -> Self {
         self.mock.set(self.mock.take().expect_body(body));
         self
     }
 
+    /// Sets an expected HTTP body regex. If the body of an HTTP request at the server matches
+    /// the provided regex, the request will be considered a match for this mock to respond
+    /// (given all other criteria are met).
+    /// * `regex` - The regex that will matched against.
     pub fn body_matches(self, regex: Regex) -> Self {
         self.mock.set(self.mock.take().expect_body_matches(regex));
         self
     }
-
+    /// Sets an expected HTTP body substring. If the body of an HTTP request at the server contains
+    /// the provided substring, the request will be considered a match for this mock to respond
+    /// (given all other criteria are met).
+    /// * `substring` - The substring that will matched against.
     pub fn body_contains(self, substring: &str) -> Self {
         self.mock
             .set(self.mock.take().expect_body_contains(substring));
         self
     }
-
+    /// Sets the expected JSON body. This method expects a serde_json::Value object.
+    /// If the body of an HTTP request at the server matches the body according to the
+    /// provided JSON value, the request will be considered a match for this mock to
+    /// respond (given all other criteria are met).
+    ///
+    /// This is an exact match, so all elements are taken into account.
+    ///
+    /// Note that this method does not set the "Content-Type" header
+    /// automatically, so you need to provide one yourself!
+    ///
+    /// * `body` - The HTTP body as a json value (serde_json::Value).
     pub fn json_body(self, value: serde_json::Value) -> Self {
         self.mock.set(self.mock.take().expect_json_body(value));
         self
     }
-
+    /// Sets the expected JSON body. This method expects a serializable serde object
+    /// that will be serialized/deserialized to/from a JSON string. If the body of an HTTP
+    /// request at the server matches the body according to the provided JSON object,
+    /// the request will be considered a match for this mock to respond (given all other
+    /// criteria are met).
+    ///
+    /// This is an exact match, so all elements are taken into account.
+    ///
+    /// The provided JSON object needs to be both, a deserializable and
+    /// serializable serde object. Note that this method does not set the "Content-Type" header
+    /// automatically, so you need to provide one yourself!
+    ///
+    /// * `body` - The HTTP body object that will be serialized to JSON using serde.
     pub fn json_body_obj<T>(self, body: &T) -> Self
     where
         T: Serialize,
@@ -473,33 +532,116 @@ impl Expectations {
         self.mock.set(self.mock.take().expect_json_body_obj(body));
         self
     }
-
+    /// Sets an expected partial HTTP body JSON string.
+    ///
+    /// If the body of an HTTP request at the server matches the
+    /// partial, the request will be considered a match for
+    /// this mock to respond (given all other criteria are met).
+    ///
+    /// * `partial` - The JSON partial.
+    ///
+    /// # Important
+    /// The partial string needs to contain the full JSON object path from the root.
+    ///
+    /// ## Example
+    /// If your application sends the following JSON request data to the mock server
+    /// ```json
+    /// {
+    ///     "parent_attribute" : "Some parent data goes here",
+    ///     "child" : {
+    ///         "target_attribute" : "Target value",
+    ///         "other_attribute" : "Another value"
+    ///     }
+    /// }
+    /// ```
+    /// and you only want to make sure that `target_attribute` has the value
+    /// `Target value`, you need to provide a partial JSON string to this method, that starts from
+    /// the root of the JSON object, but may leave out unimportant values:
+    /// ```rust
+    /// // Arrange: Create mock server and a mock
+    /// use httpmock::{MockServer, Mock};
+    ///
+    /// let mock_server = MockServer::start();
+    /// let mut mock = mock_server.mock(|when, then| {
+    ///    when.json_body_partial(r#"
+    ///         {
+    ///             "child" : {
+    ///                 "target_attribute" : "Target value"
+    ///             }
+    ///          }
+    ///     "#);
+    ///     then.status(202);
+    /// });
+    /// ```
+    /// String format and attribute order will be ignored.
     pub fn json_body_partial(self, partial: &str) -> Self {
         self.mock
             .set(self.mock.take().expect_json_body_partial(partial));
         self
     }
 
+    /// Sets an expected HTTP header. If one of the headers of an HTTP request at the server matches
+    /// the provided header key and value, the request will be considered a match for this mock to
+    /// respond (given all other criteria are met).
+    ///
+    /// * `name` - The HTTP header name (header names are case-insensitive by RFC 2616).
+    /// * `value` - The HTTP header value.
     pub fn header(self, name: &str, value: &str) -> Self {
         self.mock.set(self.mock.take().expect_header(name, value));
         self
     }
 
+    /// Sets an expected HTTP header to exists. If one of the headers of an HTTP request at the
+    /// server matches the provided header name, the request will be considered a match for this
+    /// mock to respond (given all other criteria are met).
+    ///
+    /// * `name` - The HTTP header name (header names are case-insensitive by RFC 2616).
     pub fn header_exists(self, name: &str) -> Self {
         self.mock.set(self.mock.take().expect_header_exists(name));
         self
     }
-
+    /// Sets the cookie that needs to exist in the HTTP request.
+    /// Cookie parsing follows RFC-6265 (https://tools.ietf.org/html/rfc6265.html).
+    ///
+    /// * `name` - The cookie name.
+    /// * `value` - The expected cookie value.
     pub fn cookie(self, name: &str, value: &str) -> Self {
         self.mock.set(self.mock.take().expect_cookie(name, value));
         self
     }
-
+    /// Sets the cookie that needs to exist in the HTTP request.
+    /// Cookie parsing follows RFC-6265 (https://tools.ietf.org/html/rfc6265.html).
+    ///
+    /// * `name` - The cookie name
     pub fn cookie_exists(self, name: &str) -> Self {
         self.mock.set(self.mock.take().expect_cookie_exists(name));
         self
     }
-
+    /// Sets a custom matcher for expected HTTP request. If this function returns true, the request
+    /// is considered a match and the mock server will respond to the request
+    /// (given all other criteria are also met).
+    /// * `request_matcher` - The matcher function.
+    ///
+    /// ## Example:
+    /// ```rust
+    /// use httpmock::{MockServer, Mock, MockServerRequest};
+    ///
+    /// // Arrange
+    /// let mock_server = MockServer::start();
+    /// let m = mock_server.mock(|when, then|{
+    ///    when.matches(|req: MockServerRequest| {
+    ///         req.path.contains("es")
+    ///    });
+    ///    then.status(200);
+    /// });
+    ///
+    /// // Act: Send the HTTP request
+    /// let response = isahc::get(mock_server.url("/test")).unwrap();
+    ///
+    /// // Assert
+    /// assert_eq!(response.status(), 200);
+    /// assert_eq!(m.times_called(), 1);
+    /// ```
     pub fn matches(self, matcher: MockMatcherFunction) -> Self {
         self.mock.set(self.mock.take().expect_match(matcher));
         self
@@ -511,21 +653,43 @@ pub struct Responders {
 }
 
 impl Responders {
+    /// Sets the HTTP status that the mock will return, if an HTTP request fulfills all of
+/// the mocks requirements.
+/// * `status` - The HTTP status that the mock server will return.
     pub fn status(self, status: usize) -> Self {
         self.mock.set(self.mock.take().return_status(status));
         self
     }
-
+    /// Sets the HTTP response body that the mock will return, if an HTTP request fulfills all of
+    /// the mocks requirements.
+    /// * `body` - The HTTP response body that the mock server will return.
     pub fn body(self, body: &str) -> Self {
         self.mock.set(self.mock.take().return_body(body));
         self
     }
-
+    /// Sets the JSON body for the HTTP response that will be returned by the mock server.
+     ///
+     /// The provided JSON object needs to be both, a deserializable and
+     /// serializable serde object. Note that this method does not set the "Content-Type" header
+     /// automatically, so you need to provide one yourself!
+     ///
+     /// * `body` -  The HTTP response body the mock server will return in the form of a
+     ///             serde_json::Value object.
+     /// ```
     pub fn json_body(self, value: Value) -> Self {
         self.mock.set(self.mock.take().return_json_body(value));
         self
     }
 
+    /// Sets the JSON body for the HTTP response that will be returned by the mock server.
+    ///
+    /// The provided JSON object needs to be both, a deserializable and
+    /// serializable serde object. Note that this method does not set the "Content-Type" header
+    /// automatically, so you need to provide one yourself!
+    ///
+    /// * `body` -  The HTTP response body the mock server will return in the form of a
+    ///             serde_json::Value object.
+    ///
     pub fn json_body_obj<T>(self, body: &T) -> Self
     where
         T: Serialize,
@@ -534,11 +698,17 @@ impl Responders {
         self
     }
 
+    /// Sets an HTTP header that the mock will return, if an HTTP request fulfills all of
+    /// the mocks requirements.
+    /// * `name` - The name of the header.
+    /// * `value` - The value of the header.
     pub fn header(self, name: &str, value: &str) -> Self {
         self.mock.set(self.mock.take().return_header(name, value));
         self
     }
 
+    /// Sets a duration that will delay the mock server response.
+    /// * `duration` - The delay.
     pub fn delay(self, duration: Duration) -> Self {
         self.mock.set(self.mock.take().return_with_delay(duration));
         self

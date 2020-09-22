@@ -3,7 +3,7 @@ extern crate httpmock;
 use isahc::prelude::*;
 use isahc::HttpClientBuilder;
 
-use httpmock::{Mock, MockServer};
+use httpmock::{MockServer};
 use httpmock_macros::httpmock_example_test;
 use isahc::config::RedirectPolicy;
 
@@ -15,7 +15,7 @@ fn multiple_mock_servers_redirect_test() {
     let mock_server1 = MockServer::start();
     let mock_server2 = MockServer::start();
 
-    let redirect_mock = mock_server1.mock(|| {
+    let redirect_mock = mock_server1.mock(|when, then| {
         when.path("/redirectTest");
         then.status(302).header(
             "Location",
@@ -25,7 +25,7 @@ fn multiple_mock_servers_redirect_test() {
 
     let target_mock = mock_server2.mock(|when, then| {
         when.path("/finalTarget");
-        then.return_status(200);
+        then.status(200);
     });
 
     // Act: Send the HTTP request

@@ -7,7 +7,7 @@ use isahc::{get, get_async};
 use tokio::task::LocalSet;
 
 use httpmock::standalone::start_standalone_server;
-use httpmock::{HttpMockConfig, Mock, MockServer};
+use httpmock::{HttpMockConfig, MockServer};
 use httpmock_macros::httpmock_example_test;
 
 #[test]
@@ -22,7 +22,7 @@ fn standalone_test() {
     // Instead of creating a new MockServer using new(), we connect to an existing remote instance.
     let mock_server = MockServer::connect("localhost:5000");
 
-    let search_mock = mock_server.mock(|| {
+    let search_mock = mock_server.mock(|when, then| {
         when.path_contains("/search")
             .query_param("query", "metallica");
         then.status(202);
@@ -101,7 +101,7 @@ fn unsupported_features() {
 
     // Creating this mock will panic because expect_match is not supported when using
     // a remote mock server.
-    let _ = mock_server.mock(|when, then| {
+    let _ = mock_server.mock(|when, _then| {
         when.matches(|_| true);
     });
 }
