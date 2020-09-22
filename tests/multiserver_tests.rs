@@ -5,7 +5,7 @@ use isahc::{get, get_async, HttpClientBuilder};
 
 use httpmock::Method::{GET, POST};
 use httpmock::{Mock, MockServer, MockServerRequest, Regex};
-use httpmock_macros::test_executors;
+use httpmock_macros::httpmock_example_test;
 use isahc::config::RedirectPolicy;
 use std::fs::read_to_string;
 use std::time::{Duration, SystemTime};

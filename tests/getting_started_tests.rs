@@ -21,11 +21,10 @@ fn example_test() {
 
     // Create a mock on the mock server. The mock will return HTTP status code 200 whenever
     // the mock server receives a GET-request with path "/hello".
-    let hello_mock = Mock::new()
-        .expect_method(GET)
-        .expect_path("/hello")
-        .return_status(200)
-        .create_on(&mock_server);
+    let hello_mock = mock_server.mock(|when, then| {
+        when.method(GET);
+        then.status(200);
+    });
 
     // Send an HTTP request to the mock server. This simulates your code.
     // The mock_server variable is being used to generate a mock server URL for path "/hello".

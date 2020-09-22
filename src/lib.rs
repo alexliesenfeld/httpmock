@@ -388,19 +388,22 @@ impl MockServer {
     /// ```
     pub fn mock<F>(&self, mut config_fn: F) -> MockRef
     where
-        F: FnOnce(When, Then),
+        F: FnOnce(Expectations, Responders),
     {
         let mock = Rc::new(Cell::new(Mock::new()));
-        config_fn(When { mock: mock.clone() }, Then { mock: mock.clone() });
+        config_fn(
+            Expectations { mock: mock.clone() },
+            Responders { mock: mock.clone() },
+        );
         mock.take().create_on(self)
     }
 }
 
-pub struct When {
+pub struct Expectations {
     pub(crate) mock: Rc<Cell<Mock>>,
 }
 
-impl When {
+impl Expectations {
     pub fn method(self, method: Method) -> Self {
         self.mock.set(self.mock.take().expect_method(method));
         self
@@ -495,11 +498,11 @@ impl When {
     }
 }
 
-pub struct Then {
+pub struct Responders {
     pub(crate) mock: Rc<Cell<Mock>>,
 }
 
-impl Then {
+impl Responders {
     pub fn status(self, status: usize) -> Self {
         self.mock.set(self.mock.take().return_status(status));
         self

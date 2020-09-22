@@ -59,19 +59,19 @@ fn exact_body_match_test() {
     let _ = env_logger::try_init();
     let mock_server = MockServer::start();
 
-    let m = Mock::new()
-        .expect_method(POST)
-        .expect_path("/users")
-        .expect_header("Content-Type", "application/json")
-        .expect_json_body_obj(&TestUser {
-            name: String::from("Fred"),
-        })
-        .return_status(201)
-        .return_header("Content-Type", "application/json")
-        .return_json_body_obj(&TestUser {
-            name: String::from("Hans"),
-        })
-        .create_on(&mock_server);
+    let m = mock_server.mock(|when, then| {
+        when.method(POST)
+            .path("/users")
+            .header("Content-Type", "application/json")
+            .json_body_obj(&TestUser {
+                name: String::from("Fred"),
+            });
+        then.status(201)
+            .header("Content-Type", "application/json")
+            .json_body_obj(&TestUser {
+                name: String::from("Hans"),
+            });
+    });
 
     // Act: Send the request and deserialize the response to JSON
     let mut response = Request::post(&format!("http://{}/users", mock_server.address()))
