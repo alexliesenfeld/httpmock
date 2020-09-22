@@ -7,7 +7,6 @@ use httpmock::{Mock, MockServer};
 use httpmock_macros::httpmock_example_test;
 use isahc::config::RedirectPolicy;
 
-/// This test shows how to use multiple mock servers in one test.
 #[test]
 #[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
 fn multiple_mock_servers_redirect_test() {

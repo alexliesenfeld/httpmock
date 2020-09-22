@@ -1,11 +1,10 @@
 extern crate httpmock;
 
-use httpmock::Method::{POST};
+use httpmock::Method::POST;
 use httpmock::{Mock, MockServer, Regex};
 use httpmock_macros::httpmock_example_test;
 use isahc::prelude::*;
 
-/// Tests and demonstrates body matching.
 #[test]
 #[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
 fn body_test() {

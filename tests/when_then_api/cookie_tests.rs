@@ -5,7 +5,6 @@ use httpmock::{Mock, MockServer};
 use httpmock_macros::httpmock_example_test;
 use isahc::prelude::*;
 
-/// Tests and demonstrates cookie matching.
 #[test]
 #[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
 fn cookie_matching_test() {
@@ -13,13 +12,13 @@ fn cookie_matching_test() {
     let _ = env_logger::try_init();
     let mock_server = MockServer::start();
 
-    let mock = Mock::new()
-        .expect_method(GET)
-        .expect_path("/")
-        .expect_cookie_exists("SESSIONID")
-        .expect_cookie("SESSIONID", "298zf09hf012fh2")
-        .return_status(200)
-        .create_on(&mock_server);
+    let mock = mock_server.mock(|when, then| {
+        when.method(GET)
+            .path("/")
+            .cookie_exists("SESSIONID")
+            .cookie("SESSIONID", "298zf09hf012fh2");
+        then.status(200);
+    });
 
     // Act: Send the request and deserialize the response to JSON
     let response = Request::get(&format!("http://{}", mock_server.address()))

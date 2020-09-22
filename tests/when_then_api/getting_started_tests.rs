@@ -2,11 +2,10 @@ extern crate httpmock;
 
 use isahc::{get, get_async};
 
-use httpmock::Method::{GET};
+use httpmock::Method::GET;
 use httpmock::{Mock, MockServer};
 use httpmock_macros::httpmock_example_test;
 
-/// This test asserts that mocks can be stored, served and deleted as designed.
 #[test]
 #[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
 fn getting_started_test() {
@@ -17,11 +16,10 @@ fn getting_started_test() {
 
     // Create a mock on the mock server. The mock will return HTTP status code 200 whenever
     // the mock server receives a GET-request with path "/hello".
-    let hello_mock = Mock::new()
-        .expect_method(GET)
-        .expect_path("/hello")
-        .return_status(200)
-        .create_on(&mock_server);
+    let hello_mock = mock_server.mock(|when, then| {
+        when.method(GET).path("/hello");
+        then.status(200);
+    });
 
     // Send an HTTP request to the mock server. This simulates your code.
     // The mock_server variable is being used to generate a mock server URL for path "/hello".
@@ -33,7 +31,6 @@ fn getting_started_test() {
     assert_eq!(hello_mock.times_called(), 1);
 }
 
-/// Demonstrates how to use async structures
 #[async_std::test]
 async fn async_getting_started_test() {
     let _ = env_logger::try_init();

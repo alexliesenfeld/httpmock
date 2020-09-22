@@ -1,12 +1,11 @@
 extern crate httpmock;
 
-use httpmock::Method::{POST};
+use httpmock::Method::POST;
 use httpmock::{Mock, MockServer};
 use httpmock_macros::httpmock_example_test;
 use isahc::prelude::*;
 use serde_json::{json, Value};
 
-/// Tests and demonstrates body matching.
 #[test]
 #[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
 fn json_value_body_test() {
@@ -14,15 +13,15 @@ fn json_value_body_test() {
     let _ = env_logger::try_init();
     let mock_server = MockServer::start();
 
-    let m = Mock::new()
-        .expect_method(POST)
-        .expect_path("/users")
-        .expect_header("Content-Type", "application/json")
-        .expect_json_body(json!({ "name": "Fred" }))
-        .return_status(201)
-        .return_header("Content-Type", "application/json")
-        .return_json_body(json!({ "name": "Hans" }))
-        .create_on(&mock_server);
+    let m = mock_server.mock(|when, then| {
+        when.method(POST)
+            .path("/users")
+            .header("Content-Type", "application/json")
+            .json_body(json!({ "name": "Fred" }));
+        then.status(201)
+            .header("Content-Type", "application/json")
+            .json_body(json!({ "name": "Hans" }));
+    });
 
     // Act: Send the request and deserialize the response to JSON
     let mut response = Request::post(&format!("http://{}/users", mock_server.address()))
@@ -41,7 +40,6 @@ fn json_value_body_test() {
     assert_eq!(user.as_object().unwrap().get("name").unwrap(), "Hans");
 }
 
-/// Tests and demonstrates body matching.
 #[test]
 #[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
 fn json_body_object_serde_test() {
@@ -55,19 +53,19 @@ fn json_body_object_serde_test() {
     let _ = env_logger::try_init();
     let mock_server = MockServer::start();
 
-    let m = Mock::new()
-        .expect_method(POST)
-        .expect_path("/users")
-        .expect_header("Content-Type", "application/json")
-        .expect_json_body_obj(&TestUser {
-            name: String::from("Fred"),
-        })
-        .return_status(201)
-        .return_header("Content-Type", "application/json")
-        .return_json_body_obj(&TestUser {
-            name: String::from("Hans"),
-        })
-        .create_on(&mock_server);
+    let m = mock_server.mock(|when, then| {
+        when.method(POST)
+            .path("/users")
+            .header("Content-Type", "application/json")
+            .json_body_obj(&TestUser {
+                name: String::from("Fred"),
+            });
+        then.status(201)
+            .header("Content-Type", "application/json")
+            .json_body_obj(&TestUser {
+                name: String::from("Hans"),
+            });
+    });
 
     // Act: Send the request and deserialize the response to JSON
     let mut response = Request::post(&format!("http://{}/users", mock_server.address()))
@@ -76,7 +74,7 @@ fn json_body_object_serde_test() {
             json!(&TestUser {
                 name: "Fred".to_string()
             })
-                .to_string(),
+            .to_string(),
         )
         .unwrap()
         .send()
@@ -91,8 +89,6 @@ fn json_body_object_serde_test() {
     assert_eq!(m.times_called(), 1);
 }
 
-
-/// Tests and demonstrates matching JSON body partials.
 #[test]
 #[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
 fn partial_json_body_test() {
@@ -113,10 +109,8 @@ fn partial_json_body_test() {
     }
 
     // Arranging the test by creating HTTP mocks.
-    let m = Mock::new()
-        .expect_method(POST)
-        .expect_path("/users")
-        .expect_json_body_partial(
+    let m = mock_server.mock(|when, then| {
+        when.method(POST).path("/users").json_body_partial(
             r#"
             {
                 "child" : {
@@ -124,10 +118,9 @@ fn partial_json_body_test() {
                 }
             }
         "#,
-        )
-        .return_status(201)
-        .return_body(r#"{"result":"success"}"#)
-        .create_on(&mock_server);
+        );
+        then.status(201).body(r#"{"result":"success"}"#);
+    });
 
     // Simulates application that makes the request to the mock.
     let uri = format!("http://{}/users", m.server_address());
@@ -141,7 +134,7 @@ fn partial_json_body_test() {
                 },
                 some_other_value: "Flintstone".to_string(),
             })
-                .unwrap(),
+            .unwrap(),
         )
         .unwrap()
         .send()

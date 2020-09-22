@@ -1,6 +1,4 @@
 extern crate httpmock;
-#[macro_use]
-extern crate lazy_static;
 
 use std::sync::Mutex;
 use std::thread::{spawn, JoinHandle};
@@ -12,10 +10,8 @@ use httpmock::standalone::start_standalone_server;
 use httpmock::{HttpMockConfig, Mock, MockServer};
 use httpmock_macros::httpmock_example_test;
 
-/// This test asserts that mocks can be stored, served and deleted as designed.
-// Ignore this "test_executors" macro. It runs tests in multiple async runtimes for quality assurance.
 #[test]
-#[httpmock_example_test]
+#[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
 fn standalone_test() {
     // This starts up a standalone server in the background running on port 5000
     simulate_standalone_server();
@@ -26,11 +22,11 @@ fn standalone_test() {
     // Instead of creating a new MockServer using new(), we connect to an existing remote instance.
     let mock_server = MockServer::connect("localhost:5000");
 
-    let search_mock = Mock::new()
-        .expect_path_contains("/search")
-        .expect_query_param("query", "metallica")
-        .return_status(202)
-        .create_on(&mock_server);
+    let search_mock = mock_server.mock(|| {
+        when.path_contains("/search")
+            .query_param("query", "metallica");
+        then.status(202);
+    });
 
     // Act: Send the HTTP request
     let response = get(&format!(
@@ -44,7 +40,6 @@ fn standalone_test() {
     assert_eq!(search_mock.times_called(), 1);
 }
 
-/// Demonstrates how to use async structures
 #[async_std::test]
 async fn async_standalone_test() {
     // This starts up a standalone server in the background running on port 5000
@@ -58,11 +53,12 @@ async fn async_standalone_test() {
     // falling back to defaults (localhost on port 5000)
     let mock_server = MockServer::connect_from_env_async().await;
 
-    let mut search_mock = Mock::new()
-        .expect_path_contains("/search")
-        .expect_query_param("query", "metallica")
-        .return_status(202)
-        .create_on_async(&mock_server)
+    let mut search_mock = mock_server
+        .mock_async(|when, then| {
+            when.path_contains("/search")
+                .query_param("query", "metallica");
+            then.status(202);
+        })
         .await;
 
     // Act: Send the HTTP request
@@ -91,7 +87,6 @@ async fn async_standalone_test() {
     assert_eq!(response.status(), 404);
 }
 
-/// This test asserts that mocks can be stored, served and deleted as designed.
 #[test]
 #[should_panic]
 fn unsupported_features() {
@@ -106,11 +101,15 @@ fn unsupported_features() {
 
     // Creating this mock will panic because expect_match is not supported when using
     // a remote mock server.
-    let _ = Mock::new().expect_match(|_| true).create_on(&mock_server);
+    let _ = mock_server.mock(|when, then| {
+        when.matches(|_| true);
+    });
 }
 
+/// ====================================================================================
 /// The rest of this file is only required to simulate that a standalone mock server is
 /// running somewhere else. The tests above will is.
+/// ====================================================================================
 fn simulate_standalone_server() {
     let _ = STANDALONE_SERVER.lock().unwrap_or_else(|e| e.into_inner());
 }

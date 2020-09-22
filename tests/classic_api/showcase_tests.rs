@@ -3,11 +3,10 @@ extern crate httpmock;
 use isahc::prelude::*;
 use serde_json::json;
 
-use httpmock::Method::{POST};
+use httpmock::Method::POST;
 use httpmock::{Mock, MockServer, MockServerRequest, Regex};
 use httpmock_macros::httpmock_example_test;
 
-/// Tests and demonstrates matching features.
 #[test]
 #[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
 fn showcase_test() {

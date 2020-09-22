@@ -4,9 +4,8 @@ use isahc::get;
 
 use httpmock::{Mock, MockServer};
 use httpmock_macros::httpmock_example_test;
-use std::time::{SystemTime, Duration};
+use std::time::{Duration, SystemTime};
 
-/// This test asserts that mocks can be stored, served and deleted as designed.
 #[test]
 #[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
 fn delay_test() {
