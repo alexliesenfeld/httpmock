@@ -18,17 +18,12 @@ fn explicit_delete_test() {
     let _ = env_logger::try_init();
     let server = MockServer::start();
 
-    let mut m = server.mock(|when, then| {
-        when.method(GET).path("/health");
-        then.status(205);
-    });
+    let mut m = Mock::new()
+        .expect_method(GET)
+        .expect_path("/health")
+        .return_status(205)
+        .create_on(&mock_server);
 
-    /*let mut m = Mock::new()
-            .expect_method(GET)
-            .expect_path("/health")
-            .return_status(205)
-            .create_on(&mock_server);
-    */
     // Act: Send the HTTP request
     let response = get(&format!(
         "http://{}:{}/health",

@@ -196,6 +196,7 @@ use serde::Serialize;
 use serde_json::Value;
 use std::borrow::{Borrow, BorrowMut};
 use std::cell::Cell;
+use std::future::Future;
 use std::mem::replace;
 
 mod api;
@@ -390,12 +391,22 @@ impl MockServer {
     where
         F: FnOnce(Expectations, Responders),
     {
+        self.mock_async(config_fn).join()
+    }
+
+    /// Builds the base URL for the mock server.
+    ///
+    /// ```
+    pub async fn mock_async<'a, F>(&'a self, mut config_fn: F) -> MockRef<'a>
+    where
+        F: FnOnce(Expectations, Responders),
+    {
         let mock = Rc::new(Cell::new(Mock::new()));
         config_fn(
             Expectations { mock: mock.clone() },
             Responders { mock: mock.clone() },
         );
-        mock.take().create_on(self)
+        mock.take().create_on_async(self).await
     }
 }
 
