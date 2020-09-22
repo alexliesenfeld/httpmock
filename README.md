@@ -58,7 +58,8 @@ fn example_test() {
     // the mock server receives a GET-request with path "/hello".
     let hello_mock = mock_server.mock(|expect, respond_with| {
         expect.method(GET).path("/hello");
-        respond_with.status(200)
+        respond_with
+            .status(200)
             .header("Content-Type", "application/json")
             .json_body(json!({ "example" : "value"}));
     });
