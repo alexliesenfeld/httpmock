@@ -56,11 +56,11 @@ fn example_test() {
 
     // Create a mock on the mock server. The mock will return HTTP status code 200 whenever
     // the mock server receives a GET-request with path "/hello".
-    let hello_mock = mock_server.mock(|expect, respond_with| {
-        expect
+    let hello_mock = mock_server.mock(|when, then| {
+        when
             .method(GET)
             .path("/hello");
-        respond_with    
+        then    
             .status(200);
     });
 
