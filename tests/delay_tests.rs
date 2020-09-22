@@ -1,14 +1,10 @@
 extern crate httpmock;
 
-use isahc::prelude::*;
-use isahc::{get, get_async, HttpClientBuilder};
+use isahc::get;
 
-use httpmock::Method::{GET, POST};
-use httpmock::{Mock, MockServer, MockServerRequest, Regex};
-use httpmock_macros::test_executors;
-use isahc::config::RedirectPolicy;
-use std::fs::read_to_string;
-use std::time::{Duration, SystemTime};
+use httpmock::{Mock, MockServer};
+use httpmock_macros::httpmock_example_test;
+use std::time::{SystemTime, Duration};
 
 /// This test asserts that mocks can be stored, served and deleted as designed.
 #[test]
@@ -23,7 +19,7 @@ fn delay_test() {
 
     let search_mock = Mock::new()
         .expect_path("/delay")
-        .return_delay(delay)
+        .return_with_delay(delay)
         .create_on(&mock_server);
 
     // Act: Send the HTTP request

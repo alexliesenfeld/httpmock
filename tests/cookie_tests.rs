@@ -1,14 +1,9 @@
 extern crate httpmock;
 
 use httpmock::Method::GET;
-use httpmock::{Mock, MockServer, MockServerRequest, Regex};
-use httpmock_macros::test_executors;
-use isahc::config::RedirectPolicy;
+use httpmock::{Mock, MockServer};
+use httpmock_macros::httpmock_example_test;
 use isahc::prelude::*;
-use isahc::{get, get_async, HttpClientBuilder};
-use serde_json::{json, Value};
-use std::fs::read_to_string;
-use std::time::{Duration, SystemTime};
 
 /// Tests and demonstrates cookie matching.
 #[test]
@@ -27,7 +22,7 @@ fn cookie_matching_test() {
         .create_on(&mock_server);
 
     // Act: Send the request and deserialize the response to JSON
-    let mut response = Request::get(&format!("http://{}", mock_server.address()))
+    let response = Request::get(&format!("http://{}", mock_server.address()))
         .header(
             "Cookie",
             "OTHERCOOKIE1=01234; SESSIONID=298zf09hf012fh2; OTHERCOOKIE2=56789",

@@ -1,14 +1,10 @@
 extern crate httpmock;
 
-use httpmock::Method::{GET, POST};
-use httpmock::{Mock, MockServer, MockServerRequest, Regex};
-use httpmock_macros::test_executors;
-use isahc::config::RedirectPolicy;
+use httpmock::Method::{POST};
+use httpmock::{Mock, MockServer};
+use httpmock_macros::httpmock_example_test;
 use isahc::prelude::*;
-use isahc::{get, get_async, HttpClientBuilder};
 use serde_json::{json, Value};
-use std::fs::read_to_string;
-use std::time::{Duration, SystemTime};
 
 /// Tests and demonstrates body matching.
 #[test]
@@ -135,7 +131,7 @@ fn partial_json_body_test() {
 
     // Simulates application that makes the request to the mock.
     let uri = format!("http://{}/users", m.server_address());
-    let mut response = Request::post(&uri)
+    let response = Request::post(&uri)
         .header("Content-Type", "application/json")
         .header("User-Agent", "rust-test")
         .body(

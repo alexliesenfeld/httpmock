@@ -1,14 +1,9 @@
 extern crate httpmock;
 
 use httpmock::Method::{POST};
-use httpmock::{Mock, MockServer, MockServerRequest, Regex};
+use httpmock::{Mock, MockServer, Regex};
 use httpmock_macros::httpmock_example_test;
-use isahc::config::RedirectPolicy;
 use isahc::prelude::*;
-use isahc::{get, get_async, HttpClientBuilder};
-use serde_json::{json, Value};
-use std::fs::read_to_string;
-use std::time::{Duration, SystemTime};
 
 /// Tests and demonstrates body matching.
 #[test]
@@ -29,7 +24,7 @@ fn body_test() {
         .create_on(&mock_server);
 
     // Act: Send the request and deserialize the response to JSON
-    let mut response = Request::post(&format!("http://{}/books", mock_server.address()))
+    let response = Request::post(&format!("http://{}/books", mock_server.address()))
         .body("The Fellowship of the Ring")
         .unwrap()
         .send()

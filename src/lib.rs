@@ -194,10 +194,7 @@ use crate::util::{read_env, with_retry};
 use futures_util::core_reexport::time::Duration;
 use serde::Serialize;
 use serde_json::Value;
-use std::borrow::{Borrow, BorrowMut};
 use std::cell::Cell;
-use std::future::Future;
-use std::mem::replace;
 
 mod api;
 mod server;
@@ -387,7 +384,7 @@ impl MockServer {
     /// Builds the base URL for the mock server.
     ///
     /// ```
-    pub fn mock<F>(&self, mut config_fn: F) -> MockRef
+    pub fn mock<F>(&self, config_fn: F) -> MockRef
     where
         F: FnOnce(Expectations, Responders),
     {
@@ -397,7 +394,7 @@ impl MockServer {
     /// Builds the base URL for the mock server.
     ///
     /// ```
-    pub async fn mock_async<'a, F>(&'a self, mut config_fn: F) -> MockRef<'a>
+    pub async fn mock_async<'a, F>(&'a self, config_fn: F) -> MockRef<'a>
     where
         F: FnOnce(Expectations, Responders),
     {

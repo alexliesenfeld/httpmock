@@ -1,15 +1,9 @@
 extern crate httpmock;
 
 use isahc::prelude::*;
-use isahc::{get, get_async, HttpClientBuilder};
 
-use serde_json::json;
-use httpmock::Method::{GET, POST};
-use httpmock::{Mock, MockServer, MockServerRequest, Regex};
+use httpmock::{Mock, MockServer};
 use httpmock_macros::httpmock_example_test;
-use isahc::config::RedirectPolicy;
-use std::fs::read_to_string;
-use std::time::{Duration, SystemTime};
 
 /// Tests and demonstrates body matching.
 #[test]
@@ -28,7 +22,7 @@ fn headers_test() {
         .create_on(&mock_server);
 
     // Act: Send the request and deserialize the response to JSON
-    let mut response = Request::post(&format!("http://{}/test", mock_server.address()))
+    let response = Request::post(&format!("http://{}/test", mock_server.address()))
         .header("Authorization", "token 123456789")
         .body(())
         .unwrap()

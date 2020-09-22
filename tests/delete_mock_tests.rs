@@ -1,14 +1,10 @@
 extern crate httpmock;
 
-use isahc::prelude::*;
-use isahc::{get, get_async, HttpClientBuilder};
+use isahc::{get};
 
-use httpmock::Method::{GET, POST};
-use httpmock::{Mock, MockServer, MockServerRequest, Regex};
+use httpmock::Method::{GET};
+use httpmock::{Mock, MockServer};
 use httpmock_macros::httpmock_example_test;
-use isahc::config::RedirectPolicy;
-use std::fs::read_to_string;
-use std::time::{Duration, SystemTime};
 
 /// Ensures that once explicitly deleting a mock, it will not be delivered by the server anymore.
 #[test]
@@ -16,7 +12,7 @@ use std::time::{Duration, SystemTime};
 fn explicit_delete_mock_test() {
     // Arrange
     let _ = env_logger::try_init();
-    let server = MockServer::start();
+    let mock_server = MockServer::start();
 
     let mut m = Mock::new()
         .expect_method(GET)
@@ -27,8 +23,8 @@ fn explicit_delete_mock_test() {
     // Act: Send the HTTP request
     let response = get(&format!(
         "http://{}:{}/health",
-        server.host(),
-        server.port()
+        mock_server.host(),
+        mock_server.port()
     ))
     .unwrap();
 
@@ -39,7 +35,7 @@ fn explicit_delete_mock_test() {
     // Delete the mock and send the request again
     m.delete();
 
-    let response = get(&format!("http://{}/health", server.address())).unwrap();
+    let response = get(&format!("http://{}/health", mock_server.address())).unwrap();
 
     // Assert that the request failed, because the mock has been deleted
     assert_eq!(response.status(), 404);

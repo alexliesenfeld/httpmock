@@ -8,15 +8,14 @@ use std::thread::{spawn, JoinHandle};
 use isahc::{get, get_async};
 use tokio::task::LocalSet;
 
-use actix_rt::Builder;
 use httpmock::standalone::start_standalone_server;
 use httpmock::{HttpMockConfig, Mock, MockServer};
-use httpmock_macros::test_executors;
+use httpmock_macros::httpmock_example_test;
 
 /// This test asserts that mocks can be stored, served and deleted as designed.
 // Ignore this "test_executors" macro. It runs tests in multiple async runtimes for quality assurance.
-#[test_executors]
 #[test]
+#[httpmock_example_test]
 fn standalone_test() {
     // This starts up a standalone server in the background running on port 5000
     simulate_standalone_server();

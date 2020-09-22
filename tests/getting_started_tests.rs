@@ -1,14 +1,10 @@
 extern crate httpmock;
 
-use isahc::prelude::*;
-use isahc::{get, get_async, HttpClientBuilder};
+use isahc::{get, get_async};
 
-use httpmock::Method::{GET, POST};
-use httpmock::{Mock, MockServer, MockServerRequest, Regex};
-use httpmock_macros::test_executors;
-use isahc::config::RedirectPolicy;
-use std::fs::read_to_string;
-use std::time::{Duration, SystemTime};
+use httpmock::Method::{GET};
+use httpmock::{Mock, MockServer};
+use httpmock_macros::httpmock_example_test;
 
 /// This test asserts that mocks can be stored, served and deleted as designed.
 #[test]

@@ -405,7 +405,6 @@ mod test {
         add_new_mock, read_one, request_matches, validate_mock_definition,
     };
     use crate::server::MockServerState;
-    use crate::MockServerRequest;
     use regex::Regex;
 
     /// TODO

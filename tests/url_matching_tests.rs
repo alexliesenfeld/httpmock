@@ -1,14 +1,8 @@
 extern crate httpmock;
 
-use httpmock::Method::{GET, POST};
-use httpmock::{Mock, MockServer, MockServerRequest, Regex};
+use httpmock::{Mock, MockServer, Regex};
 use httpmock_macros::httpmock_example_test;
-use isahc::config::RedirectPolicy;
-use isahc::prelude::*;
-use isahc::{get, get_async, HttpClientBuilder};
-use serde_json::{json, Value};
-use std::fs::read_to_string;
-use std::time::{Duration, SystemTime};
+use isahc::get;
 
 /// Tests and demonstrates body matching.
 #[test]

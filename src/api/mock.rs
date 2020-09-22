@@ -425,7 +425,7 @@ impl Mock {
     /// automatically, so you need to provide one yourself!
     ///
     /// * `body` - The HTTP body object that will be serialized to JSON using serde.
-    pub fn expect_json_body_obj<T>(mut self, body: &T) -> Self
+    pub fn expect_json_body_obj<T>(self, body: &T) -> Self
     where
         T: Serialize,
     {
@@ -646,7 +646,7 @@ impl Mock {
     /// automatically, so you need to provide one yourself!
     ///
     /// * `body` - The HTTP response body the mock server will return in the form of an object.
-    pub fn return_json_body_obj<T>(mut self, body: &T) -> Self
+    pub fn return_json_body_obj<T>(self, body: &T) -> Self
     where
         T: Serialize,
     {

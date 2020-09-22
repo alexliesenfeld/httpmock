@@ -1,14 +1,11 @@
 extern crate httpmock;
 
 use isahc::prelude::*;
-use isahc::{get, get_async, HttpClientBuilder};
+use isahc::HttpClientBuilder;
 
-use httpmock::Method::{GET, POST};
-use httpmock::{Mock, MockServer, MockServerRequest, Regex};
+use httpmock::{Mock, MockServer};
 use httpmock_macros::httpmock_example_test;
 use isahc::config::RedirectPolicy;
-use std::fs::read_to_string;
-use std::time::{Duration, SystemTime};
 
 /// This test shows how to use multiple mock servers in one test.
 #[test]

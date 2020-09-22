@@ -314,8 +314,6 @@ mod test {
     };
     use crate::Regex;
     use futures_util::TryStreamExt;
-    use hyper::Body;
-    use std::borrow::Borrow;
     use std::collections::BTreeMap;
 
     #[test]
