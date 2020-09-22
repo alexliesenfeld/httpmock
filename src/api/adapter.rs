@@ -41,19 +41,14 @@ pub(crate) trait MockServerAdapter {
     async fn ping(&self) -> Result<(), String>;
 }
 
-/// This adapter allows to access the servers management functionality.
-///
-/// You can create an adapter by calling `ServerAdapter::from_env` to create a new instance.
-/// You should never actually need to use this adapter, but you certainly can, if you absolutely
-/// need to.
 #[derive(Debug)]
-pub struct RemoteMockServerAdapter {
+pub(crate) struct RemoteMockServerAdapter {
     addr: SocketAddr,
     http_client: Arc<InternalHttpClient>,
 }
 
 impl RemoteMockServerAdapter {
-    pub(crate) fn new(addr: SocketAddr) -> Self {
+    pub fn new(addr: SocketAddr) -> Self {
         Self {
             addr,
             http_client: build_http_client(),
@@ -211,14 +206,14 @@ impl MockServerAdapter for RemoteMockServerAdapter {
     }
 }
 
-pub struct LocalMockServerAdapter {
-    pub(crate) addr: SocketAddr,
+pub(crate) struct LocalMockServerAdapter {
+    pub addr: SocketAddr,
     local_state: Arc<MockServerState>,
     client: Arc<InternalHttpClient>,
 }
 
 impl LocalMockServerAdapter {
-    pub(crate) fn new(addr: SocketAddr, local_state: Arc<MockServerState>) -> Self {
+    pub fn new(addr: SocketAddr, local_state: Arc<MockServerState>) -> Self {
         let client = build_http_client();
         LocalMockServerAdapter {
             addr,
@@ -273,7 +268,6 @@ impl MockServerAdapter for LocalMockServerAdapter {
     }
 }
 
-/// Enables enum to_string conversion
 impl std::fmt::Display for Method {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         std::fmt::Debug::fmt(self, f)
@@ -306,7 +300,6 @@ async fn http_ping(
     Ok(())
 }
 
-/// Executes an HTTP request synchronously
 async fn execute_request(
     req: Request<String>,
     http_client: &InternalHttpClient,

@@ -192,7 +192,7 @@ pub use crate::server::HttpMockConfig;
 use crate::server::{start_server, MockServerState};
 use crate::util::{read_env, with_retry};
 use futures_util::core_reexport::time::Duration;
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
 use serde_json::Value;
 use std::cell::Cell;
 
@@ -548,9 +548,9 @@ impl Expectations {
     /// automatically, so you need to provide one yourself!
     ///
     /// * `body` - The HTTP body object that will be serialized to JSON using serde.
-    pub fn json_body_obj<T>(self, body: &T) -> Self
+    pub fn json_body_obj<'a, T>(self, body: &T) -> Self
     where
-        T: Serialize,
+        T: Serialize + Deserialize<'a>,
     {
         self.mock.set(self.mock.take().expect_json_body_obj(body));
         self
@@ -701,7 +701,6 @@ impl Responders {
     ///
     /// * `body` -  The HTTP response body the mock server will return in the form of a
     ///             serde_json::Value object.
-    /// ```
     pub fn json_body(self, value: Value) -> Self {
         self.mock.set(self.mock.take().return_json_body(value));
         self
