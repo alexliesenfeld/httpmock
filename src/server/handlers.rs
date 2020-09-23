@@ -15,7 +15,7 @@ use basic_cookies::Cookie;
 const NON_BODY_METHODS: &[&str] = &["GET", "HEAD", "DELETE"];
 
 /// Adds a new mock to the internal state.
-pub fn add_new_mock(state: &MockServerState, mock_def: MockDefinition) -> Result<usize, String> {
+pub(crate) fn add_new_mock(state: &MockServerState, mock_def: MockDefinition) -> Result<usize, String> {
     let result = validate_mock_definition(&mock_def);
 
     if let Err(error_msg) = result {
@@ -34,7 +34,7 @@ pub fn add_new_mock(state: &MockServerState, mock_def: MockDefinition) -> Result
 }
 
 /// Reads exactly one mock object.
-pub fn read_one(state: &MockServerState, id: usize) -> Result<Option<ActiveMock>, String> {
+pub(crate) fn read_one(state: &MockServerState, id: usize) -> Result<Option<ActiveMock>, String> {
     {
         let mocks = state.mocks.read().unwrap();
         let result = mocks.get(&id);
@@ -46,7 +46,7 @@ pub fn read_one(state: &MockServerState, id: usize) -> Result<Option<ActiveMock>
 }
 
 /// Deletes one mock by id. Returns the number of deleted elements.
-pub fn delete_one(state: &MockServerState, id: usize) -> Result<bool, String> {
+pub(crate) fn delete_one(state: &MockServerState, id: usize) -> Result<bool, String> {
     let result;
     {
         let mut mocks = state.mocks.write().unwrap();
@@ -58,7 +58,7 @@ pub fn delete_one(state: &MockServerState, id: usize) -> Result<bool, String> {
 }
 
 /// Deletes all mocks. Returns the number of deleted elements.
-pub fn delete_all(state: &MockServerState) -> Result<usize, String> {
+pub(crate) fn delete_all(state: &MockServerState) -> Result<usize, String> {
     let result;
     {
         let mut mocks = state.mocks.write().unwrap();
@@ -72,7 +72,7 @@ pub fn delete_all(state: &MockServerState) -> Result<usize, String> {
 
 /// Finds a mock that matches the current request and serve a response according to the mock
 /// specification. If no mock is found, an empty result is being returned.
-pub fn find_mock(
+pub(crate) fn find_mock(
     state: &MockServerState,
     req: MockServerHttpRequest,
 ) -> Result<Option<MockServerHttpResponse>, String> {

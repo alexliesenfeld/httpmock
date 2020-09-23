@@ -24,7 +24,7 @@ pub struct MockServerHttpRequest {
 }
 
 impl MockServerHttpRequest {
-    pub fn new(method: String, path: String) -> Self {
+    pub(crate) fn new(method: String, path: String) -> Self {
         Self {
             path,
             method,
@@ -34,17 +34,17 @@ impl MockServerHttpRequest {
         }
     }
 
-    pub fn with_headers(mut self, arg: BTreeMap<String, String>) -> Self {
+    pub(crate) fn with_headers(mut self, arg: BTreeMap<String, String>) -> Self {
         self.headers = Some(arg);
         self
     }
 
-    pub fn with_query_params(mut self, arg: BTreeMap<String, String>) -> Self {
+    pub(crate) fn with_query_params(mut self, arg: BTreeMap<String, String>) -> Self {
         self.query_params = Some(arg);
         self
     }
 
-    pub fn with_body(mut self, arg: String) -> Self {
+    pub(crate) fn with_body(mut self, arg: String) -> Self {
         self.body = Some(arg);
         self
     }
@@ -52,7 +52,7 @@ impl MockServerHttpRequest {
 
 /// A general abstraction of an HTTP response for all handlers.
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct MockServerHttpResponse {
+pub(crate) struct MockServerHttpResponse {
     pub status: u16,
     pub headers: Option<BTreeMap<String, String>>,
     pub body: Option<String>,
@@ -82,7 +82,7 @@ impl MockServerHttpResponse {
 
 /// A general abstraction of an HTTP request for all handlers.
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct Pattern {
+pub(crate) struct Pattern {
     #[serde(with = "serde_regex")]
     pub regex: Regex,
 }
@@ -117,7 +117,7 @@ pub type MockMatcherFunction = fn(Rc<MockServerHttpRequest>) -> bool;
 
 /// A general abstraction of an HTTP request for all handlers.
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct RequestRequirements {
+pub(crate) struct RequestRequirements {
     pub path: Option<String>,
     pub path_contains: Option<Vec<String>>,
     pub path_matches: Option<Vec<Pattern>>,
@@ -238,7 +238,7 @@ impl RequestRequirements {
 
 /// A Request that is made to set a new mock.
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct MockDefinition {
+pub(crate) struct MockDefinition {
     pub request: RequestRequirements,
     pub response: MockServerHttpResponse,
 }
@@ -253,7 +253,7 @@ impl MockDefinition {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct MockIdentification {
+pub(crate) struct MockIdentification {
     pub mock_id: usize,
 }
 
@@ -264,7 +264,7 @@ impl MockIdentification {
 }
 
 /// The shared state accessible to all handlers
-pub struct MockServerState {
+pub(crate) struct MockServerState {
     pub mocks: RwLock<BTreeMap<usize, ActiveMock>>,
     id_counter: AtomicUsize,
 }
@@ -283,7 +283,7 @@ impl MockServerState {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
-pub struct ActiveMock {
+pub(crate) struct ActiveMock {
     pub id: usize,
     pub call_counter: usize,
     pub definition: MockDefinition,
@@ -300,7 +300,7 @@ impl ActiveMock {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct ErrorResponse {
+pub(crate) struct ErrorResponse {
     pub message: String,
 }
 

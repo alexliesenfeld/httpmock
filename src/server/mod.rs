@@ -16,7 +16,7 @@ use hyper::{
 };
 use regex::Regex;
 
-pub use crate::server::data::MockServerState;
+pub(crate) use crate::server::data::MockServerState;
 
 pub(crate) mod data;
 pub(crate) mod handlers;
@@ -150,7 +150,7 @@ async fn handle_server_request(
 /// Starts a new instance of an HTTP mock server. You should never need to use this function
 /// directly. Use it if you absolutely need to manage the low-level details of how the mock
 /// server operates.
-pub async fn start_server(
+pub(crate) async fn start_server(
     http_mock_config: HttpMockConfig,
     state: &Arc<MockServerState>,
     socket_addr_sender: Option<tokio::sync::oneshot::Sender<SocketAddr>>,
