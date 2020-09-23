@@ -15,7 +15,10 @@ use basic_cookies::Cookie;
 const NON_BODY_METHODS: &[&str] = &["GET", "HEAD", "DELETE"];
 
 /// Adds a new mock to the internal state.
-pub(crate) fn add_new_mock(state: &MockServerState, mock_def: MockDefinition) -> Result<usize, String> {
+pub(crate) fn add_new_mock(
+    state: &MockServerState,
+    mock_def: MockDefinition,
+) -> Result<usize, String> {
     let result = validate_mock_definition(&mock_def);
 
     if let Err(error_msg) = result {

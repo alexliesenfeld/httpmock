@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::net::SocketAddr;
 use std::str::FromStr;
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::api::{Method, Regex};
@@ -651,7 +651,6 @@ impl Mock {
         self.expect_json_body(json_value)
     }
 
-
     /// Sets the expected JSON body. This method expects a [serde_json::Value](../serde_json/enum.Value.html)
     /// that will be serialized/deserialized to/from a JSON string.
     ///
@@ -744,7 +743,8 @@ impl Mock {
             self.mock.request.json_body_includes = Some(Vec::new());
         }
 
-        let value = Value::from_str(partial_body).expect("cannot convert JSON string to serde value");
+        let value =
+            Value::from_str(partial_body).expect("cannot convert JSON string to serde value");
 
         self.mock
             .request
@@ -886,27 +886,27 @@ impl Mock {
     }
 
     /// Sets a query parameter that needs to exist in an HTTP request.
-   /// * `name` - The query parameter name that will matched against.
-   ///
-   /// ```
-   /// // Arrange
-   /// use isahc::get;
-   /// use httpmock::{MockServer, Mock};
-   ///
-   /// let _ = env_logger::try_init();
-   /// let mock_server = MockServer::start();
-   ///
-   /// let m = Mock::new()
-   ///     .expect_query_param_exists("query")
-   ///     .return_status(200)
-   ///     .create_on(&mock_server);
-   ///
-   /// // Act
-   /// get(mock_server.url("/search?query=Metallica")).unwrap();
-   ///
-   /// // Assert
-   /// assert_eq!(m.times_called(), 1);
-   /// ```
+    /// * `name` - The query parameter name that will matched against.
+    ///
+    /// ```
+    /// // Arrange
+    /// use isahc::get;
+    /// use httpmock::{MockServer, Mock};
+    ///
+    /// let _ = env_logger::try_init();
+    /// let mock_server = MockServer::start();
+    ///
+    /// let m = Mock::new()
+    ///     .expect_query_param_exists("query")
+    ///     .return_status(200)
+    ///     .create_on(&mock_server);
+    ///
+    /// // Act
+    /// get(mock_server.url("/search?query=Metallica")).unwrap();
+    ///
+    /// // Assert
+    /// assert_eq!(m.times_called(), 1);
+    /// ```
     pub fn expect_query_param_exists(mut self, name: &str) -> Self {
         if self.mock.request.query_param_exists.is_none() {
             self.mock.request.query_param_exists = Some(Vec::new());
@@ -1019,6 +1019,51 @@ impl Mock {
         self
     }
 
+    /// Sets the JSON body for the HTTP response that will be returned by the mock server.
+    ///
+    /// The provided JSON object needs to be both, a deserializable and serializable serde object.
+    ///
+    /// Note that this method does not set the "Content-Type" header automatically, so you need
+    /// to provide one yourself!
+    ///
+    /// * `body` -  The HTTP response body the mock server will return in the form of a
+    ///             serde_json::Value object.
+    ///
+    /// ## Example
+    /// You can use this method conveniently as follows:
+    /// ```rust
+    /// use httpmock::{MockServer, Mock};
+    /// use serde_json::{Value, json};
+    /// use isahc::ResponseExt;
+    /// use isahc::prelude::*;
+    ///
+    /// // Arrange
+    /// let _ = env_logger::try_init();
+    /// let mock_server = MockServer::start();
+    ///
+    /// let m = Mock::new()
+    ///     .expect_path("/user")
+    ///     .return_status(200)
+    ///     .return_header("Content-Type", "application/json")
+    ///     .return_json_body(json!({ "name": "Hans" }))
+    ///     .create_on(&mock_server);
+    ///
+    /// // Act
+    /// let mut response = isahc::get(mock_server.url("/user")).unwrap();
+    ///
+    /// let user: Value =
+    ///     serde_json::from_str(&response.text().unwrap()).expect("cannot deserialize JSON");
+    ///
+    /// // Assert
+    /// assert_eq!(response.status(), 200);
+    /// assert_eq!(m.times_called(), 1);
+    /// assert_eq!(user.as_object().unwrap().get("name").unwrap(), "Hans");
+    /// ```
+    pub fn return_json_body(mut self, body: Value) -> Self {
+        self.mock.response.body = Some(body.to_string());
+        self
+    }
+
     /// Sets the JSON body that will be returned by the mock server.
     /// This method expects a serializable serde object that will be serialized/deserialized
     /// to/from a JSON string.
@@ -1069,51 +1114,6 @@ impl Mock {
         let json_body =
             serde_json::to_value(body).expect("cannot serialize json body to JSON string ");
         self.return_json_body(json_body)
-    }
-
-    /// Sets the JSON body for the HTTP response that will be returned by the mock server.
-    ///
-    /// The provided JSON object needs to be both, a deserializable and serializable serde object.
-    ///
-    /// Note that this method does not set the "Content-Type" header automatically, so you need
-    /// to provide one yourself!
-    ///
-    /// * `body` -  The HTTP response body the mock server will return in the form of a
-    ///             serde_json::Value object.
-    ///
-    /// ## Example
-    /// You can use this method conveniently as follows:
-    /// ```rust
-    /// use httpmock::{MockServer, Mock};
-    /// use serde_json::{Value, json};
-    /// use isahc::ResponseExt;
-    /// use isahc::prelude::*;
-    ///
-    /// // Arrange
-    /// let _ = env_logger::try_init();
-    /// let mock_server = MockServer::start();
-    ///
-    /// let m = Mock::new()
-    ///     .expect_path("/user")
-    ///     .return_status(200)
-    ///     .return_header("Content-Type", "application/json")
-    ///     .return_json_body(json!({ "name": "Hans" }))
-    ///     .create_on(&mock_server);
-    ///
-    /// // Act
-    /// let mut response = isahc::get(mock_server.url("/user")).unwrap();
-    ///
-    /// let user: Value =
-    ///     serde_json::from_str(&response.text().unwrap()).expect("cannot deserialize JSON");
-    ///
-    /// // Assert
-    /// assert_eq!(response.status(), 200);
-    /// assert_eq!(m.times_called(), 1);
-    /// assert_eq!(user.as_object().unwrap().get("name").unwrap(), "Hans");
-    /// ```
-    pub fn return_json_body(mut self, body: Value) -> Self {
-        self.mock.response.body = Some(body.to_string());
-        self
     }
 
     /// Sets an HTTP header that the mock server will return.

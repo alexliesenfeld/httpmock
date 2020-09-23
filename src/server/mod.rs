@@ -26,19 +26,6 @@ mod util;
 
 type GenericError = Box<dyn std::error::Error + Send + Sync>;
 
-/// Holds server configuration properties.
-#[derive(Debug)]
-pub struct HttpMockConfig {
-    pub port: u16,
-    pub expose: bool,
-}
-
-impl HttpMockConfig {
-    pub fn new(port: u16, expose: bool) -> Self {
-        Self { port, expose }
-    }
-}
-
 #[derive(Default, Debug)]
 pub(crate) struct ServerRequestHeader {
     pub method: String,
@@ -151,16 +138,12 @@ async fn handle_server_request(
 /// directly. Use it if you absolutely need to manage the low-level details of how the mock
 /// server operates.
 pub(crate) async fn start_server(
-    http_mock_config: HttpMockConfig,
+    port: u16,
+    expose: bool,
     state: &Arc<MockServerState>,
     socket_addr_sender: Option<tokio::sync::oneshot::Sender<SocketAddr>>,
 ) -> Result<(), String> {
-    let port = http_mock_config.port;
-    let host = if http_mock_config.expose {
-        "0.0.0.0"
-    } else {
-        "127.0.0.1"
-    };
+    let host = if expose { "0.0.0.0" } else { "127.0.0.1" };
 
     let state = state.clone();
     let new_service = make_service_fn(move |_| {

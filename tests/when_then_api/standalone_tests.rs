@@ -2,9 +2,9 @@ extern crate httpmock;
 
 use isahc::{get, get_async};
 
-use httpmock::{MockServer};
-use httpmock_macros::httpmock_example_test;
 use crate::simulate_standalone_server;
+use httpmock::MockServer;
+use httpmock_macros::httpmock_example_test;
 
 #[test]
 #[httpmock_example_test] // Internal macro to make testing easier. Ignore it.

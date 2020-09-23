@@ -1,6 +1,6 @@
 extern crate httpmock;
 
-use httpmock::{MockServer};
+use httpmock::MockServer;
 use httpmock_macros::httpmock_example_test;
 use isahc::get;
 
@@ -11,7 +11,7 @@ fn url_matching_test() {
     let _ = env_logger::try_init();
     let mock_server = MockServer::start();
 
-    let m = mock_server.mock(|when, then|{
+    let m = mock_server.mock(|when, then| {
         when.query_param("query", "Metallica")
             .query_param_exists("query");
         then.status(200);

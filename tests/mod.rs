@@ -1,7 +1,6 @@
 #[macro_use]
 extern crate lazy_static;
 
-use httpmock::HttpMockConfig;
 use httpmock::standalone::start_standalone_server;
 use std::sync::Mutex;
 use std::thread::{spawn, JoinHandle};
@@ -20,7 +19,7 @@ pub fn simulate_standalone_server() {
 
 lazy_static! {
     static ref STANDALONE_SERVER: Mutex<JoinHandle<Result<(), String>>> = Mutex::new(spawn(|| {
-        let srv = start_standalone_server(HttpMockConfig::new(5000, false));
+        let srv = start_standalone_server(5000, false);
         let mut runtime = tokio::runtime::Runtime::new().unwrap();
         LocalSet::new().block_on(&mut runtime, srv)
     }));
