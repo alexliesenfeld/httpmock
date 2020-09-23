@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 use std::collections::BTreeMap;
 
 /// Extends a tree map to provide additional operations.
-pub trait TreeMapExtension<K, V>
+pub(crate) trait TreeMapExtension<K, V>
 where
     K: std::cmp::Ord,
     V: std::cmp::Ord,
@@ -31,7 +31,7 @@ where
 }
 
 /// Extends a string based tree map to provide additional operations.
-pub trait StringTreeMapExtension {
+pub(crate) trait StringTreeMapExtension {
     /// Checks if a tree map contains another tree map while ignoring the case of the key.
     fn contains_with_case_insensitive_key(&self, other: &BTreeMap<String, String>) -> bool;
 

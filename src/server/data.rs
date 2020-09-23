@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::time::Duration;
 
-/// A general abstraction of an HTTP request for all handlers.
+/// A general abstraction of an HTTP request of `httpmock`.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct MockServerHttpRequest {
     pub path: String,

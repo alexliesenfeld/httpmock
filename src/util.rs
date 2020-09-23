@@ -9,7 +9,7 @@ use crossbeam_utils::sync::{Parker, Unparker};
 use futures_util::{pin_mut, task::ArcWake};
 
 #[doc(hidden)]
-pub async fn with_retry<T, U, F, Fut>(retries: usize, f: F) -> Result<T, U>
+pub(crate) async fn with_retry<T, U, F, Fut>(retries: usize, f: F) -> Result<T, U>
 where
     F: Fn() -> Fut,
     Fut: Future<Output = Result<T, U>>,
@@ -25,7 +25,7 @@ where
 }
 
 #[doc(hidden)]
-pub fn read_env(name: &str, default: &str) -> String {
+pub(crate) fn read_env(name: &str, default: &str) -> String {
     match std::env::var(name) {
         Ok(value) => value,
         Err(_) => default.to_string(),
