@@ -22,7 +22,7 @@ fn standalone_test() {
     // Instead of creating a new MockServer using new(), we connect to an existing remote instance.
     let mock_server = MockServer::connect("localhost:5000");
 
-    let search_mock = Mock::new()
+    let mock = Mock::new()
         .expect_path_contains("/search")
         .expect_query_param("query", "metallica")
         .return_status(202)
@@ -37,7 +37,7 @@ fn standalone_test() {
 
     // Assert
     assert_eq!(response.status(), 202);
-    assert_eq!(search_mock.times_called(), 1);
+    assert_eq!(mock.times_called(), 1);
 }
 
 /// Demonstrates how to use async structures
@@ -54,7 +54,7 @@ async fn async_standalone_test() {
     // falling back to defaults (localhost on port 5000)
     let mock_server = MockServer::connect_from_env_async().await;
 
-    let mut search_mock = Mock::new()
+    let mut mock = Mock::new()
         .expect_path_contains("/search")
         .expect_query_param("query", "metallica")
         .return_status(202)
@@ -71,10 +71,10 @@ async fn async_standalone_test() {
 
     // Assert 1
     assert_eq!(response.status(), 202);
-    assert_eq!(search_mock.times_called_async().await, 1);
+    assert_eq!(mock.times_called_async().await, 1);
 
     // Act 2: Delete the mock and send a request to show that it is not present on the server anymore
-    search_mock.delete();
+    mock.delete();
     let response = get_async(&format!(
         "http://{}:{}/search?query=metallica",
         mock_server.host(),

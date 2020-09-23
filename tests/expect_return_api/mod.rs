@@ -5,6 +5,7 @@ mod delete_mock_tests;
 mod getting_started_tests;
 mod headers_tests;
 mod json_body_tests;
+mod query_param_tests;
 mod multiserver_redirect_tests;
 mod showcase_tests;
 mod standalone_tests;

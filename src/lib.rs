@@ -405,16 +405,18 @@ impl MockServer {
     ///
     /// **Example**:
     /// ```rust
-    /// let mock_server = httpmock::MockServer::start();
+    /// async_std::task::block_on(async {
+    ///     let mock_server = httpmock::MockServer::start();
     ///
-    /// let mock = mock_server
-    ///    .mock_async(|when, then| {
-    ///        when.path("/hello");
-    ///        then.status(200);
-    ///    })
-    ///    .await;
+    ///     let mock = mock_server
+    ///         .mock_async(|when, then| {
+    ///             when.path("/hello");
+    ///             then.status(200);
+    ///         })
+    ///         .await;
     ///
-    /// assert_eq!(mock.times_called(), 0);
+    ///     assert_eq!(mock.times_called(), 0);
+    /// });
     /// ```
     pub async fn mock_async<'a, F>(&'a self, config_fn: F) -> MockRef<'a>
     where

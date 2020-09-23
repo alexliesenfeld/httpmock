@@ -10,7 +10,7 @@ use isahc::prelude::*;
 use crate::server::data::{ActiveMock, MockDefinition, MockIdentification, MockServerState};
 use crate::server::handlers::{add_new_mock, delete_all, delete_one, read_one};
 
-/// Refer to [regex::Regex](../regex/struct.Regex.html).
+/// Type alias for [regex::Regex](../regex/struct.Regex.html).
 pub type Regex = regex::Regex;
 
 pub(crate) type InternalHttpClient = isahc::HttpClient;

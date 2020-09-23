@@ -16,7 +16,7 @@ fn delay_test() {
 
     let mock_server = MockServer::start();
 
-    let search_mock = Mock::new()
+    let mock = Mock::new()
         .expect_path("/delay")
         .return_with_delay(delay)
         .create_on(&mock_server);
@@ -26,6 +26,6 @@ fn delay_test() {
 
     // Assert
     assert_eq!(response.status(), 200);
-    assert_eq!(search_mock.times_called(), 1);
+    assert_eq!(mock.times_called(), 1);
     assert_eq!(start_time.elapsed().unwrap() > delay, true);
 }

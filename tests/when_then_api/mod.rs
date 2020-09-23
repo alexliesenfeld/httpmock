@@ -6,6 +6,7 @@ mod getting_started_tests;
 mod headers_tests;
 mod json_body_tests;
 mod multiserver_redirect_tests;
+mod query_param_tests;
 mod showcase_tests;
 mod standalone_tests;
 mod url_matching_tests;
