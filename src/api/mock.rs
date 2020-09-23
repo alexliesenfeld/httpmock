@@ -25,7 +25,7 @@ use std::time::Duration;
 /// "expect/return" API of `httpmock`.
 ///
 /// # Example
-/// ```rust
+/// ```
 /// // Arrange
 /// use httpmock::{MockServer, Mock};
 ///
@@ -63,7 +63,7 @@ pub struct Mock {
 /// deleting the mock from the [MockServer](struct.MockServer.html).
 ///
 /// # Example
-/// ```rust
+/// ```
 /// // Arrange
 /// use httpmock::{MockServer, Mock};
 ///
@@ -98,7 +98,7 @@ impl<'a> MockRef<'a> {
     /// This method returns the number of times a mock has been called at the mock server.
     ///
     /// # Example
-    /// ```rust
+    /// ```
     /// // Arrange: Create mock server and a mock
     /// use httpmock::{MockServer, Mock};
     ///
@@ -124,7 +124,7 @@ impl<'a> MockRef<'a> {
     /// This method returns the number of times a mock has been called at the mock server.
     ///
     /// # Example
-    /// ```rust
+    /// ```
     /// async_std::task::block_on(async {
     ///     // Arrange: Create mock server and a mock
     ///     use httpmock::{MockServer, Mock};
@@ -163,7 +163,7 @@ impl<'a> MockRef<'a> {
     /// Deletes the associated mock object from the mock server.
     ///
     /// # Example
-    /// ```rust
+    /// ```
     /// // Arrange
     /// use httpmock::{MockServer, Mock};
     ///
@@ -197,7 +197,7 @@ impl<'a> MockRef<'a> {
     /// [MockRef::delete](struct.MockRef.html#method.delete).
     ///
     /// # Example
-    /// ```rust
+    /// ```
     /// async_std::task::block_on(async {
     ///     // Arrange
     ///     use httpmock::{MockServer, Mock};
@@ -240,7 +240,7 @@ impl<'a> MockRef<'a> {
     /// Returns the address of the mock server where the associated mock object is store on.
     ///
     /// # Example
-    /// ```rust
+    /// ```
     /// // Arrange: Create mock server and a mock
     /// use httpmock::{MockServer, Mock};
     ///
@@ -292,7 +292,7 @@ impl Mock {
     /// * `path` - The URL path.
     ///
     /// # Example
-    /// ```rust
+    /// ```
     /// use httpmock::{Mock, MockServer};
     ///
     /// let mock_server = MockServer::start();
@@ -314,7 +314,7 @@ impl Mock {
     /// * `substring` - The substring to match against.
     ///
     /// # Example
-    /// ```rust
+    /// ```
     /// use httpmock::{Mock, MockServer};
     ///
     /// let mock_server = MockServer::start();
@@ -346,7 +346,7 @@ impl Mock {
     /// * `regex` - The regex to match against.
     ///
     /// # Example
-    /// ```rust
+    /// ```
     /// use httpmock::{Mock, MockServer};
     /// use regex::Regex;
     ///
@@ -379,7 +379,7 @@ impl Mock {
     /// * `method` - The HTTP method.
     ///
     /// # Example
-    /// ```rust
+    /// ```
     /// use httpmock::{Mock, MockServer};
     /// use httpmock::Method::GET;
     /// use regex::Regex;
@@ -404,7 +404,7 @@ impl Mock {
     /// * `value` - The header value.
     ///
     /// # Example
-    /// ```rust
+    /// ```
     /// use httpmock::{Mock, MockServer};
     /// use httpmock::Method::GET;
     /// use regex::Regex;
@@ -446,7 +446,7 @@ impl Mock {
     /// * `name` - The HTTP header name (header names are case-insensitive by RFC 2616).
     ///
     /// # Example
-    /// ```rust
+    /// ```
     /// use httpmock::{Mock, MockServer};
     /// use httpmock::Method::GET;
     /// use regex::Regex;
@@ -488,7 +488,7 @@ impl Mock {
     /// * `value` - The expected cookie value.
     ///
     /// # Example
-    /// ```rust
+    /// ```
     /// use httpmock::{Mock, MockServer};
     /// use httpmock::Method::GET;
     /// use regex::Regex;
@@ -530,7 +530,7 @@ impl Mock {
     /// * `name` - The cookie name
     ///
     /// # Example
-    /// ```rust
+    /// ```
     /// use httpmock::{Mock, MockServer};
     /// use httpmock::Method::GET;
     /// use regex::Regex;
@@ -570,7 +570,7 @@ impl Mock {
     /// * `body` - The required HTTP request body.
     ///
     /// # Example
-    /// ```rust
+    /// ```
     /// use httpmock::{Mock, MockServer};
     /// use httpmock::Method::GET;
     /// use regex::Regex;
@@ -720,7 +720,7 @@ impl Mock {
     /// ```
     /// If we only want to verify that `target_attribute` has value `Example` without the need
     /// to provive a full JSON object, we can use this method as follows:
-    /// ```rust
+    /// ```
     /// use httpmock::{MockServer, Mock};
     ///
     /// let mock_server = MockServer::start();
@@ -928,7 +928,7 @@ impl Mock {
     /// * `request_matcher` - The matcher function.
     ///
     /// ## Example:
-    /// ```rust
+    /// ```
     /// use httpmock::{MockServer, Mock, MockServerRequest};
     ///
     /// // Arrange
@@ -967,7 +967,7 @@ impl Mock {
     /// * `status` - The status code.
     ///
     /// ## Example:
-    /// ```rust
+    /// ```
     /// use httpmock::{MockServer, Mock, MockServerRequest};
     ///
     /// // Arrange
@@ -994,7 +994,7 @@ impl Mock {
     /// * `body` - The response body content.
     ///
     /// ## Example:
-    /// ```rust
+    /// ```
     /// use httpmock::{MockServer, Mock, MockServerRequest};
     /// use isahc::ResponseExt;
     ///
@@ -1031,7 +1031,7 @@ impl Mock {
     ///
     /// ## Example
     /// You can use this method conveniently as follows:
-    /// ```rust
+    /// ```
     /// use httpmock::{MockServer, Mock};
     /// use serde_json::{Value, json};
     /// use isahc::ResponseExt;
@@ -1073,7 +1073,7 @@ impl Mock {
     ///
     /// * `body` - The HTTP body object that will be serialized to JSON using serde.
     ///
-    /// ```rust
+    /// ```
     /// use httpmock::{MockServer, Mock};
     /// use isahc::ResponseExt;
     ///
@@ -1123,7 +1123,7 @@ impl Mock {
     ///
     /// ## Example
     /// You can use this method conveniently as follows:
-    /// ```rust
+    /// ```
     /// // Arrange
     /// use httpmock::{MockServer, Mock};
     /// use serde_json::Value;
@@ -1163,7 +1163,7 @@ impl Mock {
     ///
     /// * `duration` - The delay.
     ///
-    /// ```rust
+    /// ```
     /// // Arrange
     /// use std::time::{SystemTime, Duration};
     /// use httpmock::{MockServer, Mock};
@@ -1196,7 +1196,7 @@ impl Mock {
     /// created mock at the server. Only after the call of this method completes, the mock server
     /// will start serving HTTP requests as specified in the [Mock](struct.Mock.html) instance.
     ///
-    /// ```rust
+    /// ```
     /// // Arrange
     /// use httpmock::{MockServer, Mock};
     ///
@@ -1225,7 +1225,7 @@ impl Mock {
     /// created mock at the server. Only after the call of this method completes, the mock server
     /// will start serving HTTP requests as specified in the [Mock](struct.Mock.html) instance.
     ///
-    /// ```rust
+    /// ```
     /// async_std::task::block_on(async {
     ///     use std::time::{SystemTime, Duration};
     ///     use httpmock::{MockServer, Mock};

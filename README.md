@@ -43,7 +43,7 @@ httpmock = "0.5.0"
 ```
 
 You can then use `httpmock` in your tests like shown in the example below:
-```rust
+```
 extern crate httpmock;
 
 use httpmock::Method::{GET};
