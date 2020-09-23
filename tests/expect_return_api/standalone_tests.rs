@@ -1,14 +1,10 @@
 extern crate httpmock;
 
-use std::sync::Mutex;
-use std::thread::{spawn, JoinHandle};
-
 use isahc::{get, get_async};
-use tokio::task::LocalSet;
 
-use httpmock::standalone::start_standalone_server;
-use httpmock::{HttpMockConfig, Mock, MockServer};
+use httpmock::{Mock, MockServer};
 use httpmock_macros::httpmock_example_test;
+use crate::simulate_standalone_server;
 
 #[test]
 #[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
@@ -103,18 +99,4 @@ fn unsupported_features() {
     // Creating this mock will panic because expect_match is not supported when using
     // a remote mock server.
     let _ = Mock::new().expect_match(|_| true).create_on(&mock_server);
-}
-
-/// The rest of this file is only required to simulate that a standalone mock server is
-/// running somewhere else. The tests above will is.
-fn simulate_standalone_server() {
-    let _ = STANDALONE_SERVER.lock().unwrap_or_else(|e| e.into_inner());
-}
-
-lazy_static! {
-    static ref STANDALONE_SERVER: Mutex<JoinHandle<Result<(), String>>> = Mutex::new(spawn(|| {
-        let srv = start_standalone_server(HttpMockConfig::new(5000, false));
-        let mut runtime = tokio::runtime::Runtime::new().unwrap();
-        LocalSet::new().block_on(&mut runtime, srv)
-    }));
 }
