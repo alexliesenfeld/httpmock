@@ -53,19 +53,19 @@ impl MockServerHttpRequest {
 /// A general abstraction of an HTTP response for all handlers.
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub(crate) struct MockServerHttpResponse {
-    pub status: u16,
+    pub status: Option<u16>,
     pub headers: Option<BTreeMap<String, String>>,
     pub body: Option<String>,
-    pub duration: Option<Duration>,
+    pub delay: Option<Duration>,
 }
 
 impl MockServerHttpResponse {
-    pub fn new(status: u16) -> Self {
+    pub fn new() -> Self {
         Self {
-            status,
+            status: None,
             headers: None,
             body: None,
-            duration: None,
+            delay: None,
         }
     }
 

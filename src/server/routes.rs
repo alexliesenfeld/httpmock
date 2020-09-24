@@ -93,7 +93,7 @@ fn to_route_response(
                 None,
                 ErrorResponse::new(&"Request did not match any route or mock"),
             ),
-            Some(res) => create_response(res.status, res.headers, res.body),
+            Some(res) => create_response(res.status.unwrap_or(200), res.headers, res.body),
         },
     }
 }
@@ -161,7 +161,7 @@ async fn postprocess_response(
     result: Result<Option<MockServerHttpResponse>, String>,
 ) -> Result<Option<MockServerHttpResponse>, String> {
     if let Ok(Some(response_def)) = &result {
-        if let Some(duration) = response_def.duration {
+        if let Some(duration) = response_def.delay {
             tokio::time::delay_for(duration).await;
         }
     }
