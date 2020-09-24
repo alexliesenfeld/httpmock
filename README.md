@@ -59,8 +59,8 @@ let hello_mock = mock_server.mock(|when, then| {
         .path("/translate")
         .query_param("word", "hello");
     then.status(200)
-        .header("Content-Type", "text/html")
-        .body("ohi");
+        .header("Content-Type", "text/html; charset=UTF-8")
+        .body("Привет");
 });
 
 // Send an HTTP request to the mock server. This simulates your code.
@@ -73,7 +73,8 @@ assert_eq!(hello_mock.times_called(), 1);
 ```
 
 The above example will spin up a lightweight HTTP mock server and configure it to respond to all `GET` requests 
-to path `/translate` with query parameter `word=hello`. The corresponding HTTP response will contain the text body `ohi`.
+to path `/translate` with query parameter `word=hello`. The corresponding HTTP response will contain the text body 
+`Привет`.
 
 # Usage
 See the [reference docs](https://docs.rs/httpmock/) for detailed API documentation.
