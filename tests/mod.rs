@@ -6,8 +6,8 @@ use std::sync::Mutex;
 use std::thread::{spawn, JoinHandle};
 use tokio::task::LocalSet;
 
-mod expect_return_api;
 mod default_api;
+mod expect_return_api;
 
 /// ====================================================================================
 /// The rest of this file is only required to simulate that a standalone mock server is
