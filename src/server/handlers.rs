@@ -28,7 +28,7 @@ pub(crate) fn add_new_mock(
 
     let mock_id = state.create_new_id();
     {
-        log::debug!("Adding new mock with ID={}: {:?}", mock_id, mock_def);
+        log::debug!("Adding new mock with ID={}: {:#?}", mock_id, mock_def);
         let mut mocks = state.mocks.write().unwrap();
         mocks.insert(mock_id, ActiveMock::new(mock_id, mock_def));
     }
@@ -97,7 +97,7 @@ pub(crate) fn find_mock(
 
     if let Some(found_id) = found_mock_id {
         log::debug!(
-            "Matched mock with id={} to the following request: {:?}",
+            "Matched mock with id={} to the following request: {:#?}",
             found_id,
             req
         );
@@ -108,7 +108,7 @@ pub(crate) fn find_mock(
     }
 
     log::debug!(
-        "Could not match any mock to the following request: {:?}",
+        "Could not match any mock to the following request: {:#?}",
         req
     );
     Result::Ok(None)
