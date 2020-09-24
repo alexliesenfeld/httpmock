@@ -173,7 +173,7 @@
 //! Instead of using [MockServer::start](struct.MockServer.html#method.start),
 //! you need to connect to a remote server by using one of the `connect` methods (such as
 //! [MockServer::connect](struct.MockServer.html#method.connect) or
-//! [MockServer::connect_from_env](struct.MockServer.html#method.connect_from_env).
+//! [MockServer::connect_from_env](struct.MockServer.html#method.connect_from_env)).
 //!
 //! ```
 //! use httpmock::{MockServer, Mock};
