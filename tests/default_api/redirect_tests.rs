@@ -42,14 +42,14 @@ fn temporary_redirect_test() {
 }
 
 #[test]
-// #[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
+#[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
 fn permanent_redirect_test() {
     // Arrange
     let _ = env_logger::try_init();
     let mock_server = MockServer::start();
 
     let redirect_mock = mock_server.mock(|when, then| {
-        when.path("/redirectPaths");
+        when.path("/redirectPath");
         then.permanent_redirect("http://www.google.com");
     });
 

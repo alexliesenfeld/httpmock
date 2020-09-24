@@ -81,7 +81,7 @@ See the [reference docs](https://docs.rs/httpmock/) for detailed API documentati
 
 ## Examples
 You can find examples in the 
-[`httpmock` test directory](https://github.com/alexliesenfeld/httpmock/blob/master/tests). 
+[`httpmock` test directory](https://github.com/alexliesenfeld/httpmock/blob/master/tests/). 
 The [reference docs](https://docs.rs/httpmock/) also contain _**a lot**_ of examples. 
 
 ## License
