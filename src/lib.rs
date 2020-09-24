@@ -1,17 +1,17 @@
-//! `httpmock` is an HTTP mocking library that allows you to simulate responses from HTTP based services.
+//! HTTP mocking library that allows you to simulate responses from HTTP based services.
 //!
 //!  # Features
 //! * Simple, expressive, fluent API.
 //! * Many built-in helpers for easy request matching.
 //! * Parallel test execution.
 //! * Extensible request matching.
-//! * Choose from two interchangeable API DSLs to define mocks.
-//! * Network delay simulation.
-//! * Support for [Regex](type.Regex.html), JSON, [serde](https://crates.io/crates/serde), cookies, redirect, and more.
+//! * Two interchangeable API DSLs for mock definition.
 //! * Fully asynchronous core with synchronous and asynchronous APIs.
 //! * Debugging support
 //! * Standalone mode with an accompanying [Docker image](https://hub.docker.com/r/alexliesenfeld/httpmock).
-//!
+//! * Network delay simulation
+//! * Support for [Regex](type.Regex.html) matching, JSON, [serde](https://crates.io/crates/serde), cookies, redirect, and more.
+
 //! # Getting Started
 //! Add `httpmock` to `Cargo.toml`:
 //!
@@ -45,14 +45,67 @@
 //! // Ensure the specified mock was called exactly one time.
 //! assert_eq!(hello_mock.times_called(), 1);
 //! ```
+//! # Usage
+//! To be able to configure mocks, you first need to start a mock server by calling
+//! [MockServer::start](struct.MockServer.html#method.start).
+//! This will spin up a lightweight HTTP
+//! mock server in the background and wait until the server is ready to accept requests.
 //!
-//! # API Usage
+//! You can then create a [Mock](struct.Mock.html) object on the server by using the
+//! [MockServer::mock](struct.MockServer.html#method.mock) method. This method expects a closure
+//! with two parameters, that we will refer to as the `when` and `then` parameter:
+//! - The `when` parameter is of type [When](struct.When.html) and holds all request characteristics.
+//! The mock server will only respond to HTTP requests that meet all the criteria. Otherwise it
+//! will respond with HTTP status code `404` and an error message.
+//! - The `then` parameter is of type [Then](struct.Then.html) and holds all values that the mock
+//! server will respond with.
 //!
+//! # Sync / Async
+//! The internal implementation of `httpmock` is completely asynchronous. It provides you a
+//! synchronous and an asynchronous API though. If you want to schedule awaiting operations manually, then
+//! you can use the `async` variants that exist for every potentially blocking operation. For
+//! example, there is [MockServer::start_async](struct.MockServer.html#method.start_async) as an
+//! asynchronous counterpart to [MockServer::start](struct.MockServer.html#method.start). You can
+//! find similar methods throughout the entire library.
+//!
+//! # Parallelism
+//! To balance execution speed and resource consumption, [MockServer](struct.MockServer.html)s
+//! are kept in a server pool internally. This allows to run tests in parallel without overwhelming
+//! the executing machine by creating too many HTTP servers. A test will be blocked if it tries to
+//! use a [MockServer](struct.MockServer.html) (e.g. by calling
+//! [MockServer::start](struct.MockServer.html#method.start)) while the server pool is empty
+//! (i.e. all servers are occupied by other tests).
+//!
+//! [MockServer](struct.MockServer.html)s are never recreated but recycled/resetted.
+//! The pool is filled on demand up to a maximum number of 25 servers.
+//! You can override this number by using the environment variable `HTTPMOCK_MAX_SERVERS`.
+//!
+//! # Debugging
+//! `httpmock` logs against the [log](https://crates.io/crates/log) crate. This allows you to
+//! see detailed log output that contains information about `httpmock`s behaviour.
+//! You can use this log output to investigate
+//! issues, such as to find out why a request does not match a mock definition.
+//!
+//! The most useful log level is `debug`, but you can also go down to `trace` to see even more
+//! information.
+//!
+//! **Attention**: To be able to see the log output, you need to add the `--nocapture` argument
+//! when starting test execution!
+//!
+//! *Hint*: If you use the `env_logger` backend, you need to set the `RUST_LOG` environment variable to
+//! `httpmock=debug`.
+//!
+//! # API Alternatives
 //! This library provides two functionally interchangeable DSL APIs that allow you to create
 //! mocks on the server. You can choose the one you like best or use both side-by-side. For a
 //! consistent look, it is recommended to stick to one of them, though.
 //!
 //! ## When/Then API
+//! This is the default API of `httpmock`. It is concise and easy to read. The main goal
+//! is to reduce overhead emposed by this library to a bare minimum. It works well with
+//! formatting tools, such as [rustfmt](https://crates.io/crates/rustfmt) (i.e. `cargo fmt`),
+//! and can fully benefit from IDE support.
+//!
 //! ### Example
 //! ```
 //! let mock_server = httpmock::MockServer::start();
@@ -65,14 +118,14 @@
 //! let response = isahc::get(mock_server.url("/hi")).unwrap();
 //! assert_eq!(hello_mock.times_called(), 1);
 //! ```
-//! This API is very concise. It tries to reduce cognitive overhead emposed by the
-//! library to a bare minimum. It is very easy to read and works well with formatting tools,
-//! such as `cargo fmt`. Because `when` and `then` are variables, you can give them you own
-//! names that you like better (such as `expect`/`respond_with`).
+//! Note that `when` and `then` are variables. This allows you to rename them to something you
+//! like better (such as `expect`/`respond_with`).
 //!
 //! Relevant elements for this API are [MockServer::mock](struct.MockServer.html#method.mock), [When](struct.When.html) and [Then](struct.Then.html).
 //!
 //! ## Expect/Return API
+//! This is the historical API of `httpmock`. It is verbous but explicit and provides
+//! much control over mock definition reuse. You should almost never need to use it though.
 //!
 //! ### Example
 //! ```
@@ -87,7 +140,7 @@
 //! let response = isahc::get(mock_server.url("/hi")).unwrap();
 //! assert_eq!(hello_mock.times_called(), 1);
 //! ```
-//! Please note the naming scheme:
+//! Please observe the following method naming scheme:
 //! - All [Mock](struct.Mock.html) methods that start with `expect` in their name set a requirement
 //! for HTTP requests (e.g. [Mock::expect_method](struct.Mock.html#method.expect_method),
 //! [Mock::expect_path](struct.Mock.html#method.expect_path),
@@ -100,53 +153,27 @@
 //! With this naming scheme users can benefit from IDE autocompletion to find request matchers and
 //! response attributes mostly without even looking into documentation.
 //!
-//! Although this API exists for historical reasons, there are no plans to remove it from
-//! `httpmock` just yet.
-//!
-//! ## Sync / Async
-//!
-//! The internal implementation of `httpmock` is fully asynchronous. It provides you a synchronous
-//! and an asynchronous API though. If you want to schedule awaiting operations manually, then
-//! you can use the `async` variants that exist for every potentially blocking operation. For
-//! example, there is [MockServer::start_async](struct.MockServer.html#method.start_async) as an
-//! asynchronous counterpart to [MockServer::start](struct.MockServer.html#method.start).
-//!
-//! # Parallelism
-//! To balance execution speed and resource consumption, `MockServer`s are kept in a server pool
-//! internally. This allows to run tests in parallel without overwhelming the executing
-//! machine by creating too many HTTP servers. A test will be blocked if it tries to use a
-//! `MockServer` (e.g. by calling `MockServer::start()`) while the server pool is empty (i.e. all
-//! servers are occupied by other tests). `MockServers` are never recreated but recycled/resetted.
-//! The pool is filled on demand up to a predefined maximum number of 25 servers.
-//! You can change this number by setting the environment variable `HTTPMOCK_MAX_SERVERS`.
-//!
 //! # Examples
 //! You can find examples in the test directory in this crates Git repository:
-//! [this crates test directory](https://github.com/alexliesenfeld/httpmock/blob/master/tests/integration_tests.rs ).
-//!
-//! # Debugging
-//! `httpmock` logs against the `log` crate. This allows you to see detailed information about
-//! `httpmock`s behaviour. For example, if you use the `env_logger` backend, you can activate debug
-//! logging by setting the `RUST_LOG` environment variable to `httpmock=debug`.
-//!
-//! Attention: To be able to see the log output, you need to add the `--nocapture` argument
-//! when starting test execution!
+//! [this crates test directory](https://github.com/alexliesenfeld/httpmock/blob/master/tests ).
 //!
 //! # Standalone Mode
-//! You can use `httpmock` to run a standalone mock server that is available to multiple applications.
-//! This can be useful if you are running integration tests that involve both, real and mocked
-//! applications.
+//! You can use `httpmock` to run a standalone mock server that runs in a separate process.
+//! This allows it to be available to multiple applications, not only inside your unit and integration
+//! tests. This is useful if you want to use `httpmock` in system (or even end-to-end) tests, that
+//! require mocked services. With this feature, `httpmock` is a universal HTTP mocking tool that is
+//! useful in all stages of the development lifecycle.
 //!
+//! ## Using a Standalone Mock Server
 //! Although you can build the mock server in standalone mode yourself, it is easiest to use the
 //! accompanying [Docker image](https://hub.docker.com/r/alexliesenfeld/httpmock).
 //!
-//! ## API Usage
-//! To be able to use a standalone server from your tests, you need to change how an instance
-//! of the `MockServer` structure is created. Instead of using `MockServer::start()`, you need
-//! to connect to a remote server by using one of the `connect` methods (such as
-//! `MockServer::connect("localhost:5000")` or `MockServer::connect_from_env()`).
-//! Therefore, tests that use a local mock server do only differ in one line of code
-//! from tests that use a remote server. Otherwise, both variants are identical.
+//! To be able to use the standalone server from within your tests, you need to change how an
+//! instance of the [MockServer](struct.MockServer.html) instance is created.
+//! Instead of using [MockServer::start](struct.MockServer.html#method.start),
+//! you need to connect to a remote server by using one of the `connect` methods (such as
+//! [MockServer::connect](struct.MockServer.html#method.connect) or
+//! [MockServer::connect_from_env](struct.MockServer.html#method.connect_from_env).
 //!
 //! ```
 //! use httpmock::{MockServer, Mock};
@@ -154,37 +181,33 @@
 //!
 //! #[test]
 //! fn simple_test() {
-//!     // Arrange: Create a mock on a test local mock server
+//!     // Arrange
 //!     let mock_server = MockServer::connect("some-host:5000");
 //!
-//!     let hello_mock = Mock::new()
-//!         .expect_method(GET)
-//!         .expect_path("/hello")
-//!         .return_status(200)
-//!         .create_on(&mock_server);
+//!     let hello_mock = mock_server.mock(|when, then|{
+//!         when.path("/hello/standalone");
+//!         then.status(200);
+//!     });
 //!
-//!     // Act: Send an HTTP request to the mock server (simulates your software)
-//!     let response = get(mock_server.url("/hello")).unwrap();
+//!     // Act
+//!     let response = get(mock_server.url("/hello/standalone")).unwrap();
 //!
-//!     // Assert: Ensure there was a response from the mock server
+//!     // Assert
 //!     assert_eq!(response.status(), 200);
 //!     assert_eq!(hello_mock.times_called(), 1);
 //! }
 //! ```
 //!
-//! ## Parallelism
+//! ## Standalone Parallelism
 //! Tests that use a remote mock server are executed sequentially by default. This is in
 //! contrast to tests that use a local mock server. Sequential execution is achieved by
 //! blocking all tests from further execution whenever a test requires to connect to a
 //! busy mock server.
 //!
-//! ## Limitations
-//! At this time, it is not possible to use custom request matchers in combination with remote
-//! mock servers. It is planned to add this functionality in future though.
-//!
-//! ## Examples
-//! Fore more examples on how to use a remote server, please refer to
-//! [this crates test directory](https://github.com/alexliesenfeld/httpmock/blob/master/tests/standalone_tests.rs ).
+//! ## Limitations of the Standalone Mode
+//! At this time, it is not possible to use custom request matchers in combination with standalone
+//! mock servers (see [When::matches](struct.When.html#method.matches) or
+//! [Mock::expect_match](struct.Mock.html#method.expect_match)).
 //!
 //! # License
 //! `httpmock` is free software: you can redistribute it and/or modify it under the terms
