@@ -31,9 +31,16 @@ fn temporary_redirect_test() {
     // (see details in mock builder method documentation).
     assert_eq!(response.status(), 302);
     assert_eq!(body, "Found");
-    assert_eq!(response.headers().get("Location").unwrap().to_str().unwrap(), "http://www.google.com");
+    assert_eq!(
+        response
+            .headers()
+            .get("Location")
+            .unwrap()
+            .to_str()
+            .unwrap(),
+        "http://www.google.com"
+    );
 }
-
 
 #[test]
 #[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
@@ -59,5 +66,13 @@ fn permanent_redirect_test() {
     // (see details in mock builder method documentation).
     assert_eq!(response.status(), 301);
     assert_eq!(body, "Moved Permanently");
-    assert_eq!(response.headers().get("Location").unwrap().to_str().unwrap(), "http://www.google.com");
+    assert_eq!(
+        response
+            .headers()
+            .get("Location")
+            .unwrap()
+            .to_str()
+            .unwrap(),
+        "http://www.google.com"
+    );
 }

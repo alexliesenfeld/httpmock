@@ -15,12 +15,12 @@ fn multiserver_test() {
     let mock_server1 = MockServer::start();
     let mock_server2 = MockServer::start();
 
-    let redirect_mock = mock_server1.mock(|when, then|{
+    let redirect_mock = mock_server1.mock(|when, then| {
         when.path("/redirectTest");
         then.temporary_redirect(&mock_server2.url("/finalTarget"));
     });
 
-    let target_mock = mock_server2.mock(|when, then|{
+    let target_mock = mock_server2.mock(|when, then| {
         when.path("/finalTarget");
         then.status(200);
     });

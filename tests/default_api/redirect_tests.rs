@@ -14,7 +14,7 @@ fn temporary_redirect_test() {
     let _ = env_logger::try_init();
     let mock_server = MockServer::start();
 
-    let redirect_mock = mock_server.mock(|when, then|{
+    let redirect_mock = mock_server.mock(|when, then| {
         when.path("/redirectPath");
         then.temporary_redirect("http://www.google.com");
     });
@@ -30,7 +30,15 @@ fn temporary_redirect_test() {
     // (see details in mock builder method documentation).
     assert_eq!(response.status(), 302);
     assert_eq!(body, "Found");
-    assert_eq!(response.headers().get("Location").unwrap().to_str().unwrap(), "http://www.google.com");
+    assert_eq!(
+        response
+            .headers()
+            .get("Location")
+            .unwrap()
+            .to_str()
+            .unwrap(),
+        "http://www.google.com"
+    );
 }
 
 #[test]
@@ -40,7 +48,7 @@ fn permanent_redirect_test() {
     let _ = env_logger::try_init();
     let mock_server = MockServer::start();
 
-    let redirect_mock = mock_server.mock(|when, then|{
+    let redirect_mock = mock_server.mock(|when, then| {
         when.path("/redirectPath");
         then.permanent_redirect("http://www.google.com");
     });
@@ -56,5 +64,13 @@ fn permanent_redirect_test() {
     // (see details in mock builder method documentation).
     assert_eq!(response.status(), 301);
     assert_eq!(body, "Moved Permanently");
-    assert_eq!(response.headers().get("Location").unwrap().to_str().unwrap(), "http://www.google.com");
+    assert_eq!(
+        response
+            .headers()
+            .get("Location")
+            .unwrap()
+            .to_str()
+            .unwrap(),
+        "http://www.google.com"
+    );
 }

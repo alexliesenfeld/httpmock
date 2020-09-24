@@ -1,14 +1,14 @@
 ## Version 0.5.0
-- _**Breaking Change**_: Function `expect_json_body` was renamed to `expect_json_body_obj`. 
-- _**Breaking Change**_: Function `return_json_body` was renamed to `return_json_body_obj`. 
-- A new function `expect_json_body` was added which takes a `serde_json::Value` as an argument. 
+- _**Breaking Change**_: Function `expect_json_body` was renamed to `expect_json_body_obj`.
+- _**Breaking Change**_: Function `return_json_body` was renamed to `return_json_body_obj`.
+- A new function `expect_json_body` was added which takes a `serde_json::Value` as an argument.
 - A new function `return_json_body` was added which takes a `serde_json::Value` as an argument.
-- A new default API DSL for mock definition.
-- Cookie matching support. 
+- _**Attention**: A new API for mock definition was added. The old API is still available. No changed required!_
+- Improved documentation (a lot!).
+- Cookie matching support.
 - Support for convenient temporary and permanent redirect.
 - The log level of the following messages wes changed from `debug` to `trace`:
   - When deleting all mocks during mock server initialization. 
-- Improved documentation (a lot!).
 
 ## Version 0.4.5
 - Improved documentation.

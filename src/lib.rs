@@ -1286,7 +1286,8 @@ impl Then {
     /// assert_eq!(response.headers().get("Location").unwrap().to_str().unwrap(), target_url);
     /// ```
     pub fn temporary_redirect(mut self, redirect_url: &str) -> Self {
-        self.mock.set(self.mock.take().return_temporary_redirect(redirect_url));
+        self.mock
+            .set(self.mock.take().return_temporary_redirect(redirect_url));
         self
     }
 
@@ -1330,7 +1331,8 @@ impl Then {
     /// assert_eq!(response.headers().get("Location").unwrap().to_str().unwrap(), target_url);
     /// ```
     pub fn permanent_redirect(mut self, redirect_url: &str) -> Self {
-        self.mock.set(self.mock.take().return_permanent_redirect(redirect_url));
+        self.mock
+            .set(self.mock.take().return_permanent_redirect(redirect_url));
         self
     }
 
