@@ -1,4 +1,4 @@
-mod body_tests;
+mod string_body_tests;
 mod cookie_tests;
 mod delay_tests;
 mod delete_mock_tests;
