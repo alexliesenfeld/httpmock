@@ -10,7 +10,7 @@
 //! * Debugging support
 //! * Standalone mode with an accompanying [Docker image](https://hub.docker.com/r/alexliesenfeld/httpmock).
 //! * Network delay simulation
-//! * Support for [Regex](type.Regex.html) matching, JSON, [serde](https://crates.io/crates/serde), cookies, redirect, and more.
+//! * Support for [Regex](type.Regex.html) matching, JSON, [serde](https://crates.io/crates/serde), cookies, and more.
 
 //! # Getting Started
 //! Add `httpmock` to `Cargo.toml`:
