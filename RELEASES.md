@@ -5,6 +5,7 @@
 - A new function `return_json_body` was added which takes a `serde_json::Value` as an argument.
 - _**Attention**: A new API for mock definition was added. The old API is still available. No changed required!_
 - Improved documentation (a lot!).
+- Debug log output is now pretty printed!
 - Cookie matching support.
 - Support for convenient temporary and permanent redirect.
 - The log level of the following messages wes changed from `debug` to `trace`:
