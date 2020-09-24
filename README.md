@@ -71,6 +71,10 @@ assert_eq!(response.status(), 200);
 // Ensure the specified mock was called exactly one time.
 assert_eq!(hello_mock.times_called(), 1);
 ```
+
+The above example will spin up a lightweight HTTP mock server and configure it to respond to all `GET` requests 
+to path `/translate` with query parameter `word=hello`. The corresponding HTTP response will contain the text body `ohi`.
+
 # Usage
 See the [reference docs](https://docs.rs/httpmock/) for detailed API documentation.
 
