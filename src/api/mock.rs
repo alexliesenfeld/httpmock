@@ -1159,6 +1159,57 @@ impl Mock {
         self
     }
 
+    /// Sets the HTTP response up to return a permanent redirect.
+    ///
+    /// In detail, this method will add the following information to the HTTP response:
+    /// - A "Location" header with the provided URL as its value.
+    /// - Status code will be set to 301 (if no other status code was set before).
+    /// - The response body will be set to "Moved Permanently" (if no other body was set before).
+    ///
+    /// Further information: https://developer.mozilla.org/en-US/docs/Web/HTTP/Redirections
+    /// and https://tools.ietf.org/html/rfc2616#section-10.3.8.
+    ///
+    /// * `redirect_url` - THe URL to redirect to.
+    ///
+    /// ## Example
+    /// ```
+    /// // Arrange
+    /// use httpmock::{MockServer, Mock};
+    /// use isahc::ResponseExt;
+    ///
+    /// let _ = env_logger::try_init();
+    /// let mock_server = MockServer::start();
+    ///
+    /// let redirect_mock = Mock::new()
+    ///     .expect_path("/redirectPath")
+    ///     .return_permanent_redirect("http://www.google.com")
+    ///     .create_on(&mock_server);
+    ///
+    /// // Act: Send the HTTP request with an HTTP client that DOES NOT FOLLOW redirects automatically!
+    ///
+    /// let mut response = isahc::get(mock_server.url("/redirectPath")).unwrap();
+    /// let body = response.text().unwrap();
+    ///
+    /// // Assert
+    /// assert_eq!(redirect_mock.times_called(), 1);
+    ///
+    /// // Attention!: Note that all of these values are automatically added to the response
+    /// // (see details in mock builder method documentation).
+    /// assert_eq!(response.status(), 302);
+    /// assert_eq!(body, "Found");
+    /// assert_eq!(response.headers().get("Location").unwrap().to_str().unwrap(), target_url);
+    /// ```
+    pub fn return_permanent_redirect(mut self, redirect_url: &str) -> Self {
+        // see https://developer.mozilla.org/en-US/docs/Web/HTTP/Redirections
+        if self.mock.response.status.is_none() {
+            self = self.return_status(301);
+        }
+        if self.mock.response.body.is_none() {
+            self = self.return_body("Moved Permanently");
+        }
+        self.return_header("Location", redirect_url)
+    }
+
     /// Sets the HTTP response up to return a temporary redirect.
     ///
     /// In detail, this method will add the following information to the HTTP response:

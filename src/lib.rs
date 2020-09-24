@@ -1290,6 +1290,50 @@ impl Then {
         self
     }
 
+    /// Sets the HTTP response up to return a permanent redirect.
+    ///
+    /// In detail, this method will add the following information to the HTTP response:
+    /// - A "Location" header with the provided URL as its value.
+    /// - Status code will be set to 301 (if no other status code was set before).
+    /// - The response body will be set to "Moved Permanently" (if no other body was set before).
+    ///
+    /// Further information: https://developer.mozilla.org/en-US/docs/Web/HTTP/Redirections
+    /// and https://tools.ietf.org/html/rfc2616#section-10.3.8.
+    ///
+    /// * `redirect_url` - THe URL to redirect to.
+    ///
+    /// ## Example
+    /// ```
+    /// // Arrange
+    /// use httpmock::MockServer;
+    /// use isahc::ResponseExt;
+    /// let _ = env_logger::try_init();
+    ///
+    /// let mock_server = MockServer::start();
+    ///
+    /// let redirect_mock = mock_server.mock(|when, then|{
+    ///     when.path("/redirectPath");
+    ///     then.permanent_redirect("http://www.google.com");
+    /// });
+    ///
+    /// // Act: Send the HTTP request with an HTTP client that DOES NOT FOLLOW redirects automatically!
+    /// let mut response = isahc::get(mock_server.url("/redirectPath")).unwrap();
+    /// let body = response.text().unwrap();
+    ///
+    /// // Assert
+    /// assert_eq!(redirect_mock.times_called(), 1);
+    ///
+    /// // Attention!: Note that all of these values are automatically added to the response
+    /// // (see details in mock builder method documentation).
+    /// assert_eq!(response.status(), 301);
+    /// assert_eq!(body, "Moved Permanently");
+    /// assert_eq!(response.headers().get("Location").unwrap().to_str().unwrap(), target_url);
+    /// ```
+    pub fn permanent_redirect(mut self, redirect_url: &str) -> Self {
+        self.mock.set(self.mock.take().return_permanent_redirect(redirect_url));
+        self
+    }
+
     /// Sets a duration that will delay the mock server response.
     ///
     /// * `duration` - The delay.

@@ -5,6 +5,7 @@
 - A new function `return_json_body` was added which takes a `serde_json::Value` as an argument.
 - A new default API DSL for mock definition.
 - Cookie matching support. 
+- Support for convenient temporary and permanent redirect.
 - The log level of the following messages wes changed from `debug` to `trace`:
   - When deleting all mocks during mock server initialization. 
 - Improved documentation (a lot!).
