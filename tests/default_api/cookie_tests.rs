@@ -24,7 +24,7 @@ fn cookie_matching_test() {
     let response = Request::get(&format!("http://{}", mock_server.address()))
         .header(
             "Cookie",
-            "OTHERCOOKIE1=01234; SESSIONID=298zf09hf012fh2; OTHERCOOKIE2=56789",
+            "OTHERCOOKIE1=01234; SESSIONID=298zf09hf012fh2; OTHERCOOKIE2=56789; HttpOnly",
         )
         .body(())
         .unwrap()
