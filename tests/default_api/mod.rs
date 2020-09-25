@@ -1,4 +1,5 @@
 mod cookie_tests;
+mod binary_body_tests;
 mod delay_tests;
 mod delete_mock_tests;
 mod getting_started_tests;
