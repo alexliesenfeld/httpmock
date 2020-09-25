@@ -1,7 +1,7 @@
 ## Version 0.5.0
 - ❌ _**Breaking Change**_: Function `Mock::expect_json_body` was renamed to `expect_json_body_obj`.
 - ❌ _**Breaking Change**_: Function `Mock::return_json_body` was renamed to `return_json_body_obj`.
-- 🚀 _**Attention**: A new API for mock definition was added. The old API is still available. No changes required on your side!._
+- 🚀 _**Attention**: A new API for mock definition was added. The old API is still available. No changes required on your side!_
 - Most API methods now accept convertible types (such as `Into<String>`) instead of concrete types (such as `&str`).
 - Function `Mock::return_body` and `Then::body` now accept a `Into<Vec<u8>>` parameter instead of `String`. No changes required on your side! 
   This allows for binary content in the response body.  
