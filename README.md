@@ -4,13 +4,11 @@
 
 <p align="center">HTTP mocking library for Rust.</p>
 <div align="center">
-    
 [![Build Status](https://dev.azure.com/alexliesenfeld/httpmock/_apis/build/status/alexliesenfeld.httpmock?branchName=master)](https://dev.azure.com/alexliesenfeld/httpmock/_build/latest?definitionId=2&branchName=master)
 [![codecov](https://codecov.io/gh/alexliesenfeld/httpmock/branch/master/graph/badge.svg)](https://codecov.io/gh/alexliesenfeld/httpmock)
 [![crates.io](https://img.shields.io/crates/d/httpmock.svg)](https://crates.io/crates/httpmock)
 [![Docker](https://img.shields.io/docker/cloud/build/alexliesenfeld/httpmock)](https://hub.docker.com/r/alexliesenfeld/httpmock)
 [![License](https://img.shields.io/github/license/alexliesenfeld/httpmock.svg)](LICENSE)
-	
 </div>
 
 <p align="center">
@@ -25,11 +23,6 @@
     <a href="https://github.com/alexliesenfeld/httpmock/blob/develop/RELEASES.md">Changelog</a>
 </p>
 
-<p align="center">
-[![Watch on GitHub](https://img.shields.io/github/watchers/alexliesenfeld/httpmock.svg?style=social)](https://github.com/jonsn0w/Hyde/watchers)
-[![Star on GitHub](https://img.shields.io/github/stars/jonsn0w/hyde.svg?style=social)](https://github.com/jonsn0w/hyde/stargazers)
-[![Tweet](https://img.shields.io/twitter/url/https/github.com/jonsn0w/hyde.svg?style=social)](https://twitter.com/intent/tweet?text=Check%20out%20Hyde!%20%E2%9C%A8%20An%20accessible,%20open-source%20markdown%20editor%20for%20any%20user%20E2%9C%A8%20https://github.com/jonsn0w/hyde%20%F0%9F%A4%97)
-</p>
 ## Features
 
 * Simple, expressive, fluent API.
