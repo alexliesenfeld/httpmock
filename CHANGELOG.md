@@ -5,8 +5,7 @@
 - Most API methods now accept convertible types (such as `Into<String>`) instead of concrete types (such as `&str`).
 - Function `Mock::return_body` and `Then::body` now accept a `Into<Vec<u8>>` parameter instead of `String`. No changes required on your side! 
   This allows for binary content in the response body.  
-- A new function `expect_json_body` was added which takes a `serde_json::Value` as an argument.
-- A new function `return_json_body` was added which takes a `serde_json::Value` as an argument.
+- Two new functions `expect_json_body` and `return_json_body were added which take a `serde_json::Value` as an argument.
 - Improved documentation (a lot!).
 - Debug log output is now pretty printed!
 - Cookie matching support.
