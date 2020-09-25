@@ -1117,6 +1117,37 @@ impl Then {
         self
     }
 
+    /// Sets the HTTP response body that will be returned by the mock server.
+    ///
+    /// * `body` - The response body content.
+    ///
+    /// ## Example:
+    /// ```
+    /// use httpmock::{MockServer, Mock, MockServerRequest};
+    /// use isahc::ResponseExt;
+    ///
+    /// // Arrange
+    /// let mock_server = MockServer::start();
+    ///
+    /// let m = mock_server.mock(|when, then|{
+    ///     when.path("/hello");
+    ///     then.status(200)
+    ///         .body_from_file("tests/resources/simple_body.txt");
+    /// });
+    ///
+    /// // Act
+    /// let mut response = isahc::get(mock_server.url("/hello")).unwrap();
+    ///
+    /// // Assert
+    /// assert_eq!(response.status(), 200);
+    /// assert_eq!(response.text().unwrap(), "ohi!");
+    /// assert_eq!(m.times_called(), 1);
+    /// ```
+    pub fn body_from_file<S: Into<String>>(self, body: S) -> Self {
+        self.mock.set(self.mock.take().return_body_from_file(body));
+        self
+    }
+
     /// Sets the JSON body for the HTTP response that will be returned by the mock server.
     ///
     /// The provided JSON object needs to be both, a deserializable and serializable serde object.

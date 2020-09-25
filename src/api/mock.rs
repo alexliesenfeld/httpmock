@@ -9,7 +9,7 @@ use crate::api::{Method, Regex};
 use crate::server::data::{
     MockDefinition, MockMatcherFunction, MockServerHttpResponse, Pattern, RequestRequirements,
 };
-use crate::util::Join;
+use crate::util::{get_test_resource_file_path, read_file, Join};
 use crate::MockServer;
 use std::time::Duration;
 
@@ -1017,6 +1017,47 @@ impl Mock {
     pub fn return_body<S: Into<Vec<u8>>>(mut self, body: S) -> Self {
         self.mock.response.body = Some(body.into());
         self
+    }
+
+    /// Sets the HTTP response body that will be returned by the mock server.
+    ///
+    /// * `body` - The response body content.
+    ///
+    /// ## Example:
+    /// ```
+    /// use httpmock::{MockServer, Mock, MockServerRequest};
+    /// use isahc::ResponseExt;
+    ///
+    /// // Arrange
+    /// let mock_server = MockServer::start();
+    /// let m = Mock::new()
+    ///     .expect_path("/hello")
+    ///     .return_status(200)
+    ///     .return_body_from_file("tests/resources/simple_body.txt")
+    ///     .create_on(&mock_server);
+    ///
+    /// // Act
+    /// let mut response = isahc::get(mock_server.url("/hello")).unwrap();
+    ///
+    /// // Assert
+    /// assert_eq!(response.status(), 200);
+    /// assert_eq!(response.text().unwrap(), "ohi!");
+    /// assert_eq!(m.times_called(), 1);
+    /// ```
+    pub fn return_body_from_file<S: Into<String>>(
+        mut self,
+        relative_test_resource_path: S,
+    ) -> Self {
+        let rel_path = relative_test_resource_path.into();
+        let abs_path = get_test_resource_file_path(&rel_path).expect(&format!(
+            "Cannot create absolute path from string '{}'",
+            &rel_path
+        ));
+        let content = read_file(&abs_path).expect(&format!(
+            "Cannot read from file {}",
+            abs_path.to_str().expect("Invalid OS path")
+        ));
+        self.return_body(content)
     }
 
     /// Sets the JSON body for the HTTP response that will be returned by the mock server.
