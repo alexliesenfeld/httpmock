@@ -21,106 +21,69 @@
     <a href="https://github.com/alexliesenfeld/httpmock/issues">Report Bug</a>
     ·
     <a href="https://github.com/alexliesenfeld/httpmock/issues">Request Feature</a>
+    ·
+    <a href="https://github.com/alexliesenfeld/httpmock/blob/develop/RELEASES.md">Changelog</a>
 </p>
 
 ## Features
 
-* Provides an HTTP mock server with HTTP/1 and HTTP/2 support.
-* A fully asynchronous core with synchronous and asynchronous APIs.
-* Compatible with all major asynchronous executors and runtimes.
-* Built-in request matchers with support for custom request matchers.
-* Parallel test execution by default.
-* A standalone mode with an accompanying [Docker image](https://hub.docker.com/r/alexliesenfeld/httpmock).
+* Simple, expressive, fluent API.
+* Many built-in helpers for easy request matching.
+* Parallel test execution.
+* Extensible request matching.
+* Two interchangeable API DSLs for mock definition.
+* Fully asynchronous core with synchronous and asynchronous APIs.
+* Debugging support.
+* Standalone mode with an accompanying [Docker image](https://hub.docker.com/r/alexliesenfeld/httpmock).
+* Network delay simulation.
+* Support for [Regex](https://docs.rs/regex/) matching, JSON, [serde](https://crates.io/crates/serde), cookies, and more.
+
 
 ## Getting Started
 Add `httpmock` to `Cargo.toml`:
 
 ```toml
 [dev-dependencies]
-httpmock = "0.4.5"
+httpmock = "0.5.0"
 ```
-
-You can then use `httpmock` in your tests like shown in the example below:
+You can then use `httpmock` as follows:
 ```rust
-extern crate httpmock;
+use httpmock::MockServer;
+use httpmock::Method::GET;
 
-use httpmock::Method::{GET};
-use httpmock::{Mock, MockServer, MockServerRequest, Regex};
+// Start a lightweight mock server.
+let mock_server = MockServer::start();
 
-#[test]
-fn example_test() {
-    // Start a local mock server for exclusive use by this test function.
-    let mock_server = MockServer::start();
+// Create a mock on the server.
+let hello_mock = mock_server.mock(|when, then| {
+    when.method(GET)
+        .path("/translate")
+        .query_param("word", "hello");
+    then.status(200)
+        .header("Content-Type", "text/html; charset=UTF-8")
+        .body("Привет");
+});
 
-    // Create a mock on the mock server. The mock will return HTTP status code 200 whenever
-    // the mock server receives a GET-request with path "/hello".
-    let hello_mock = Mock::new()
-        .expect_method(GET)
-        .expect_path("/hello")
-        .return_status(200)
-        .create_on(&mock_server);
+// Send an HTTP request to the mock server. This simulates your code.
+let response = isahc::get(mock_server.url("/translate?word=hello")).unwrap();
 
-    // Send an HTTP request to the mock server. This simulates your code.
-    // The mock_server variable is being used to generate a mock server URL for path "/hello".
-    let response = get(mock_server.url("/hello")).unwrap();
-
-    // Ensure the mock server did respond as specified above.
-    assert_eq!(response.status(), 200);
-    // Ensure the specified mock responded exactly one time.
-    assert_eq!(hello_mock.times_called(), 1);
-}
+// Ensure the mock server did respond as specified.
+assert_eq!(response.status(), 200);
+// Ensure the specified mock was called exactly one time.
+assert_eq!(hello_mock.times_called(), 1);
 ```
 
-## API Usage
+The above example will spin up a lightweight HTTP mock server and configure it to respond to all `GET` requests 
+to path `/translate` with query parameter `word=hello`. The corresponding HTTP response will contain the text body 
+`Привет`.
 
-Each test usually creates its own local `MockServer` using `MockServer::start()`. This creates a lightweight HTTP
-server that runs on its own port. This way tests do not conflict with each other.
-
-You can use the `Mock`  structure to specify and create mocks on the mock server. It provides you all supported mocking 
-functionality.
-
-### Request Matching and Responses
-Other than many other libraries `httpmock` does not require you to learn a DSL-like API to
-specify mock behaviour. Instead, `httpmock` provides you a fluent builder API that
-clearly separates request matching and response attributes by using the following naming scheme:
-
-- All `Mock` methods that start with `expect` in their name set a requirement
-for HTTP requests (e.g. `Mock::expect_method`, `Mock::expect_path`, or `Mock::expect_body`).
-- All `Mock` methods that start with `return` in their name define what the
-mock server will return in response to an HTTP request that matched all mock requirements (e.g.
-`Mock::return_status`, `Mock::return_body`, etc.).
-
-With this naming scheme users can benefit from IDE autocompletion to find request matchers and
-response attributes mostly without even looking into documentation.
-
-If a request does not match at least one mock, the server will respond with
-an error message and HTTP status code 404 (Not Found).
-
-### Sync / Async
-
-The internal implementation of `httpmock` is fully asynchronous. It provides you a synchronous and an asynchronous API 
-though. If you want to schedule awaiting operations manually, then you can use the `async` variants that exist for every 
-potentially blocking operation. For example, there is `MockServer::start_async` as an asynchronous 
-counterpart to `MockServer::start` and `Mock::create_on_async` for `Mock::create_on`. 
+# Usage
+See the [reference docs](https://docs.rs/httpmock/) for detailed API documentation.
 
 ## Examples
-For more examples, please refer to
-[this crates test directory](https://github.com/alexliesenfeld/httpmock/blob/master/tests ).
-
-## Debugging
-`httpmock` logs against the `log` crate. This allows you to see detailed information about `httpmock`s behaviour.   
-For example, if you use the `env_logger` backend, you can activate debug logging by setting the `RUST_LOG` environment 
-variable to `httpmock=debug`. 
-
-Attention: To be able to see the log output, you need to add the `--nocapture` argument 
-when starting test execution!  
-
-## Standalone Mode
-You can use `httpmock` to run a standalone mock server that is available to multiple applications. This can be useful 
-if you are running integration tests that involve both, real and mocked applications. 
-
-Although you can build the mock server in standalone mode yourself, it is easiest to use the accompanying 
-[Docker image](https://hub.docker.com/r/alexliesenfeld/httpmock).
+You can find examples in the 
+[`httpmock` test directory](https://github.com/alexliesenfeld/httpmock/blob/master/tests/). 
+The [reference docs](https://docs.rs/httpmock/) also contain _**a lot**_ of examples. 
 
 ## License
 `httpmock` is free software: you can redistribute it and/or modify it under the terms of the MIT Public License.
