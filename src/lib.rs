@@ -23,6 +23,7 @@
 //! You can then use `httpmock` as follows:
 //! ```
 //! use httpmock::MockServer;
+//! use httpmock::Method::GET;
 //!
 //! // Start a lightweight mock server.
 //! let mock_server = MockServer::start();
@@ -116,7 +117,7 @@
 //! });
 //!
 //! let response = isahc::get(mock_server.url("/hi")).unwrap();
-//! assert_eq!(hello_mock.times_called(), 1);
+//! assert_eq!(greeting_mock.times_called(), 1);
 //! ```
 //! Note that `when` and `then` are variables. This allows you to rename them to something you
 //! like better (such as `expect`/`respond_with`).
@@ -138,7 +139,7 @@
 //!     .create_on(&mock_server);
 //!
 //! let response = isahc::get(mock_server.url("/hi")).unwrap();
-//! assert_eq!(hello_mock.times_called(), 1);
+//! assert_eq!(greeting_mock.times_called(), 1);
 //! ```
 //! Please observe the following method naming scheme:
 //! - All [Mock](struct.Mock.html) methods that start with `expect` in their name set a requirement
@@ -1080,7 +1081,7 @@ impl Then {
     /// assert_eq!(response.status(), 200);
     /// assert_eq!(m.times_called(), 1);
     /// ```
-    pub fn status(self, status: usize) -> Self {
+    pub fn status(self, status: u16) -> Self {
         self.mock.set(self.mock.take().return_status(status));
         self
     }
@@ -1283,7 +1284,7 @@ impl Then {
     /// // (see details in mock builder method documentation).
     /// assert_eq!(response.status(), 302);
     /// assert_eq!(body, "Found");
-    /// assert_eq!(response.headers().get("Location").unwrap().to_str().unwrap(), target_url);
+    /// assert_eq!(response.headers().get("Location").unwrap().to_str().unwrap(), "http://www.google.com");
     /// ```
     pub fn temporary_redirect(mut self, redirect_url: &str) -> Self {
         self.mock
@@ -1328,7 +1329,7 @@ impl Then {
     /// // (see details in mock builder method documentation).
     /// assert_eq!(response.status(), 301);
     /// assert_eq!(body, "Moved Permanently");
-    /// assert_eq!(response.headers().get("Location").unwrap().to_str().unwrap(), target_url);
+    /// assert_eq!(response.headers().get("Location").unwrap().to_str().unwrap(), "http://www.google.com");
     /// ```
     pub fn permanent_redirect(mut self, redirect_url: &str) -> Self {
         self.mock

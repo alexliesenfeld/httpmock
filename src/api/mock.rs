@@ -984,8 +984,8 @@ impl Mock {
     /// assert_eq!(response.status(), 200);
     /// assert_eq!(m.times_called(), 1);
     /// ```
-    pub fn return_status(mut self, status: usize) -> Self {
-        self.mock.response.status = Some(status as u16);
+    pub fn return_status(mut self, status: u16) -> Self {
+        self.mock.response.status = Some(status);
         self
     }
 
@@ -1186,7 +1186,6 @@ impl Mock {
     ///     .create_on(&mock_server);
     ///
     /// // Act: Send the HTTP request with an HTTP client that DOES NOT FOLLOW redirects automatically!
-    ///
     /// let mut response = isahc::get(mock_server.url("/redirectPath")).unwrap();
     /// let body = response.text().unwrap();
     ///
@@ -1195,9 +1194,9 @@ impl Mock {
     ///
     /// // Attention!: Note that all of these values are automatically added to the response
     /// // (see details in mock builder method documentation).
-    /// assert_eq!(response.status(), 302);
-    /// assert_eq!(body, "Found");
-    /// assert_eq!(response.headers().get("Location").unwrap().to_str().unwrap(), target_url);
+    /// assert_eq!(response.status(), 301);
+    /// assert_eq!(body, "Moved Permanently");
+    /// assert_eq!(response.headers().get("Location").unwrap().to_str().unwrap(), "http://www.google.com");
     /// ```
     pub fn return_permanent_redirect(mut self, redirect_url: &str) -> Self {
         // see https://developer.mozilla.org/en-US/docs/Web/HTTP/Redirections
@@ -1248,7 +1247,7 @@ impl Mock {
     /// // (see details in mock builder method documentation).
     /// assert_eq!(response.status(), 302);
     /// assert_eq!(body, "Found");
-    /// assert_eq!(response.headers().get("Location").unwrap().to_str().unwrap(), target_url);
+    /// assert_eq!(response.headers().get("Location").unwrap().to_str().unwrap(), "http://www.google.com");
     /// ```
     pub fn return_temporary_redirect(mut self, redirect_url: &str) -> Self {
         // see https://developer.mozilla.org/en-US/docs/Web/HTTP/Redirections
@@ -1381,6 +1380,6 @@ mod test {
     #[test]
     fn fill_mock_requirements() {
         let mock = Mock::default();
-        assert_eq!(mock.mock.response.status, 200);
+        assert_eq!(mock.mock.response.status, None);
     }
 }

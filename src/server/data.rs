@@ -69,6 +69,11 @@ impl MockServerHttpResponse {
         }
     }
 
+    pub fn with_status(mut self, arg: u16) -> Self {
+        self.status = Some(arg);
+        self
+    }
+
     pub fn with_headers(mut self, arg: BTreeMap<String, String>) -> Self {
         self.headers = Some(arg);
         self
