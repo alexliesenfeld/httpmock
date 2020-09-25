@@ -4,7 +4,7 @@
 - 🚀 _**Attention**: A new API for mock definition was added. The old API is still available. No changes required on your side!_
 - Most API methods now accept `Into<T>` trait bounds (such as `Into<String>`) instead of concrete types (such as `&str`).
 - The two methods `Mock::return_body` and `Then::body` now accept binary content.
-- The new following methods which take a `serde_json::Value` as an argument:
+- The following methods were added:
     - `Mock::expect_json_body`
     - `Mock::return_json_body`
     - `When::json_body`
