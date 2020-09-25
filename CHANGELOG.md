@@ -2,9 +2,8 @@
 - ❌ _**Breaking Change**_: Function `Mock::expect_json_body` was renamed to `expect_json_body_obj`.
 - ❌ _**Breaking Change**_: Function `Mock::return_json_body` was renamed to `return_json_body_obj`.
 - 🚀 _**Attention**: A new API for mock definition was added. The old API is still available. No changes required on your side!_
-- Most API methods now accept trait bounds (such as `Into<String>`) instead of concrete types (such as `&str`).
-- Function `Mock::return_body` and `Then::body` now accept a `Into<Vec<u8>>` parameter instead of `String`. No changes required on your side! 
-  This allows for binary content in the response body.  
+- Most API methods now accept `Into<T>` trait bounds (such as `Into<String>`) instead of concrete types (such as `&str`).
+- The methods `Mock::return_body` and `Then::body` now accept binary content.
 - Two new functions `expect_json_body` and `return_json_body were added which take a `serde_json::Value` as an argument.
 - Improved documentation (a lot!).
 - Debug log output is now pretty printed!
