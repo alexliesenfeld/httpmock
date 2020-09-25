@@ -70,11 +70,11 @@ impl ServerRequestHeader {
 pub(crate) struct ServerResponse {
     pub status: u16,
     pub headers: BTreeMap<String, String>,
-    pub body: String,
+    pub body: Vec<u8>,
 }
 
 impl ServerResponse {
-    pub fn new(status: u16, headers: BTreeMap<String, String>, body: String) -> Self {
+    pub fn new(status: u16, headers: BTreeMap<String, String>, body: Vec<u8>) -> Self {
         Self {
             status,
             headers,
@@ -341,7 +341,7 @@ mod test {
         headers.insert(";;;".to_string(), ";;;".to_string());
 
         let res = ServerResponse {
-            body: "".to_string(),
+            body: Vec::new(),
             status: 500,
             headers,
         };

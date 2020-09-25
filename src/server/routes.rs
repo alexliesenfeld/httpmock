@@ -106,7 +106,7 @@ fn create_json_response<T>(
 where
     T: Serialize,
 {
-    let body = serde_json::to_string(&body);
+    let body = serde_json::to_vec(&body);
     if let Err(e) = body {
         return Err(format!("Cannot serialize body: {}", e));
     }
@@ -120,7 +120,7 @@ where
 fn create_response(
     status: u16,
     headers: Option<BTreeMap<String, String>>,
-    body: Option<String>,
+    body: Option<Vec<u8>>,
 ) -> Result<ServerResponse, String> {
     let headers = headers.unwrap_or_default();
     let body = body.unwrap_or_default();

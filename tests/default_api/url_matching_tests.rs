@@ -1,8 +1,15 @@
 extern crate httpmock;
 
+use self::httpmock::Mock;
 use httpmock::{MockServer, Regex};
 use httpmock_macros::httpmock_example_test;
 use isahc::get;
+
+#[test]
+fn aaa_test() {
+    let a = "".to_string();
+    Mock::new().return_body(a);
+}
 
 #[test]
 #[httpmock_example_test] // Internal macro to make testing easier. Ignore it.

@@ -1,14 +1,14 @@
+use async_trait::async_trait;
+use isahc::prelude::*;
 use std::borrow::Borrow;
 use std::fmt::Debug;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 
-use async_trait::async_trait;
-use isahc::prelude::*;
-
 use crate::server::data::{ActiveMock, MockDefinition, MockIdentification, MockServerState};
 use crate::server::handlers::{add_new_mock, delete_all, delete_one, read_one};
+use std::str::FromStr;
 
 /// Type alias for [regex::Regex](../regex/struct.Regex.html).
 pub type Regex = regex::Regex;
@@ -27,6 +27,31 @@ pub enum Method {
     OPTIONS,
     TRACE,
     PATCH,
+}
+
+impl FromStr for Method {
+    type Err = String;
+
+    fn from_str(input: &str) -> Result<Self, Self::Err> {
+        match input {
+            "GET" => Ok(Method::GET),
+            "HEAD" => Ok(Method::HEAD),
+            "POST" => Ok(Method::POST),
+            "PUT" => Ok(Method::PUT),
+            "DELETE" => Ok(Method::DELETE),
+            "CONNECT" => Ok(Method::CONNECT),
+            "OPTIONS" => Ok(Method::OPTIONS),
+            "TRACE" => Ok(Method::TRACE),
+            "PATCH" => Ok(Method::PATCH),
+            _ => Err(format!("Invalid HTTP method {}", input)),
+        }
+    }
+}
+
+impl From<&str> for Method {
+    fn from(value: &str) -> Self {
+        value.parse().expect("Cannot parse HTTP method")
+    }
 }
 
 #[async_trait]

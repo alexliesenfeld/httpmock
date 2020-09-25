@@ -305,8 +305,8 @@ impl Mock {
     ///
     /// assert_eq!(mock.times_called(), 1);
     /// ```
-    pub fn expect_path(mut self, path: &str) -> Self {
-        self.mock.request.path = Some(path.to_string());
+    pub fn expect_path<S: Into<String>>(mut self, path: S) -> Self {
+        self.mock.request.path = Some(path.into());
         self
     }
 
@@ -327,7 +327,7 @@ impl Mock {
     ///
     /// assert_eq!(mock.times_called(), 1);
     /// ```
-    pub fn expect_path_contains(mut self, substring: &str) -> Self {
+    pub fn expect_path_contains<S: Into<String>>(mut self, substring: S) -> Self {
         if self.mock.request.path_contains.is_none() {
             self.mock.request.path_contains = Some(Vec::new());
         }
@@ -337,7 +337,7 @@ impl Mock {
             .path_contains
             .as_mut()
             .unwrap()
-            .push(substring.to_string());
+            .push(substring.into());
 
         self
     }
@@ -360,7 +360,7 @@ impl Mock {
     ///
     /// assert_eq!(mock.times_called(), 1);
     /// ```
-    pub fn expect_path_matches(mut self, regex: Regex) -> Self {
+    pub fn expect_path_matches<R: Into<Regex>>(mut self, regex: R) -> Self {
         if self.mock.request.path_matches.is_none() {
             self.mock.request.path_matches = Some(Vec::new());
         }
@@ -370,7 +370,7 @@ impl Mock {
             .path_matches
             .as_mut()
             .unwrap()
-            .push(Pattern::from_regex(regex));
+            .push(Pattern::from_regex(regex.into()));
         self
     }
 
@@ -394,8 +394,8 @@ impl Mock {
     ///
     /// assert_eq!(mock.times_called(), 1);
     /// ```
-    pub fn expect_method(mut self, method: Method) -> Self {
-        self.mock.request.method = Some(method.to_string());
+    pub fn expect_method<M: Into<Method>>(mut self, method: M) -> Self {
+        self.mock.request.method = Some(method.into().to_string());
         self
     }
 
@@ -425,7 +425,7 @@ impl Mock {
     ///
     /// assert_eq!(mock.times_called(), 1);
     /// ```
-    pub fn expect_header(mut self, name: &str, value: &str) -> Self {
+    pub fn expect_header<S: Into<String>>(mut self, name: S, value: S) -> Self {
         if self.mock.request.headers.is_none() {
             self.mock.request.headers = Some(BTreeMap::new());
         }
@@ -435,7 +435,7 @@ impl Mock {
             .headers
             .as_mut()
             .unwrap()
-            .insert(name.to_string(), value.to_string());
+            .insert(name.into(), value.into());
 
         self
     }
@@ -467,7 +467,7 @@ impl Mock {
     ///
     /// assert_eq!(mock.times_called(), 1);
     /// ```
-    pub fn expect_header_exists(mut self, name: &str) -> Self {
+    pub fn expect_header_exists<S: Into<String>>(mut self, name: S) -> Self {
         if self.mock.request.header_exists.is_none() {
             self.mock.request.header_exists = Some(Vec::new());
         }
@@ -477,7 +477,7 @@ impl Mock {
             .header_exists
             .as_mut()
             .unwrap()
-            .push(name.to_string());
+            .push(name.into());
         self
     }
 
@@ -509,7 +509,7 @@ impl Mock {
     ///
     /// assert_eq!(mock.times_called(), 1);
     /// ```
-    pub fn expect_cookie(mut self, name: &str, value: &str) -> Self {
+    pub fn expect_cookie<S: Into<String>>(mut self, name: S, value: S) -> Self {
         if self.mock.request.cookies.is_none() {
             self.mock.request.cookies = Some(BTreeMap::new());
         }
@@ -519,7 +519,7 @@ impl Mock {
             .cookies
             .as_mut()
             .unwrap()
-            .insert(name.to_string(), value.to_string());
+            .insert(name.into(), value.into());
 
         self
     }
@@ -551,7 +551,7 @@ impl Mock {
     ///
     /// assert_eq!(mock.times_called(), 1);
     /// ```
-    pub fn expect_cookie_exists(mut self, name: &str) -> Self {
+    pub fn expect_cookie_exists<S: Into<String>>(mut self, name: S) -> Self {
         if self.mock.request.cookie_exists.is_none() {
             self.mock.request.cookie_exists = Some(Vec::new());
         }
@@ -561,7 +561,7 @@ impl Mock {
             .cookie_exists
             .as_mut()
             .unwrap()
-            .push(name.to_string());
+            .push(name.into());
         self
     }
 
@@ -590,8 +590,8 @@ impl Mock {
     ///
     /// assert_eq!(mock.times_called(), 1);
     /// ```
-    pub fn expect_body(mut self, body: &str) -> Self {
-        self.mock.request.body = Some(body.to_string());
+    pub fn expect_body<S: Into<String>>(mut self, body: S) -> Self {
+        self.mock.request.body = Some(body.into());
         self
     }
 
@@ -689,8 +689,8 @@ impl Mock {
     /// assert_eq!(response.status(), 201);
     /// assert_eq!(m.times_called(), 1);
     /// ```
-    pub fn expect_json_body(mut self, body: Value) -> Self {
-        self.mock.request.json_body = Some(body);
+    pub fn expect_json_body<V: Into<Value>>(mut self, body: V) -> Self {
+        self.mock.request.json_body = Some(body.into());
         self
     }
 
@@ -738,13 +738,13 @@ impl Mock {
     /// Please note that the JSON partial contains the full object hierachy, i.e. it needs to start
     /// from the root! It leaves out irrelevant attributes, however (`parent_attribute`
     /// and `child.other_attribute`).
-    pub fn expect_json_body_partial(mut self, partial_body: &str) -> Self {
+    pub fn expect_json_body_partial<S: Into<String>>(mut self, partial_body: S) -> Self {
         if self.mock.request.json_body_includes.is_none() {
             self.mock.request.json_body_includes = Some(Vec::new());
         }
 
-        let value =
-            Value::from_str(partial_body).expect("cannot convert JSON string to serde value");
+        let value = Value::from_str(&partial_body.into())
+            .expect("cannot convert JSON string to serde value");
 
         self.mock
             .request
@@ -787,7 +787,7 @@ impl Mock {
     /// assert_eq!(response.status(), 201);
     /// assert_eq!(m.times_called(), 1);
     /// ```
-    pub fn expect_body_contains(mut self, substring: &str) -> Self {
+    pub fn expect_body_contains<S: Into<String>>(mut self, substring: S) -> Self {
         if self.mock.request.body_contains.is_none() {
             self.mock.request.body_contains = Some(Vec::new());
         }
@@ -797,7 +797,7 @@ impl Mock {
             .body_contains
             .as_mut()
             .unwrap()
-            .push(substring.to_string());
+            .push(substring.into());
         self
     }
 
@@ -833,7 +833,7 @@ impl Mock {
     /// assert_eq!(response.status(), 201);
     /// assert_eq!(m.times_called(), 1);
     /// ```
-    pub fn expect_body_matches(mut self, regex: Regex) -> Self {
+    pub fn expect_body_matches<R: Into<Regex>>(mut self, regex: R) -> Self {
         if self.mock.request.body_matches.is_none() {
             self.mock.request.body_matches = Some(Vec::new());
         }
@@ -843,7 +843,7 @@ impl Mock {
             .body_matches
             .as_mut()
             .unwrap()
-            .push(Pattern::from_regex(regex));
+            .push(Pattern::from_regex(regex.into()));
         self
     }
 
@@ -870,7 +870,7 @@ impl Mock {
     /// // Assert
     /// assert_eq!(m.times_called(), 1);
     /// ```
-    pub fn expect_query_param(mut self, name: &str, value: &str) -> Self {
+    pub fn expect_query_param<S: Into<String>>(mut self, name: S, value: S) -> Self {
         if self.mock.request.query_param.is_none() {
             self.mock.request.query_param = Some(BTreeMap::new());
         }
@@ -880,7 +880,7 @@ impl Mock {
             .query_param
             .as_mut()
             .unwrap()
-            .insert(name.to_string(), value.to_string());
+            .insert(name.into(), value.into());
 
         self
     }
@@ -907,7 +907,7 @@ impl Mock {
     /// // Assert
     /// assert_eq!(m.times_called(), 1);
     /// ```
-    pub fn expect_query_param_exists(mut self, name: &str) -> Self {
+    pub fn expect_query_param_exists<S: Into<String>>(mut self, name: S) -> Self {
         if self.mock.request.query_param_exists.is_none() {
             self.mock.request.query_param_exists = Some(Vec::new());
         }
@@ -917,7 +917,7 @@ impl Mock {
             .query_param_exists
             .as_mut()
             .unwrap()
-            .push(name.to_string());
+            .push(name.into());
 
         self
     }
@@ -1014,8 +1014,8 @@ impl Mock {
     /// assert_eq!(response.text().unwrap(), "ohi!");
     /// assert_eq!(m.times_called(), 1);
     /// ```
-    pub fn return_body(mut self, body: &str) -> Self {
-        self.mock.response.body = Some(body.to_string());
+    pub fn return_body<S: Into<Vec<u8>>>(mut self, body: S) -> Self {
+        self.mock.response.body = Some(body.into());
         self
     }
 
@@ -1059,8 +1059,8 @@ impl Mock {
     /// assert_eq!(m.times_called(), 1);
     /// assert_eq!(user.as_object().unwrap().get("name").unwrap(), "Hans");
     /// ```
-    pub fn return_json_body(mut self, body: Value) -> Self {
-        self.mock.response.body = Some(body.to_string());
+    pub fn return_json_body<V: Into<Value>>(mut self, body: V) -> Self {
+        self.mock.response.body = Some(body.into().to_string().into_bytes());
         self
     }
 
@@ -1144,7 +1144,7 @@ impl Mock {
     /// assert_eq!(response.status(), 200);
     /// assert_eq!(m.times_called(), 1);
     /// ```
-    pub fn return_header(mut self, name: &str, value: &str) -> Self {
+    pub fn return_header<S: Into<String>>(mut self, name: S, value: S) -> Self {
         if self.mock.response.headers.is_none() {
             self.mock.response.headers = Some(BTreeMap::new());
         }
@@ -1154,7 +1154,7 @@ impl Mock {
             .headers
             .as_mut()
             .unwrap()
-            .insert(name.to_string(), value.to_string());
+            .insert(name.into(), value.into());
 
         self
     }
@@ -1198,7 +1198,7 @@ impl Mock {
     /// assert_eq!(body, "Moved Permanently");
     /// assert_eq!(response.headers().get("Location").unwrap().to_str().unwrap(), "http://www.google.com");
     /// ```
-    pub fn return_permanent_redirect(mut self, redirect_url: &str) -> Self {
+    pub fn return_permanent_redirect<S: Into<String>>(mut self, redirect_url: S) -> Self {
         // see https://developer.mozilla.org/en-US/docs/Web/HTTP/Redirections
         if self.mock.response.status.is_none() {
             self = self.return_status(301);
@@ -1206,7 +1206,7 @@ impl Mock {
         if self.mock.response.body.is_none() {
             self = self.return_body("Moved Permanently");
         }
-        self.return_header("Location", redirect_url)
+        self.return_header("Location", &redirect_url.into())
     }
 
     /// Sets the HTTP response up to return a temporary redirect.
@@ -1249,7 +1249,7 @@ impl Mock {
     /// assert_eq!(body, "Found");
     /// assert_eq!(response.headers().get("Location").unwrap().to_str().unwrap(), "http://www.google.com");
     /// ```
-    pub fn return_temporary_redirect(mut self, redirect_url: &str) -> Self {
+    pub fn return_temporary_redirect<S: Into<String>>(mut self, redirect_url: S) -> Self {
         // see https://developer.mozilla.org/en-US/docs/Web/HTTP/Redirections
         if self.mock.response.status.is_none() {
             self = self.return_status(302);
@@ -1257,7 +1257,7 @@ impl Mock {
         if self.mock.response.body.is_none() {
             self = self.return_body("Found");
         }
-        self.return_header("Location", redirect_url)
+        self.return_header("Location", &redirect_url.into())
     }
 
     /// Sets a duration that will delay the mock server response.
@@ -1287,8 +1287,8 @@ impl Mock {
     /// assert_eq!(mock.times_called(), 1);
     /// assert_eq!(start_time.elapsed().unwrap() > delay, true);
     /// ```
-    pub fn return_with_delay(mut self, duration: Duration) -> Self {
-        self.mock.response.delay = Some(duration);
+    pub fn return_with_delay<D: Into<Duration>>(mut self, duration: D) -> Self {
+        self.mock.response.delay = Some(duration.into());
         self
     }
 

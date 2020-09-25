@@ -55,7 +55,7 @@ impl MockServerHttpRequest {
 pub(crate) struct MockServerHttpResponse {
     pub status: Option<u16>,
     pub headers: Option<BTreeMap<String, String>>,
-    pub body: Option<String>,
+    pub body: Option<Vec<u8>>,
     pub delay: Option<Duration>,
 }
 
@@ -80,7 +80,7 @@ impl MockServerHttpResponse {
     }
 
     pub fn with_body(mut self, arg: String) -> Self {
-        self.body = Some(arg);
+        self.body = Some(arg.into_bytes());
         self
     }
 }

@@ -8,6 +8,7 @@
 - Debug log output is now pretty printed!
 - Cookie matching support.
 - Support for convenient temporary and permanent redirect.
+- Most API methods now accept convertible types (such as `Into<String>`) instead of actual types (such as `&str`).
 - The log level of the following messages wes changed from `debug` to `trace`:
   - When deleting all mocks during mock server initialization. 
 

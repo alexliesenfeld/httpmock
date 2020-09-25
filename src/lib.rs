@@ -503,7 +503,7 @@ impl When {
     ///
     /// assert_eq!(mock.times_called(), 1);
     /// ```
-    pub fn method(self, method: Method) -> Self {
+    pub fn method<M: Into<Method>>(self, method: M) -> Self {
         self.mock.set(self.mock.take().expect_method(method));
         self
     }
@@ -526,7 +526,7 @@ impl When {
     ///
     /// assert_eq!(mock.times_called(), 1);
     /// ```
-    pub fn path(self, path: &str) -> Self {
+    pub fn path<S: Into<String>>(self, path: S) -> Self {
         self.mock.set(self.mock.take().expect_path(path));
         self
     }
@@ -549,7 +549,7 @@ impl When {
     ///
     /// assert_eq!(mock.times_called(), 1);
     /// ```
-    pub fn path_contains(self, substring: &str) -> Self {
+    pub fn path_contains<S: Into<String>>(self, substring: S) -> Self {
         self.mock
             .set(self.mock.take().expect_path_contains(substring));
         self
@@ -574,7 +574,7 @@ impl When {
     ///
     /// assert_eq!(mock.times_called(), 1);
     /// ```
-    pub fn path_matches(self, regex: Regex) -> Self {
+    pub fn path_matches<R: Into<Regex>>(self, regex: R) -> Self {
         self.mock.set(self.mock.take().expect_path_matches(regex));
         self
     }
@@ -602,7 +602,7 @@ impl When {
     /// // Assert
     /// assert_eq!(m.times_called(), 1);
     /// ```
-    pub fn query_param(self, name: &str, value: &str) -> Self {
+    pub fn query_param<S: Into<String>>(self, name: S, value: S) -> Self {
         self.mock
             .set(self.mock.take().expect_query_param(name, value));
         self
@@ -630,7 +630,7 @@ impl When {
     /// // Assert
     /// assert_eq!(m.times_called(), 1);
     /// ```
-    pub fn query_param_exists(self, name: &str) -> Self {
+    pub fn query_param_exists<S: Into<String>>(self, name: S) -> Self {
         self.mock
             .set(self.mock.take().expect_query_param_exists(name));
         self
@@ -662,7 +662,7 @@ impl When {
     ///
     /// assert_eq!(mock.times_called(), 1);
     /// ```
-    pub fn body(self, body: &str) -> Self {
+    pub fn body<S: Into<String>>(self, body: S) -> Self {
         self.mock.set(self.mock.take().expect_body(body));
         self
     }
@@ -699,7 +699,7 @@ impl When {
     /// assert_eq!(response.status(), 201);
     /// assert_eq!(m.times_called(), 1);
     /// ```
-    pub fn body_matches(self, regex: Regex) -> Self {
+    pub fn body_matches<R: Into<Regex>>(self, regex: R) -> Self {
         self.mock.set(self.mock.take().expect_body_matches(regex));
         self
     }
@@ -735,7 +735,7 @@ impl When {
     /// assert_eq!(response.status(), 201);
     /// assert_eq!(m.times_called(), 1);
     /// ```
-    pub fn body_contains(self, substring: &str) -> Self {
+    pub fn body_contains<S: Into<String>>(self, substring: S) -> Self {
         self.mock
             .set(self.mock.take().expect_body_contains(substring));
         self
@@ -778,7 +778,7 @@ impl When {
     /// assert_eq!(response.status(), 201);
     /// assert_eq!(m.times_called(), 1);
     /// ```
-    pub fn json_body(self, value: serde_json::Value) -> Self {
+    pub fn json_body<V: Into<serde_json::Value>>(self, value: V) -> Self {
         self.mock.set(self.mock.take().expect_json_body(value));
         self
     }
@@ -883,7 +883,7 @@ impl When {
     /// Please note that the JSON partial contains the full object hierachy, i.e. it needs to start
     /// from the root! It leaves out irrelevant attributes, however (`parent_attribute`
     /// and `child.other_attribute`).
-    pub fn json_body_partial(self, partial: &str) -> Self {
+    pub fn json_body_partial<S: Into<String>>(self, partial: S) -> Self {
         self.mock
             .set(self.mock.take().expect_json_body_partial(partial));
         self
@@ -916,7 +916,7 @@ impl When {
     ///
     /// assert_eq!(mock.times_called(), 1);
     /// ```
-    pub fn header(self, name: &str, value: &str) -> Self {
+    pub fn header<S: Into<String>>(self, name: S, value: S) -> Self {
         self.mock.set(self.mock.take().expect_header(name, value));
         self
     }
@@ -949,7 +949,7 @@ impl When {
     ///
     /// assert_eq!(mock.times_called(), 1);
     /// ```
-    pub fn header_exists(self, name: &str) -> Self {
+    pub fn header_exists<S: Into<String>>(self, name: S) -> Self {
         self.mock.set(self.mock.take().expect_header_exists(name));
         self
     }
@@ -983,7 +983,7 @@ impl When {
     ///
     /// assert_eq!(mock.times_called(), 1);
     /// ```
-    pub fn cookie(self, name: &str, value: &str) -> Self {
+    pub fn cookie<S: Into<String>>(self, name: S, value: S) -> Self {
         self.mock.set(self.mock.take().expect_cookie(name, value));
         self
     }
@@ -1016,7 +1016,7 @@ impl When {
     ///
     /// assert_eq!(mock.times_called(), 1);
     /// ```
-    pub fn cookie_exists(self, name: &str) -> Self {
+    pub fn cookie_exists<S: Into<String>>(self, name: S) -> Self {
         self.mock.set(self.mock.take().expect_cookie_exists(name));
         self
     }
@@ -1112,7 +1112,7 @@ impl Then {
     /// assert_eq!(response.text().unwrap(), "ohi!");
     /// assert_eq!(m.times_called(), 1);
     /// ```
-    pub fn body(self, body: &str) -> Self {
+    pub fn body<S: Into<Vec<u8>>>(self, body: S) -> Self {
         self.mock.set(self.mock.take().return_body(body));
         self
     }
@@ -1157,7 +1157,7 @@ impl Then {
     /// assert_eq!(m.times_called(), 1);
     /// assert_eq!(user.as_object().unwrap().get("name").unwrap(), "Hans");
     /// ```
-    pub fn json_body(self, value: Value) -> Self {
+    pub fn json_body<V: Into<Value>>(self, value: V) -> Self {
         self.mock.set(self.mock.take().return_json_body(value));
         self
     }
@@ -1242,7 +1242,7 @@ impl Then {
     /// assert_eq!(response.status(), 200);
     /// assert_eq!(m.times_called(), 1);
     /// ```
-    pub fn header(self, name: &str, value: &str) -> Self {
+    pub fn header<S: Into<String>>(self, name: S, value: S) -> Self {
         self.mock.set(self.mock.take().return_header(name, value));
         self
     }
@@ -1286,7 +1286,7 @@ impl Then {
     /// assert_eq!(body, "Found");
     /// assert_eq!(response.headers().get("Location").unwrap().to_str().unwrap(), "http://www.google.com");
     /// ```
-    pub fn temporary_redirect(mut self, redirect_url: &str) -> Self {
+    pub fn temporary_redirect<S: Into<String>>(mut self, redirect_url: S) -> Self {
         self.mock
             .set(self.mock.take().return_temporary_redirect(redirect_url));
         self
@@ -1331,7 +1331,7 @@ impl Then {
     /// assert_eq!(body, "Moved Permanently");
     /// assert_eq!(response.headers().get("Location").unwrap().to_str().unwrap(), "http://www.google.com");
     /// ```
-    pub fn permanent_redirect(mut self, redirect_url: &str) -> Self {
+    pub fn permanent_redirect<S: Into<String>>(mut self, redirect_url: S) -> Self {
         self.mock
             .set(self.mock.take().return_permanent_redirect(redirect_url));
         self
@@ -1364,7 +1364,7 @@ impl Then {
     /// assert_eq!(mock.times_called(), 1);
     /// assert_eq!(start_time.elapsed().unwrap() > three_seconds, true);
     /// ```
-    pub fn delay(self, duration: Duration) -> Self {
+    pub fn delay<D: Into<Duration>>(self, duration: D) -> Self {
         self.mock.set(self.mock.take().return_with_delay(duration));
         self
     }
