@@ -1,4 +1,4 @@
-## Version 0.5.0 🪂
+## Version 0.5.0
 - ❌ _**Breaking Change**_: Function `Mock::expect_json_body` was renamed to `expect_json_body_obj`.
 - ❌ _**Breaking Change**_: Function `Mock::return_json_body` was renamed to `return_json_body_obj`.
 - 🚀 _**Attention**: A new API for mock definition was added. The old API is still available. No changes required on your side!_
@@ -9,7 +9,7 @@
     - `Mock::return_json_body`
     - `When::json_body`
     - `Then::json_body`
-- Improved documentation (**a lot!**).
+- 🔥 Improved documentation (**a lot!**).
 - 👏 Debug log output is now pretty printed! 
 - 🍪 Cookie matching support.
 - Support for convenient temporary and permanent redirect.
