@@ -1,10 +1,10 @@
 extern crate httpmock;
 
-use httpmock::{MockServer};
+use self::httpmock::Mock;
+use httpmock::MockServer;
 use httpmock_macros::httpmock_example_test;
 use isahc::prelude::*;
 use std::io::Read;
-use self::httpmock::Mock;
 
 #[test]
 #[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
@@ -32,7 +32,7 @@ fn binary_body_test() {
 }
 
 fn body_to_vec(body: &mut Body) -> Vec<u8> {
-    let mut buf : Vec<u8> = Vec::new();
+    let mut buf: Vec<u8> = Vec::new();
     body.read_to_end(&mut buf).expect("Cannot read from body");
     buf
 }

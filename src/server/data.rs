@@ -74,14 +74,15 @@ impl MockServerHttpResponse {
 
 /// Serializes and deserializes the response body to/from a Base64 string.
 mod opt_vector_serde_base64 {
-    use serde::{Serializer, Deserializer, Deserialize};
+    use serde::{Deserialize, Deserializer, Serializer};
 
     // See the following references:
     // https://github.com/serde-rs/serde/blob/master/serde/src/ser/impls.rs#L99
     // https://github.com/serde-rs/serde/issues/661
     pub fn serialize<T, S>(bytes: &Option<T>, serializer: S) -> Result<S::Ok, S::Error>
-        where T: AsRef<[u8]>,
-              S: Serializer
+    where
+        T: AsRef<[u8]>,
+        S: Serializer,
     {
         match bytes {
             Some(ref value) => serializer.serialize_bytes(base64::encode(value).as_bytes()),
@@ -92,8 +93,8 @@ mod opt_vector_serde_base64 {
     // See the following references:
     // https://github.com/serde-rs/serde/issues/1444
     pub fn deserialize<'de, D>(deserializer: D) -> Result<Option<Vec<u8>>, D::Error>
-        where
-            D: Deserializer<'de>,
+    where
+        D: Deserializer<'de>,
     {
         #[derive(Deserialize)]
         struct Wrapper(#[serde(deserialize_with = "from_base64")] Vec<u8>);
@@ -103,8 +104,8 @@ mod opt_vector_serde_base64 {
     }
 
     fn from_base64<'de, D>(deserializer: D) -> Result<Vec<u8>, D::Error>
-        where
-            D: Deserializer<'de>,
+    where
+        D: Deserializer<'de>,
     {
         let vec = Vec::deserialize(deserializer)?;
         base64::decode(vec).map_err(serde::de::Error::custom)

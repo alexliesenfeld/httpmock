@@ -1,6 +1,6 @@
 extern crate httpmock;
 
-use isahc::{get_async, get};
+use isahc::{get, get_async};
 
 use httpmock::Method::GET;
 use httpmock::{Mock, MockServer};

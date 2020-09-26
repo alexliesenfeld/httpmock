@@ -1,6 +1,6 @@
 extern crate httpmock;
 
-use httpmock::{MockServer};
+use httpmock::MockServer;
 use httpmock_macros::httpmock_example_test;
 use isahc::prelude::*;
 use std::io::Read;
@@ -16,8 +16,7 @@ fn binary_body_test() {
     let mock_server = MockServer::start();
     let m = mock_server.mock(|when, then| {
         when.path("/hello");
-        then.status(200)
-            .body(binary_content);
+        then.status(200).body(binary_content);
     });
 
     // Act
@@ -30,7 +29,7 @@ fn binary_body_test() {
 }
 
 fn body_to_vec(body: &mut Body) -> Vec<u8> {
-    let mut buf : Vec<u8> = Vec::new();
+    let mut buf: Vec<u8> = Vec::new();
     body.read_to_end(&mut buf).expect("Cannot read from body");
     buf
 }
