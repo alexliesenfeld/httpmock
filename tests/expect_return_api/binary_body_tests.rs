@@ -4,6 +4,7 @@ use httpmock::{MockServer};
 use httpmock_macros::httpmock_example_test;
 use isahc::prelude::*;
 use std::io::Read;
+use self::httpmock::Mock;
 
 #[test]
 #[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
@@ -14,11 +15,12 @@ fn binary_body_test() {
     let binary_content = b"\x80\x02\x03";
 
     let mock_server = MockServer::start();
-    let m = mock_server.mock(|when, then| {
-        when.path("/hello");
-        then.status(200)
-            .body(binary_content);
-    });
+
+    let m = Mock::new()
+        .expect_path("/hello")
+        .return_status(200)
+        .return_body(binary_content)
+        .create_on(&mock_server);
 
     // Act
     let mut response = isahc::get(mock_server.url("/hello")).unwrap();

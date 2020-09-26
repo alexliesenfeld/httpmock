@@ -1,6 +1,5 @@
 extern crate httpmock;
 
-use crate::simulate_standalone_server;
 use httpmock::Method::POST;
 use httpmock::MockServer;
 use httpmock_macros::httpmock_example_test;

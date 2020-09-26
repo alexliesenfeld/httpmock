@@ -9,7 +9,7 @@ use std::sync::atomic::Ordering::Relaxed;
 use std::sync::RwLock;
 
 use regex::Regex;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_json::Value;
 use std::fmt;
 use std::time::Duration;
@@ -56,6 +56,7 @@ impl MockServerHttpRequest {
 pub(crate) struct MockServerHttpResponse {
     pub status: Option<u16>,
     pub headers: Option<BTreeMap<String, String>>,
+    #[serde(default, with = "opt_vector_serde_base64")]
     pub body: Option<Vec<u8>>,
     pub delay: Option<Duration>,
 }
@@ -71,6 +72,46 @@ impl MockServerHttpResponse {
     }
 }
 
+/// Serializes and deserializes the response body to/from a Base64 string.
+mod opt_vector_serde_base64 {
+    use serde::{Serializer, Deserializer, Deserialize};
+
+    // See the following references:
+    // https://github.com/serde-rs/serde/blob/master/serde/src/ser/impls.rs#L99
+    // https://github.com/serde-rs/serde/issues/661
+    pub fn serialize<T, S>(bytes: &Option<T>, serializer: S) -> Result<S::Ok, S::Error>
+        where T: AsRef<[u8]>,
+              S: Serializer
+    {
+        match bytes {
+            Some(ref value) => serializer.serialize_bytes(base64::encode(value).as_bytes()),
+            None => serializer.serialize_none(),
+        }
+    }
+
+    // See the following references:
+    // https://github.com/serde-rs/serde/issues/1444
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Option<Vec<u8>>, D::Error>
+        where
+            D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        struct Wrapper(#[serde(deserialize_with = "from_base64")] Vec<u8>);
+
+        let v = Option::deserialize(deserializer)?;
+        Ok(v.map(|Wrapper(a)| a))
+    }
+
+    fn from_base64<'de, D>(deserializer: D) -> Result<Vec<u8>, D::Error>
+        where
+            D: Deserializer<'de>,
+    {
+        let vec = Vec::deserialize(deserializer)?;
+        base64::decode(vec).map_err(serde::de::Error::custom)
+    }
+}
+
+/// Prints the response body as UTF8 string
 impl fmt::Debug for MockServerHttpResponse {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("MockServerHttpResponse")
