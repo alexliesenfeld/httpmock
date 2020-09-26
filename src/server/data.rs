@@ -9,7 +9,7 @@ use std::sync::atomic::Ordering::Relaxed;
 use std::sync::RwLock;
 
 use regex::Regex;
-use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::fmt;
 use std::time::Duration;

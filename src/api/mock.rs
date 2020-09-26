@@ -1101,9 +1101,7 @@ impl Mock {
     /// assert_eq!(user.as_object().unwrap().get("name").unwrap(), "Hans");
     /// ```
     pub fn return_json_body<V: Into<Value>>(mut self, body: V) -> Self {
-        self.mock
-            .response
-            .body = Some(body.into().to_string().into_bytes());
+        self.mock.response.body = Some(body.into().to_string().into_bytes());
         self
     }
 

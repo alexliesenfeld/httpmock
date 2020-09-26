@@ -54,11 +54,9 @@ fn json_body_object_serde_test() {
 
     // Arrange
     let _ = env_logger::try_init();
-    // This starts up a standalone server in the background running on port 5000
-    simulate_standalone_server();
 
     // Arrange
-    let mock_server = MockServer::connect_from_env();
+    let mock_server = MockServer::start();
 
     let m = mock_server.mock(|when, then| {
         when.method(POST)
