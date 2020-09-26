@@ -1,6 +1,6 @@
 extern crate httpmock;
 
-use isahc::get_async;
+use isahc::{get_async, get};
 
 use httpmock::Method::GET;
 use httpmock::{Mock, MockServer};
@@ -23,7 +23,7 @@ fn getting_started_test() {
     });
 
     // Send an HTTP request to the mock server. This simulates your code.
-    let response = isahc::get(mock_server.url("/translate?word=hello")).unwrap();
+    let response = get(mock_server.url("/translate?word=hello")).unwrap();
 
     // Ensure the mock server did respond as specified.
     assert_eq!(response.status(), 200);

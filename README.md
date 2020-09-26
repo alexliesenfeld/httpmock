@@ -48,6 +48,7 @@ httpmock = "0.5.0"
 ```
 You can then use `httpmock` as follows:
 ```rust
+use isahc::get;
 use httpmock::MockServer;
 use httpmock::Method::GET;
 
@@ -65,7 +66,7 @@ let hello_mock = mock_server.mock(|when, then| {
 });
 
 // Send an HTTP request to the mock server. This simulates your code.
-let response = isahc::get(mock_server.url("/translate?word=hello")).unwrap();
+let response = get(mock_server.url("/translate?word=hello")).unwrap();
 
 // Ensure the mock server did respond as specified.
 assert_eq!(response.status(), 200);
