@@ -9,8 +9,9 @@ use std::sync::atomic::Ordering::Relaxed;
 use std::sync::RwLock;
 
 use regex::Regex;
-use serde::{Deserialize, Serialize};
+use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 use serde_json::Value;
+use std::fmt;
 use std::time::Duration;
 
 /// A general abstraction of an HTTP request of `httpmock`.
@@ -51,7 +52,7 @@ impl MockServerHttpRequest {
 }
 
 /// A general abstraction of an HTTP response for all handlers.
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone)]
 pub(crate) struct MockServerHttpResponse {
     pub status: Option<u16>,
     pub headers: Option<BTreeMap<String, String>>,
@@ -68,20 +69,22 @@ impl MockServerHttpResponse {
             delay: None,
         }
     }
+}
 
-    pub fn with_status(mut self, arg: u16) -> Self {
-        self.status = Some(arg);
-        self
-    }
-
-    pub fn with_headers(mut self, arg: BTreeMap<String, String>) -> Self {
-        self.headers = Some(arg);
-        self
-    }
-
-    pub fn with_body(mut self, arg: String) -> Self {
-        self.body = Some(arg.into_bytes());
-        self
+impl fmt::Debug for MockServerHttpResponse {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("MockServerHttpResponse")
+            .field("status", &self.status)
+            .field("headers", &self.headers)
+            .field(
+                "body",
+                &self
+                    .body
+                    .as_ref()
+                    .map(|x| String::from_utf8_lossy(x.as_ref()).to_string()),
+            )
+            .field("delay", &self.delay)
+            .finish()
     }
 }
 

@@ -2,6 +2,7 @@ mod binary_body_tests;
 mod cookie_tests;
 mod delay_tests;
 mod delete_mock_tests;
+mod file_body_tests;
 mod getting_started_tests;
 mod headers_tests;
 mod json_body_tests;

@@ -1112,7 +1112,7 @@ impl Then {
     /// assert_eq!(response.text().unwrap(), "ohi!");
     /// assert_eq!(m.times_called(), 1);
     /// ```
-    pub fn body<S: Into<Vec<u8>>>(self, body: S) -> Self {
+    pub fn body(self, body: impl AsRef<[u8]>) -> Self {
         self.mock.set(self.mock.take().return_body(body));
         self
     }

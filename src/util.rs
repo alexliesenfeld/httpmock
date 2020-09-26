@@ -96,7 +96,11 @@ pub(crate) fn read_file<P: AsRef<Path>>(absolute_resource_path: P) -> Result<Vec
         Ok(len) => log::trace!(
             "Read {} bytes from file {:?}",
             &len,
-            &absolute_resource_path.as_ref().as_os_str().to_str().expect("Invalid file path")
+            &absolute_resource_path
+                .as_ref()
+                .as_os_str()
+                .to_str()
+                .expect("Invalid file path")
         ),
         Err(e) => return Err(e.to_string()),
     }

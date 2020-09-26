@@ -1,26 +1,35 @@
 extern crate httpmock;
 
-use httpmock::Method::GET;
-use httpmock::{Mock, MockServer};
+use httpmock::MockServer;
 use httpmock_macros::httpmock_example_test;
 use isahc::prelude::*;
+use std::io::Read;
 
 #[test]
 #[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
 fn binary_body_test() {
-     // Arrange
-     let mock_server = MockServer::start();
-     let m = mock_server.mock(|when, then|{
-         when.path("/hello");
-         then.status(200)
-             .body_from_file("tests/resources/simple_body.txt");
-     });
+    let _ = env_logger::try_init();
 
-     // Act
-     let mut response = isahc::get(mock_server.url("/hello")).unwrap();
-    
-     // Assert
-     assert_eq!(response.status(), 200);
-     assert_eq!(response.text().unwrap(), "ohi!");
-     assert_eq!(m.times_called(), 1);
+    // Arrange
+    let binary_content = b"\x80\x02\x03\xF0\x90\x80";
+
+    let mock_server = MockServer::start();
+    let m = mock_server.mock(|when, then| {
+        when.path("/hello");
+        then.status(200).body(binary_content);
+    });
+
+    // Act
+    let mut response = isahc::get(mock_server.url("/hello")).unwrap();
+
+    // Assert
+    assert_eq!(response.status(), 200);
+    assert_eq!(m.times_called(), 1);
+    assert_eq!(body_to_vec(response.body_mut()), binary_content.to_vec());
+}
+
+fn body_to_vec(body: &mut Body) -> Vec<u8> {
+    let mut buf: Vec<u8> = Vec::new();
+    body.read_to_end(&mut buf).expect("Cannot read from body");
+    buf
 }

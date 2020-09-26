@@ -114,6 +114,8 @@ impl MockServerAdapter for RemoteMockServerAdapter {
             Ok(json) => json,
         };
 
+        log::info!("{}", &json);
+
         // Send the request to the mock server
         let request_url = format!("http://{}/__mocks", &self.address());
         let request = Request::builder()

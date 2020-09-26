@@ -1014,8 +1014,8 @@ impl Mock {
     /// assert_eq!(response.text().unwrap(), "ohi!");
     /// assert_eq!(m.times_called(), 1);
     /// ```
-    pub fn return_body<S: Into<Vec<u8>>>(mut self, body: S) -> Self {
-        self.mock.response.body = Some(body.into());
+    pub fn return_body(mut self, body: impl AsRef<[u8]>) -> Self {
+        self.mock.response.body = Some(body.as_ref().to_vec());
         self
     }
 
@@ -1101,7 +1101,9 @@ impl Mock {
     /// assert_eq!(user.as_object().unwrap().get("name").unwrap(), "Hans");
     /// ```
     pub fn return_json_body<V: Into<Value>>(mut self, body: V) -> Self {
-        self.mock.response.body = Some(body.into().to_string().into_bytes());
+        self.mock
+            .response
+            .body = Some(body.into().to_string().into_bytes());
         self
     }
 
