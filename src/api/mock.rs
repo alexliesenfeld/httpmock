@@ -125,7 +125,7 @@ impl<'a> MockRef<'a> {
     /// Deprecated, use [Mock::hits](struct.MockServer.html#method.hits) instead.
     #[deprecated(
         since = "0.5.0",
-        note = "Please use "hits" function instead"
+        note = "Please use 'hits' function instead"
     )]
     pub fn times_called(&self) -> usize {
         self.hits()
@@ -174,10 +174,10 @@ impl<'a> MockRef<'a> {
     /// Deprecated, use [Mock::hits](struct.MockServer.html#method.hits_async) instead.
     #[deprecated(
     since = "0.5.0",
-    note = "Please use "hits_async" function instead"
+    note = "Please use 'hits_async' function instead"
     )]
     pub async fn times_called_async(&self) -> usize {
-        self.hits_async()
+        self.hits_async().await
     }
 
     /// Deletes the associated mock object from the mock server.

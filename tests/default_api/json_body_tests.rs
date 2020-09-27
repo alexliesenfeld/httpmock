@@ -5,7 +5,6 @@ use httpmock::MockServer;
 use httpmock_macros::httpmock_example_test;
 use isahc::prelude::*;
 use serde_json::{json, Value};
-use self::httpmock::mock;
 
 #[test]
 #[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
@@ -13,7 +12,9 @@ fn json_value_body_test() {
     // Arrange
     let _ = env_logger::try_init();
 
-    let m = mock(|when, then| {
+    let server = MockServer::start();
+
+    let m = server.mock(|when, then| {
         when.method(POST)
             .path("/users")
             .header("Content-Type", "application/json")
