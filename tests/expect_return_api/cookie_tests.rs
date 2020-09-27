@@ -10,7 +10,7 @@ use isahc::prelude::*;
 fn cookie_matching_test() {
     // Arrange
     let _ = env_logger::try_init();
-    let mock_server = MockServer::start();
+    let server = MockServer::start();
 
     let mock = Mock::new()
         .expect_method(GET)
@@ -18,10 +18,10 @@ fn cookie_matching_test() {
         .expect_cookie_exists("SESSIONID")
         .expect_cookie("SESSIONID", "298zf09hf012fh2")
         .return_status(200)
-        .create_on(&mock_server);
+        .create_on(&server);
 
     // Act: Send the request and deserialize the response to JSON
-    let response = Request::get(&format!("http://{}", mock_server.address()))
+    let response = Request::get(&format!("http://{}", server.address()))
         .header(
             "Cookie",
             "OTHERCOOKIE1=01234; SESSIONID=298zf09hf012fh2; OTHERCOOKIE2=56789; HttpOnly",
@@ -33,5 +33,5 @@ fn cookie_matching_test() {
 
     // Assert
     assert_eq!(response.status(), 200);
-    assert_eq!(mock.times_called(), 1);
+    assert_eq!(mock.hits(), 1);
 }

@@ -12,7 +12,7 @@ fn getting_started_test() {
     let _ = env_logger::try_init();
 
     // Start a local mock server for exclusive use by this test function.
-    let mock_server = MockServer::start();
+    let server = MockServer::start();
 
     // Create a mock on the mock server. The mock will return HTTP status code 200 whenever
     // the mock server receives a GET-request with path "/hello".
@@ -20,16 +20,16 @@ fn getting_started_test() {
         .expect_method(GET)
         .expect_path("/hello")
         .return_status(200)
-        .create_on(&mock_server);
+        .create_on(&server);
 
     // Send an HTTP request to the mock server. This simulates your code.
-    // The mock_server variable is being used to generate a mock server URL for path "/hello".
-    let response = get(mock_server.url("/hello")).unwrap();
+    // The server variable is being used to generate a mock server URL for path "/hello".
+    let response = get(server.url("/hello")).unwrap();
 
     // Ensure the mock server did respond as specified above.
     assert_eq!(response.status(), 200);
     // Ensure the specified mock responded exactly one time.
-    assert_eq!(hello_mock.times_called(), 1);
+    assert_eq!(hello_mock.hits(), 1);
 }
 
 #[async_std::test]
@@ -37,7 +37,7 @@ async fn async_getting_started_test() {
     let _ = env_logger::try_init();
 
     // Start a local mock server for exclusive use by this test function.
-    let mock_server = MockServer::start_async().await;
+    let server = MockServer::start_async().await;
 
     // Create a mock on the mock server. The mock will return HTTP status code 200 whenever
     // the mock server receives a GET-request with path "/hello".
@@ -45,15 +45,15 @@ async fn async_getting_started_test() {
         .expect_method(GET)
         .expect_path("/hello")
         .return_status(200)
-        .create_on_async(&mock_server)
+        .create_on_async(&server)
         .await;
 
     // Send an HTTP request to the mock server. This simulates your code.
-    let url = format!("http://{}/hello", mock_server.address());
+    let url = format!("http://{}/hello", server.address());
     let response = get_async(&url).await.unwrap();
 
     // Ensure the mock server did respond as specified above.
     assert_eq!(response.status(), 200);
     // Ensure the specified mock responded exactly one time.
-    assert_eq!(hello_mock.times_called_async().await, 1);
+    assert_eq!(hello_mock.hits_async().await, 1);
 }

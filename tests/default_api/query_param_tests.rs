@@ -9,17 +9,17 @@ use isahc::get;
 fn url_matching_test() {
     // Arrange
     let _ = env_logger::try_init();
-    let mock_server = MockServer::start();
+    let server = MockServer::start();
 
-    let m = mock_server.mock(|when, then| {
+    let m = server.mock(|when, then| {
         when.query_param("query", "Metallica")
             .query_param_exists("query");
         then.status(200);
     });
 
     // Act: Send the request and deserialize the response to JSON
-    get(mock_server.url("/search?query=Metallica")).unwrap();
+    get(server.url("/search?query=Metallica")).unwrap();
 
     // Assert
-    assert_eq!(m.times_called(), 1);
+    assert_eq!(m.hits(), 1);
 }

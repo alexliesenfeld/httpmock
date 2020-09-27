@@ -10,7 +10,7 @@ use isahc::prelude::*;
 fn body_test() {
     // Arrange
     let _ = env_logger::try_init();
-    let mock_server = MockServer::start();
+    let server = MockServer::start();
 
     let m = Mock::new()
         .expect_method(POST)
@@ -20,10 +20,10 @@ fn body_test() {
         .expect_body_matches(Regex::new("Fellowship").unwrap())
         .return_status(201)
         .return_body("The Lord of the Rings")
-        .create_on(&mock_server);
+        .create_on(&server);
 
     // Act: Send the request and deserialize the response to JSON
-    let response = Request::post(&format!("http://{}/books", mock_server.address()))
+    let response = Request::post(&format!("http://{}/books", server.address()))
         .body("The Fellowship of the Ring")
         .unwrap()
         .send()
@@ -31,5 +31,5 @@ fn body_test() {
 
     // Assert
     assert_eq!(response.status(), 201);
-    assert_eq!(m.times_called(), 1);
+    assert_eq!(m.hits(), 1);
 }

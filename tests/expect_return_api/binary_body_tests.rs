@@ -14,20 +14,20 @@ fn binary_body_test() {
     // Arrange
     let binary_content = b"\x80\x02\x03";
 
-    let mock_server = MockServer::start();
+    let server = MockServer::start();
 
     let m = Mock::new()
         .expect_path("/hello")
         .return_status(200)
         .return_body(binary_content)
-        .create_on(&mock_server);
+        .create_on(&server);
 
     // Act
-    let mut response = isahc::get(mock_server.url("/hello")).unwrap();
+    let mut response = isahc::get(server.url("/hello")).unwrap();
 
     // Assert
     assert_eq!(response.status(), 200);
-    assert_eq!(m.times_called(), 1);
+    assert_eq!(m.hits(), 1);
     assert_eq!(body_to_vec(response.body_mut()), binary_content.to_vec());
 }
 

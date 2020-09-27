@@ -11,7 +11,7 @@ use serde_json::{json, Value};
 fn json_value_body_test() {
     // Arrange
     let _ = env_logger::try_init();
-    let mock_server = MockServer::start();
+    let server = MockServer::start();
 
     let m = Mock::new()
         .expect_method(POST)
@@ -21,10 +21,10 @@ fn json_value_body_test() {
         .return_status(201)
         .return_header("Content-Type", "application/json")
         .return_json_body(json!({ "name": "Hans" }))
-        .create_on(&mock_server);
+        .create_on(&server);
 
     // Act: Send the request and deserialize the response to JSON
-    let mut response = Request::post(&format!("http://{}/users", mock_server.address()))
+    let mut response = Request::post(&format!("http://{}/users", server.address()))
         .header("Content-Type", "application/json")
         .body(json!({ "name": "Fred" }).to_string())
         .unwrap()
@@ -36,7 +36,7 @@ fn json_value_body_test() {
 
     // Assert
     assert_eq!(response.status(), 201);
-    assert_eq!(m.times_called(), 1);
+    assert_eq!(m.hits(), 1);
     assert_eq!(user.as_object().unwrap().get("name").unwrap(), "Hans");
 }
 
@@ -51,7 +51,7 @@ fn json_body_object_serde_test() {
 
     // Arrange
     let _ = env_logger::try_init();
-    let mock_server = MockServer::start();
+    let server = MockServer::start();
 
     let m = Mock::new()
         .expect_method(POST)
@@ -65,10 +65,10 @@ fn json_body_object_serde_test() {
         .return_json_body_obj(&TestUser {
             name: String::from("Hans"),
         })
-        .create_on(&mock_server);
+        .create_on(&server);
 
     // Act: Send the request and deserialize the response to JSON
-    let mut response = Request::post(&format!("http://{}/users", mock_server.address()))
+    let mut response = Request::post(&format!("http://{}/users", server.address()))
         .header("Content-Type", "application/json")
         .body(
             json!(&TestUser {
@@ -86,14 +86,14 @@ fn json_body_object_serde_test() {
     // Assert
     assert_eq!(response.status(), 201);
     assert_eq!(user.name, "Hans");
-    assert_eq!(m.times_called(), 1);
+    assert_eq!(m.hits(), 1);
 }
 
 #[test]
 #[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
 fn partial_json_body_test() {
     let _ = env_logger::try_init();
-    let mock_server = MockServer::start();
+    let server = MockServer::start();
 
     // This is the structure that needs to be included in the request
     #[derive(serde::Serialize, serde::Deserialize)]
@@ -123,7 +123,7 @@ fn partial_json_body_test() {
         )
         .return_status(201)
         .return_body(r#"{"result":"success"}"#)
-        .create_on(&mock_server);
+        .create_on(&server);
 
     // Simulates application that makes the request to the mock.
     let uri = format!("http://{}/users", m.server_address());
@@ -145,5 +145,5 @@ fn partial_json_body_test() {
 
     // Assertions
     assert_eq!(response.status(), 201);
-    assert_eq!(m.times_called(), 1);
+    assert_eq!(m.hits(), 1);
 }

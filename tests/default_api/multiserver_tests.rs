@@ -12,15 +12,15 @@ use isahc::config::RedirectPolicy;
 fn multiserver_test() {
     // Arrange
     let _ = env_logger::try_init();
-    let mock_server1 = MockServer::start();
-    let mock_server2 = MockServer::start();
+    let server1 = MockServer::start();
+    let server2 = MockServer::start();
 
-    let redirect_mock = mock_server1.mock(|when, then| {
+    let redirect_mock = server1.mock(|when, then| {
         when.path("/redirectTest");
-        then.temporary_redirect(&mock_server2.url("/finalTarget"));
+        then.temporary_redirect(&server2.url("/finalTarget"));
     });
 
-    let target_mock = mock_server2.mock(|when, then| {
+    let target_mock = server2.mock(|when, then| {
         when.path("/finalTarget");
         then.status(200);
     });
@@ -31,10 +31,10 @@ fn multiserver_test() {
         .build()
         .unwrap();
 
-    let response = http_client.get(mock_server1.url("/redirectTest")).unwrap();
+    let response = http_client.get(server1.url("/redirectTest")).unwrap();
 
     // Assert
     assert_eq!(response.status(), 200);
-    assert_eq!(redirect_mock.times_called(), 1);
-    assert_eq!(target_mock.times_called(), 1);
+    assert_eq!(redirect_mock.hits(), 1);
+    assert_eq!(target_mock.hits(), 1);
 }

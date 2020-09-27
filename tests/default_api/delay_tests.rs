@@ -14,18 +14,18 @@ fn delay_test() {
     let start_time = SystemTime::now();
     let delay = Duration::from_secs(3);
 
-    let mock_server = MockServer::start();
+    let server = MockServer::start();
 
-    let search_mock = mock_server.mock(|when, then| {
+    let search_mock = server.mock(|when, then| {
         when.path("/delay");
         then.status(200).delay(delay);
     });
 
     // Act: Send the HTTP request
-    let response = get(mock_server.url("/delay")).unwrap();
+    let response = get(server.url("/delay")).unwrap();
 
     // Assert
     assert_eq!(response.status(), 200);
-    assert_eq!(search_mock.times_called(), 1);
+    assert_eq!(search_mock.hits(), 1);
     assert_eq!(start_time.elapsed().unwrap() > delay, true);
 }

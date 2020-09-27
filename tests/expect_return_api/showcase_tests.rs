@@ -18,7 +18,7 @@ fn showcase_test() {
 
     // Arrange
     let _ = env_logger::try_init();
-    let mock_server = MockServer::start();
+    let server = MockServer::start();
 
     let m = Mock::new()
         .expect_method(POST)
@@ -35,12 +35,12 @@ fn showcase_test() {
         .expect_json_body(json!({ "number": 5 }))
         .expect_match(|req: MockServerRequest| req.path.contains("es"))
         .return_status(200)
-        .create_on(&mock_server);
+        .create_on(&server);
 
     // Act: Send the HTTP request
     let uri = format!(
         "http://{}/test?myQueryParam=%C3%BCberschall",
-        mock_server.address()
+        server.address()
     );
     let response = Request::post(&uri)
         .header("Content-Type", "application/json")
@@ -52,5 +52,5 @@ fn showcase_test() {
 
     // Assert
     assert_eq!(response.status(), 200);
-    assert_eq!(m.times_called(), 1);
+    assert_eq!(m.hits(), 1);
 }

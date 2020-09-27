@@ -26,10 +26,10 @@
 //! use httpmock::Method::GET;
 //!
 //! // Start a lightweight mock server.
-//! let mock_server = MockServer::start();
+//! let server = MockServer::start();
 //!
 //! // Create a mock on the server.
-//! let hello_mock = mock_server.mock(|when, then| {
+//! let hello_mock = server.mock(|when, then| {
 //!     when.method(GET)
 //!         .path("/translate")
 //!         .query_param("word", "hello");
@@ -39,12 +39,12 @@
 //! });
 //!
 //! // Send an HTTP request to the mock server. This simulates your code.
-//! let response = isahc::get(mock_server.url("/translate?word=hello")).unwrap();
+//! let response = isahc::get(server.url("/translate?word=hello")).unwrap();
 //!
 //! // Ensure the mock server did respond as specified.
 //! assert_eq!(response.status(), 200);
 //! // Ensure the specified mock was called exactly one time.
-//! assert_eq!(hello_mock.times_called(), 1);
+//! assert_eq!(hello_mock.hits(), 1);
 //! ```
 //! # Usage
 //! To be able to configure mocks, you first need to start a mock server by calling
@@ -109,15 +109,15 @@
 //!
 //! ### Example
 //! ```
-//! let mock_server = httpmock::MockServer::start();
+//! let server = httpmock::MockServer::start();
 //!
-//! let greeting_mock = mock_server.mock(|when, then| {
+//! let greeting_mock = server.mock(|when, then| {
 //!     when.path("/hi");
 //!     then.status(200);
 //! });
 //!
-//! let response = isahc::get(mock_server.url("/hi")).unwrap();
-//! assert_eq!(greeting_mock.times_called(), 1);
+//! let response = isahc::get(server.url("/hi")).unwrap();
+//! assert_eq!(greeting_mock.hits(), 1);
 //! ```
 //! Note that `when` and `then` are variables. This allows you to rename them to something you
 //! like better (such as `expect`/`respond_with`).
@@ -131,15 +131,15 @@
 //! ### Example
 //! ```
 //! use httpmock::{MockServer, Mock};
-//! let mock_server = MockServer::start();
+//! let server = MockServer::start();
 //!
 //! let greeting_mock = Mock::new()
 //!     .expect_path("/hi")
 //!     .return_status(200)
-//!     .create_on(&mock_server);
+//!     .create_on(&server);
 //!
-//! let response = isahc::get(mock_server.url("/hi")).unwrap();
-//! assert_eq!(greeting_mock.times_called(), 1);
+//! let response = isahc::get(server.url("/hi")).unwrap();
+//! assert_eq!(greeting_mock.hits(), 1);
 //! ```
 //! Please observe the following method naming scheme:
 //! - All [Mock](struct.Mock.html) methods that start with `expect` in their name set a requirement
@@ -183,19 +183,19 @@
 //! #[test]
 //! fn simple_test() {
 //!     // Arrange
-//!     let mock_server = MockServer::connect("some-host:5000");
+//!     let server = MockServer::connect("some-host:5000");
 //!
-//!     let hello_mock = mock_server.mock(|when, then|{
+//!     let hello_mock = server.mock(|when, then|{
 //!         when.path("/hello/standalone");
 //!         then.status(200);
 //!     });
 //!
 //!     // Act
-//!     let response = get(mock_server.url("/hello/standalone")).unwrap();
+//!     let response = get(server.url("/hello/standalone")).unwrap();
 //!
 //!     // Assert
 //!     assert_eq!(response.status(), 200);
-//!     assert_eq!(hello_mock.times_called(), 1);
+//!     assert_eq!(hello_mock.hits(), 1);
 //! }
 //! ```
 //!
@@ -377,12 +377,12 @@ impl MockServer {
     /// **Example**:
     /// ```
     /// // Start a local mock server for exclusive use by this test function.
-    /// let mock_server = httpmock::MockServer::start();
+    /// let server = httpmock::MockServer::start();
     ///
-    /// let expected_addr_str = format!("127.0.0.1:{}", mock_server.port());
+    /// let expected_addr_str = format!("127.0.0.1:{}", server.port());
     ///
     /// // Get the address of the MockServer.
-    /// let addr = mock_server.address();
+    /// let addr = server.address();
     ///
     /// // Ensure the returned URL is as expected
     /// assert_eq!(expected_addr_str, addr.to_string());
@@ -396,12 +396,12 @@ impl MockServer {
     /// **Example**:
     /// ```
     /// // Start a local mock server for exclusive use by this test function.
-    /// let mock_server = httpmock::MockServer::start();
+    /// let server = httpmock::MockServer::start();
     ///
-    /// let expected_url = format!("http://127.0.0.1:{}/hello", mock_server.port());
+    /// let expected_url = format!("http://127.0.0.1:{}/hello", server.port());
     ///
     /// // Get the URL for path "/hello".
-    /// let url = mock_server.url("/hello");
+    /// let url = server.url("/hello");
     ///
     /// // Ensure the returned URL is as expected
     /// assert_eq!(expected_url, url);
@@ -415,12 +415,12 @@ impl MockServer {
     /// **Example**:
     /// ```
     /// // Start a local mock server for exclusive use by this test function.
-    /// let mock_server = httpmock::MockServer::start();
+    /// let server = httpmock::MockServer::start();
     ///
-    /// let expected_url = format!("http://127.0.0.1:{}", mock_server.port());
+    /// let expected_url = format!("http://127.0.0.1:{}", server.port());
     ///
     /// // Get the URL for path "/hello".
-    /// let url = mock_server.base_url();
+    /// let url = server.base_url();
     ///
     /// // Ensure the returned URL is as expected
     /// assert_eq!(expected_url, url);
@@ -433,14 +433,14 @@ impl MockServer {
     ///
     /// **Example**:
     /// ```
-    /// let mock_server = httpmock::MockServer::start();
+    /// let server = httpmock::MockServer::start();
     ///
-    /// let mock = mock_server.mock(|when, then| {
+    /// let mock = server.mock(|when, then| {
     ///     when.path("/hello");
     ///     then.status(200);
     /// });
     ///
-    /// assert_eq!(mock.times_called(), 0);
+    /// assert_eq!(mock.hits(), 0);
     /// ```
     pub fn mock<F>(&self, config_fn: F) -> MockRef
     where
@@ -454,16 +454,16 @@ impl MockServer {
     /// **Example**:
     /// ```
     /// async_std::task::block_on(async {
-    ///     let mock_server = httpmock::MockServer::start();
+    ///     let server = httpmock::MockServer::start();
     ///
-    ///     let mock = mock_server
+    ///     let mock = server
     ///         .mock_async(|when, then| {
     ///             when.path("/hello");
     ///             then.status(200);
     ///         })
     ///         .await;
     ///
-    ///     assert_eq!(mock.times_called(), 0);
+    ///     assert_eq!(mock.hits(), 0);
     /// });
     /// ```
     pub async fn mock_async<'a, F>(&'a self, config_fn: F) -> MockRef<'a>
@@ -492,16 +492,16 @@ impl When {
     /// use httpmock::Method::GET;
     /// use regex::Regex;
     ///
-    /// let mock_server = MockServer::start();
+    /// let server = MockServer::start();
     ///
-    /// let mock = mock_server.mock(|when, then|{
+    /// let mock = server.mock(|when, then|{
     ///     when.method(GET);
     ///     then.status(200);
     /// });
     ///
-    /// isahc::get(mock_server.url("/")).unwrap();
+    /// isahc::get(server.url("/")).unwrap();
     ///
-    /// assert_eq!(mock.times_called(), 1);
+    /// assert_eq!(mock.hits(), 1);
     /// ```
     pub fn method<M: Into<Method>>(self, method: M) -> Self {
         self.mock.set(self.mock.take().expect_method(method));
@@ -515,16 +515,16 @@ impl When {
     /// ```
     /// use httpmock::{Mock, MockServer};
     ///
-    /// let mock_server = MockServer::start();
+    /// let server = MockServer::start();
     ///
-    /// let mock = mock_server.mock(|when, then|{
+    /// let mock = server.mock(|when, then|{
     ///     when.path_contains("/test");
     ///     then.status(200);
     /// });
     ///
-    /// isahc::get(mock_server.url("/test")).unwrap();
+    /// isahc::get(server.url("/test")).unwrap();
     ///
-    /// assert_eq!(mock.times_called(), 1);
+    /// assert_eq!(mock.hits(), 1);
     /// ```
     pub fn path<S: Into<String>>(self, path: S) -> Self {
         self.mock.set(self.mock.take().expect_path(path));
@@ -538,16 +538,16 @@ impl When {
     /// ```
     /// use httpmock::{Mock, MockServer};
     ///
-    /// let mock_server = MockServer::start();
+    /// let server = MockServer::start();
     ///
-    /// let mock = mock_server.mock(|when, then|{
+    /// let mock = server.mock(|when, then|{
     ///     when.path_contains("es");
     ///     then.status(200);
     /// });
     ///
-    /// isahc::get(mock_server.url("/test")).unwrap();
+    /// isahc::get(server.url("/test")).unwrap();
     ///
-    /// assert_eq!(mock.times_called(), 1);
+    /// assert_eq!(mock.hits(), 1);
     /// ```
     pub fn path_contains<S: Into<String>>(self, substring: S) -> Self {
         self.mock
@@ -563,16 +563,16 @@ impl When {
     /// use httpmock::{Mock, MockServer};
     /// use regex::Regex;
     ///
-    /// let mock_server = MockServer::start();
+    /// let server = MockServer::start();
     ///
-    /// let mock = mock_server.mock(|when, then|{
+    /// let mock = server.mock(|when, then|{
     ///     when.path_matches(Regex::new("le$").unwrap());
     ///     then.status(200);
     /// });
     ///
-    /// isahc::get(mock_server.url("/example")).unwrap();
+    /// isahc::get(server.url("/example")).unwrap();
     ///
-    /// assert_eq!(mock.times_called(), 1);
+    /// assert_eq!(mock.hits(), 1);
     /// ```
     pub fn path_matches<R: Into<Regex>>(self, regex: R) -> Self {
         self.mock.set(self.mock.take().expect_path_matches(regex));
@@ -589,18 +589,18 @@ impl When {
     /// use httpmock::{MockServer, Mock};
     ///
     /// let _ = env_logger::try_init();
-    /// let mock_server = MockServer::start();
+    /// let server = MockServer::start();
     ///
-    /// let m = mock_server.mock(|when, then|{
+    /// let m = server.mock(|when, then|{
     ///     when.query_param("query", "Metallica");
     ///     then.status(200);
     /// });
     ///
     /// // Act
-    /// get(mock_server.url("/search?query=Metallica")).unwrap();
+    /// get(server.url("/search?query=Metallica")).unwrap();
     ///
     /// // Assert
-    /// assert_eq!(m.times_called(), 1);
+    /// assert_eq!(m.hits(), 1);
     /// ```
     pub fn query_param<S: Into<String>>(self, name: S, value: S) -> Self {
         self.mock
@@ -617,18 +617,18 @@ impl When {
     /// use httpmock::{MockServer, Mock};
     ///
     /// let _ = env_logger::try_init();
-    /// let mock_server = MockServer::start();
+    /// let server = MockServer::start();
     ///
-    /// let m = mock_server.mock(|when, then| {
+    /// let m = server.mock(|when, then| {
     ///     when.query_param_exists("query");
     ///     then.status(200);
     /// });
     ///
     /// // Act
-    /// get(mock_server.url("/search?query=Metallica")).unwrap();
+    /// get(server.url("/search?query=Metallica")).unwrap();
     ///
     /// // Assert
-    /// assert_eq!(m.times_called(), 1);
+    /// assert_eq!(m.hits(), 1);
     /// ```
     pub fn query_param_exists<S: Into<String>>(self, name: S) -> Self {
         self.mock
@@ -647,20 +647,20 @@ impl When {
     /// use regex::Regex;
     /// use isahc::prelude::*;
     ///
-    /// let mock_server = MockServer::start();
+    /// let server = MockServer::start();
     ///
-    /// let mock = mock_server.mock(|when, then|{
+    /// let mock = server.mock(|when, then|{
     ///     when.body("The Great Gatsby");
     ///     then.status(200);
     /// });
     ///
-    /// Request::post(&format!("http://{}/test", mock_server.address()))
+    /// Request::post(&format!("http://{}/test", server.address()))
     ///     .body("The Great Gatsby")
     ///     .unwrap()
     ///     .send()
     ///     .unwrap();
     ///
-    /// assert_eq!(mock.times_called(), 1);
+    /// assert_eq!(mock.hits(), 1);
     /// ```
     pub fn body<S: Into<String>>(self, body: S) -> Self {
         self.mock.set(self.mock.take().expect_body(body));
@@ -679,9 +679,9 @@ impl When {
     /// // Arrange
     /// let _ = env_logger::try_init();
     ///
-    /// let mock_server = MockServer::start();
+    /// let server = MockServer::start();
     ///
-    /// let m = mock_server.mock(|when, then|{
+    /// let m = server.mock(|when, then|{
     ///     when.method(POST)
     ///         .path("/books")
     ///         .body_matches(Regex::new("Fellowship").unwrap());
@@ -689,7 +689,7 @@ impl When {
     /// });
     ///
     /// // Act: Send the request
-    /// let response = Request::post(mock_server.url("/books"))
+    /// let response = Request::post(server.url("/books"))
     ///     .body("The Fellowship of the Ring")
     ///     .unwrap()
     ///     .send()
@@ -697,7 +697,7 @@ impl When {
     ///
     /// // Assert
     /// assert_eq!(response.status(), 201);
-    /// assert_eq!(m.times_called(), 1);
+    /// assert_eq!(m.hits(), 1);
     /// ```
     pub fn body_matches<R: Into<Regex>>(self, regex: R) -> Self {
         self.mock.set(self.mock.take().expect_body_matches(regex));
@@ -716,16 +716,16 @@ impl When {
     /// // Arrange
     /// let _ = env_logger::try_init();
     ///
-    /// let mock_server = MockServer::start();
+    /// let server = MockServer::start();
     ///
-    /// let m = mock_server.mock(|when, then|{
+    /// let m = server.mock(|when, then|{
     ///     when.path("/books")
     ///         .body_contains("Ring");
     ///     then.status(201);
     /// });
     ///
     /// // Act: Send the request
-    /// let response = Request::post(mock_server.url("/books"))
+    /// let response = Request::post(server.url("/books"))
     ///     .body("The Fellowship of the Ring")
     ///     .unwrap()
     ///     .send()
@@ -733,7 +733,7 @@ impl When {
     ///
     /// // Assert
     /// assert_eq!(response.status(), 201);
-    /// assert_eq!(m.times_called(), 1);
+    /// assert_eq!(m.hits(), 1);
     /// ```
     pub fn body_contains<S: Into<String>>(self, substring: S) -> Self {
         self.mock
@@ -757,9 +757,9 @@ impl When {
     ///
     /// // Arrange
     /// let _ = env_logger::try_init();
-    /// let mock_server = MockServer::start();
+    /// let server = MockServer::start();
     ///
-    /// let m = mock_server.mock(|when, then|{
+    /// let m = server.mock(|when, then|{
     ///     when.path("/user")
     ///         .header("Content-Type", "application/json")
     ///         .json_body(json!({ "name": "Hans" }));
@@ -767,7 +767,7 @@ impl When {
     /// });
     ///
     /// // Act: Send the request and deserialize the response to JSON
-    /// let mut response = Request::post(&format!("http://{}/user", mock_server.address()))
+    /// let mut response = Request::post(&format!("http://{}/user", server.address()))
     ///     .header("Content-Type", "application/json")
     ///     .body(json!({ "name": "Hans" }).to_string())
     ///     .unwrap()
@@ -776,7 +776,7 @@ impl When {
     ///
     /// // Assert
     /// assert_eq!(response.status(), 201);
-    /// assert_eq!(m.times_called(), 1);
+    /// assert_eq!(m.hits(), 1);
     /// ```
     pub fn json_body<V: Into<serde_json::Value>>(self, value: V) -> Self {
         self.mock.set(self.mock.take().expect_json_body(value));
@@ -805,9 +805,9 @@ impl When {
     ///
     /// // Arrange
     /// let _ = env_logger::try_init();
-    /// let mock_server = MockServer::start();
+    /// let server = MockServer::start();
     ///
-    /// let m = mock_server.mock(|when, then|{
+    /// let m = server.mock(|when, then|{
     ///     when.path("/user")
     ///         .header("Content-Type", "application/json")
     ///         .json_body_obj(&TestUser {
@@ -817,7 +817,7 @@ impl When {
     /// });
     ///
     /// // Act: Send the request and deserialize the response to JSON
-    /// let mut response = Request::post(&format!("http://{}/user", mock_server.address()))
+    /// let mut response = Request::post(&format!("http://{}/user", server.address()))
     ///     .header("Content-Type", "application/json")
     ///     .body(json!(&TestUser {
     ///         name: "Fred".to_string()
@@ -828,7 +828,7 @@ impl When {
     ///
     /// // Assert
     /// assert_eq!(response.status(), 200);
-    /// assert_eq!(m.times_called(), 1);
+    /// assert_eq!(m.hits(), 1);
     /// ```
     pub fn json_body_obj<'a, T>(self, body: &T) -> Self
     where
@@ -867,9 +867,9 @@ impl When {
     /// ```
     /// use httpmock::{MockServer, Mock};
     ///
-    /// let mock_server = MockServer::start();
+    /// let server = MockServer::start();
     ///
-    /// let mut mock = mock_server.mock(|when, then|{
+    /// let mut mock = server.mock(|when, then|{
     ///     when.json_body_partial(r#"
     ///         {
     ///             "child" : {
@@ -900,21 +900,21 @@ impl When {
     /// use regex::Regex;
     /// use isahc::prelude::*;
     ///
-    /// let mock_server = MockServer::start();
+    /// let server = MockServer::start();
     ///
-    /// let mock = mock_server.mock(|when, then|{
+    /// let mock = server.mock(|when, then|{
     ///     when.header("Authorization", "token 1234567890");
     ///     then.status(200);
     /// });
     ///
-    /// Request::post(&format!("http://{}/test", mock_server.address()))
+    /// Request::post(&format!("http://{}/test", server.address()))
     ///     .header("Authorization", "token 1234567890")
     ///     .body(())
     ///     .unwrap()
     ///     .send()
     ///     .unwrap();
     ///
-    /// assert_eq!(mock.times_called(), 1);
+    /// assert_eq!(mock.hits(), 1);
     /// ```
     pub fn header<S: Into<String>>(self, name: S, value: S) -> Self {
         self.mock.set(self.mock.take().expect_header(name, value));
@@ -933,21 +933,21 @@ impl When {
     /// use regex::Regex;
     /// use isahc::prelude::*;
     ///
-    /// let mock_server = MockServer::start();
+    /// let server = MockServer::start();
     ///
-    /// let mock = mock_server.mock(|when, then|{
+    /// let mock = server.mock(|when, then|{
     ///     when.header_exists("Authorization");
     ///     then.status(200);
     /// });
     ///
-    /// Request::post(&format!("http://{}/test", mock_server.address()))
+    /// Request::post(&format!("http://{}/test", server.address()))
     ///     .header("Authorization", "token 1234567890")
     ///     .body(())
     ///     .unwrap()
     ///     .send()
     ///     .unwrap();
     ///
-    /// assert_eq!(mock.times_called(), 1);
+    /// assert_eq!(mock.hits(), 1);
     /// ```
     pub fn header_exists<S: Into<String>>(self, name: S) -> Self {
         self.mock.set(self.mock.take().expect_header_exists(name));
@@ -967,21 +967,21 @@ impl When {
     /// use regex::Regex;
     /// use isahc::prelude::*;
     ///
-    /// let mock_server = MockServer::start();
+    /// let server = MockServer::start();
     ///
-    /// let mock = mock_server.mock(|when, then|{
+    /// let mock = server.mock(|when, then|{
     ///     when.cookie("SESSIONID", "1234567890");
     ///     then.status(200);
     /// });
     ///
-    /// Request::post(&format!("http://{}/test", mock_server.address()))
+    /// Request::post(&format!("http://{}/test", server.address()))
     ///     .header("Cookie", "TRACK=12345; SESSIONID=1234567890; CONSENT=1")
     ///     .body(())
     ///     .unwrap()
     ///     .send()
     ///     .unwrap();
     ///
-    /// assert_eq!(mock.times_called(), 1);
+    /// assert_eq!(mock.hits(), 1);
     /// ```
     pub fn cookie<S: Into<String>>(self, name: S, value: S) -> Self {
         self.mock.set(self.mock.take().expect_cookie(name, value));
@@ -1000,21 +1000,21 @@ impl When {
     /// use regex::Regex;
     /// use isahc::prelude::*;
     ///
-    /// let mock_server = MockServer::start();
+    /// let server = MockServer::start();
     ///
-    /// let mock = mock_server.mock(|when, then|{
+    /// let mock = server.mock(|when, then|{
     ///     when.cookie_exists("SESSIONID");
     ///     then.status(200);
     /// });
     ///
-    /// Request::post(&format!("http://{}/test", mock_server.address()))
+    /// Request::post(&format!("http://{}/test", server.address()))
     ///     .header("Cookie", "TRACK=12345; SESSIONID=1234567890; CONSENT=1")
     ///     .body(())
     ///     .unwrap()
     ///     .send()
     ///     .unwrap();
     ///
-    /// assert_eq!(mock.times_called(), 1);
+    /// assert_eq!(mock.hits(), 1);
     /// ```
     pub fn cookie_exists<S: Into<String>>(self, name: S) -> Self {
         self.mock.set(self.mock.take().expect_cookie_exists(name));
@@ -1030,9 +1030,9 @@ impl When {
     /// use httpmock::{MockServer, Mock, MockServerRequest};
     ///
     /// // Arrange
-    /// let mock_server = MockServer::start();
+    /// let server = MockServer::start();
     ///
-    /// let m = mock_server.mock(|when, then|{
+    /// let m = server.mock(|when, then|{
     ///    when.matches(|req: MockServerRequest| {
     ///         req.path.contains("es")
     ///    });
@@ -1040,11 +1040,11 @@ impl When {
     /// });
     ///
     /// // Act: Send the HTTP request
-    /// let response = isahc::get(mock_server.url("/test")).unwrap();
+    /// let response = isahc::get(server.url("/test")).unwrap();
     ///
     /// // Assert
     /// assert_eq!(response.status(), 200);
-    /// assert_eq!(m.times_called(), 1);
+    /// assert_eq!(m.hits(), 1);
     /// ```
     pub fn matches(self, matcher: MockMatcherFunction) -> Self {
         self.mock.set(self.mock.take().expect_match(matcher));
@@ -1067,19 +1067,19 @@ impl Then {
     /// use httpmock::{MockServer, Mock, MockServerRequest};
     ///
     /// // Arrange
-    /// let mock_server = MockServer::start();
+    /// let server = MockServer::start();
     ///
-    /// let m = mock_server.mock(|when, then|{
+    /// let m = server.mock(|when, then|{
     ///     when.path("/hello");
     ///     then.status(200);
     /// });
     ///
     /// // Act
-    /// let response = isahc::get(mock_server.url("/hello")).unwrap();
+    /// let response = isahc::get(server.url("/hello")).unwrap();
     ///
     /// // Assert
     /// assert_eq!(response.status(), 200);
-    /// assert_eq!(m.times_called(), 1);
+    /// assert_eq!(m.hits(), 1);
     /// ```
     pub fn status(self, status: u16) -> Self {
         self.mock.set(self.mock.take().return_status(status));
@@ -1096,21 +1096,21 @@ impl Then {
     /// use isahc::ResponseExt;
     ///
     /// // Arrange
-    /// let mock_server = MockServer::start();
+    /// let server = MockServer::start();
     ///
-    /// let m = mock_server.mock(|when, then| {
+    /// let m = server.mock(|when, then| {
     ///     when.path("/hello");
     ///     then.status(200)
     ///         .body("ohi!");
     /// });
     ///
     /// // Act
-    /// let mut response = isahc::get(mock_server.url("/hello")).unwrap();
+    /// let mut response = isahc::get(server.url("/hello")).unwrap();
     ///
     /// // Assert
     /// assert_eq!(response.status(), 200);
     /// assert_eq!(response.text().unwrap(), "ohi!");
-    /// assert_eq!(m.times_called(), 1);
+    /// assert_eq!(m.hits(), 1);
     /// ```
     pub fn body(self, body: impl AsRef<[u8]>) -> Self {
         self.mock.set(self.mock.take().return_body(body));
@@ -1127,21 +1127,21 @@ impl Then {
     /// use isahc::ResponseExt;
     ///
     /// // Arrange
-    /// let mock_server = MockServer::start();
+    /// let server = MockServer::start();
     ///
-    /// let m = mock_server.mock(|when, then|{
+    /// let m = server.mock(|when, then|{
     ///     when.path("/hello");
     ///     then.status(200)
     ///         .body_from_file("tests/resources/simple_body.txt");
     /// });
     ///
     /// // Act
-    /// let mut response = isahc::get(mock_server.url("/hello")).unwrap();
+    /// let mut response = isahc::get(server.url("/hello")).unwrap();
     ///
     /// // Assert
     /// assert_eq!(response.status(), 200);
     /// assert_eq!(response.text().unwrap(), "ohi!");
-    /// assert_eq!(m.times_called(), 1);
+    /// assert_eq!(m.hits(), 1);
     /// ```
     pub fn body_from_file<S: Into<String>>(self, body: S) -> Self {
         self.mock.set(self.mock.take().return_body_from_file(body));
@@ -1168,9 +1168,9 @@ impl Then {
     ///
     /// // Arrange
     /// let _ = env_logger::try_init();
-    /// let mock_server = MockServer::start();
+    /// let server = MockServer::start();
     ///
-    /// let m = mock_server.mock(|when, then|{
+    /// let m = server.mock(|when, then|{
     ///     when.path("/user");
     ///     then.status(200)
     ///         .header("Content-Type", "application/json")
@@ -1178,14 +1178,14 @@ impl Then {
     /// });
     ///
     /// // Act
-    /// let mut response = isahc::get(mock_server.url("/user")).unwrap();
+    /// let mut response = isahc::get(server.url("/user")).unwrap();
     ///
     /// let user: Value =
     ///     serde_json::from_str(&response.text().unwrap()).expect("cannot deserialize JSON");
     ///
     /// // Assert
     /// assert_eq!(response.status(), 200);
-    /// assert_eq!(m.times_called(), 1);
+    /// assert_eq!(m.hits(), 1);
     /// assert_eq!(user.as_object().unwrap().get("name").unwrap(), "Hans");
     /// ```
     pub fn json_body<V: Into<Value>>(self, value: V) -> Self {
@@ -1214,9 +1214,9 @@ impl Then {
     ///
     /// // Arrange
     /// let _ = env_logger::try_init();
-    /// let mock_server = MockServer::start();
+    /// let server = MockServer::start();
     ///
-    /// let m = mock_server.mock(|when, then| {
+    /// let m = server.mock(|when, then| {
     ///     when.path("/user");
     ///     then.status(200)
     ///         .header("Content-Type", "application/json")
@@ -1226,7 +1226,7 @@ impl Then {
     /// });
     ///
     /// // Act
-    /// let mut response = isahc::get(mock_server.url("/user")).unwrap();
+    /// let mut response = isahc::get(server.url("/user")).unwrap();
     ///
     /// let user: TestUser =
     ///     serde_json::from_str(&response.text().unwrap()).unwrap();
@@ -1234,7 +1234,7 @@ impl Then {
     /// // Assert
     /// assert_eq!(response.status(), 200);
     /// assert_eq!(user.name, "Hans");
-    /// assert_eq!(m.times_called(), 1);
+    /// assert_eq!(m.hits(), 1);
     /// ```
     pub fn json_body_obj<T>(self, body: &T) -> Self
     where
@@ -1258,20 +1258,20 @@ impl Then {
     /// use isahc::ResponseExt;
     ///
     /// let _ = env_logger::try_init();
-    /// let mock_server = MockServer::start();
+    /// let server = MockServer::start();
     ///
-    /// let m = mock_server.mock(|when, then|{
+    /// let m = server.mock(|when, then|{
     ///     when.path("/");
     ///     then.status(200)
     ///         .header("Expires", "Wed, 21 Oct 2050 07:28:00 GMT");
     /// });
     ///
     /// // Act
-    /// let mut response = isahc::get(mock_server.url("/")).unwrap();
+    /// let mut response = isahc::get(server.url("/")).unwrap();
     ///
     /// // Assert
     /// assert_eq!(response.status(), 200);
-    /// assert_eq!(m.times_called(), 1);
+    /// assert_eq!(m.hits(), 1);
     /// ```
     pub fn header<S: Into<String>>(self, name: S, value: S) -> Self {
         self.mock.set(self.mock.take().return_header(name, value));
@@ -1297,19 +1297,19 @@ impl Then {
     /// use isahc::ResponseExt;
     /// let _ = env_logger::try_init();
     ///
-    /// let mock_server = MockServer::start();
+    /// let server = MockServer::start();
     ///
-    /// let redirect_mock = mock_server.mock(|when, then|{
+    /// let redirect_mock = server.mock(|when, then|{
     ///     when.path("/redirectPath");
     ///     then.temporary_redirect("http://www.google.com");
     /// });
     ///
     /// // Act: Send the HTTP request with an HTTP client that DOES NOT FOLLOW redirects automatically!
-    /// let mut response = isahc::get(mock_server.url("/redirectPath")).unwrap();
+    /// let mut response = isahc::get(server.url("/redirectPath")).unwrap();
     /// let body = response.text().unwrap();
     ///
     /// // Assert
-    /// assert_eq!(redirect_mock.times_called(), 1);
+    /// assert_eq!(redirect_mock.hits(), 1);
     ///
     /// // Attention!: Note that all of these values are automatically added to the response
     /// // (see details in mock builder method documentation).
@@ -1342,19 +1342,19 @@ impl Then {
     /// use isahc::ResponseExt;
     /// let _ = env_logger::try_init();
     ///
-    /// let mock_server = MockServer::start();
+    /// let server = MockServer::start();
     ///
-    /// let redirect_mock = mock_server.mock(|when, then|{
+    /// let redirect_mock = server.mock(|when, then|{
     ///     when.path("/redirectPath");
     ///     then.permanent_redirect("http://www.google.com");
     /// });
     ///
     /// // Act: Send the HTTP request with an HTTP client that DOES NOT FOLLOW redirects automatically!
-    /// let mut response = isahc::get(mock_server.url("/redirectPath")).unwrap();
+    /// let mut response = isahc::get(server.url("/redirectPath")).unwrap();
     /// let body = response.text().unwrap();
     ///
     /// // Assert
-    /// assert_eq!(redirect_mock.times_called(), 1);
+    /// assert_eq!(redirect_mock.hits(), 1);
     ///
     /// // Attention!: Note that all of these values are automatically added to the response
     /// // (see details in mock builder method documentation).
@@ -1380,19 +1380,19 @@ impl Then {
     /// let _ = env_logger::try_init();
     /// let start_time = SystemTime::now();
     /// let three_seconds = Duration::from_secs(3);
-    /// let mock_server = MockServer::start();
+    /// let server = MockServer::start();
     ///
-    /// let mock = mock_server.mock(|when, then| {
+    /// let mock = server.mock(|when, then| {
     ///     when.path("/delay");
     ///     then.status(200)
     ///         .delay(three_seconds);
     /// });
     ///
     /// // Act
-    /// let response = isahc::get(mock_server.url("/delay")).unwrap();
+    /// let response = isahc::get(server.url("/delay")).unwrap();
     ///
     /// // Assert
-    /// assert_eq!(mock.times_called(), 1);
+    /// assert_eq!(mock.hits(), 1);
     /// assert_eq!(start_time.elapsed().unwrap() > three_seconds, true);
     /// ```
     pub fn delay<D: Into<Duration>>(self, duration: D) -> Self {
@@ -1439,4 +1439,13 @@ lazy_static! {
     };
     static ref REMOTE_SERVER_POOL_REF: Arc<Pool<Arc<dyn MockServerAdapter + Send + Sync>>> =
         Arc::new(Pool::new(1));
+}
+
+
+pub fn mock<'a, F>(config_fn: F) -> MockRef<'a>
+    where
+        F: FnOnce(When, Then),
+{
+    let ms = MockServer::start();
+    return Mock::new().create_on(&ms);
 }
