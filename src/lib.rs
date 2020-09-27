@@ -1440,3 +1440,12 @@ lazy_static! {
     static ref REMOTE_SERVER_POOL_REF: Arc<Pool<Arc<dyn MockServerAdapter + Send + Sync>>> =
         Arc::new(Pool::new(1));
 }
+
+/*
+pub fn mock<'a, F>(config_fn: F) -> MockRef<'a>
+    where
+        F: FnOnce(When, Then),
+{
+    let ms = MockServer::start();
+    return Mock::new().create_on(&ms);
+}*/
