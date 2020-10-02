@@ -1,6 +1,7 @@
 extern crate httpmock;
 
-use httpmock::{Mock, MockServer};
+use self::httpmock::Mock;
+use httpmock::{MockServer, Regex};
 use httpmock_macros::httpmock_example_test;
 use isahc::get;
 
@@ -11,14 +12,15 @@ fn url_matching_test() {
     let _ = env_logger::try_init();
     let server = MockServer::start();
 
-    let m = Mock::new()
-        .expect_query_param("query", "Metallica")
-        .expect_query_param_exists("query")
-        .return_status(200)
-        .create_on(&server);
+    let m = server.mock(|when, then| {
+        when.path("/appointments/20200922")
+            .path_contains("appointments")
+            .path_matches(Regex::new(r"\d{4}\d{2}\d{2}$").unwrap());
+        then.status(201);
+    });
 
     // Act: Send the request and deserialize the response to JSON
-    get(server.url("/search?query=Metallica")).unwrap();
+    get(server.url("/appointments/20200922")).unwrap();
 
     // Assert
     assert_eq!(m.hits(), 1);

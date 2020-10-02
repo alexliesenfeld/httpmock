@@ -4,7 +4,7 @@ use std::borrow::Borrow;
 use std::collections::BTreeMap;
 use std::net::SocketAddr;
 use std::str::FromStr;
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 use hyper::body::Buf;
 use hyper::header::HeaderValue;
@@ -16,13 +16,95 @@ use hyper::{
 };
 use regex::Regex;
 
-pub(crate) use crate::server::data::MockServerState;
+use crate::data::{ActiveMock, HttpMockRequest};
+use crate::server::matchers::body_contains_matcher::BodyContainsMatcher;
+use crate::server::matchers::body_json_includes_matcher::BodyJsonIncludesMatcher;
+use crate::server::matchers::body_json_matcher::BodyJsonMatcher;
+use crate::server::matchers::body_matcher::BodyMatcher;
+use crate::server::matchers::body_regex_matcher::BodyRegexMatcher;
+use crate::server::matchers::cookie_exists_matcher::CookieExistsMatcher;
+use crate::server::matchers::cookie_matcher::CookieMatcher;
+use crate::server::matchers::custom_function_matcher::CustomFunctionMatcher;
+use crate::server::matchers::header_exists_matcher::HeaderExistsMatcher;
+use crate::server::matchers::header_matcher::HeaderMatcher;
+use crate::server::matchers::method_matcher::MethodMatcher;
+use crate::server::matchers::path_contains_matcher::PathContainsMatcher;
+use crate::server::matchers::path_matcher::PathMatcher;
+use crate::server::matchers::path_regex_matcher::PathRegexMatcher;
+use crate::server::matchers::query_parameter_exists_matcher::QueryParameterExistsMatcher;
+use crate::server::matchers::query_parameter_matcher::QueryParameterMatcher;
+use crate::server::matchers::Matcher;
+use crate::server::web::routes;
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering::Relaxed;
 
-pub(crate) mod data;
-pub(crate) mod handlers;
+mod matchers;
 
-mod routes;
 mod util;
+pub(crate) mod web;
+
+pub(crate) use matchers::Mismatch;
+
+pub(crate) struct Matchers {
+    pub custom_function_matchers: Vec<Box<dyn Matcher + Sync + Send>>,
+    pub path_matchers: Vec<Box<dyn Matcher + Sync + Send>>,
+    pub method_matchers: Vec<Box<dyn Matcher + Sync + Send>>,
+    pub headers_matchers: Vec<Box<dyn Matcher + Sync + Send>>,
+    pub query_params_matchers: Vec<Box<dyn Matcher + Sync + Send>>,
+    pub cookie_matchers: Vec<Box<dyn Matcher + Sync + Send>>,
+    pub body_matchers: Vec<Box<dyn Matcher + Sync + Send>>,
+    //pub multipart_matchers: Vec<Box<dyn Matcher + Sync + Send>>,
+}
+
+/// The shared state accessible to all handlers
+pub(crate) struct MockServerState {
+    id_counter: AtomicUsize,
+    pub mocks: RwLock<BTreeMap<usize, ActiveMock>>,
+    pub history: RwLock<Vec<Arc<HttpMockRequest>>>,
+    pub matchers: Matchers,
+}
+
+impl MockServerState {
+    pub fn create_new_id(&self) -> usize {
+        self.id_counter.fetch_add(1, Relaxed)
+    }
+
+    pub fn new() -> Self {
+        MockServerState {
+            mocks: RwLock::new(BTreeMap::new()),
+            history: RwLock::new(Vec::new()),
+            id_counter: AtomicUsize::new(0),
+            matchers: Matchers {
+                method_matchers: vec![Box::new(MethodMatcher::new(3.0))],
+                path_matchers: vec![
+                    Box::new(PathMatcher::new(10.0)),
+                    Box::new(PathContainsMatcher::new(10.0)),
+                    Box::new(PathRegexMatcher::new(10.0)),
+                ],
+                body_matchers: vec![
+                    Box::new(BodyContainsMatcher::new(1.0)),
+                    Box::new(BodyJsonIncludesMatcher::new(1.0)),
+                    Box::new(BodyJsonMatcher::new(1.0)),
+                    Box::new(BodyMatcher::new(1.0)),
+                    Box::new(BodyRegexMatcher::new(1.0)),
+                ],
+                cookie_matchers: vec![
+                    Box::new(CookieExistsMatcher::new(1.0)),
+                    Box::new(CookieMatcher::new(1.0)),
+                ],
+                headers_matchers: vec![
+                    Box::new(HeaderMatcher::new(1.0)),
+                    Box::new(HeaderExistsMatcher::new(1.0)),
+                ],
+                query_params_matchers: vec![
+                    Box::new(QueryParameterExistsMatcher::new(1.0)),
+                    Box::new(QueryParameterMatcher::new(1.0)),
+                ],
+                custom_function_matchers: vec![Box::new(CustomFunctionMatcher::new(1.0))],
+            },
+        }
+    }
+}
 
 type GenericError = Box<dyn std::error::Error + Send + Sync>;
 
@@ -225,7 +307,7 @@ async fn route_request(
     if MOCKS_PATH.is_match(&request_header.path) {
         match request_header.method.as_str() {
             "POST" => return routes::add(state, body),
-            "DELETE" => return routes::delete_all(state),
+            "DELETE" => return routes::delete_all_mocks(state),
             _ => {}
         }
     }
@@ -240,6 +322,13 @@ async fn route_request(
         match request_header.method.as_str() {
             "GET" => return routes::read_one(state, id),
             "DELETE" => return routes::delete_one(state, id),
+            _ => {}
+        }
+    }
+
+    if HISTORY_PATH.is_match(&request_header.path) {
+        match request_header.method.as_str() {
+            "DELETE" => return routes::delete_history(state),
             _ => {}
         }
     }
@@ -288,6 +377,7 @@ lazy_static! {
     static ref PING_PATH: Regex = Regex::new(r"^/__ping$").unwrap();
     static ref MOCKS_PATH: Regex = Regex::new(r"^/__mocks$").unwrap();
     static ref MOCK_PATH: Regex = Regex::new(r"^/__mocks/([0-9]+)$").unwrap();
+    static ref HISTORY_PATH: Regex = Regex::new(r"^/__history$").unwrap();
 }
 
 #[cfg(test)]

@@ -3,20 +3,20 @@ extern crate serde_regex;
 use std::cmp::Ordering;
 use std::collections::BTreeMap;
 use std::fmt::Debug;
-use std::rc::Rc;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::Relaxed;
-use std::sync::RwLock;
+use std::sync::{Arc, RwLock};
 
+use crate::server::Mismatch;
 use regex::Regex;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::fmt;
 use std::time::Duration;
 
 /// A general abstraction of an HTTP request of `httpmock`.
 #[derive(Serialize, Deserialize, Debug)]
-pub struct MockServerHttpRequest {
+pub struct HttpMockRequest {
     pub path: String,
     pub method: String,
     pub headers: Option<BTreeMap<String, String>>,
@@ -24,7 +24,7 @@ pub struct MockServerHttpRequest {
     pub body: Option<String>,
 }
 
-impl MockServerHttpRequest {
+impl HttpMockRequest {
     pub(crate) fn new(method: String, path: String) -> Self {
         Self {
             path,
@@ -163,7 +163,7 @@ impl PartialEq for Pattern {
 
 impl Eq for Pattern {}
 
-pub type MockMatcherFunction = fn(Rc<MockServerHttpRequest>) -> bool;
+pub type MockMatcherFunction = fn(Arc<HttpMockRequest>) -> bool;
 
 /// A general abstraction of an HTTP request for all handlers.
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -313,25 +313,6 @@ impl MockIdentification {
     }
 }
 
-/// The shared state accessible to all handlers
-pub(crate) struct MockServerState {
-    pub mocks: RwLock<BTreeMap<usize, ActiveMock>>,
-    id_counter: AtomicUsize,
-}
-
-impl MockServerState {
-    pub fn create_new_id(&self) -> usize {
-        self.id_counter.fetch_add(1, Relaxed)
-    }
-
-    pub fn new() -> Self {
-        MockServerState {
-            mocks: RwLock::new(BTreeMap::new()),
-            id_counter: AtomicUsize::new(0),
-        }
-    }
-}
-
 #[derive(Serialize, Deserialize, Clone)]
 pub(crate) struct ActiveMock {
     pub id: usize,
@@ -347,6 +328,13 @@ impl ActiveMock {
             call_counter: 0,
         }
     }
+}
+
+#[derive(Serialize, Deserialize)]
+pub(crate) struct ClosestMatch {
+    pub definition: RequestRequirements,
+    pub request: HttpMockRequest,
+    pub mismatches: Vec<Mismatch>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -367,7 +355,7 @@ impl ErrorResponse {
 
 #[cfg(test)]
 mod test {
-    use crate::server::data::{Pattern, RequestRequirements};
+    use crate::data::{Pattern, RequestRequirements};
     use regex::Regex;
     use serde_json::json;
     use std::collections::BTreeMap;

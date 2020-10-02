@@ -46,7 +46,7 @@ pub(crate) fn read_env(name: &str, default: &str) -> String {
 // Futures
 // ===============================================================================================
 #[doc(hidden)]
-pub(crate) trait Join: Future {
+pub trait Join: Future {
     fn join(self) -> <Self as Future>::Output;
 }
 

@@ -16,10 +16,10 @@ fn delay_test() {
 
     let server = MockServer::start();
 
-    let mock = Mock::new()
-        .expect_path("/delay")
-        .return_with_delay(delay)
-        .create_on(&server);
+    let mock = server.mock(|when, then| {
+        when.path("/delay");
+        then.delay(delay);
+    });
 
     // Act: Send the HTTP request
     let response = get(server.url("/delay")).unwrap();

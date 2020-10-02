@@ -6,57 +6,12 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::api::{Method, Regex};
-use crate::server::data::{
+use crate::data::{
     MockDefinition, MockMatcherFunction, MockServerHttpResponse, Pattern, RequestRequirements,
 };
 use crate::util::{get_test_resource_file_path, read_file, Join};
 use crate::MockServer;
 use std::time::Duration;
-
-/// The [Mock](struct.Mock.html) structure holds a definition for a request/response scenario
-/// that can be used to configure a [MockServer](struct.MockServer.html).
-///
-/// This structure provides methods starting with `expect` in their name to
-/// define requirements for HTTP requests that the server will respond to. On the other hand,
-/// methods starting with `return` in their name define what data the mock server will put into
-/// the corresponding HTTP response.
-///
-/// Because of this naming scheme, this structure is said to privide access to the
-/// "expect/return" API of `httpmock`.
-///
-/// # Example
-/// ```
-/// // Arrange
-/// use httpmock::{MockServer, Mock};
-///
-/// let server = MockServer::start();
-///
-/// let mock = Mock::new()
-///     .expect_path_contains("/search")
-///     .expect_query_param("query", "metallica")
-///     .return_status(202)
-///     .create_on(&server);
-///
-/// // Act: Send the HTTP request
-/// let response = isahc::get(server.url("/search?query=metallica")).unwrap();
-///
-/// // Assert
-/// assert_eq!(response.status(), 202);
-/// assert_eq!(mock.hits(), 1);
-/// ```
-/// Observe how [Mock::create_on](struct.Mock.html#method.create_on) is used to create a mock object
-/// on the server. After the call completes, the mock server will start serving HTTP requests
-/// as specified in the [Mock](struct.Mock.html) instance.
-///
-/// The [Mock::create_on](struct.Mock.html#method.create_on) method also returns a mock reference
-/// that identifies the mock object on the server. It can be used to fetch related information
-/// from the server, such as the number of times the mock was served
-/// (see [MockRef::hits](struct.MockRef.html#method.hits)). You can also use it
-/// to explicitly delete the mock object from the server
-/// (see [MockRef::delete](struct.MockRef.html#method.delete)).
-pub struct Mock {
-    mock: MockDefinition,
-}
 
 /// Represents a reference to the mock object on a [MockServer](struct.MockServer.html).
 /// It can be used to spy on the mock and also perform some management operations, such as
@@ -95,6 +50,44 @@ pub struct MockRef<'a> {
 }
 
 impl<'a> MockRef<'a> {
+    pub fn assert_hits(&self, hits: usize) {
+        self.assert_hits_async(hits).join()
+    }
+
+    pub async fn assert_hits_async(&self, hits: usize) {
+        let active_mock = self
+            .server
+            .server_adapter
+            .as_ref()
+            .unwrap()
+            .fetch_mock(self.id)
+            .await
+            .expect("Cannot deserialize mock server response");
+
+        if active_mock.call_counter == hits {
+            return;
+        }
+
+        let closest_match = self
+            .server
+            .server_adapter
+            .as_ref()
+            .unwrap()
+            .find_mismatches(self.id)
+            .await
+            .expect("Cannot deserialize mock server response");
+
+        match closest_match {
+            Some(closest_match) => {
+                for x in closest_match {
+                    assert!(false, format!("{:?}", x));
+                }
+
+            }
+            None => {}
+        }
+    }
+
     /// This method returns the number of times a mock has been called at the mock server.
     ///
     /// # Example
@@ -123,10 +116,7 @@ impl<'a> MockRef<'a> {
 
     /// This method returns the number of times a mock has been called at the mock server.
     /// Deprecated, use [Mock::hits](struct.MockServer.html#method.hits) instead.
-    #[deprecated(
-        since = "0.5.0",
-        note = "Please use 'hits' function instead"
-    )]
+    #[deprecated(since = "0.5.0", note = "Please use 'hits' function instead")]
     pub fn times_called(&self) -> usize {
         self.hits()
     }
@@ -172,10 +162,7 @@ impl<'a> MockRef<'a> {
 
     /// This method returns the number of times a mock has been called at the mock server.
     /// Deprecated, use [Mock::hits](struct.MockServer.html#method.hits_async) instead.
-    #[deprecated(
-    since = "0.5.0",
-    note = "Please use 'hits_async' function instead"
-    )]
+    #[deprecated(since = "0.5.0", note = "Please use 'hits_async' function instead")]
     pub async fn times_called_async(&self) -> usize {
         self.hits_async().await
     }
@@ -275,6 +262,52 @@ impl<'a> MockRef<'a> {
     }
 }
 
+/// The [Mock](struct.Mock.html) structure holds a definition for a request/response scenario
+/// that can be used to configure a [MockServer](struct.MockServer.html).
+///
+/// This structure provides methods starting with `expect` in their name to
+/// define requirements for HTTP requests that the server will respond to. On the other hand,
+/// methods starting with `return` in their name define what data the mock server will put into
+/// the corresponding HTTP response.
+///
+/// Because of this naming scheme, this structure is said to privide access to the
+/// "expect/return" API of `httpmock`.
+///
+/// # Example
+/// ```
+/// // Arrange
+/// use httpmock::{MockServer, Mock};
+///
+/// let server = MockServer::start();
+///
+/// let mock = Mock::new()
+///     .expect_path_contains("/search")
+///     .expect_query_param("query", "metallica")
+///     .return_status(202)
+///     .create_on(&server);
+///
+/// // Act: Send the HTTP request
+/// let response = isahc::get(server.url("/search?query=metallica")).unwrap();
+///
+/// // Assert
+/// assert_eq!(response.status(), 202);
+/// assert_eq!(mock.hits(), 1);
+/// ```
+/// Observe how [Mock::create_on](struct.Mock.html#method.create_on) is used to create a mock object
+/// on the server. After the call completes, the mock server will start serving HTTP requests
+/// as specified in the [Mock](struct.Mock.html) instance.
+///
+/// The [Mock::create_on](struct.Mock.html#method.create_on) method also returns a mock reference
+/// that identifies the mock object on the server. It can be used to fetch related information
+/// from the server, such as the number of times the mock was served
+/// (see [MockRef::hits](struct.MockRef.html#method.hits)). You can also use it
+/// to explicitly delete the mock object from the server
+/// (see [MockRef::delete](struct.MockRef.html#method.delete)).
+#[deprecated(since = "0.5.0", note = "Please use new API instead.")]
+pub struct Mock {
+    mock: MockDefinition,
+}
+
 impl Mock {
     /// Creates a new mock that automatically returns HTTP status code 200 if hit by an HTTP call.
     pub fn new() -> Self {
@@ -325,6 +358,7 @@ impl Mock {
     ///
     /// assert_eq!(mock.hits(), 1);
     /// ```
+    #[deprecated(since = "0.5.0", note = "Please use new API instead.")]
     pub fn expect_path<S: Into<String>>(mut self, path: S) -> Self {
         self.mock.request.path = Some(path.into());
         self
@@ -347,6 +381,7 @@ impl Mock {
     ///
     /// assert_eq!(mock.hits(), 1);
     /// ```
+    #[deprecated(since = "0.5.0", note = "Please use new API instead.")]
     pub fn expect_path_contains<S: Into<String>>(mut self, substring: S) -> Self {
         if self.mock.request.path_contains.is_none() {
             self.mock.request.path_contains = Some(Vec::new());
@@ -380,6 +415,7 @@ impl Mock {
     ///
     /// assert_eq!(mock.hits(), 1);
     /// ```
+    #[deprecated(since = "0.5.0", note = "Please use new API instead.")]
     pub fn expect_path_matches<R: Into<Regex>>(mut self, regex: R) -> Self {
         if self.mock.request.path_matches.is_none() {
             self.mock.request.path_matches = Some(Vec::new());
@@ -414,6 +450,7 @@ impl Mock {
     ///
     /// assert_eq!(mock.hits(), 1);
     /// ```
+    #[deprecated(since = "0.5.0", note = "Please use new API instead.")]
     pub fn expect_method<M: Into<Method>>(mut self, method: M) -> Self {
         self.mock.request.method = Some(method.into().to_string());
         self
@@ -445,6 +482,7 @@ impl Mock {
     ///
     /// assert_eq!(mock.hits(), 1);
     /// ```
+    #[deprecated(since = "0.5.0", note = "Please use new API instead.")]
     pub fn expect_header<S: Into<String>>(mut self, name: S, value: S) -> Self {
         if self.mock.request.headers.is_none() {
             self.mock.request.headers = Some(BTreeMap::new());
@@ -487,6 +525,7 @@ impl Mock {
     ///
     /// assert_eq!(mock.hits(), 1);
     /// ```
+    #[deprecated(since = "0.5.0", note = "Please use new API instead.")]
     pub fn expect_header_exists<S: Into<String>>(mut self, name: S) -> Self {
         if self.mock.request.header_exists.is_none() {
             self.mock.request.header_exists = Some(Vec::new());
@@ -529,6 +568,7 @@ impl Mock {
     ///
     /// assert_eq!(mock.hits(), 1);
     /// ```
+    #[deprecated(since = "0.5.0", note = "Please use new API instead.")]
     pub fn expect_cookie<S: Into<String>>(mut self, name: S, value: S) -> Self {
         if self.mock.request.cookies.is_none() {
             self.mock.request.cookies = Some(BTreeMap::new());
@@ -571,6 +611,7 @@ impl Mock {
     ///
     /// assert_eq!(mock.hits(), 1);
     /// ```
+    #[deprecated(since = "0.5.0", note = "Please use new API instead.")]
     pub fn expect_cookie_exists<S: Into<String>>(mut self, name: S) -> Self {
         if self.mock.request.cookie_exists.is_none() {
             self.mock.request.cookie_exists = Some(Vec::new());
@@ -610,6 +651,7 @@ impl Mock {
     ///
     /// assert_eq!(mock.hits(), 1);
     /// ```
+    #[deprecated(since = "0.5.0", note = "Please use new API instead.")]
     pub fn expect_body<S: Into<String>>(mut self, body: S) -> Self {
         self.mock.request.body = Some(body.into());
         self
@@ -663,6 +705,7 @@ impl Mock {
     /// assert_eq!(response.status(), 201);
     /// assert_eq!(m.hits(), 1);
     /// ```
+    #[deprecated(since = "0.5.0", note = "Please use new API instead.")]
     pub fn expect_json_body_obj<'a, T>(self, body: &T) -> Self
     where
         T: Serialize + Deserialize<'a>,
@@ -709,6 +752,7 @@ impl Mock {
     /// assert_eq!(response.status(), 201);
     /// assert_eq!(m.hits(), 1);
     /// ```
+    #[deprecated(since = "0.5.0", note = "Please use new API instead.")]
     pub fn expect_json_body<V: Into<Value>>(mut self, body: V) -> Self {
         self.mock.request.json_body = Some(body.into());
         self
@@ -758,6 +802,7 @@ impl Mock {
     /// Please note that the JSON partial contains the full object hierachy, i.e. it needs to start
     /// from the root! It leaves out irrelevant attributes, however (`parent_attribute`
     /// and `child.other_attribute`).
+    #[deprecated(since = "0.5.0", note = "Please use new API instead.")]
     pub fn expect_json_body_partial<S: Into<String>>(mut self, partial_body: S) -> Self {
         if self.mock.request.json_body_includes.is_none() {
             self.mock.request.json_body_includes = Some(Vec::new());
@@ -807,6 +852,7 @@ impl Mock {
     /// assert_eq!(response.status(), 201);
     /// assert_eq!(m.hits(), 1);
     /// ```
+    #[deprecated(since = "0.5.0", note = "Please use new API instead.")]
     pub fn expect_body_contains<S: Into<String>>(mut self, substring: S) -> Self {
         if self.mock.request.body_contains.is_none() {
             self.mock.request.body_contains = Some(Vec::new());
@@ -853,6 +899,7 @@ impl Mock {
     /// assert_eq!(response.status(), 201);
     /// assert_eq!(m.hits(), 1);
     /// ```
+    #[deprecated(since = "0.5.0", note = "Please use new API instead.")]
     pub fn expect_body_matches<R: Into<Regex>>(mut self, regex: R) -> Self {
         if self.mock.request.body_matches.is_none() {
             self.mock.request.body_matches = Some(Vec::new());
@@ -890,6 +937,7 @@ impl Mock {
     /// // Assert
     /// assert_eq!(m.hits(), 1);
     /// ```
+    #[deprecated(since = "0.5.0", note = "Please use new API instead.")]
     pub fn expect_query_param<S: Into<String>>(mut self, name: S, value: S) -> Self {
         if self.mock.request.query_param.is_none() {
             self.mock.request.query_param = Some(BTreeMap::new());
@@ -927,6 +975,7 @@ impl Mock {
     /// // Assert
     /// assert_eq!(m.hits(), 1);
     /// ```
+    #[deprecated(since = "0.5.0", note = "Please use new API instead.")]
     pub fn expect_query_param_exists<S: Into<String>>(mut self, name: S) -> Self {
         if self.mock.request.query_param_exists.is_none() {
             self.mock.request.query_param_exists = Some(Vec::new());
@@ -967,6 +1016,7 @@ impl Mock {
     /// assert_eq!(response.status(), 200);
     /// assert_eq!(m.hits(), 1);
     /// ```
+    #[deprecated(since = "0.5.0", note = "Please use new API instead.")]
     pub fn expect_match(mut self, request_matcher: MockMatcherFunction) -> Self {
         if self.mock.request.matchers.is_none() {
             self.mock.request.matchers = Some(Vec::new());
@@ -1004,6 +1054,7 @@ impl Mock {
     /// assert_eq!(response.status(), 200);
     /// assert_eq!(m.hits(), 1);
     /// ```
+    #[deprecated(since = "0.5.0", note = "Please use new API instead.")]
     pub fn return_status(mut self, status: u16) -> Self {
         self.mock.response.status = Some(status);
         self
@@ -1034,6 +1085,7 @@ impl Mock {
     /// assert_eq!(response.text().unwrap(), "ohi!");
     /// assert_eq!(m.hits(), 1);
     /// ```
+    #[deprecated(since = "0.5.0", note = "Please use new API instead.")]
     pub fn return_body(mut self, body: impl AsRef<[u8]>) -> Self {
         self.mock.response.body = Some(body.as_ref().to_vec());
         self
@@ -1064,6 +1116,7 @@ impl Mock {
     /// assert_eq!(response.text().unwrap(), "ohi!");
     /// assert_eq!(m.hits(), 1);
     /// ```
+    #[deprecated(since = "0.5.0", note = "Please use new API instead.")]
     pub fn return_body_from_file<S: Into<String>>(
         mut self,
         relative_test_resource_path: S,
@@ -1120,6 +1173,7 @@ impl Mock {
     /// assert_eq!(m.hits(), 1);
     /// assert_eq!(user.as_object().unwrap().get("name").unwrap(), "Hans");
     /// ```
+    #[deprecated(since = "0.5.0", note = "Please use new API instead.")]
     pub fn return_json_body<V: Into<Value>>(mut self, body: V) -> Self {
         self.mock.response.body = Some(body.into().to_string().into_bytes());
         self
@@ -1168,6 +1222,7 @@ impl Mock {
     /// assert_eq!(user.name, "Hans");
     /// assert_eq!(m.hits(), 1);
     /// ```
+    #[deprecated(since = "0.5.0", note = "Please use new API instead.")]
     pub fn return_json_body_obj<T>(self, body: &T) -> Self
     where
         T: Serialize,
@@ -1205,6 +1260,7 @@ impl Mock {
     /// assert_eq!(response.status(), 200);
     /// assert_eq!(m.hits(), 1);
     /// ```
+    #[deprecated(since = "0.5.0", note = "Please use new API instead.")]
     pub fn return_header<S: Into<String>>(mut self, name: S, value: S) -> Self {
         if self.mock.response.headers.is_none() {
             self.mock.response.headers = Some(BTreeMap::new());
@@ -1259,6 +1315,7 @@ impl Mock {
     /// assert_eq!(body, "Moved Permanently");
     /// assert_eq!(response.headers().get("Location").unwrap().to_str().unwrap(), "http://www.google.com");
     /// ```
+    #[deprecated(since = "0.5.0", note = "Please use new API instead.")]
     pub fn return_permanent_redirect<S: Into<String>>(mut self, redirect_url: S) -> Self {
         // see https://developer.mozilla.org/en-US/docs/Web/HTTP/Redirections
         if self.mock.response.status.is_none() {
@@ -1310,6 +1367,7 @@ impl Mock {
     /// assert_eq!(body, "Found");
     /// assert_eq!(response.headers().get("Location").unwrap().to_str().unwrap(), "http://www.google.com");
     /// ```
+    #[deprecated(since = "0.5.0", note = "Please use new API instead.")]
     pub fn return_temporary_redirect<S: Into<String>>(mut self, redirect_url: S) -> Self {
         // see https://developer.mozilla.org/en-US/docs/Web/HTTP/Redirections
         if self.mock.response.status.is_none() {
@@ -1348,6 +1406,7 @@ impl Mock {
     /// assert_eq!(mock.hits(), 1);
     /// assert_eq!(start_time.elapsed().unwrap() > delay, true);
     /// ```
+    #[deprecated(since = "0.5.0", note = "Please use new API instead.")]
     pub fn return_with_delay<D: Into<Duration>>(mut self, duration: D) -> Self {
         self.mock.response.delay = Some(duration.into());
         self
@@ -1378,6 +1437,7 @@ impl Mock {
     ///
     /// # Panics
     /// This method will panic if there is a problem communicating with the server.
+    #[deprecated(since = "0.5.0", note = "Please use new API instead.")]
     pub fn create_on<'a>(self, server: &'a MockServer) -> MockRef<'a> {
         self.create_on_async(server).join()
     }
@@ -1412,6 +1472,7 @@ impl Mock {
     ///
     /// # Panics
     /// This method will panic if there is a problem communicating with the server.
+    #[deprecated(since = "0.5.0", note = "Please use new API instead.")]
     pub async fn create_on_async<'a>(self, server: &'a MockServer) -> MockRef<'a> {
         let response = server
             .server_adapter

@@ -1,3 +1,4 @@
+#![allow(warnings)]
 //! HTTP mocking library that allows you to simulate responses from HTTP based services.
 //!
 //!  # Features
@@ -200,10 +201,11 @@
 //! ```
 //!
 //! ## Standalone Parallelism
-//! Tests that use a remote mock server are executed sequentially by default. This is in
-//! contrast to tests that use a local mock server. Sequential execution is achieved by
-//! blocking all tests from further execution whenever a test requires to connect to a
-//! busy mock server.
+//! To prevent interference with other tests, test functions are forced to use the standalone
+//! mock server sequentially.
+//! This means that test functions may be blocked when connecting to the remote server until
+//! it becomes free again.
+//! This is in contrast to tests that use a local mock server.
 //!
 //! ## Limitations of the Standalone Mode
 //! At this time, it is not possible to use custom request matchers in combination with standalone
@@ -233,17 +235,18 @@ use util::Join;
 
 use crate::api::{LocalMockServerAdapter, MockServerAdapter, RemoteMockServerAdapter};
 pub use crate::api::{Method, Mock, MockRef, Regex};
-use crate::server::data::{MockMatcherFunction, MockServerHttpRequest};
 use crate::server::{start_server, MockServerState};
 use crate::util::{read_env, with_retry};
+use data::{HttpMockRequest, MockMatcherFunction};
 use futures_util::core_reexport::time::Duration;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::cell::Cell;
 
 mod api;
+pub(crate) mod data;
 mod server;
-mod util;
+pub mod util;
 
 pub mod standalone {
     use std::sync::Arc;
@@ -257,7 +260,7 @@ pub mod standalone {
 }
 
 /// A general abstraction of an HTTP request of `httpmock`.
-pub type MockServerRequest = Rc<MockServerHttpRequest>;
+pub type MockServerRequest = Arc<HttpMockRequest>;
 
 /// A mock server that is able to receive and respond to HTTP requests.
 pub struct MockServer {
@@ -275,7 +278,10 @@ impl MockServer {
             .expect("Cannot ping mock server.");
         with_retry(5, || server_adapter.delete_all_mocks())
             .await
-            .expect("Cannot reset mock server.");
+            .expect("Cannot reset mock server (task: delete mocks).");
+        with_retry(5, || server_adapter.delete_history())
+            .await
+            .expect("Cannot reset mock server (task: delete request history).");
         Self {
             server_adapter: Some(server_adapter),
             pool,
@@ -444,7 +450,7 @@ impl MockServer {
     /// ```
     pub fn mock<F>(&self, config_fn: F) -> MockRef
     where
-        F: FnOnce(When, Then),
+        F: FnOnce(Expectations, Responders),
     {
         self.mock_async(config_fn).join()
     }
@@ -468,23 +474,52 @@ impl MockServer {
     /// ```
     pub async fn mock_async<'a, F>(&'a self, config_fn: F) -> MockRef<'a>
     where
-        F: FnOnce(When, Then),
+        F: FnOnce(Expectations, Responders),
     {
         let mock = Rc::new(Cell::new(Mock::new()));
-        config_fn(When { mock: mock.clone() }, Then { mock: mock.clone() });
+        config_fn(
+            Expectations { mock: mock.clone() },
+            Responders { mock: mock.clone() },
+        );
         mock.take().create_on_async(self).await
     }
 }
 
-/// A builder that allows concise specification of HTTP request values.
-pub struct When {
+/// A builder that allows the specification of expected HTTP request values.
+pub struct Expectations {
     pub(crate) mock: Rc<Cell<Mock>>,
 }
 
-impl When {
+impl Expectations {
+    /// Sets the mock server to respond to any incoming request.
+    ///
+    /// # Example
+    /// ```
+    /// use httpmock::{Mock, MockServer};
+    /// use httpmock::Method::GET;
+    /// use regex::Regex;
+    ///
+    /// let server = MockServer::start();
+    ///
+    /// let mock = server.mock(|when, then|{
+    ///     when.any_request();
+    ///     then.status(200);
+    /// });
+    ///
+    /// isahc::get(server.url("/anyPath")).unwrap();
+    ///
+    /// assert_eq!(mock.hits(), 1);
+    /// ```
+    pub fn any_request(self) -> Self {
+        // This method does nothing. It only exists to make it very explicit that
+        // the mock server will respond to any request. This is the default at this time, but
+        // may change in the future.
+        self
+    }
+
     /// Sets the expected HTTP method.
     ///
-    /// * `method` - The HTTP method.
+    /// * `method` - The HTTP method (a [Method](enum.Method.html) or a `String`).
     ///
     /// # Example
     /// ```
@@ -1052,12 +1087,12 @@ impl When {
     }
 }
 
-/// A builder that allows concise specification of HTTP response values.
-pub struct Then {
+/// A builder that allows specification of HTTP response values.
+pub struct Responders {
     pub(crate) mock: Rc<Cell<Mock>>,
 }
 
-impl Then {
+impl Responders {
     /// Sets the HTTP response code that will be returned by the mock server.
     ///
     /// * `status` - The status code.
@@ -1440,12 +1475,3 @@ lazy_static! {
     static ref REMOTE_SERVER_POOL_REF: Arc<Pool<Arc<dyn MockServerAdapter + Send + Sync>>> =
         Arc::new(Pool::new(1));
 }
-
-/*
-pub fn mock<'a, F>(config_fn: F) -> MockRef<'a>
-    where
-        F: FnOnce(When, Then),
-{
-    let ms = MockServer::start();
-    return Mock::new().create_on(&ms);
-}*/

@@ -6,8 +6,11 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 
-use crate::server::data::{ActiveMock, MockDefinition, MockIdentification, MockServerState};
-use crate::server::handlers::{add_new_mock, delete_all, delete_one, read_one};
+use crate::data::{ActiveMock, ClosestMatch, MockDefinition, MockIdentification};
+use crate::server::web::handlers::{
+    add_new_mock, delete_all_mocks, delete_history, delete_one_mock, find_mismatches, read_one_mock,
+};
+use crate::server::{Mismatch, MockServerState};
 use std::str::FromStr;
 
 /// Type alias for [regex::Regex](../regex/struct.Regex.html).
@@ -63,6 +66,9 @@ pub(crate) trait MockServerAdapter {
     async fn fetch_mock(&self, mock_id: usize) -> Result<ActiveMock, String>;
     async fn delete_mock(&self, mock_id: usize) -> Result<(), String>;
     async fn delete_all_mocks(&self) -> Result<(), String>;
+    async fn find_mismatches(&self, mock_id: usize) -> Result<Option<Vec<Mismatch>>, String>;
+
+    async fn delete_history(&self) -> Result<(), String>;
     async fn ping(&self) -> Result<(), String>;
 }
 
@@ -226,6 +232,35 @@ impl MockServerAdapter for RemoteMockServerAdapter {
         Ok(())
     }
 
+    async fn find_mismatches(&self, mock_id: usize) -> Result<Option<Vec<Mismatch>>, String> {
+        Ok(None)
+    }
+
+    async fn delete_history(&self) -> Result<(), String> {
+        // Send the request to the mock server
+        let request_url = format!("http://{}/__history", &self.address());
+        let request = Request::builder()
+            .method("DELETE")
+            .uri(request_url)
+            .body("".to_string())
+            .unwrap();
+
+        let (status, body) = match execute_request(request, &self.http_client).await {
+            Err(err) => return Err(format!("cannot send request to mock server: {}", err)),
+            Ok(sb) => sb,
+        };
+
+        // Evaluate response status code
+        if status != 202 {
+            return Err(format!(
+                "Could not delete history from server (status = {}, message = {})",
+                status, body
+            ));
+        }
+
+        Ok(())
+    }
+
     async fn ping(&self) -> Result<(), String> {
         http_ping(&self.addr, self.http_client.borrow()).await
     }
@@ -268,14 +303,14 @@ impl MockServerAdapter for LocalMockServerAdapter {
     }
 
     async fn fetch_mock(&self, mock_id: usize) -> Result<ActiveMock, String> {
-        match read_one(&self.local_state, mock_id)? {
+        match read_one_mock(&self.local_state, mock_id)? {
             Some(mock) => Ok(mock),
             None => Err("Cannot find mock".to_string()),
         }
     }
 
     async fn delete_mock(&self, mock_id: usize) -> Result<(), String> {
-        let deleted = delete_one(&self.local_state, mock_id)?;
+        let deleted = delete_one_mock(&self.local_state, mock_id)?;
         if deleted {
             Ok(())
         } else {
@@ -284,7 +319,16 @@ impl MockServerAdapter for LocalMockServerAdapter {
     }
 
     async fn delete_all_mocks(&self) -> Result<(), String> {
-        delete_all(&self.local_state)?;
+        delete_all_mocks(&self.local_state);
+        Ok(())
+    }
+
+    async fn find_mismatches(&self, mock_id: usize) -> Result<Option<Vec<Mismatch>>, String> {
+        find_mismatches(&self.local_state, mock_id)
+    }
+
+    async fn delete_history(&self) -> Result<(), String> {
+        delete_history(&self.local_state);
         Ok(())
     }
 

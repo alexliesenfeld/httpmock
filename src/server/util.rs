@@ -40,6 +40,9 @@ pub(crate) trait StringTreeMapExtension {
 
     /// Checks if a tree map contains a key while ignoring the case of the key.
     fn contains_case_insensitive_key(&self, key: &str) -> bool;
+
+    /// Find an element by key while ignoring the case of the key.
+    fn get_case_insensitive(&self, key: &str) -> Option<&'_ String>;
 }
 
 /// Implements [`StringTreeMapExtension`].
@@ -60,6 +63,13 @@ impl StringTreeMapExtension for BTreeMap<String, String> {
     fn contains_case_insensitive_key(&self, key: &str) -> bool {
         let key_lc = key.to_lowercase();
         self.keys().any(|k| k.to_lowercase().eq(&key_lc))
+    }
+
+    fn get_case_insensitive(&self, key: &str) -> Option<&'_ String> {
+        let key_lc = key.to_lowercase();
+        self.keys()
+            .find(|k| k.to_lowercase().eq(&key_lc))
+            .map(|key| self.get(key).unwrap())
     }
 }
 

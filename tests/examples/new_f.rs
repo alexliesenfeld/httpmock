@@ -1,6 +1,6 @@
 extern crate httpmock;
 
-use self::httpmock::Mock;
+use self::httpmock::Expectations;
 use httpmock::MockServer;
 use httpmock_macros::httpmock_example_test;
 use isahc::prelude::*;
@@ -16,16 +16,22 @@ fn binary_body_test() {
 
     let server = MockServer::start();
 
-    let m = Mock::new()
-        .expect_path("/hello")
-        .return_status(200)
-        .return_body(binary_content)
-        .create_on(&server);
+    let m = server.mock(|when, then| {
+        when.path("/hello");
+        then.status(200).body(binary_content);
+    });
 
     // Act
     let mut response = isahc::get(server.url("/hello")).unwrap();
 
     // Assert
+    server.verify(3, |that| {
+        that.path("/p")
+            .header("Accept", "*/*")
+            .query_param("putt", "abc");
+    });
+
+    m.assert();
     assert_eq!(response.status(), 200);
     assert_eq!(m.hits(), 1);
     assert_eq!(body_to_vec(response.body_mut()), binary_content.to_vec());

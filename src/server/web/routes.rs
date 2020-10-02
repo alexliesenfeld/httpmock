@@ -3,8 +3,9 @@ use std::collections::BTreeMap;
 use qstring::QString;
 use serde::Serialize;
 
-use crate::server::data::*;
-use crate::server::{handlers, ServerRequestHeader, ServerResponse};
+use crate::data::*;
+use crate::server::web::handlers;
+use crate::server::{MockServerState, ServerRequestHeader, ServerResponse};
 
 /// This route is responsible for adding a new mock
 pub(crate) fn ping() -> Result<ServerResponse, String> {
@@ -29,7 +30,7 @@ pub(crate) fn add(state: &MockServerState, body: String) -> Result<ServerRespons
 
 /// This route is responsible for deleting mocks
 pub(crate) fn delete_one(state: &MockServerState, id: usize) -> Result<ServerResponse, String> {
-    let result = handlers::delete_one(state, id);
+    let result = handlers::delete_one_mock(state, id);
     match result {
         Err(e) => create_json_response(500, None, ErrorResponse::new(&e)),
         Ok(found) => {
@@ -43,17 +44,20 @@ pub(crate) fn delete_one(state: &MockServerState, id: usize) -> Result<ServerRes
 }
 
 /// This route is responsible for deleting all mocks
-pub(crate) fn delete_all(state: &MockServerState) -> Result<ServerResponse, String> {
-    let result = handlers::delete_all(state);
-    match result {
-        Err(e) => create_json_response(500, None, ErrorResponse::new(&e)),
-        Ok(_) => create_response(202, None, None),
-    }
+pub(crate) fn delete_all_mocks(state: &MockServerState) -> Result<ServerResponse, String> {
+    handlers::delete_all_mocks(state);
+    create_response(202, None, None)
+}
+
+/// This route is responsible for deleting all mocks
+pub(crate) fn delete_history(state: &MockServerState) -> Result<ServerResponse, String> {
+    handlers::delete_history(state);
+    create_response(202, None, None)
 }
 
 /// This route is responsible for deleting mocks
 pub(crate) fn read_one(state: &MockServerState, id: usize) -> Result<ServerResponse, String> {
-    let handler_result = handlers::read_one(state, id);
+    let handler_result = handlers::read_one_mock(state, id);
     match handler_result {
         Err(e) => create_json_response(500, None, ErrorResponse { message: e }),
         Ok(mock_opt) => match mock_opt {
@@ -128,16 +132,13 @@ fn create_response(
 }
 
 /// Maps the request of the serve handler to a request representation which the handlers understand
-fn to_handler_request(
-    req: &ServerRequestHeader,
-    body: String,
-) -> Result<MockServerHttpRequest, String> {
+fn to_handler_request(req: &ServerRequestHeader, body: String) -> Result<HttpMockRequest, String> {
     let query_params = extract_query_params(&req.query);
     if let Err(e) = query_params {
         return Err(format!("error parsing query_params: {}", e));
     }
 
-    let request = MockServerHttpRequest::new(req.method.to_string(), req.path.to_string())
+    let request = HttpMockRequest::new(req.method.to_string(), req.path.to_string())
         .with_headers(req.headers.clone())
         .with_query_params(query_params.unwrap())
         .with_body(body);
