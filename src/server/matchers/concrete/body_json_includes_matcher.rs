@@ -1,5 +1,5 @@
 use crate::data::{HttpMockRequest, Pattern, RequestRequirements};
-use crate::server::matchers::util::{match_json, score_for};
+use crate::server::matchers::util::{distance_for, match_json};
 use crate::server::matchers::{diff_str, Matcher, Mismatch, SimpleDiffResult, Tokenizer};
 use serde_json::Value;
 
@@ -49,7 +49,7 @@ impl Matcher for BodyJsonIncludesMatcher {
                     message: None,
                     simple_diff: None,
                     detailed_diff: Some(diff_str(&mock_body, req_body, Tokenizer::Line)),
-                    score: score_for(&mock_body, &req_body),
+                    score: distance_for(&mock_body, &req_body),
                 }
             })
             .collect()

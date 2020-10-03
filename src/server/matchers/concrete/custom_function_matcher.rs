@@ -1,5 +1,5 @@
 use crate::data::{HttpMockRequest, Pattern, RequestRequirements};
-use crate::server::matchers::util::score_for;
+use crate::server::matchers::util::distance_for;
 use crate::server::matchers::{diff_str, Matcher, Mismatch, SimpleDiffResult, Tokenizer};
 
 pub(crate) struct CustomFunctionMatcher {}
@@ -36,7 +36,7 @@ impl Matcher for CustomFunctionMatcher {
                     idx + 1
                 ),
                 message: None,
-                score: score_for(&mock.body.as_ref().unwrap_or(&String::new()), &req.body.as_ref().unwrap_or(&String::new())),
+                score: distance_for(&mock.body.as_ref().unwrap_or(&String::new()), &req.body.as_ref().unwrap_or(&String::new())),
                 simple_diff: None,
                 detailed_diff: None,
             })

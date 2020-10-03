@@ -17,22 +17,22 @@ use hyper::{
 use regex::Regex;
 
 use crate::data::{ActiveMock, HttpMockRequest};
-use crate::server::matchers::body_contains_matcher::BodyContainsMatcher;
-use crate::server::matchers::body_json_includes_matcher::BodyJsonIncludesMatcher;
-use crate::server::matchers::body_json_matcher::BodyJsonMatcher;
-use crate::server::matchers::body_matcher::BodyMatcher;
-use crate::server::matchers::body_regex_matcher::BodyRegexMatcher;
-use crate::server::matchers::cookie_exists_matcher::CookieExistsMatcher;
-use crate::server::matchers::cookie_matcher::CookieMatcher;
-use crate::server::matchers::custom_function_matcher::CustomFunctionMatcher;
-use crate::server::matchers::header_exists_matcher::HeaderExistsMatcher;
-use crate::server::matchers::header_matcher::HeaderMatcher;
-use crate::server::matchers::method_matcher::MethodMatcher;
-use crate::server::matchers::path_contains_matcher::PathContainsMatcher;
-use crate::server::matchers::path_matcher::PathMatcher;
-use crate::server::matchers::path_regex_matcher::PathRegexMatcher;
-use crate::server::matchers::query_parameter_exists_matcher::QueryParameterExistsMatcher;
-use crate::server::matchers::query_parameter_matcher::QueryParameterMatcher;
+use crate::server::matchers::concrete::_body_matcher::BodyMatcher;
+use crate::server::matchers::concrete::_cookie_matcher::CookieMatcher;
+use crate::server::matchers::concrete::body_contains_matcher::BodyContainsMatcher;
+use crate::server::matchers::concrete::body_json_includes_matcher::BodyJsonIncludesMatcher;
+use crate::server::matchers::concrete::body_json_matcher::BodyJsonMatcher;
+use crate::server::matchers::concrete::body_regex_matcher::BodyRegexMatcher;
+use crate::server::matchers::concrete::cookie_exists_matcher::CookieExistsMatcher;
+use crate::server::matchers::concrete::custom_function_matcher::CustomFunctionMatcher;
+use crate::server::matchers::concrete::header_exists_matcher::HeaderExistsMatcher;
+use crate::server::matchers::concrete::header_matcher::HeaderMatcher;
+use crate::server::matchers::concrete::method_matcher::MethodMatcher;
+use crate::server::matchers::concrete::path_contains_matcher::PathContainsMatcher;
+use crate::server::matchers::concrete::path_matcher::PathMatcher;
+use crate::server::matchers::concrete::path_regex_matcher::PathRegexMatcher;
+use crate::server::matchers::concrete::query_parameter_exists_matcher::QueryParameterExistsMatcher;
+use crate::server::matchers::concrete::query_parameter_matcher::QueryParameterMatcher;
 use crate::server::matchers::Matcher;
 use crate::server::web::routes;
 use std::sync::atomic::AtomicUsize;
@@ -43,7 +43,7 @@ mod matchers;
 mod util;
 pub(crate) mod web;
 
-pub(crate) use matchers::Mismatch;
+pub(crate) use matchers::{Diff, Mismatch, Tokenizer};
 
 pub(crate) struct Matchers {
     pub custom_function_matchers: Vec<Box<dyn Matcher + Sync + Send>>,
@@ -54,6 +54,22 @@ pub(crate) struct Matchers {
     pub cookie_matchers: Vec<Box<dyn Matcher + Sync + Send>>,
     pub body_matchers: Vec<Box<dyn Matcher + Sync + Send>>,
     //pub multipart_matchers: Vec<Box<dyn Matcher + Sync + Send>>,
+}
+
+impl Matchers {
+    fn all(&self) -> Vec<&Box<dyn Matcher + Sync + Send>> {
+        let all = vec![
+            &self.custom_function_matchers,
+            &self.path_matchers,
+            &self.method_matchers,
+            &self.headers_matchers,
+            &self.query_params_matchers,
+            &self.cookie_matchers,
+            &self.body_matchers,
+        ];
+
+        all.into_iter().flatten().collect()
+    }
 }
 
 /// The shared state accessible to all handlers

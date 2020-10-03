@@ -1,5 +1,5 @@
 use crate::data::{HttpMockRequest, RequestRequirements};
-use crate::server::matchers::util::{parse_cookies, score_for};
+use crate::server::matchers::util::{distance_for, parse_cookies};
 use crate::server::matchers::{
     diff_str, DetailedDiffResult, Matcher, Mismatch, SimpleDiffResult, Tokenizer,
 };
@@ -73,7 +73,7 @@ impl Matcher for CookieExistsMatcher {
                     &k
                 ),
                 message: None,
-                score: score_for(k, &best_match.as_ref().unwrap_or(&String::new())),
+                score: distance_for(k, &best_match.as_ref().unwrap_or(&String::new())),
                 simple_diff: best_match.as_ref().map(|bm| SimpleDiffResult {
                     expected: k.to_lowercase(),
                     actual: bm.to_lowercase(),

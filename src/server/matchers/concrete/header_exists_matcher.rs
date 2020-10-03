@@ -1,5 +1,5 @@
 use crate::data::{HttpMockRequest, RequestRequirements};
-use crate::server::matchers::util::score_for_opt;
+use crate::server::matchers::util::distance_for_opt;
 use crate::server::matchers::{
     diff_str, DetailedDiffResult, Matcher, Mismatch, SimpleDiffResult, Tokenizer,
 };
@@ -73,7 +73,7 @@ impl Matcher for HeaderExistsMatcher {
                     best_match: true,
                 }),
                 detailed_diff: None,
-                score: score_for_opt(k, &best_match.as_ref()),
+                score: distance_for_opt(k, &best_match.as_ref()),
             })
             .collect()
     }

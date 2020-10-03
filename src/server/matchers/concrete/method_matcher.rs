@@ -1,5 +1,5 @@
 use crate::data::{HttpMockRequest, RequestRequirements};
-use crate::server::matchers::util::{score_for, score_for_opt};
+use crate::server::matchers::util::{distance_for, distance_for_opt};
 use crate::server::matchers::{Matcher, Mismatch, SimpleDiffResult};
 
 pub(crate) struct MethodMatcher {}
@@ -29,7 +29,7 @@ impl Matcher for MethodMatcher {
                     best_match: false,
                 }),
                 detailed_diff: None,
-                score: score_for_opt(&req.method, &mock.method.as_ref()),
+                score: distance_for_opt(&req.method, &mock.method.as_ref()),
             }],
         }
     }

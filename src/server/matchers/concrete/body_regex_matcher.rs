@@ -1,5 +1,5 @@
 use crate::data::{HttpMockRequest, Pattern, RequestRequirements};
-use crate::server::matchers::util::score_for;
+use crate::server::matchers::util::distance_for;
 use crate::server::matchers::{diff_str, Matcher, Mismatch, SimpleDiffResult, Tokenizer};
 
 pub(crate) struct BodyRegexMatcher {}
@@ -40,7 +40,7 @@ impl Matcher for BodyRegexMatcher {
                     pattern
                 ),
                 message: None,
-                score: score_for(
+                score: distance_for(
                     &mock.body.as_ref().unwrap_or(&String::new()),
                     &req.body.as_ref().unwrap_or(&String::new()),
                 ),

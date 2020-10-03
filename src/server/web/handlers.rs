@@ -9,8 +9,10 @@ use crate::data::{
 };
 
 use crate::server::util::{StringTreeMapExtension, TreeMapExtension};
-use crate::server::{Mismatch, MockServerState};
+use crate::server::{Matchers, Mismatch, MockServerState};
 use basic_cookies::Cookie;
+use std::cmp::Ordering;
+use std::collections::BTreeMap;
 use std::sync::Arc;
 
 /// Contains HTTP methods which cannot have a body.
@@ -79,61 +81,6 @@ pub(crate) fn delete_history(state: &MockServerState) {
     log::trace!("Deleted request history");
 }
 
-/// Deletes the request history.
-pub(crate) fn find_mismatches(
-    state: &MockServerState,
-    mock_id: usize,
-) -> Result<Option<Vec<Mismatch>>, String> {
-    let mock = match read_one_mock(state, mock_id)? {
-        None => return Ok(None),
-        Some(v) => v,
-    };
-
-    let mut history = state.history.write().unwrap();
-
-    // For each request, find the number of matchers that successfully matched
-    let num_matches: Vec<(usize, usize)> = history
-        .iter()
-        .enumerate()
-        .map(|(idx, req)| {
-            (
-                idx,
-                state
-                    .matchers
-                    .path_matchers
-                    .iter()
-                    .filter(|mm| mm.matches(&req, &mock.definition.request))
-                    .count(),
-            )
-        })
-        .collect();
-
-    // Find the element with the maximum matches
-    let max_elem = num_matches
-        .iter()
-        .max_by(|(idx1, num1), (idx2, num2)| num1.cmp(num2));
-
-    // Remember the maximum number of matchers that successfully matched
-    let max = match max_elem {
-        None => return Ok(None),
-        Some((_, n)) => n,
-    };
-
-    // Get the distance
-    let (idx,b) = max_elem.unwrap();
-    let mut a : Vec<Vec<Mismatch>> = state
-        .matchers
-        .path_matchers
-        .iter()
-        .map(|m| m.mismatches(&history.get(idx.to_owned()).unwrap(), &mock.definition.request))
-        .collect();
-
-    let mut v = Vec::new();
-    a.into_iter().for_each(|mut x| v.append(&mut x));
-
-    Ok(Some(v))
-}
-
 /// Finds a mock that matches the current request and serve a response according to the mock
 /// specification. If no mock is found, an empty result is being returned.
 pub(crate) fn find_mock(
@@ -199,116 +146,30 @@ fn request_matches(
         .all(|(i, x)| x.matches(&req, mock))
 }
 
-/// Matches headers from a request and a mock. Matches header names case-insensitive:
-/// From RFC 2616 - "Hypertext Transfer Protocol -- HTTP/1.1", Section 4.2, "Message Headers":
-/// "Each header field consists of a name followed by a colon (":") and the field value.
-/// Field names are case-insensitive."
-fn match_headers_exact(req: &HttpMockRequest, mock: &RequestRequirements) -> bool {
-    match (&req.headers, &mock.headers) {
-        (Some(m1), Some(m2)) => m1.contains_with_case_insensitive_key(m2),
-        (Some(_), None) => true,
-        (None, Some(m2)) => m2.is_empty(),
-        (None, None) => true,
-    }
-}
-
-/// Matches query params from a request and a mock
-fn match_query_params_exact(req: &HttpMockRequest, mock: &RequestRequirements) -> bool {
-    match (&req.query_params, &mock.query_param) {
-        (Some(m1), Some(m2)) => m1.contains(m2),
-        (Some(_), None) => true,
-        (None, Some(m2)) => m2.is_empty(),
-        (None, None) => true,
-    }
-}
-
-/// Matches body
-fn match_body_exact(req: &HttpMockRequest, mock: &RequestRequirements) -> bool {
-    match (&req.body, &mock.body) {
-        (Some(rb), Some(mb)) => rb.eq(mb),
-        (None, Some(mb)) => mb.is_empty(),
-        (Some(rb), None) => rb.is_empty(),
-        (None, None) => true,
-    }
-}
-
-/// Matches JSON
-fn match_json(req: &Option<String>, mock: &Value, exact: bool) -> bool {
-    match req {
-        Some(req_string) => {
-            // Parse the request body as JSON string
-            let result = serde_json::Value::from_str(req_string);
-            if let Err(e) = result {
-                log::trace!("cannot deserialize request body to JSON: {}", e);
-                return false;
-            }
-            let req_value = result.unwrap();
-
-            log::trace!(
-                "Comapring the following JSON values: (1){}, (2){}",
-                &req_value,
-                &mock
-            );
-
-            // Compare JSON values
-            let result = if exact {
-                assert_json_eq_no_panic(&req_value, mock)
-            } else {
-                assert_json_include_no_panic(&req_value, mock)
-            };
-
-            // Log and return the comparison result
-            match result {
-                Err(e) => {
-                    log::trace!("Request body does not match mock JSON body: {}", e);
-                    false
-                }
-                _ => {
-                    log::trace!("Request body matched mock JSON body");
-                    true
-                }
-            }
-        }
-        None => false,
-    }
-}
-
-fn contains_cookie(
-    req: &HttpMockRequest,
-    expected_cookie_name: &str,
-    expected_cookie_value: Option<&str>,
-) -> bool {
-    let expected_cookie_name = expected_cookie_name.to_lowercase();
-    return match &req.headers {
-        None => false,
-        Some(request_headers) => {
-            let cookie_header = request_headers
-                .iter()
-                .find(|(k, _)| k.to_lowercase().eq("cookie"));
-            return match cookie_header {
-                None => false,
-                Some((_, val)) => {
-                    let cookie_parse_result = Cookie::parse(val);
-                    return match cookie_parse_result {
-                        Err(e) => {
-                            log::warn!("Cannot parse request cookie: {}", e);
-                            false
-                        }
-                        Ok(req_cookies) => {
-                            let found_cookie = req_cookies
-                                .iter()
-                                .find(|e| e.get_name().to_lowercase().eq(&expected_cookie_name));
-                            match (found_cookie, expected_cookie_value) {
-                                (None, _) => false,
-                                (Some(_), None) => true,
-                                (Some(cookie), Some(val)) => return cookie.get_value().eq(val),
-                            }
-                        }
-                    };
-                }
-            };
-        }
+/// Deletes the request history.
+pub(crate) fn find_mismatches(
+    state: &MockServerState,
+    mock_id: usize,
+) -> Result<Option<Vec<Mismatch>>, String> {
+    let mock = match read_one_mock(state, mock_id)? {
+        None => return Ok(None),
+        Some(v) => v,
     };
+
+    let mut history = state.history.write().unwrap();
+
+    let hit_counts = get_request_hit_counts(state, &mock, &history);
+    let max_hit_requests = get_max_hits_requests(&hit_counts);
+    let request_scores = get_scores(&max_hit_requests, &history, &state.matchers, &mock);
+    let max_scored_requests = get_max_scored_requests(&request_scores);
+    assert!(max_scored_requests.len() > 0, "??!??!!");
+    let max_scored_request_idx = match max_scored_requests.get(0) {
+        None => return Ok(None),
+        Some(idx) => *idx,
+    };
+
+    let req = history.get(max_scored_request_idx).unwrap();
+    Ok(Some(get_request_mismatches(req, &mock, &state.matchers)))
 }
 
 /// Validates a mock request.
@@ -323,6 +184,102 @@ fn validate_mock_definition(req: &MockDefinition) -> Result<(), String> {
         }
     }
     Ok(())
+}
+
+// For each request, find the number of matchers that successfully matched
+fn get_request_hit_counts(
+    state: &MockServerState,
+    mock: &ActiveMock,
+    history: &Vec<Arc<HttpMockRequest>>,
+) -> BTreeMap<usize, usize> {
+    history
+        .iter()
+        .enumerate()
+        .map(|(idx, req)| {
+            (
+                idx,
+                state
+                    .matchers
+                    .path_matchers
+                    .iter()
+                    .filter(|mm| mm.matches(&req, &mock.definition.request))
+                    .count(),
+            )
+        })
+        .collect()
+}
+
+// Remember the maximum number of matchers that successfully matched
+fn get_max_hits_requests(hit_counts: &BTreeMap<usize, usize>) -> BTreeMap<usize, usize> {
+    // Find the element with the maximum matches
+    let max_hits_req = hit_counts
+        .iter()
+        .max_by(|(idx1, num1), (idx2, num2)| num1.cmp(num2));
+
+    let max_hits = match max_hits_req {
+        None => return BTreeMap::new(),
+        Some((_, n)) => *n,
+    };
+
+    hit_counts
+        .into_iter()
+        .filter(|(a, b)| **b == max_hits)
+        .map(|(a, b)| (*a, *b))
+        .collect()
+}
+
+// Remember the maximum number of matchers that successfully matched
+fn get_scores(
+    requests: &BTreeMap<usize, usize>,
+    history: &Vec<Arc<HttpMockRequest>>,
+    matchers: &Matchers,
+    mock: &ActiveMock,
+) -> BTreeMap<usize, usize> {
+    history
+        .iter()
+        .enumerate()
+        .filter(|(idx, r)| requests.contains_key(idx))
+        .map(|(idx, req)| {
+            let sum = get_request_mismatches(req, mock, matchers)
+                .iter()
+                .map(|mm| mm.score)
+                .sum::<usize>();
+            (idx, sum)
+        })
+        .collect()
+}
+
+fn get_request_mismatches(
+    req: &Arc<HttpMockRequest>,
+    mock: &ActiveMock,
+    matchers: &Matchers,
+) -> Vec<Mismatch> {
+    matchers
+        .all()
+        .iter()
+        .map(|mat| mat.mismatches(req, &mock.definition.request))
+        .flatten()
+        .into_iter()
+        .collect()
+}
+
+// Remember the maximum number of matchers that successfully matched
+fn get_max_scored_requests(request_scores: &BTreeMap<usize, usize>) -> Vec<usize> {
+    // Find the element with the maximum matches
+    let max_elem = request_scores
+        .iter()
+        .max_by(|(idx1, d1), (idx2, d2)| (**d1).cmp(d2));
+
+    let max = match max_elem {
+        None => return Vec::new(),
+        Some((_, n)) => *n,
+    };
+
+    request_scores
+        .into_iter()
+        .filter(|(idx, score)| **score == max)
+        .map(|(idx, _)| *idx)
+        .collect()
 }
 
 #[cfg(test)]

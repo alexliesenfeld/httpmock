@@ -1,22 +1,9 @@
 use crate::data::{HttpMockRequest, RequestRequirements};
 use difference::{Changeset, Difference};
 
-pub(crate) mod body_contains_matcher;
-pub(crate) mod body_json_includes_matcher;
-pub(crate) mod body_json_matcher;
-pub(crate) mod body_matcher;
-pub(crate) mod body_regex_matcher;
-pub(crate) mod cookie_exists_matcher;
-pub(crate) mod cookie_matcher;
-pub(crate) mod custom_function_matcher;
-pub(crate) mod header_exists_matcher;
-pub(crate) mod header_matcher;
-pub(crate) mod method_matcher;
-pub(crate) mod path_contains_matcher;
-pub(crate) mod path_matcher;
-pub(crate) mod path_regex_matcher;
-pub(crate) mod query_parameter_exists_matcher;
-pub(crate) mod query_parameter_matcher;
+pub(crate) mod concrete;
+mod generic;
+mod sources;
 mod util;
 
 use serde::{Deserialize, Serialize};
@@ -35,9 +22,9 @@ pub(crate) enum Diff {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub(crate) struct DetailedDiffResult {
-    differences: Vec<Diff>,
-    distance: i32,
-    tokenizer: Tokenizer,
+    pub differences: Vec<Diff>,
+    pub distance: i32,
+    pub tokenizer: Tokenizer,
 }
 
 #[derive(PartialEq, Debug, Serialize, Deserialize, Clone, Copy)]
@@ -72,9 +59,9 @@ pub(crate) fn diff_str(base: &str, edit: &str, tokenizer: Tokenizer) -> Detailed
 
 #[derive(Debug, Serialize, Deserialize)]
 pub(crate) struct SimpleDiffResult {
-    expected: String,
-    actual: String,
-    best_match: bool,
+    pub expected: String,
+    pub actual: String,
+    pub best_match: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -83,7 +70,7 @@ pub(crate) struct Mismatch {
     pub message: Option<String>,
     pub simple_diff: Option<SimpleDiffResult>,
     pub detailed_diff: Option<DetailedDiffResult>,
-    pub score: f32,
+    pub score: usize,
 }
 
 pub(crate) trait Matcher {

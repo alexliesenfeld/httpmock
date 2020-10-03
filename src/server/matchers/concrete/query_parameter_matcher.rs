@@ -1,5 +1,5 @@
 use crate::data::{HttpMockRequest, RequestRequirements};
-use crate::server::matchers::util::{parse_cookies, score_for};
+use crate::server::matchers::util::{distance_for, parse_cookies};
 use crate::server::matchers::{
     diff_str, DetailedDiffResult, Matcher, Mismatch, SimpleDiffResult, Tokenizer,
 };
@@ -89,7 +89,7 @@ impl Matcher for QueryParameterMatcher {
                     }
                 }),
                 detailed_diff: None,
-                score: 0.0,  // TODO: score_for(&format!("{}={}", k, v), best_match.as_ref().map_or(&String::new(), |(kk,vv)| &format!("{}={}", kk, vv)))
+                score: 0,  // TODO: score_for(&format!("{}={}", k, v), best_match.as_ref().map_or(&String::new(), |(kk,vv)| &format!("{}={}", kk, vv)))
             })
             .collect()
     }

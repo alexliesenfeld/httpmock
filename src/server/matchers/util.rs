@@ -68,13 +68,20 @@ pub(crate) fn parse_cookies(req: &HttpMockRequest) -> Result<BTreeMap<String, St
     }
 }
 
-pub(crate) fn score_for(expected: &str, actual: &str) -> f32 {
-    let max_distance = (expected.len() + actual.len()) as f32;
-    let distance = levenshtein::levenshtein(expected, actual) as f32;
-    (max_distance - distance) / max_distance
+pub(crate) fn distance_for(expected: &str, actual: &str) -> usize {
+    let max_distance = (expected.len() + actual.len());
+    if max_distance == 0 {
+        return 0;
+    }
+    let distance = levenshtein::levenshtein(expected, actual);
+    100 - ((max_distance - distance) / max_distance)
 }
 
-pub(crate) fn score_for_opt(expected: &str, actual: &Option<&String>) -> f32 {
+pub(crate) fn distance_for_opt(expected: &str, actual: &Option<&String>) -> usize {
     let actual = actual.as_ref().map_or("", |x| &**x);
-    score_for(expected, actual)
+    distance_for(expected, actual)
+}
+
+pub(crate) fn diff_str_new(s1: &str, s2: &str) -> usize {
+    levenshtein::levenshtein(s1, s2)
 }

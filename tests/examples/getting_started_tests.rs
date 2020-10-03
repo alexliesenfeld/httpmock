@@ -2,10 +2,10 @@ extern crate httpmock;
 
 use isahc::{get, get_async};
 
+use httpmock::util::Join;
 use httpmock::Method::{GET, POST};
 use httpmock::{Mock, MockServer};
 use httpmock_macros::httpmock_example_test;
-use httpmock::util::Join;
 
 #[test]
 #[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
@@ -17,6 +17,7 @@ fn getting_started_test() {
     let hello_mock = server.mock(|when, then| {
         when.method("POST")
             .path("/translatez")
+            .cookie("asd", "cyxc")
             .query_param("word", "hello");
         then.status(200)
             .header("Content-Type", "text/html; charset=UTF-8")

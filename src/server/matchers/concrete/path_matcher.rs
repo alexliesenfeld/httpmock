@@ -1,5 +1,5 @@
 use crate::data::{HttpMockRequest, RequestRequirements};
-use crate::server::matchers::util::{score_for, score_for_opt};
+use crate::server::matchers::util::{distance_for, distance_for_opt};
 use crate::server::matchers::{diff_str, Matcher, Mismatch, SimpleDiffResult, Tokenizer};
 
 pub(crate) struct PathMatcher {}
@@ -27,7 +27,7 @@ impl Matcher for PathMatcher {
                     best_match: false,
                 }),
                 detailed_diff: None,
-                score: score_for_opt(&req.path, &mock.path.as_ref()),
+                score: distance_for_opt(&req.path, &mock.path.as_ref()),
             }],
         }
     }

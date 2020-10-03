@@ -9,6 +9,7 @@ use crate::api::{Method, Regex};
 use crate::data::{
     MockDefinition, MockMatcherFunction, MockServerHttpResponse, Pattern, RequestRequirements,
 };
+use crate::server::{Diff, Tokenizer};
 use crate::util::{get_test_resource_file_path, read_file, Join};
 use crate::MockServer;
 use std::time::Duration;
@@ -77,12 +78,80 @@ impl<'a> MockRef<'a> {
             .await
             .expect("Cannot deserialize mock server response");
 
+        assert!(closest_match.is_some(), "!!");
+
         match closest_match {
             Some(closest_match) => {
-                for x in closest_match {
-                    assert!(false, format!("{:?}", x));
+                let mut output = String::new();
+                output.push_str("At least one request has been received, but none exactly matched the mock specification.\n");
+                output.push_str(&format!(
+                    "Here is a comparison with the most similar request (request number {}): \n\n",
+                    1
+                ));
+
+                for (idx, mm) in closest_match.into_iter().enumerate() {
+                    output.push_str(&format!("{} : {}", idx + 1, &mm.title));
+                    output.push_str("\n");
+                    output.push_str(&"-".repeat(60));
+                    output.push_str("\n");
+
+                    mm.message.map(|m| {
+                        output.push_str(&m);
+                        output.push_str("\n");
+                    });
+
+                    mm.simple_diff.map(|sd| {
+                        output.push_str("Expected: \t");
+                        output.push_str(&sd.expected);
+                        output.push_str("\n");
+                        if sd.best_match {
+                            output.push_str("Actual (closest match): \t");
+                        } else {
+                            output.push_str("Actual: \t");
+                        }
+                        output.push_str(&sd.actual);
+                        output.push_str("\n");
+                    });
+
+                    mm.detailed_diff.map(|dd| {
+                        output.push_str("Diff: ");
+                        if dd.differences.is_empty() {
+                            output.push_str("<empty>");
+                        }
+                        output.push_str("\n");
+
+                        dd.differences.iter().for_each(|d| {
+                            match d {
+                                Diff::Same(e) => {
+                                    output.push_str("   | ");
+                                    output.push_str(e);
+                                }
+                                Diff::Add(e) => {
+                                    output.push_str("+++| ");
+                                    output.push_str(e);
+                                }
+                                Diff::Rem(e) => {
+                                    output.push_str("---| ");
+                                    output.push_str(e);
+                                }
+                            }
+                            match dd.tokenizer {
+                                Tokenizer::Line => output.push_str("\n"),
+                                Tokenizer::Word => output.push_str(" "),
+                                Tokenizer::Character => output.push_str(""),
+                            }
+                        });
+                        output.push_str("\n");
+                    });
+
+                    output.push_str("\n");
                 }
 
+                output.push_str(
+                    &"wow so large!wow so large!wow so large!wow so large!wow so large!\n"
+                        .repeat(6000),
+                );
+                assert!(false, output);
             }
             None => {}
         }
