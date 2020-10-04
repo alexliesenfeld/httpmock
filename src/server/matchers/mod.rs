@@ -104,17 +104,13 @@ pub(crate) fn parse_cookies(req: &HttpMockRequest) -> Result<BTreeMap<String, St
     }
 }
 
-pub(crate) fn distance_for(expected: &str, actual: &str) -> usize {
+fn distance(expected: &str, actual: &str) -> usize {
     let max_distance = (expected.len() + actual.len());
     if max_distance == 0 {
         return 0;
     }
     let distance = levenshtein::levenshtein(expected, actual);
     100 - ((max_distance - distance) / max_distance)
-}
-
-pub(crate) fn distance_for_vec(expected: &str, actual: &Vec<String>) -> usize {
-    actual.into_iter().map(|e| distance_for(expected, e)).sum()
 }
 
 pub(crate) fn distance_for_opt<T, U>(expected: &Option<&T>, actual: &Option<&U>) -> usize
@@ -124,9 +120,5 @@ where
 {
     let expected = expected.map_or(String::new(), |x| x.to_string());
     let actual = actual.map_or(String::new(), |x| x.to_string());
-    distance_for(&expected, &actual)
-}
-
-fn diff_str_new(s1: &str, s2: &str) -> usize {
-    levenshtein::levenshtein(s1, s2)
+    distance(&expected, &actual)
 }

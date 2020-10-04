@@ -4,7 +4,7 @@ use crate::server::matchers::transformers::Transformer;
 use crate::server::matchers::sources::{MultiValueSource, ValueSource};
 use crate::server::matchers::targets::{MultiValueTarget, ValueRefTarget, ValueTarget};
 use crate::server::matchers::{
-    diff_str, distance_for, distance_for_vec, Matcher, Reason,
+    diff_str, distance, Matcher, Reason,
 };
 use crate::server::{Mismatch, Tokenizer};
 use assert_json_diff::assert_json_eq_no_panic;
