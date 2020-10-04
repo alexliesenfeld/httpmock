@@ -91,3 +91,38 @@ impl MultiValueValueTarget for CookieTarget {
             .collect()
     }
 }
+
+
+// *************************************************************************************
+// PathTarget
+// *************************************************************************************
+pub(crate) struct PathTarget {}
+
+impl PathTarget {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+impl ValueTarget<String> for PathTarget {
+    fn parse_from_request(&self, req: &HttpMockRequest) -> Option<String> {
+        Some(req.path.to_string()) // FIXME: Avoid copying here. Create a "ValueRefTarget".
+    }
+}
+
+// *************************************************************************************
+// MethodTarget
+// *************************************************************************************
+pub(crate) struct MethodTarget {}
+
+impl MethodTarget {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+impl ValueTarget<String> for MethodTarget {
+    fn parse_from_request(&self, req: &HttpMockRequest) -> Option<String> {
+        Some(req.method.to_string()) // FIXME: Avoid copying here. Create a "ValueRefTarget".
+    }
+}

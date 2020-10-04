@@ -1,4 +1,4 @@
-use crate::data::{HttpMockRequest, RequestRequirements};
+use crate::data::{HttpMockRequest, RequestRequirements, Pattern};
 use crate::server::matchers::util::parse_cookies;
 use std::collections::BTreeMap;
 use serde_json::Value;
@@ -101,5 +101,74 @@ impl MultiValueValueSource for CookieSource {
         mock: &'a RequestRequirements,
     ) -> Option<&'a BTreeMap<String, String>> {
         mock.cookies.as_ref()
+    }
+}
+
+// ************************************************************************************************
+// MethodSource
+// ************************************************************************************************
+pub(crate) struct MethodSource {}
+
+impl MethodSource {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+impl ValueSource<String> for MethodSource {
+    fn parse_from_mock<'a>(&self, mock: &'a RequestRequirements) -> Option<Vec<&'a String>> {
+        mock.method.as_ref().map(|b| vec![b])
+    }
+}
+
+// ************************************************************************************************
+// StringPathSource
+// ************************************************************************************************
+pub(crate) struct StringPathSource {}
+
+impl StringPathSource {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+impl ValueSource<String> for StringPathSource {
+    fn parse_from_mock<'a>(&self, mock: &'a RequestRequirements) -> Option<Vec<&'a String>> {
+        mock.path.as_ref().map(|b| vec![b])
+    }
+}
+
+
+// ************************************************************************************************
+// StringPathContainsSource
+// ************************************************************************************************
+pub(crate) struct PathContainsSubstringSource {}
+
+impl PathContainsSubstringSource {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+impl ValueSource<String> for PathContainsSubstringSource {
+    fn parse_from_mock<'a>(&self, mock: &'a RequestRequirements) -> Option<Vec<&'a String>> {
+        mock.path_contains.as_ref().map(|b| b.into_iter().map(|v| v).collect())
+    }
+}
+
+// ************************************************************************************************
+// PathRegexSource
+// ************************************************************************************************
+pub(crate) struct PathRegexSource {}
+
+impl PathRegexSource {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+impl ValueSource<Regex> for PathRegexSource {
+    fn parse_from_mock<'a>(&self, mock: &'a RequestRequirements) -> Option<Vec<&'a Regex>> {
+        mock.path_matches.as_ref().map(|b| b.into_iter().map(|v| &v.regex).collect())
     }
 }

@@ -28,7 +28,7 @@ mod util;
 pub(crate) mod web;
 
 pub(crate) use matchers::{Diff, Mismatch, Tokenizer};
-use crate::server::matchers::generic::single_value::SingleValueMatcher;
+use matchers::generic::SingleValueMatcher;
 use crate::server::matchers::comparators::{StringContainsMatchComparator, StringExactMatchComparator, StringRegexMatchComparator, JSONContainsMatchComparator, JSONExactMatchComparator};
 use matchers::targets::{StringBodyTarget, JSONBodyTarget};
 use crate::server::matchers::concrete::path_matcher::PathMatcher;
@@ -41,7 +41,8 @@ use crate::server::matchers::concrete::header_exists_matcher::HeaderExistsMatche
 use crate::server::matchers::concrete::query_parameter_exists_matcher::QueryParameterExistsMatcher;
 use crate::server::matchers::concrete::query_parameter_matcher::QueryParameterMatcher;
 use crate::server::matchers::concrete::custom_function_matcher::CustomFunctionMatcher;
-use crate::server::matchers::sources::{StringBodySource, BodyRegexSource, PartialJSONBodySource, JSONBodySource};
+use crate::server::matchers::sources::{StringBodySource, BodyRegexSource, PartialJSONBodySource, JSONBodySource, StringPathSource, PathContainsSubstringSource, PathRegexSource, MethodSource};
+use crate::server::matchers::targets::{PathTarget, MethodTarget};
 
 pub(crate) struct Matchers {
     pub custom_function_matchers: Vec<Box<dyn Matcher + Sync + Send>>,
@@ -89,11 +90,49 @@ impl MockServerState {
             history: RwLock::new(Vec::new()),
             id_counter: AtomicUsize::new(0),
             matchers: Matchers {
-                method_matchers: vec![Box::new(MethodMatcher::new(3.0))],
+                method_matchers: vec![
+                    // method exact
+                    Box::new(SingleValueMatcher {
+                        entity_name: "method",
+                        comparator: Box::new(StringExactMatchComparator::new()),
+                        source: Box::new(MethodSource::new()),
+                        target: Box::new(MethodTarget::new()),
+                        encoder: None,
+                        with_reason: true,
+                        with_diff: false,
+                    })
+                ],
                 path_matchers: vec![
-                    Box::new(PathMatcher::new(10.0)),
-                    Box::new(PathContainsMatcher::new(10.0)),
-                    Box::new(PathRegexMatcher::new(10.0)),
+                    // path exact
+                    Box::new(SingleValueMatcher {
+                        entity_name: "path",
+                        comparator: Box::new(StringExactMatchComparator::new()),
+                        source: Box::new(StringPathSource::new()),
+                        target: Box::new(PathTarget::new()),
+                        encoder: None,
+                        with_reason: true,
+                        with_diff: false,
+                    }),
+                    // path contains
+                    Box::new(SingleValueMatcher {
+                        entity_name: "path",
+                        comparator: Box::new(StringContainsMatchComparator::new()),
+                        source: Box::new(PathContainsSubstringSource::new()),
+                        target: Box::new(PathTarget::new()),
+                        encoder: None,
+                        with_reason: true,
+                        with_diff: false,
+                    }),
+                    // path matches regex
+                    Box::new(SingleValueMatcher {
+                        entity_name: "path",
+                        comparator: Box::new(StringRegexMatchComparator::new()),
+                        source: Box::new(PathRegexSource::new()),
+                        target: Box::new(PathTarget::new()),
+                        encoder: None,
+                        with_reason: true,
+                        with_diff: false,
+                    }),
                 ],
                 body_matchers: vec![
                     // string body exact
