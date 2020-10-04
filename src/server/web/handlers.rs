@@ -140,7 +140,7 @@ fn request_matches(
 
     state
         .matchers
-        .path_matchers
+        .all()
         .iter()
         .enumerate()
         .all(|(i, x)| x.matches(&req, mock))

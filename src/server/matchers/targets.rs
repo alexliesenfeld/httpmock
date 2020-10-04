@@ -1,6 +1,7 @@
+// TODO: Implement memoization for Targets
 use crate::data::{HttpMockRequest, RequestRequirements};
-use crate::server::matchers::sources::{ValueSource};
-use crate::server::matchers::util::parse_cookies;
+use crate::server::matchers::parse_cookies;
+use crate::server::matchers::sources::ValueSource;
 use serde_json::Value;
 use std::cell::RefCell;
 use std::collections::BTreeMap;
@@ -13,8 +14,8 @@ pub(crate) trait ValueRefTarget<T> {
     fn parse_from_request<'a>(&self, req: &'a HttpMockRequest) -> Option<&'a T>;
 }
 
-pub(crate) trait MultiValueTarget<T,U> {
-    fn parse_from_request(&self, req: &HttpMockRequest) -> Option<Vec<(T,U)>>;
+pub(crate) trait MultiValueTarget<T, U> {
+    fn parse_from_request(&self, req: &HttpMockRequest) -> Option<Vec<(T, Option<U>)>>;
 }
 
 // *************************************************************************************
@@ -74,7 +75,7 @@ impl CookieTarget {
 }
 
 impl MultiValueTarget<String, String> for CookieTarget {
-    fn parse_from_request(&self, req: &HttpMockRequest) -> Option<Vec<(String, String)>> {
+    fn parse_from_request(&self, req: &HttpMockRequest) -> Option<Vec<(String, Option<String>)>> {
         let req_cookies = match parse_cookies(req) {
             Ok(v) => v,
             Err(err) => {
@@ -86,13 +87,59 @@ impl MultiValueTarget<String, String> for CookieTarget {
             }
         };
 
-        Some(req_cookies
-            .into_iter()
-            .map(|(k, v)| (k.to_lowercase(), v))
-            .collect())
+        Some(
+            req_cookies
+                .into_iter()
+                .map(|(k, v)| (k.to_lowercase(), Some(v)))
+                .collect(),
+        )
     }
 }
 
+// *************************************************************************************
+// HeaderTarget
+// *************************************************************************************
+pub(crate) struct HeaderTarget {}
+
+impl HeaderTarget {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+impl MultiValueTarget<String, String> for HeaderTarget {
+    fn parse_from_request(&self, req: &HttpMockRequest) -> Option<Vec<(String, Option<String>)>> {
+        req.headers.as_ref().map(|headers| {
+            headers
+                .into_iter()
+                .map(|(k, v)| (k.to_string(), Some(v.to_string())))
+                .collect()
+        })
+    }
+}
+
+
+// *************************************************************************************
+// HeaderTarget
+// *************************************************************************************
+pub(crate) struct QueryParameterTarget {}
+
+impl QueryParameterTarget {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+impl MultiValueTarget<String, String> for QueryParameterTarget {
+    fn parse_from_request(&self, req: &HttpMockRequest) -> Option<Vec<(String, Option<String>)>> {
+        req.query_params.as_ref().map(|headers| {
+            headers
+                .into_iter()
+                .map(|(k, v)| (k.to_string(), Some(v.to_string())))
+                .collect()
+        })
+    }
+}
 
 // *************************************************************************************
 // PathTarget

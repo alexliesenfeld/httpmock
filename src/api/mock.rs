@@ -101,12 +101,15 @@ impl<'a> MockRef<'a> {
                     });
 
                     mm.reason.map(|sd| {
-                        output.push_str("Expected: \t");
-                        output.push_str(&sd.expected);
-                        output.push_str("\n");
                         if sd.best_match {
+                            output.push_str("Expected: \t\t\t\t\t");
+                            output.push_str(&sd.expected);
+                            output.push_str("\n");
                             output.push_str("Actual (closest match): \t");
                         } else {
+                            output.push_str("Expected: \t");
+                            output.push_str(&sd.expected);
+                            output.push_str("\n");
                             output.push_str("Actual: \t");
                         }
                         output.push_str(&sd.actual);

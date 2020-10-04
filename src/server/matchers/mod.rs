@@ -8,8 +8,10 @@ pub(crate) mod sources;
 pub(crate) mod targets;
 mod util;
 
+use basic_cookies::Cookie;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+use std::fmt::Display;
 
 // *************************************************************************************************
 // Diff and Change correspond to difference::Changeset and Difference structs. They are duplicated
@@ -79,4 +81,54 @@ pub(crate) struct Mismatch {
 pub(crate) trait Matcher {
     fn matches(&self, req: &HttpMockRequest, mock: &RequestRequirements) -> bool;
     fn mismatches(&self, req: &HttpMockRequest, mock: &RequestRequirements) -> Vec<Mismatch>;
+}
+
+// *************************************************************************************************
+// Helper functions
+// *************************************************************************************************
+pub(crate) fn parse_cookies(req: &HttpMockRequest) -> Result<BTreeMap<String, String>, String> {
+    let parsing_result = req.headers.as_ref().map_or(None, |request_headers| {
+        request_headers
+            .iter()
+            .find(|(k, _)| k.to_lowercase().eq("cookie"))
+            .map(|(k, v)| Cookie::parse(v))
+    });
+
+    match parsing_result {
+        None => Ok(BTreeMap::new()),
+        Some(res) => match res {
+            Err(e) => Err(e.to_string()),
+            Ok(v) => Ok(v
+                .into_iter()
+                .map(|c| (c.get_name().to_lowercase(), c.get_value().to_owned()))
+                .collect()),
+        },
+    }
+}
+
+pub(crate) fn distance_for(expected: &str, actual: &str) -> usize {
+    let max_distance = (expected.len() + actual.len());
+    if max_distance == 0 {
+        return 0;
+    }
+    let distance = levenshtein::levenshtein(expected, actual);
+    100 - ((max_distance - distance) / max_distance)
+}
+
+pub(crate) fn distance_for_vec(expected: &str, actual: &Vec<String>) -> usize {
+    actual.into_iter().map(|e| distance_for(expected, e)).sum()
+}
+
+pub(crate) fn distance_for_opt<T,U>(expected: &Option<&T>, actual: &Option<&U>) -> usize
+where
+    T: Display,
+    U: Display
+{
+    let expected = expected.map_or(String::new(), |x| x.to_string());
+    let actual = actual.map_or(String::new(), |x| x.to_string());
+    distance_for(&expected, &actual)
+}
+
+fn diff_str_new(s1: &str, s2: &str) -> usize {
+    levenshtein::levenshtein(s1, s2)
 }

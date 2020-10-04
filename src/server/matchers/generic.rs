@@ -1,16 +1,17 @@
 use crate::data::{HttpMockRequest, RequestRequirements};
 use crate::server::matchers::comparators::ValueComparator;
-use crate::server::matchers::targets::{ValueRefTarget, ValueTarget, MultiValueTarget};
-use crate::server::matchers::util::{diff_str_new, distance_for, distance_for_vec, match_json};
-use crate::server::matchers::{diff_str, Matcher, SimpleDiffResult};
+use crate::server::matchers::decoders::ValueDecoder;
+use crate::server::matchers::sources::{MultiValueSource, ValueSource};
+use crate::server::matchers::targets::{MultiValueTarget, ValueRefTarget, ValueTarget};
+use crate::server::matchers::{
+    diff_str, distance_for, distance_for_vec, Matcher, SimpleDiffResult,
+};
 use crate::server::{Mismatch, Tokenizer};
 use assert_json_diff::assert_json_eq_no_panic;
 use serde_json::Value;
 use std::collections::BTreeMap;
 use std::fmt::Display;
 use std::net::ToSocketAddrs;
-use crate::server::matchers::sources::{ValueSource, MultiValueSource};
-use crate::server::matchers::decoders::ValueDecoder;
 
 // ************************************************************************************************
 // SingleValueMatcher
@@ -36,16 +37,14 @@ where
 {
     fn distance(&self, req: &HttpMockRequest, mock: &RequestRequirements) -> usize {
         let mock_value = match self.source.parse_from_mock(mock) {
-            None => Vec::new(),
-            Some(v) => v.into_iter().map(|e| e.to_string()).collect(),
+            None => return 0,
+            Some(v) => v,
         };
-
-        let req_value = match self.target.parse_from_request(req) {
-            None => String::new(),
-            Some(v) => v.to_string(),
-        };
-
-        distance_for_vec(&req_value, &mock_value)
+        let req_value = self.target.parse_from_request(req);
+        mock_value
+            .into_iter()
+            .map(|s| self.comparator.distance(&Some(s), &req_value.as_ref()))
+            .sum()
     }
 }
 
@@ -110,34 +109,15 @@ where
     }
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // ************************************************************************************************
 // MultiValueMatcher
 // ************************************************************************************************
 pub(crate) struct MultiValueMatcher<SK, SV, TK, TV>
-    where
-        SK: Display,
-        SV: Display,
-        TK: Display,
-        TV: Display,
+where
+    SK: Display,
+    SV: Display,
+    TK: Display,
+    TV: Display,
 {
     pub entity_name: &'static str,
     pub source: Box<dyn MultiValueSource<SK, SV> + Send + Sync>,
@@ -151,44 +131,110 @@ pub(crate) struct MultiValueMatcher<SK, SV, TK, TV>
 }
 
 impl<SK, SV, TK, TV> MultiValueMatcher<SK, SV, TK, TV>
-    where
-        SK: Display,
-        SV: Display,
-        TK: Display,
-        TV: Display,
+where
+    SK: Display,
+    SV: Display,
+    TK: Display,
+    TV: Display,
 {
-    /*
     fn get_unmatched<'a>(
         &self,
-        req: &HttpMockRequest,
-        mock: &'a RequestRequirements,
-    ) -> Vec<(&'a String, &'a String)> {
-        mock.headers
-            .as_ref()
-            .map_or(Vec::new(), |mock_headers| match req.headers.as_ref() {
-                None => Vec::new(),
-                Some(req_headers) => mock_headers
+        req_values: &Vec<(TK, Option<TV>)>,
+        mock_values: &'a Vec<(&'a SK, Option<&'a SV>)>,
+    ) -> Vec<&'a (&'a SK, Option<&'a SV>)> {
+        mock_values
+            .into_iter()
+            .filter(|(sk, sv)| {
+                req_values
                     .iter()
-                    .filter(|(k, v)| !req_headers.contains_entry_with_case_insensitive_key(k, v))
-                    .collect(),
+                    .find(|(tk, tv)| {
+                        let key_matches = self.key_comparator.matches(sk, tk);
+                        let value_matches = match (sv, tv) {
+                            (Some(_), None) => false, // Mock required a value but none was present
+                            (Some(sv), Some(tv)) => self.value_comparator.matches(sv, tv),
+                            (None, Some(_)) => true, // Mock did not require any value but there was one
+                            (None, None) => true
+                        };
+                        key_matches && value_matches
+                    })
+                    .is_none()
             })
+            .collect()
     }
-*/
 
+    fn get_best_match<'a>(
+        &self,
+        sk: &SK,
+        sv: &Option<&SV>,
+        req_values: &'a Vec<(TK, Option<TV>)>,
+    ) -> Option<(&'a TK, &'a Option<TV>)> {
+        if req_values.is_empty() {
+            return None;
+        }
+
+        let found = req_values
+            .iter()
+            .find(|(k, v)| k.to_string().eq(&sk.to_string()));
+        if let Some((fk, fv)) = found {
+            return Some((fk, fv));
+        }
+
+        req_values
+            .iter()
+            .map(|(tk, tv)| {
+                let key_distance = self.key_comparator.distance(&Some(sk), &Some(tk));
+                let value_distance = self.value_comparator.distance(&sv, &tv.as_ref());
+                (tk, tv, key_distance + value_distance)
+            })
+            .min_by(|(_, _, d1), (_, _, d2)| d1.cmp(d2))
+            .map(|(k, v, _)| (k.to_owned(), v.to_owned()))
+    }
 }
 
 impl<SK, SV, TK, TV> Matcher for MultiValueMatcher<SK, SV, TK, TV>
-    where
-        SK: Display,
-        SV: Display,
-        TK: Display,
-        TV: Display,
+where
+    SK: Display,
+    SV: Display,
+    TK: Display,
+    TV: Display,
 {
     fn matches(&self, req: &HttpMockRequest, mock: &RequestRequirements) -> bool {
-        true
+        let req_values = self.target.parse_from_request(req).unwrap_or(Vec::new());
+        let mock_values = self.source.parse_from_mock(mock).unwrap_or(Vec::new());
+        self.get_unmatched(&req_values, &mock_values).is_empty()
     }
 
     fn mismatches(&self, req: &HttpMockRequest, mock: &RequestRequirements) -> Vec<Mismatch> {
-        Vec::new()
+        let req_values = self.target.parse_from_request(req).unwrap_or(Vec::new());
+        let mock_values = self.source.parse_from_mock(mock).unwrap_or(Vec::new());
+        self.get_unmatched(&req_values, &mock_values)
+            .into_iter()
+            .map(|(k, v)| (k, v, self.get_best_match(&k, v, &req_values)))
+            .map(|(k, v, best_match)| Mismatch {
+                title: match v {
+                    None => format!("Expected {} with name '{}' to be present in the request but it wasn't.", self.entity_name, &k),
+                    Some(v) => format!("Expected {} with name '{}' and value '{}' to be present in the request but it wasn't.", self.entity_name, &k, v),
+                },
+                message: None,
+                reason: best_match.as_ref().map(|(bmk, bmv)| {
+                    SimpleDiffResult{
+                        expected: match v {
+                            None => format!("{}", k),
+                            Some(v) => format!("{}={}", k, v),
+                        },
+                        actual: match bmv {
+                            None => format!("{}", bmk),
+                            Some(bmv) => format!("{}={}", bmk, bmv),
+                        },
+                        operation_name: "TODO".to_string(),
+                        best_match: true,
+                    }
+                }),
+                detailed_diff: None,
+                score: 0, /*score_for(
+                    &format!("{}:{}", k, v),
+                    best_match.as_ref().map_or(&String::new(), |(kk,vv)| &format!("{}:{}", kk, vv)))*/
+            })
+            .collect()
     }
 }

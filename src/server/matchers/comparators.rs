@@ -1,11 +1,14 @@
 use crate::data::Pattern;
+use crate::server::matchers::{distance_for, distance_for_opt};
 use crate::Regex;
 use assert_json_diff::{assert_json_eq_no_panic, assert_json_include_no_panic};
 use serde_json::Value;
 
+// TODO: Implement memoization for Comparators
 pub trait ValueComparator<S, T> {
     fn matches(&self, mock_value: &S, req_value: &T) -> bool;
     fn operation_name(&self) -> &str;
+    fn distance(&self, mock_value: &Option<&S>, req_value: &Option<&T>) -> usize;
 }
 
 // ************************************************************************************************
@@ -26,6 +29,10 @@ impl ValueComparator<Value, Value> for JSONExactMatchComparator {
 
     fn operation_name(&self) -> &str {
         "equals"
+    }
+
+    fn distance(&self, mock_value: &Option<&Value>, req_value: &Option<&Value>) -> usize {
+        distance_for_opt(mock_value, req_value)
     }
 }
 
@@ -48,6 +55,10 @@ impl ValueComparator<Value, Value> for JSONContainsMatchComparator {
     fn operation_name(&self) -> &str {
         "equals"
     }
+
+    fn distance(&self, mock_value: &Option<&Value>, req_value: &Option<&Value>) -> usize {
+        distance_for_opt(mock_value, req_value)
+    }
 }
 
 // ************************************************************************************************
@@ -67,6 +78,9 @@ impl ValueComparator<String, String> for StringExactMatchComparator {
     }
     fn operation_name(&self) -> &str {
         "equals"
+    }
+    fn distance(&self, mock_value: &Option<&String>, req_value: &Option<&String>) -> usize {
+        distance_for_opt(mock_value, req_value)
     }
 }
 
@@ -88,6 +102,9 @@ impl ValueComparator<String, String> for StringContainsMatchComparator {
     fn operation_name(&self) -> &str {
         "contains"
     }
+    fn distance(&self, mock_value: &Option<&String>, req_value: &Option<&String>) -> usize {
+        distance_for_opt(mock_value, req_value)
+    }
 }
 
 // ************************************************************************************************
@@ -108,5 +125,33 @@ impl ValueComparator<Regex, String> for StringRegexMatchComparator {
 
     fn operation_name(&self) -> &str {
         "matches"
+    }
+
+    fn distance(&self, mock_value: &Option<&Regex>, req_value: &Option<&String>) -> usize {
+        distance_for_opt(mock_value, req_value)
+    }
+}
+
+// ************************************************************************************************
+// AnyValueComparator
+// ************************************************************************************************
+pub struct AnyValueComparator {}
+
+impl AnyValueComparator {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+impl<T, U> ValueComparator<T, U> for AnyValueComparator {
+    fn matches(&self, _: &T, _: &U) -> bool {
+        assert!(false, "AnyValueComparator");
+        true
+    }
+    fn operation_name(&self) -> &str {
+        "any"
+    }
+    fn distance(&self, _: &Option<&T>, _: &Option<&U>) -> usize {
+        0
     }
 }

@@ -16,12 +16,9 @@ fn getting_started_test() {
 
     // Create a mock on the server.
     let hello_mock = server.mock(|when, then| {
-        when.method("POST")
-            .path("/translatez")
-            .cookie("asd", "cyxc")
-            .query_param("word", "hello")
-            .body_contains("wow so large".repeat(500))
-            .body_contains("wow so large2".repeat(500));
+        when.method("GET")
+            .path("/translate")
+            .query_param_exists("word");
         then.status(200)
             .header("Content-Type", "text/html; charset=UTF-8")
             .body("Привет");

@@ -1,3 +1,4 @@
+// TODO: Implement memoization for Comparators
 pub(crate) trait ValueDecoder<I, O> {
     fn encode(&self, v: &I) -> O;
     fn decode(&self, v: &I) -> Result<O, String>;
