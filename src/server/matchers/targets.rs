@@ -13,8 +13,8 @@ pub(crate) trait ValueRefTarget<T> {
     fn parse_from_request<'a>(&self, req: &'a HttpMockRequest) -> Option<&'a T>;
 }
 
-pub(crate) trait MultiValueValueTarget {
-    fn parse_from_request(&self, req: &HttpMockRequest) -> BTreeMap<String, String>;
+pub(crate) trait MultiValueTarget<T,U> {
+    fn parse_from_request(&self, req: &HttpMockRequest) -> Option<Vec<(T,U)>>;
 }
 
 // *************************************************************************************
@@ -72,8 +72,9 @@ impl CookieTarget {
         Self {}
     }
 }
-impl MultiValueValueTarget for CookieTarget {
-    fn parse_from_request(&self, req: &HttpMockRequest) -> BTreeMap<String, String> {
+
+impl MultiValueTarget<String, String> for CookieTarget {
+    fn parse_from_request(&self, req: &HttpMockRequest) -> Option<Vec<(String, String)>> {
         let req_cookies = match parse_cookies(req) {
             Ok(v) => v,
             Err(err) => {
@@ -81,14 +82,14 @@ impl MultiValueValueTarget for CookieTarget {
                 "Cannot parse cookies. Cookie matching will not work for this request. Error: {}",
                 err
             );
-                return BTreeMap::new();
+                return None;
             }
         };
 
-        req_cookies
+        Some(req_cookies
             .into_iter()
             .map(|(k, v)| (k.to_lowercase(), v))
-            .collect()
+            .collect())
     }
 }
 

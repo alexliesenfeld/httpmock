@@ -172,9 +172,9 @@ pub(crate) struct RequestRequirements {
     pub path_contains: Option<Vec<String>>,
     pub path_matches: Option<Vec<Pattern>>,
     pub method: Option<String>,
-    pub headers: Option<BTreeMap<String, String>>,
+    pub headers: Option<Vec<(String, String)>>,
     pub header_exists: Option<Vec<String>>,
-    pub cookies: Option<BTreeMap<String, String>>,
+    pub cookies: Option<Vec<(String, String)>>,
     pub cookie_exists: Option<Vec<String>>,
     pub body: Option<String>,
     pub json_body: Option<Value>,
@@ -182,7 +182,7 @@ pub(crate) struct RequestRequirements {
     pub body_contains: Option<Vec<String>>,
     pub body_matches: Option<Vec<Pattern>>,
     pub query_param_exists: Option<Vec<String>>,
-    pub query_param: Option<BTreeMap<String, String>>,
+    pub query_param: Option<Vec<(String, String)>>,
 
     #[serde(skip_serializing, skip_deserializing)]
     pub matchers: Option<Vec<MockMatcherFunction>>,
@@ -240,7 +240,7 @@ impl RequestRequirements {
         self
     }
 
-    pub fn with_headers(mut self, arg: BTreeMap<String, String>) -> Self {
+    pub fn with_headers(mut self, arg: Vec<(String, String)>) -> Self {
         self.headers = Some(arg);
         self
     }
@@ -250,7 +250,7 @@ impl RequestRequirements {
         self
     }
 
-    pub fn with_cookies(mut self, arg: BTreeMap<String, String>) -> Self {
+    pub fn with_cookies(mut self, arg: Vec<(String, String)>) -> Self {
         self.cookies = Some(arg);
         self
     }
@@ -280,7 +280,7 @@ impl RequestRequirements {
         self
     }
 
-    pub fn with_query_param(mut self, arg: BTreeMap<String, String>) -> Self {
+    pub fn with_query_param(mut self, arg: Vec<(String, String)>) -> Self {
         self.query_param = Some(arg);
         self
     }

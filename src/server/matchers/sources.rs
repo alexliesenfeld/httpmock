@@ -4,15 +4,12 @@ use std::collections::BTreeMap;
 use serde_json::Value;
 use crate::Regex;
 
-pub(crate) trait MultiValueValueSource {
-    fn parse_from_mock<'a>(
-        &self,
-        mock: &'a RequestRequirements,
-    ) -> Option<&'a BTreeMap<String, String>>;
-}
-
 pub(crate) trait ValueSource<T> {
     fn parse_from_mock<'a>(&self, mock: &'a RequestRequirements) -> Option<Vec<&'a T>>;
+}
+
+pub(crate) trait MultiValueSource<T,U> {
+    fn parse_from_mock<'a>(&self, mock: &'a RequestRequirements) -> Option<Vec<(&'a T, &'a U)>>;
 }
 
 // ************************************************************************************************
@@ -86,25 +83,6 @@ impl ValueSource<Regex> for BodyRegexSource {
 }
 
 // ************************************************************************************************
-// CookieSource
-// ************************************************************************************************
-pub(crate) struct CookieSource {}
-
-impl CookieSource {
-    pub fn new() -> Self {
-        Self {}
-    }
-}
-impl MultiValueValueSource for CookieSource {
-    fn parse_from_mock<'a>(
-        &self,
-        mock: &'a RequestRequirements,
-    ) -> Option<&'a BTreeMap<String, String>> {
-        mock.cookies.as_ref()
-    }
-}
-
-// ************************************************************************************************
 // MethodSource
 // ************************************************************************************************
 pub(crate) struct MethodSource {}
@@ -170,5 +148,23 @@ impl PathRegexSource {
 impl ValueSource<Regex> for PathRegexSource {
     fn parse_from_mock<'a>(&self, mock: &'a RequestRequirements) -> Option<Vec<&'a Regex>> {
         mock.path_matches.as_ref().map(|b| b.into_iter().map(|v| &v.regex).collect())
+    }
+}
+
+
+// ************************************************************************************************
+// CookieSource
+// ************************************************************************************************
+pub(crate) struct CookieSource {}
+
+impl CookieSource {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+impl MultiValueSource<String, String> for CookieSource {
+    fn parse_from_mock<'a>(&self, mock: &'a RequestRequirements) -> Option<Vec<(&'a String, &'a String)>> {
+        mock.cookies.as_ref().map(|c| c.iter().map(|(k,v)| (k,v)).collect() )
     }
 }

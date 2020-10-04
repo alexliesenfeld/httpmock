@@ -1,6 +1,6 @@
 use crate::data::{HttpMockRequest, RequestRequirements};
 use crate::server::matchers::comparators::ValueComparator;
-use crate::server::matchers::targets::{ValueRefTarget, ValueTarget};
+use crate::server::matchers::targets::{ValueRefTarget, ValueTarget, MultiValueTarget};
 use crate::server::matchers::util::{diff_str_new, distance_for, distance_for_vec, match_json};
 use crate::server::matchers::{diff_str, Matcher, SimpleDiffResult};
 use crate::server::{Mismatch, Tokenizer};
@@ -9,9 +9,12 @@ use serde_json::Value;
 use std::collections::BTreeMap;
 use std::fmt::Display;
 use std::net::ToSocketAddrs;
-use crate::server::matchers::sources::ValueSource;
+use crate::server::matchers::sources::{ValueSource, MultiValueSource};
 use crate::server::matchers::decoders::ValueDecoder;
 
+// ************************************************************************************************
+// SingleValueMatcher
+// ************************************************************************************************
 pub(crate) struct SingleValueMatcher<S, T>
 where
     S: Display,
@@ -21,7 +24,7 @@ where
     pub source: Box<dyn ValueSource<S> + Send + Sync>,
     pub target: Box<dyn ValueTarget<T> + Send + Sync>,
     pub comparator: Box<dyn ValueComparator<S, T> + Send + Sync>,
-    pub encoder: Option<Box<dyn ValueDecoder<T, T> + Send + Sync>>,
+    pub decoder: Option<Box<dyn ValueDecoder<T, T> + Send + Sync>>,
     pub with_reason: bool,
     pub with_diff: bool,
 }
@@ -104,5 +107,88 @@ where
                 }
             })
             .collect()
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// ************************************************************************************************
+// MultiValueMatcher
+// ************************************************************************************************
+pub(crate) struct MultiValueMatcher<SK, SV, TK, TV>
+    where
+        SK: Display,
+        SV: Display,
+        TK: Display,
+        TV: Display,
+{
+    pub entity_name: &'static str,
+    pub source: Box<dyn MultiValueSource<SK, SV> + Send + Sync>,
+    pub target: Box<dyn MultiValueTarget<TK, TV> + Send + Sync>,
+    pub key_comparator: Box<dyn ValueComparator<SK, TK> + Send + Sync>,
+    pub value_comparator: Box<dyn ValueComparator<SV, TV> + Send + Sync>,
+    pub key_decoder: Option<Box<dyn ValueDecoder<SK, SK> + Send + Sync>>,
+    pub value_decoder: Option<Box<dyn ValueDecoder<SV, SV> + Send + Sync>>,
+    pub with_reason: bool,
+    pub with_diff: bool,
+}
+
+impl<SK, SV, TK, TV> MultiValueMatcher<SK, SV, TK, TV>
+    where
+        SK: Display,
+        SV: Display,
+        TK: Display,
+        TV: Display,
+{
+    /*
+    fn get_unmatched<'a>(
+        &self,
+        req: &HttpMockRequest,
+        mock: &'a RequestRequirements,
+    ) -> Vec<(&'a String, &'a String)> {
+        mock.headers
+            .as_ref()
+            .map_or(Vec::new(), |mock_headers| match req.headers.as_ref() {
+                None => Vec::new(),
+                Some(req_headers) => mock_headers
+                    .iter()
+                    .filter(|(k, v)| !req_headers.contains_entry_with_case_insensitive_key(k, v))
+                    .collect(),
+            })
+    }
+*/
+
+}
+
+impl<SK, SV, TK, TV> Matcher for MultiValueMatcher<SK, SV, TK, TV>
+    where
+        SK: Display,
+        SV: Display,
+        TK: Display,
+        TV: Display,
+{
+    fn matches(&self, req: &HttpMockRequest, mock: &RequestRequirements) -> bool {
+        true
+    }
+
+    fn mismatches(&self, req: &HttpMockRequest, mock: &RequestRequirements) -> Vec<Mismatch> {
+        Vec::new()
     }
 }

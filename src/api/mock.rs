@@ -550,7 +550,7 @@ impl Mock {
     #[deprecated(since = "0.5.0", note = "Please use new API instead.")]
     pub fn expect_header<S: Into<String>>(mut self, name: S, value: S) -> Self {
         if self.mock.request.headers.is_none() {
-            self.mock.request.headers = Some(BTreeMap::new());
+            self.mock.request.headers = Some(Vec::new());
         }
 
         self.mock
@@ -558,7 +558,7 @@ impl Mock {
             .headers
             .as_mut()
             .unwrap()
-            .insert(name.into(), value.into());
+            .push((name.into(), value.into()));
 
         self
     }
@@ -636,7 +636,7 @@ impl Mock {
     #[deprecated(since = "0.5.0", note = "Please use new API instead.")]
     pub fn expect_cookie<S: Into<String>>(mut self, name: S, value: S) -> Self {
         if self.mock.request.cookies.is_none() {
-            self.mock.request.cookies = Some(BTreeMap::new());
+            self.mock.request.cookies = Some(Vec::new());
         }
 
         self.mock
@@ -644,7 +644,7 @@ impl Mock {
             .cookies
             .as_mut()
             .unwrap()
-            .insert(name.into(), value.into());
+            .push((name.into(), value.into()));
 
         self
     }
@@ -1005,7 +1005,7 @@ impl Mock {
     #[deprecated(since = "0.5.0", note = "Please use new API instead.")]
     pub fn expect_query_param<S: Into<String>>(mut self, name: S, value: S) -> Self {
         if self.mock.request.query_param.is_none() {
-            self.mock.request.query_param = Some(BTreeMap::new());
+            self.mock.request.query_param = Some(Vec::new());
         }
 
         self.mock
@@ -1013,7 +1013,7 @@ impl Mock {
             .query_param
             .as_mut()
             .unwrap()
-            .insert(name.into(), value.into());
+            .push((name.into(), value.into()));
 
         self
     }

@@ -31,16 +31,6 @@ pub(crate) use matchers::{Diff, Mismatch, Tokenizer};
 use matchers::generic::SingleValueMatcher;
 use crate::server::matchers::comparators::{StringContainsMatchComparator, StringExactMatchComparator, StringRegexMatchComparator, JSONContainsMatchComparator, JSONExactMatchComparator};
 use matchers::targets::{StringBodyTarget, JSONBodyTarget};
-use crate::server::matchers::concrete::path_matcher::PathMatcher;
-use crate::server::matchers::concrete::path_contains_matcher::PathContainsMatcher;
-use crate::server::matchers::concrete::path_regex_matcher::PathRegexMatcher;
-use crate::server::matchers::concrete::method_matcher::MethodMatcher;
-use crate::server::matchers::concrete::cookie_exists_matcher::CookieExistsMatcher;
-use crate::server::matchers::concrete::header_matcher::HeaderMatcher;
-use crate::server::matchers::concrete::header_exists_matcher::HeaderExistsMatcher;
-use crate::server::matchers::concrete::query_parameter_exists_matcher::QueryParameterExistsMatcher;
-use crate::server::matchers::concrete::query_parameter_matcher::QueryParameterMatcher;
-use crate::server::matchers::concrete::custom_function_matcher::CustomFunctionMatcher;
 use crate::server::matchers::sources::{StringBodySource, BodyRegexSource, PartialJSONBodySource, JSONBodySource, StringPathSource, PathContainsSubstringSource, PathRegexSource, MethodSource};
 use crate::server::matchers::targets::{PathTarget, MethodTarget};
 
@@ -97,7 +87,7 @@ impl MockServerState {
                         comparator: Box::new(StringExactMatchComparator::new()),
                         source: Box::new(MethodSource::new()),
                         target: Box::new(MethodTarget::new()),
-                        encoder: None,
+                        decoder: None,
                         with_reason: true,
                         with_diff: false,
                     })
@@ -109,7 +99,7 @@ impl MockServerState {
                         comparator: Box::new(StringExactMatchComparator::new()),
                         source: Box::new(StringPathSource::new()),
                         target: Box::new(PathTarget::new()),
-                        encoder: None,
+                        decoder: None,
                         with_reason: true,
                         with_diff: false,
                     }),
@@ -119,7 +109,7 @@ impl MockServerState {
                         comparator: Box::new(StringContainsMatchComparator::new()),
                         source: Box::new(PathContainsSubstringSource::new()),
                         target: Box::new(PathTarget::new()),
-                        encoder: None,
+                        decoder: None,
                         with_reason: true,
                         with_diff: false,
                     }),
@@ -129,7 +119,7 @@ impl MockServerState {
                         comparator: Box::new(StringRegexMatchComparator::new()),
                         source: Box::new(PathRegexSource::new()),
                         target: Box::new(PathTarget::new()),
-                        encoder: None,
+                        decoder: None,
                         with_reason: true,
                         with_diff: false,
                     }),
@@ -141,7 +131,7 @@ impl MockServerState {
                         comparator: Box::new(StringExactMatchComparator::new()),
                         source: Box::new(StringBodySource::new()),
                         target: Box::new(StringBodyTarget::new()),
-                        encoder: None,
+                        decoder: None,
                         with_reason: true,
                         with_diff: true,
                     }),
@@ -151,7 +141,7 @@ impl MockServerState {
                         comparator: Box::new(StringContainsMatchComparator::new()),
                         source: Box::new(StringBodySource::new()),
                         target: Box::new(StringBodyTarget::new()),
-                        encoder: None,
+                        decoder: None,
                         with_reason: true,
                         with_diff: true,
                     }),
@@ -161,7 +151,7 @@ impl MockServerState {
                         comparator: Box::new(StringRegexMatchComparator::new()),
                         source: Box::new(BodyRegexSource::new()),
                         target: Box::new(StringBodyTarget::new()),
-                        encoder: None,
+                        decoder: None,
                         with_reason: true,
                         with_diff: true,
                     }),
@@ -171,7 +161,7 @@ impl MockServerState {
                         comparator: Box::new(JSONContainsMatchComparator::new()),
                         source: Box::new(PartialJSONBodySource::new()),
                         target: Box::new(JSONBodyTarget::new()),
-                        encoder: None,
+                        decoder: None,
                         with_reason: true,
                         with_diff: true,
                     }),
@@ -181,24 +171,26 @@ impl MockServerState {
                         comparator: Box::new(JSONExactMatchComparator::new()),
                         source: Box::new(JSONBodySource::new()),
                         target: Box::new(JSONBodyTarget::new()),
-                        encoder: None,
+                        decoder: None,
                         with_reason: true,
                         with_diff: true,
                     }),
                 ],
                 cookie_matchers: vec![
-                    Box::new(CookieExistsMatcher::new(1.0)),
+                    //Box::new(CookieExistsMatcher::new(1.0)),
                     //Box::new(CookieMatcher::new(None, None)),
                 ],
                 headers_matchers: vec![
-                    Box::new(HeaderMatcher::new(1.0)),
-                    Box::new(HeaderExistsMatcher::new(1.0)),
+                    //Box::new(HeaderMatcher::new(1.0)),
+                    //Box::new(HeaderExistsMatcher::new(1.0)),
                 ],
                 query_params_matchers: vec![
-                    Box::new(QueryParameterExistsMatcher::new(1.0)),
-                    Box::new(QueryParameterMatcher::new(1.0)),
+                    //Box::new(QueryParameterExistsMatcher::new(1.0)),
+                    //Box::new(QueryParameterMatcher::new(1.0)),
                 ],
-                custom_function_matchers: vec![Box::new(CustomFunctionMatcher::new(1.0))],
+                custom_function_matchers: vec![
+                    //Box::new(CustomFunctionMatcher::new(1.0))
+                ],
             },
         }
     }
