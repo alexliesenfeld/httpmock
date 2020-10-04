@@ -174,14 +174,14 @@ where
         }
 
         let found = req_values
-            .iter()
+            .into_iter()
             .find(|(k, v)| k.to_string().eq(&sk.to_string()));
         if let Some((fk, fv)) = found {
             return Some((fk, fv));
         }
 
         req_values
-            .iter()
+            .into_iter()
             .map(|(tk, tv)| {
                 let key_distance = self.key_comparator.distance(&Some(sk), &Some(tk));
                 let value_distance = self.value_comparator.distance(&sv, &tv.as_ref());
@@ -190,6 +190,7 @@ where
             .min_by(|(_, _, d1), (_, _, d2)| d1.cmp(d2))
             .map(|(k, v, _)| (k.to_owned(), v.to_owned()))
     }
+
 }
 
 impl<SK, SV, TK, TV> Matcher for MultiValueMatcher<SK, SV, TK, TV>
