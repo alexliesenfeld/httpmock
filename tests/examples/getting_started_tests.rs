@@ -18,7 +18,7 @@ fn getting_started_test() {
     let hello_mock = server.mock(|when, then| {
         when.method("GET")
             .path("/translate")
-            .query_param_exists("word");
+            .query_param("word", "hello");
         then.status(200)
             .header("Content-Type", "text/html; charset=UTF-8")
             .body("Привет");
