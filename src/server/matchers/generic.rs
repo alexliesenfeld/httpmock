@@ -4,7 +4,7 @@ use crate::server::matchers::decoders::ValueDecoder;
 use crate::server::matchers::sources::{MultiValueSource, ValueSource};
 use crate::server::matchers::targets::{MultiValueTarget, ValueRefTarget, ValueTarget};
 use crate::server::matchers::{
-    diff_str, distance_for, distance_for_vec, Matcher, SimpleDiffResult,
+    diff_str, distance_for, distance_for_vec, Matcher, Reason,
 };
 use crate::server::{Mismatch, Tokenizer};
 use assert_json_diff::assert_json_eq_no_panic;
@@ -64,6 +64,10 @@ where
         }
     }
 
+    fn distance(&self, req: &HttpMockRequest, mock: &RequestRequirements) -> usize {
+        0
+    }
+
     fn mismatches(&self, req: &HttpMockRequest, mock: &RequestRequirements) -> Vec<Mismatch> {
         let req_value = self.target.parse_from_request(req);
         let mock_value = self.source.parse_from_mock(mock);
@@ -89,20 +93,17 @@ where
                 Mismatch {
                     title: format!("The {} does not match", self.entity_name),
                     reason: match self.with_reason {
-                        true => Some(SimpleDiffResult {
+                        true => Some(Reason {
                             expected: mock_value.to_string(),
                             actual: req_value.to_string(),
-                            operation_name: self.comparator.operation_name().to_string(),
                             best_match: false,
                         }),
                         false => None,
                     },
-                    detailed_diff: match self.with_reason {
+                    diff: match self.with_reason {
                         true => Some(diff_str(&mock_value, &req_value, Tokenizer::Line)),
                         false => None,
                     },
-                    message: None,
-                    score: 0,
                 }
             })
             .collect()
@@ -204,6 +205,10 @@ where
         self.get_unmatched(&req_values, &mock_values).is_empty()
     }
 
+    fn distance(&self, req: &HttpMockRequest, mock: &RequestRequirements) -> usize {
+        0
+    }
+
     fn mismatches(&self, req: &HttpMockRequest, mock: &RequestRequirements) -> Vec<Mismatch> {
         let req_values = self.target.parse_from_request(req).unwrap_or(Vec::new());
         let mock_values = self.source.parse_from_mock(mock).unwrap_or(Vec::new());
@@ -215,9 +220,8 @@ where
                     None => format!("Expected {} with name '{}' to be present in the request but it wasn't.", self.entity_name, &k),
                     Some(v) => format!("Expected {} with name '{}' and value '{}' to be present in the request but it wasn't.", self.entity_name, &k, v),
                 },
-                message: None,
                 reason: best_match.as_ref().map(|(bmk, bmv)| {
-                    SimpleDiffResult{
+                    Reason {
                         expected: match v {
                             None => format!("{}", k),
                             Some(v) => format!("{}={}", k, v),
@@ -226,14 +230,10 @@ where
                             None => format!("{}", bmk),
                             Some(bmv) => format!("{}={}", bmk, bmv),
                         },
-                        operation_name: "TODO".to_string(),
                         best_match: true,
                     }
                 }),
-                detailed_diff: None,
-                score: 0, /*score_for(
-                    &format!("{}:{}", k, v),
-                    best_match.as_ref().map_or(&String::new(), |(kk,vv)| &format!("{}:{}", kk, vv)))*/
+                diff: None,
             })
             .collect()
     }

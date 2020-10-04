@@ -240,11 +240,7 @@ fn get_scores(
         .enumerate()
         .filter(|(idx, r)| requests.contains_key(idx))
         .map(|(idx, req)| {
-            let sum = get_request_mismatches(req, mock, matchers)
-                .iter()
-                .map(|mm| mm.score)
-                .sum::<usize>();
-            (idx, sum)
+            (idx, get_request_distance(req, mock, matchers))
         })
         .collect()
 }
@@ -261,6 +257,18 @@ fn get_request_mismatches(
         .flatten()
         .into_iter()
         .collect()
+}
+
+fn get_request_distance(
+    req: &Arc<HttpMockRequest>,
+    mock: &ActiveMock,
+    matchers: &Matchers,
+) -> usize {
+    matchers
+        .all()
+        .iter()
+        .map(|matcher| matcher.distance(req, &mock.definition.request))
+        .sum()
 }
 
 // Remember the maximum number of matchers that successfully matched

@@ -16,7 +16,7 @@ impl ValueDecoder<String, String> for Base64ValueDecoder {
 
     fn decode(&self, v: &String) -> Result<String, String> {
         base64::decode(v)
-            .map(|t| String::from_utf8_lossy(&t.as_slice()).to_string())
-            .map_err(|r| r.to_string())
+            .map(|t| String::from_utf8_lossy(&t.as_slice()).into())
+            .map_err(|err| err.to_string())
     }
 }

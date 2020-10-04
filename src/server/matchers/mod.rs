@@ -53,33 +53,31 @@ pub(crate) fn diff_str(base: &str, edit: &str, tokenizer: Tokenizer) -> Detailed
             .diffs
             .iter()
             .map(|d| match d {
-                Difference::Same(v) => Diff::Same(v.to_string()),
-                Difference::Add(v) => Diff::Add(v.to_string()),
-                Difference::Rem(v) => Diff::Rem(v.to_string()),
+                Difference::Same(v) => Diff::Same(v.to_owned()),
+                Difference::Add(v) => Diff::Add(v.to_owned()),
+                Difference::Rem(v) => Diff::Rem(v.to_owned()),
             })
             .collect(),
     }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub(crate) struct SimpleDiffResult {
+pub(crate) struct Reason {
     pub expected: String,
     pub actual: String,
-    pub operation_name: String,
     pub best_match: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub(crate) struct Mismatch {
     pub title: String,
-    pub message: Option<String>,
-    pub reason: Option<SimpleDiffResult>,
-    pub detailed_diff: Option<DetailedDiffResult>,
-    pub score: usize,
+    pub reason: Option<Reason>,
+    pub diff: Option<DetailedDiffResult>
 }
 
 pub(crate) trait Matcher {
     fn matches(&self, req: &HttpMockRequest, mock: &RequestRequirements) -> bool;
+    fn distance(&self, req: &HttpMockRequest, mock: &RequestRequirements) -> usize;
     fn mismatches(&self, req: &HttpMockRequest, mock: &RequestRequirements) -> Vec<Mismatch>;
 }
 
@@ -97,8 +95,8 @@ pub(crate) fn parse_cookies(req: &HttpMockRequest) -> Result<BTreeMap<String, St
     match parsing_result {
         None => Ok(BTreeMap::new()),
         Some(res) => match res {
-            Err(e) => Err(e.to_string()),
-            Ok(v) => Ok(v
+            Err(err) => Err(err.to_string()),
+            Ok(vec) => Ok(vec
                 .into_iter()
                 .map(|c| (c.get_name().to_lowercase(), c.get_value().to_owned()))
                 .collect()),

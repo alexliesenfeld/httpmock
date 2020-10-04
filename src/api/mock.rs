@@ -95,28 +95,23 @@ impl<'a> MockRef<'a> {
                     output.push_str(&"-".repeat(60));
                     output.push_str("\n");
 
-                    mm.message.map(|m| {
-                        output.push_str(&m);
-                        output.push_str("\n");
-                    });
-
-                    mm.reason.map(|sd| {
-                        if sd.best_match {
+                    mm.reason.map(|reason| {
+                        if reason.best_match {
                             output.push_str("Expected: \t\t\t\t\t");
-                            output.push_str(&sd.expected);
+                            output.push_str(&reason.expected);
                             output.push_str("\n");
                             output.push_str("Actual (closest match): \t");
                         } else {
                             output.push_str("Expected: \t");
-                            output.push_str(&sd.expected);
+                            output.push_str(&reason.expected);
                             output.push_str("\n");
                             output.push_str("Actual: \t");
                         }
-                        output.push_str(&sd.actual);
+                        output.push_str(&reason.actual);
                         output.push_str("\n");
                     });
 
-                    mm.detailed_diff.map(|dd| {
+                    mm.diff.map(|dd| {
                         output.push_str("Diff: ");
                         if dd.differences.is_empty() {
                             output.push_str("<empty>");
