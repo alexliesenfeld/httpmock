@@ -153,7 +153,7 @@ where
                             (Some(_), None) => false, // Mock required a value but none was present
                             (Some(sv), Some(tv)) => self.value_comparator.matches(sv, tv),
                             (None, Some(_)) => true, // Mock did not require any value but there was one
-                            (None, None) => true
+                            (None, None) => true,
                         };
                         key_matches && value_matches
                     })

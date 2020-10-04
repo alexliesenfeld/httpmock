@@ -32,8 +32,15 @@ use crate::server::matchers::comparators::{
     StringContainsMatchComparator, StringExactMatchComparator, StringRegexMatchComparator,
 };
 use crate::server::matchers::generic::MultiValueMatcher;
-use crate::server::matchers::sources::{BodyRegexSource, CookieSource, HeaderSource, JSONBodySource, MethodSource, PartialJSONBodySource, PathContainsSubstringSource, PathRegexSource, StringBodySource, StringPathSource, ContainsCookieSource, ContainsHeaderSource, QueryParameterSource, ContainsQueryParameterSource};
-use crate::server::matchers::targets::{CookieTarget, HeaderTarget, MethodTarget, PathTarget, QueryParameterTarget};
+use crate::server::matchers::sources::{
+    BodyRegexSource, ContainsCookieSource, ContainsHeaderSource, ContainsQueryParameterSource,
+    CookieSource, HeaderSource, JSONBodySource, MethodSource, PartialJSONBodySource,
+    PathContainsSubstringSource, PathRegexSource, QueryParameterSource, StringBodySource,
+    StringPathSource,
+};
+use crate::server::matchers::targets::{
+    CookieTarget, HeaderTarget, MethodTarget, PathTarget, QueryParameterTarget,
+};
 use matchers::generic::SingleValueMatcher;
 use matchers::targets::{JSONBodyTarget, StringBodyTarget};
 pub(crate) use matchers::{Diff, Mismatch, Tokenizer};
@@ -255,7 +262,7 @@ impl MockServerState {
                         with_diff: true,
                     }),*/
                     // Header exists
-                   Box::new(MultiValueMatcher {
+                    Box::new(MultiValueMatcher {
                         entity_name: "query parameter",
                         key_comparator: Box::new(StringExactMatchComparator::new()),
                         value_comparator: Box::new(AnyValueComparator::new()),

@@ -9,7 +9,10 @@ pub(crate) trait ValueSource<T> {
 }
 
 pub(crate) trait MultiValueSource<T, U> {
-    fn parse_from_mock<'a>(&self, mock: &'a RequestRequirements) -> Option<Vec<(&'a T, Option<&'a U>)>>;
+    fn parse_from_mock<'a>(
+        &self,
+        mock: &'a RequestRequirements,
+    ) -> Option<Vec<(&'a T, Option<&'a U>)>>;
 }
 
 // ************************************************************************************************
@@ -178,7 +181,6 @@ impl MultiValueSource<String, String> for CookieSource {
     }
 }
 
-
 // ************************************************************************************************
 // ContainsCookieSource
 // ************************************************************************************************
@@ -222,7 +224,6 @@ impl MultiValueSource<String, String> for HeaderSource {
             .map(|c| c.iter().map(|(k, v)| (k, Some(v))).collect())
     }
 }
-
 
 // ************************************************************************************************
 // ContainsCookieSource

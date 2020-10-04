@@ -119,10 +119,10 @@ pub(crate) fn distance_for_vec(expected: &str, actual: &Vec<String>) -> usize {
     actual.into_iter().map(|e| distance_for(expected, e)).sum()
 }
 
-pub(crate) fn distance_for_opt<T,U>(expected: &Option<&T>, actual: &Option<&U>) -> usize
+pub(crate) fn distance_for_opt<T, U>(expected: &Option<&T>, actual: &Option<&U>) -> usize
 where
     T: Display,
-    U: Display
+    U: Display,
 {
     let expected = expected.map_or(String::new(), |x| x.to_string());
     let actual = actual.map_or(String::new(), |x| x.to_string());
