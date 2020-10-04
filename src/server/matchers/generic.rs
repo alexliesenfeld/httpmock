@@ -153,8 +153,7 @@ where
                         let value_matches = match (sv, tv) {
                             (Some(_), None) => false, // Mock required a value but none was present
                             (Some(sv), Some(tv)) => self.value_comparator.matches(sv, tv),
-                            (None, Some(_)) => true, // Mock did not require any value but there was one
-                            (None, None) => true,
+                            _ => true,
                         };
                         key_matches && value_matches
                     })
