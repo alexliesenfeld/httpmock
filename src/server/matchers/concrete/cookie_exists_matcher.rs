@@ -74,9 +74,10 @@ impl Matcher for CookieExistsMatcher {
                 ),
                 message: None,
                 score: distance_for(k, &best_match.as_ref().unwrap_or(&String::new())),
-                simple_diff: best_match.as_ref().map(|bm| SimpleDiffResult {
+                reason: best_match.as_ref().map(|bm| SimpleDiffResult {
                     expected: k.to_lowercase(),
                     actual: bm.to_lowercase(),
+                    operation_name: "TODO".to_string(),
                     best_match: true,
                 }),
                 detailed_diff: None,

@@ -1,9 +1,12 @@
 use crate::data::{HttpMockRequest, RequestRequirements};
 use difference::{Changeset, Difference};
 
+pub(crate) mod comparators;
 pub(crate) mod concrete;
-mod generic;
-mod sources;
+pub(crate) mod decoders;
+pub(crate) mod generic;
+pub(crate) mod sources;
+pub(crate) mod targets;
 mod util;
 
 use serde::{Deserialize, Serialize};
@@ -61,6 +64,7 @@ pub(crate) fn diff_str(base: &str, edit: &str, tokenizer: Tokenizer) -> Detailed
 pub(crate) struct SimpleDiffResult {
     pub expected: String,
     pub actual: String,
+    pub operation_name: String,
     pub best_match: bool,
 }
 
@@ -68,7 +72,7 @@ pub(crate) struct SimpleDiffResult {
 pub(crate) struct Mismatch {
     pub title: String,
     pub message: Option<String>,
-    pub simple_diff: Option<SimpleDiffResult>,
+    pub reason: Option<SimpleDiffResult>,
     pub detailed_diff: Option<DetailedDiffResult>,
     pub score: usize,
 }

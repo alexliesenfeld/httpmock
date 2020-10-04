@@ -21,9 +21,10 @@ impl Matcher for PathMatcher {
             false => vec![Mismatch {
                 title: "Request path does not match".to_string(),
                 message: None,
-                simple_diff: Some(SimpleDiffResult {
+                reason: Some(SimpleDiffResult {
                     expected: mock.path.as_ref().unwrap().to_owned(),
                     actual: req.path.to_owned(),
+                    operation_name: "TODO".to_string(),
                     best_match: false,
                 }),
                 detailed_diff: None,

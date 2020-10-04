@@ -17,22 +17,6 @@ use hyper::{
 use regex::Regex;
 
 use crate::data::{ActiveMock, HttpMockRequest};
-use crate::server::matchers::concrete::_body_matcher::BodyMatcher;
-use crate::server::matchers::concrete::_cookie_matcher::CookieMatcher;
-use crate::server::matchers::concrete::body_contains_matcher::BodyContainsMatcher;
-use crate::server::matchers::concrete::body_json_includes_matcher::BodyJsonIncludesMatcher;
-use crate::server::matchers::concrete::body_json_matcher::BodyJsonMatcher;
-use crate::server::matchers::concrete::body_regex_matcher::BodyRegexMatcher;
-use crate::server::matchers::concrete::cookie_exists_matcher::CookieExistsMatcher;
-use crate::server::matchers::concrete::custom_function_matcher::CustomFunctionMatcher;
-use crate::server::matchers::concrete::header_exists_matcher::HeaderExistsMatcher;
-use crate::server::matchers::concrete::header_matcher::HeaderMatcher;
-use crate::server::matchers::concrete::method_matcher::MethodMatcher;
-use crate::server::matchers::concrete::path_contains_matcher::PathContainsMatcher;
-use crate::server::matchers::concrete::path_matcher::PathMatcher;
-use crate::server::matchers::concrete::path_regex_matcher::PathRegexMatcher;
-use crate::server::matchers::concrete::query_parameter_exists_matcher::QueryParameterExistsMatcher;
-use crate::server::matchers::concrete::query_parameter_matcher::QueryParameterMatcher;
 use crate::server::matchers::Matcher;
 use crate::server::web::routes;
 use std::sync::atomic::AtomicUsize;
@@ -44,6 +28,20 @@ mod util;
 pub(crate) mod web;
 
 pub(crate) use matchers::{Diff, Mismatch, Tokenizer};
+use crate::server::matchers::generic::single_value::SingleValueMatcher;
+use crate::server::matchers::comparators::{StringContainsMatchComparator, StringExactMatchComparator, StringRegexMatchComparator, JSONContainsMatchComparator, JSONExactMatchComparator};
+use matchers::targets::{StringBodyTarget, JSONBodyTarget};
+use crate::server::matchers::concrete::path_matcher::PathMatcher;
+use crate::server::matchers::concrete::path_contains_matcher::PathContainsMatcher;
+use crate::server::matchers::concrete::path_regex_matcher::PathRegexMatcher;
+use crate::server::matchers::concrete::method_matcher::MethodMatcher;
+use crate::server::matchers::concrete::cookie_exists_matcher::CookieExistsMatcher;
+use crate::server::matchers::concrete::header_matcher::HeaderMatcher;
+use crate::server::matchers::concrete::header_exists_matcher::HeaderExistsMatcher;
+use crate::server::matchers::concrete::query_parameter_exists_matcher::QueryParameterExistsMatcher;
+use crate::server::matchers::concrete::query_parameter_matcher::QueryParameterMatcher;
+use crate::server::matchers::concrete::custom_function_matcher::CustomFunctionMatcher;
+use crate::server::matchers::sources::{StringBodySource, BodyRegexSource, PartialJSONBodySource, JSONBodySource};
 
 pub(crate) struct Matchers {
     pub custom_function_matchers: Vec<Box<dyn Matcher + Sync + Send>>,
@@ -98,15 +96,60 @@ impl MockServerState {
                     Box::new(PathRegexMatcher::new(10.0)),
                 ],
                 body_matchers: vec![
-                    Box::new(BodyContainsMatcher::new(1.0)),
-                    Box::new(BodyJsonIncludesMatcher::new(1.0)),
-                    Box::new(BodyJsonMatcher::new(1.0)),
-                    Box::new(BodyMatcher::new(1.0)),
-                    Box::new(BodyRegexMatcher::new(1.0)),
+                    // string body exact
+                    Box::new(SingleValueMatcher {
+                        entity_name: "body",
+                        comparator: Box::new(StringExactMatchComparator::new()),
+                        source: Box::new(StringBodySource::new()),
+                        target: Box::new(StringBodyTarget::new()),
+                        encoder: None,
+                        with_reason: true,
+                        with_diff: true,
+                    }),
+                    // string body contains
+                    Box::new(SingleValueMatcher {
+                        entity_name: "body",
+                        comparator: Box::new(StringContainsMatchComparator::new()),
+                        source: Box::new(StringBodySource::new()),
+                        target: Box::new(StringBodyTarget::new()),
+                        encoder: None,
+                        with_reason: true,
+                        with_diff: true,
+                    }),
+                    // string body regex
+                    Box::new(SingleValueMatcher {
+                        entity_name: "body",
+                        comparator: Box::new(StringRegexMatchComparator::new()),
+                        source: Box::new(BodyRegexSource::new()),
+                        target: Box::new(StringBodyTarget::new()),
+                        encoder: None,
+                        with_reason: true,
+                        with_diff: true,
+                    }),
+                    // JSON body contains
+                    Box::new(SingleValueMatcher {
+                        entity_name: "body",
+                        comparator: Box::new(JSONContainsMatchComparator::new()),
+                        source: Box::new(PartialJSONBodySource::new()),
+                        target: Box::new(JSONBodyTarget::new()),
+                        encoder: None,
+                        with_reason: true,
+                        with_diff: true,
+                    }),
+                    // JSON body exact
+                    Box::new(SingleValueMatcher {
+                        entity_name: "body",
+                        comparator: Box::new(JSONExactMatchComparator::new()),
+                        source: Box::new(JSONBodySource::new()),
+                        target: Box::new(JSONBodyTarget::new()),
+                        encoder: None,
+                        with_reason: true,
+                        with_diff: true,
+                    }),
                 ],
                 cookie_matchers: vec![
                     Box::new(CookieExistsMatcher::new(1.0)),
-                    Box::new(CookieMatcher::new(1.0)),
+                    //Box::new(CookieMatcher::new(None, None)),
                 ],
                 headers_matchers: vec![
                     Box::new(HeaderMatcher::new(1.0)),

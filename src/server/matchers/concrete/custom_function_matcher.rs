@@ -37,7 +37,7 @@ impl Matcher for CustomFunctionMatcher {
                 ),
                 message: None,
                 score: distance_for(&mock.body.as_ref().unwrap_or(&String::new()), &req.body.as_ref().unwrap_or(&String::new())),
-                simple_diff: None,
+                reason: None,
                 detailed_diff: None,
             })
             .collect()

@@ -34,9 +34,10 @@ impl Matcher for PathRegexMatcher {
             .map(|pattern| Mismatch {
                 title: "Request path does not contain the expected substring".to_string(),
                 message: None,
-                simple_diff: Some(SimpleDiffResult {
+                reason: Some(SimpleDiffResult {
                     expected: format!("{:?}", pattern),
                     actual: req.path.to_owned(),
+                    operation_name: "TODO".to_string(),
                     best_match: false,
                 }),
                 detailed_diff: None,

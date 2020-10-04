@@ -77,6 +77,10 @@ pub(crate) fn distance_for(expected: &str, actual: &str) -> usize {
     100 - ((max_distance - distance) / max_distance)
 }
 
+pub(crate) fn distance_for_vec(expected: &str, actual: &Vec<String>) -> usize {
+    actual.into_iter().map(|e| distance_for(expected, e)).sum()
+}
+
 pub(crate) fn distance_for_opt(expected: &str, actual: &Option<&String>) -> usize {
     let actual = actual.as_ref().map_or("", |x| &**x);
     distance_for(expected, actual)

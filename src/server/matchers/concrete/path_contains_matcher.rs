@@ -36,9 +36,10 @@ impl Matcher for PathContainsMatcher {
             .map(|substring| Mismatch {
                 title: "Expected request path does not match".to_string(),
                 message: None,
-                simple_diff: Some(SimpleDiffResult {
+                reason: Some(SimpleDiffResult {
                     expected: format!("...{}...", substring),
                     actual: req.path.to_owned(),
+                    operation_name: "TODO".to_string(),
                     best_match: false,
                 }),
                 detailed_diff: None,

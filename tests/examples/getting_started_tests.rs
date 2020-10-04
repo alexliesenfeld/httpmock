@@ -6,6 +6,7 @@ use httpmock::util::Join;
 use httpmock::Method::{GET, POST};
 use httpmock::{Mock, MockServer};
 use httpmock_macros::httpmock_example_test;
+use serde_json::json;
 
 #[test]
 #[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
@@ -18,7 +19,9 @@ fn getting_started_test() {
         when.method("POST")
             .path("/translatez")
             .cookie("asd", "cyxc")
-            .query_param("word", "hello");
+            .query_param("word", "hello")
+            .body_contains("wow so large".repeat(500))
+            .body_contains("wow so large2".repeat(500));
         then.status(200)
             .header("Content-Type", "text/html; charset=UTF-8")
             .body("Привет");

@@ -81,10 +81,11 @@ impl Matcher for QueryParameterMatcher {
             .map(|(k, v, best_match)| Mismatch {
                 title: format!("Expected query parameter '{}' with value '{}' to be present in the request but it wasn't.", &k, &v),
                 message: None,
-                simple_diff: best_match.as_ref().map(|(bmk, bmv)| {
+                reason: best_match.as_ref().map(|(bmk, bmv)| {
                     SimpleDiffResult{
                         expected: format!("{}={}", k, v),
                         actual: format!("{}={}", bmk, bmv),
+                        operation_name: "TODO".to_string(),
                         best_match: true,
                     }
                 }),

@@ -23,9 +23,10 @@ impl Matcher for MethodMatcher {
             false => vec![Mismatch {
                 title: "Request method does not match".to_string(),
                 message: None,
-                simple_diff: Some(SimpleDiffResult {
+                reason: Some(SimpleDiffResult {
                     expected: mock.method.as_ref().unwrap().to_owned(),
                     actual: req.method.to_owned(),
+                    operation_name: "TODO".to_string(),
                     best_match: false,
                 }),
                 detailed_diff: None,

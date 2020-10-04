@@ -63,9 +63,10 @@ impl Matcher for QueryParameterExistsMatcher {
             .map(|(k, best_match)| Mismatch {
                 title: "Query parameter missing".to_string(),
                 message: None,
-                simple_diff: best_match.as_ref().map(|bmk| SimpleDiffResult {
+                reason: best_match.as_ref().map(|bmk| SimpleDiffResult {
                     expected: k.to_owned(),
                     actual: bmk.to_owned(),
+                    operation_name: "TODO".to_string(),
                     best_match: true,
                 }),
                 detailed_diff: None,

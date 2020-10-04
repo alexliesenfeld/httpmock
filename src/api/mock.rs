@@ -100,7 +100,7 @@ impl<'a> MockRef<'a> {
                         output.push_str("\n");
                     });
 
-                    mm.simple_diff.map(|sd| {
+                    mm.reason.map(|sd| {
                         output.push_str("Expected: \t");
                         output.push_str(&sd.expected);
                         output.push_str("\n");
@@ -147,10 +147,6 @@ impl<'a> MockRef<'a> {
                     output.push_str("\n");
                 }
 
-                output.push_str(
-                    &"wow so large!wow so large!wow so large!wow so large!wow so large!\n"
-                        .repeat(6000),
-                );
                 assert!(false, output);
             }
             None => {}
