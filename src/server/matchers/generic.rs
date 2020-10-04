@@ -1,6 +1,6 @@
 use crate::data::{HttpMockRequest, RequestRequirements};
 use crate::server::matchers::comparators::ValueComparator;
-use crate::server::matchers::decoders::ValueDecoder;
+use crate::server::matchers::transformers::Transformer;
 use crate::server::matchers::sources::{MultiValueSource, ValueSource};
 use crate::server::matchers::targets::{MultiValueTarget, ValueRefTarget, ValueTarget};
 use crate::server::matchers::{
@@ -25,7 +25,7 @@ where
     pub source: Box<dyn ValueSource<S> + Send + Sync>,
     pub target: Box<dyn ValueTarget<T> + Send + Sync>,
     pub comparator: Box<dyn ValueComparator<S, T> + Send + Sync>,
-    pub decoder: Option<Box<dyn ValueDecoder<T, T> + Send + Sync>>,
+    pub transformer: Option<Box<dyn Transformer<T, T> + Send + Sync>>,
     pub with_reason: bool,
     pub with_diff: bool,
 }
@@ -125,8 +125,8 @@ where
     pub target: Box<dyn MultiValueTarget<TK, TV> + Send + Sync>,
     pub key_comparator: Box<dyn ValueComparator<SK, TK> + Send + Sync>,
     pub value_comparator: Box<dyn ValueComparator<SV, TV> + Send + Sync>,
-    pub key_decoder: Option<Box<dyn ValueDecoder<SK, SK> + Send + Sync>>,
-    pub value_decoder: Option<Box<dyn ValueDecoder<SV, SV> + Send + Sync>>,
+    pub key_transformer: Option<Box<dyn Transformer<SK, SK> + Send + Sync>>,
+    pub value_transformer: Option<Box<dyn Transformer<SV, SV> + Send + Sync>>,
     pub with_reason: bool,
     pub with_diff: bool,
 }

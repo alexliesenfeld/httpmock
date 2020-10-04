@@ -2,7 +2,7 @@ use crate::data::{HttpMockRequest, RequestRequirements};
 use difference::{Changeset, Difference};
 
 pub(crate) mod comparators;
-pub(crate) mod decoders;
+pub(crate) mod transformers;
 pub(crate) mod generic;
 pub(crate) mod sources;
 pub(crate) mod targets;

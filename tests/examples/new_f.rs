@@ -25,11 +25,11 @@ fn binary_body_test() {
     let mut response = isahc::get(server.url("/hello")).unwrap();
 
     // Assert
-    server.verify(3, |that| {
+    server.verify(|that| {
         that.path("/p")
             .header("Accept", "*/*")
             .query_param("putt", "abc");
-    });
+    }, 3);
 
     m.assert();
     assert_eq!(response.status(), 200);

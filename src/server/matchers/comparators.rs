@@ -145,7 +145,6 @@ impl AnyValueComparator {
 
 impl<T, U> ValueComparator<T, U> for AnyValueComparator {
     fn matches(&self, _: &T, _: &U) -> bool {
-        assert!(false, "AnyValueComparator");
         true
     }
     fn operation_name(&self) -> &str {

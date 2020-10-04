@@ -44,6 +44,7 @@ use crate::server::matchers::targets::{
 use matchers::generic::SingleValueMatcher;
 use matchers::targets::{JSONBodyTarget, StringBodyTarget};
 pub(crate) use matchers::{Diff, Mismatch, Tokenizer};
+use crate::server::matchers::transformers::ToLowercaseTransformer;
 
 pub(crate) struct Matchers {
     pub custom_function_matchers: Vec<Box<dyn Matcher + Sync + Send>>,
@@ -92,27 +93,25 @@ impl MockServerState {
             id_counter: AtomicUsize::new(0),
             matchers: Matchers {
                 method_matchers: vec![
-                    /*
                     // method exact
                     Box::new(SingleValueMatcher {
                         entity_name: "method",
                         comparator: Box::new(StringExactMatchComparator::new()),
                         source: Box::new(MethodSource::new()),
                         target: Box::new(MethodTarget::new()),
-                        decoder: None,
+                        transformer: None,
                         with_reason: true,
                         with_diff: false,
-                    }),*/
+                    }),
                 ],
                 path_matchers: vec![
-                    /*
                     // path exact
                     Box::new(SingleValueMatcher {
                         entity_name: "path",
                         comparator: Box::new(StringExactMatchComparator::new()),
                         source: Box::new(StringPathSource::new()),
                         target: Box::new(PathTarget::new()),
-                        decoder: None,
+                        transformer: None,
                         with_reason: true,
                         with_diff: false,
                     }),
@@ -122,7 +121,7 @@ impl MockServerState {
                         comparator: Box::new(StringContainsMatchComparator::new()),
                         source: Box::new(PathContainsSubstringSource::new()),
                         target: Box::new(PathTarget::new()),
-                        decoder: None,
+                        transformer: None,
                         with_reason: true,
                         with_diff: false,
                     }),
@@ -132,20 +131,19 @@ impl MockServerState {
                         comparator: Box::new(StringRegexMatchComparator::new()),
                         source: Box::new(PathRegexSource::new()),
                         target: Box::new(PathTarget::new()),
-                        decoder: None,
+                        transformer: None,
                         with_reason: true,
                         with_diff: false,
-                    }),*/
+                    }),
                 ],
                 body_matchers: vec![
-                    /*
                     // string body exact
                     Box::new(SingleValueMatcher {
                         entity_name: "body",
                         comparator: Box::new(StringExactMatchComparator::new()),
                         source: Box::new(StringBodySource::new()),
                         target: Box::new(StringBodyTarget::new()),
-                        decoder: None,
+                        transformer: None,
                         with_reason: true,
                         with_diff: true,
                     }),
@@ -155,7 +153,7 @@ impl MockServerState {
                         comparator: Box::new(StringContainsMatchComparator::new()),
                         source: Box::new(StringBodySource::new()),
                         target: Box::new(StringBodyTarget::new()),
-                        decoder: None,
+                        transformer: None,
                         with_reason: true,
                         with_diff: true,
                     }),
@@ -165,7 +163,7 @@ impl MockServerState {
                         comparator: Box::new(StringRegexMatchComparator::new()),
                         source: Box::new(BodyRegexSource::new()),
                         target: Box::new(StringBodyTarget::new()),
-                        decoder: None,
+                        transformer: None,
                         with_reason: true,
                         with_diff: true,
                     }),
@@ -175,7 +173,7 @@ impl MockServerState {
                         comparator: Box::new(JSONContainsMatchComparator::new()),
                         source: Box::new(PartialJSONBodySource::new()),
                         target: Box::new(JSONBodyTarget::new()),
-                        decoder: None,
+                        transformer: None,
                         with_reason: true,
                         with_diff: true,
                     }),
@@ -185,20 +183,19 @@ impl MockServerState {
                         comparator: Box::new(JSONExactMatchComparator::new()),
                         source: Box::new(JSONBodySource::new()),
                         target: Box::new(JSONBodyTarget::new()),
-                        decoder: None,
+                        transformer: None,
                         with_reason: true,
                         with_diff: true,
-                    }),*/
+                    }),
                 ],
                 cookie_matchers: vec![
-                    /*
                     // Cookie exact
                     Box::new(MultiValueMatcher {
                         entity_name: "cookie",
                         key_comparator: Box::new(StringExactMatchComparator::new()),
                         value_comparator: Box::new(StringExactMatchComparator::new()),
-                        key_decoder: None,
-                        value_decoder: None,
+                        key_transformer: None,
+                        value_transformer: None,
                         source: Box::new(CookieSource::new()),
                         target: Box::new(CookieTarget::new()),
                         with_reason: true,
@@ -209,25 +206,22 @@ impl MockServerState {
                         entity_name: "cookie",
                         key_comparator: Box::new(StringExactMatchComparator::new()),
                         value_comparator: Box::new(AnyValueComparator::new()),
-                        key_decoder: None,
-                        value_decoder: None,
+                        key_transformer: None,
+                        value_transformer: None,
                         source: Box::new(ContainsCookieSource::new()),
                         target: Box::new(CookieTarget::new()),
                         with_reason: true,
                         with_diff: true,
                     }),
-
-                     */
                 ],
                 headers_matchers: vec![
-                    /*
                     // Header exact
                     Box::new(MultiValueMatcher {
                         entity_name: "header",
                         key_comparator: Box::new(StringExactMatchComparator::new()),
                         value_comparator: Box::new(StringExactMatchComparator::new()),
-                        key_decoder: None,
-                        value_decoder: None,
+                        key_transformer: Some(Box::new(ToLowercaseTransformer::new())),
+                        value_transformer: None,
                         source: Box::new(HeaderSource::new()),
                         target: Box::new(HeaderTarget::new()),
                         with_reason: true,
@@ -238,36 +232,34 @@ impl MockServerState {
                         entity_name: "header",
                         key_comparator: Box::new(StringExactMatchComparator::new()),
                         value_comparator: Box::new(AnyValueComparator::new()),
-                        key_decoder: None,
-                        value_decoder: None,
+                        key_transformer: Some(Box::new(ToLowercaseTransformer::new())),
+                        value_transformer: None,
                         source: Box::new(ContainsHeaderSource::new()),
                         target: Box::new(CookieTarget::new()),
                         with_reason: true,
                         with_diff: true,
                     }),
-
-                     */
                 ],
                 query_params_matchers: vec![
                     // Header exact
-                    /*Box::new(MultiValueMatcher {
+                    Box::new(MultiValueMatcher {
                         entity_name: "query parameter",
                         key_comparator: Box::new(StringExactMatchComparator::new()),
                         value_comparator: Box::new(StringExactMatchComparator::new()),
-                        key_decoder: None,
-                        value_decoder: None,
+                        key_transformer: Some(Box::new(ToLowercaseTransformer::new())),
+                        value_transformer: None,
                         source: Box::new(QueryParameterSource::new()),
                         target: Box::new(QueryParameterTarget::new()),
                         with_reason: true,
                         with_diff: true,
-                    }),*/
+                    }),
                     // Header exists
                     Box::new(MultiValueMatcher {
                         entity_name: "query parameter",
                         key_comparator: Box::new(StringExactMatchComparator::new()),
                         value_comparator: Box::new(AnyValueComparator::new()),
-                        key_decoder: None,
-                        value_decoder: None,
+                        key_transformer: Some(Box::new(ToLowercaseTransformer::new())),
+                        value_transformer: None,
                         source: Box::new(ContainsQueryParameterSource::new()),
                         target: Box::new(QueryParameterTarget::new()),
                         with_reason: true,
