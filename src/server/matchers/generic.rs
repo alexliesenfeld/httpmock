@@ -1,11 +1,9 @@
 use crate::data::{HttpMockRequest, RequestRequirements};
 use crate::server::matchers::comparators::ValueComparator;
-use crate::server::matchers::transformers::Transformer;
 use crate::server::matchers::sources::{MultiValueSource, ValueSource};
 use crate::server::matchers::targets::{MultiValueTarget, ValueRefTarget, ValueTarget};
-use crate::server::matchers::{
-    diff_str, distance, Matcher, Reason,
-};
+use crate::server::matchers::transformers::Transformer;
+use crate::server::matchers::{diff_str, distance, Matcher, Reason};
 use crate::server::{Mismatch, Tokenizer};
 use assert_json_diff::assert_json_eq_no_panic;
 use serde_json::Value;
@@ -27,7 +25,7 @@ where
     pub comparator: Box<dyn ValueComparator<S, T> + Send + Sync>,
     pub transformer: Option<Box<dyn Transformer<T, T> + Send + Sync>>,
     pub with_reason: bool,
-    pub with_diff: bool,
+    pub diff_with: Option<Tokenizer>,
 }
 
 impl<S, T> SingleValueMatcher<S, T>
@@ -94,16 +92,14 @@ where
                     title: format!("The {} does not match", self.entity_name),
                     reason: match self.with_reason {
                         true => Some(Reason {
-                            expected: mock_value.to_string(),
+                            expected: format!("{}", mock_value.to_string()),
                             actual: req_value.to_string(),
+                            comparison: self.comparator.name().into(),
                             best_match: false,
                         }),
                         false => None,
                     },
-                    diff: match self.with_reason {
-                        true => Some(diff_str(&mock_value, &req_value, Tokenizer::Line)),
-                        false => None,
-                    },
+                    diff: self.diff_with.map(|t| diff_str(&mock_value, &req_value, t)),
                 }
             })
             .collect()
@@ -128,7 +124,7 @@ where
     pub key_transformer: Option<Box<dyn Transformer<SK, SK> + Send + Sync>>,
     pub value_transformer: Option<Box<dyn Transformer<SV, SV> + Send + Sync>>,
     pub with_reason: bool,
-    pub with_diff: bool,
+    pub diff_with: Option<Tokenizer>,
 }
 
 impl<SK, SV, TK, TV> MultiValueMatcher<SK, SV, TK, TV>
@@ -149,10 +145,10 @@ where
                 req_values
                     .iter()
                     .find(|(tk, tv)| {
-                        let key_matches = self.key_comparator.matches(sk, tk);
+                        let key_matches = self.key_comparator.matches(sk, &tk);
                         let value_matches = match (sv, tv) {
                             (Some(_), None) => false, // Mock required a value but none was present
-                            (Some(sv), Some(tv)) => self.value_comparator.matches(sv, tv),
+                            (Some(sv), Some(tv)) => self.value_comparator.matches(sv, &tv),
                             _ => true,
                         };
                         key_matches && value_matches
@@ -189,7 +185,6 @@ where
             .min_by(|(_, _, d1), (_, _, d2)| d1.cmp(d2))
             .map(|(k, v, _)| (k.to_owned(), v.to_owned()))
     }
-
 }
 
 impl<SK, SV, TK, TV> Matcher for MultiValueMatcher<SK, SV, TK, TV>
@@ -230,6 +225,7 @@ where
                             None => format!("{}", bmk),
                             Some(bmv) => format!("{}={}", bmk, bmv),
                         },
+                        comparison: format!("key={}, value={}", self.key_comparator.name(), self.value_comparator.name()),
                         best_match: true,
                     }
                 }),

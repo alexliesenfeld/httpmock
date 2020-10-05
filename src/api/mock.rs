@@ -1,3 +1,6 @@
+#[cfg(feature = "color")]
+use colored::*;
+
 use std::collections::BTreeMap;
 use std::net::SocketAddr;
 use std::str::FromStr;
@@ -51,7 +54,6 @@ pub struct MockRef<'a> {
 }
 
 impl<'a> MockRef<'a> {
-
     pub fn assert(&self) {
         self.assert_async().join()
     }
@@ -101,27 +103,33 @@ impl<'a> MockRef<'a> {
                 for (idx, mm) in closest_match.into_iter().enumerate() {
                     output.push_str(&format!("{} : {}", idx + 1, &mm.title));
                     output.push_str("\n");
-                    output.push_str(&"-".repeat(60));
+                    output.push_str(&"-".repeat(90));
                     output.push_str("\n");
 
                     mm.reason.map(|reason| {
-                        if reason.best_match {
-                            output.push_str("Expected: \t\t\t\t\t");
-                            output.push_str(&reason.expected);
-                            output.push_str("\n");
-                            output.push_str("Actual (closest match): \t");
-                        } else {
-                            output.push_str("Expected: \t");
-                            output.push_str(&reason.expected);
-                            output.push_str("\n");
-                            output.push_str("Actual: \t");
-                        }
-                        output.push_str(&reason.actual);
-                        output.push_str("\n");
+                        let offsets = match reason.best_match {
+                            true => ("\t".repeat(5), "\t".repeat(2)),
+                            false => ("\t".repeat(1), "\t".repeat(2)),
+                        };
+                        let actual_text = match reason.best_match {
+                            true => "Actual (closest match):",
+                            false => "Actual:",
+                        };
+                        output.push_str(&format!(
+                            "Expected:{}[{}]\t\t{}\n",
+                            offsets.0, reason.comparison, &reason.expected
+                        ));
+                        output.push_str(&format!(
+                            "{}{}{}\t{}\n",
+                            actual_text,
+                            offsets.1,
+                            " ".repeat(reason.comparison.len() + 7),
+                            &reason.actual
+                        ));
                     });
 
                     mm.diff.map(|dd| {
-                        output.push_str("Diff: ");
+                        output.push_str("Diff:");
                         if dd.differences.is_empty() {
                             output.push_str("<empty>");
                         }
@@ -130,23 +138,22 @@ impl<'a> MockRef<'a> {
                         dd.differences.iter().for_each(|d| {
                             match d {
                                 Diff::Same(e) => {
-                                    output.push_str("   | ");
-                                    output.push_str(e);
+                                    output.push_str(&format!("   | {}", e));
                                 }
                                 Diff::Add(e) => {
-                                    output.push_str("+++| ");
-                                    output.push_str(e);
+                                    #[cfg(feature = "color")]
+                                    output.push_str(&format!("+++| {}", e).green().to_string());
+                                    #[cfg(not(feature = "color"))]
+                                    output.push_str(&format!("+++| {}", e));
                                 }
                                 Diff::Rem(e) => {
-                                    output.push_str("---| ");
-                                    output.push_str(e);
+                                    #[cfg(feature = "color")]
+                                    output.push_str(&format!("---| {}", e).red().to_string());
+                                    #[cfg(not(feature = "color"))]
+                                    output.push_str(&format!("---| {}", e));
                                 }
                             }
-                            match dd.tokenizer {
-                                Tokenizer::Line => output.push_str("\n"),
-                                Tokenizer::Word => output.push_str(" "),
-                                Tokenizer::Character => output.push_str(""),
-                            }
+                            output.push_str("\n")
                         });
                         output.push_str("\n");
                     });
@@ -614,6 +621,7 @@ impl Mock {
 
     /// Sets the cookie that needs to exist in the HTTP request.
     /// Cookie parsing follows [RFC-6265](https://tools.ietf.org/html/rfc6265.html).
+    /// **Attention**: Cookie names are **case-sensitive**.
     ///
     /// * `name` - The cookie name.
     /// * `value` - The expected cookie value.
@@ -658,6 +666,7 @@ impl Mock {
 
     /// Sets the cookie that needs to exist in the HTTP request.
     /// Cookie parsing follows [RFC-6265](https://tools.ietf.org/html/rfc6265.html).
+    /// **Attention**: Cookie names are **case-sensitive**.
     ///
     /// * `name` - The cookie name
     ///

@@ -2,10 +2,10 @@ use crate::data::{HttpMockRequest, RequestRequirements};
 use difference::{Changeset, Difference};
 
 pub(crate) mod comparators;
-pub(crate) mod transformers;
 pub(crate) mod generic;
 pub(crate) mod sources;
 pub(crate) mod targets;
+pub(crate) mod transformers;
 mod util;
 
 use basic_cookies::Cookie;
@@ -65,6 +65,7 @@ pub(crate) fn diff_str(base: &str, edit: &str, tokenizer: Tokenizer) -> Detailed
 pub(crate) struct Reason {
     pub expected: String,
     pub actual: String,
+    pub comparison: String,
     pub best_match: bool,
 }
 
@@ -72,7 +73,7 @@ pub(crate) struct Reason {
 pub(crate) struct Mismatch {
     pub title: String,
     pub reason: Option<Reason>,
-    pub diff: Option<DetailedDiffResult>
+    pub diff: Option<DetailedDiffResult>,
 }
 
 pub(crate) trait Matcher {
@@ -84,7 +85,7 @@ pub(crate) trait Matcher {
 // *************************************************************************************************
 // Helper functions
 // *************************************************************************************************
-pub(crate) fn parse_cookies(req: &HttpMockRequest) -> Result<BTreeMap<String, String>, String> {
+pub(crate) fn parse_cookies(req: &HttpMockRequest) -> Result<Vec<(String, String)>, String> {
     let parsing_result = req.headers.as_ref().map_or(None, |request_headers| {
         request_headers
             .iter()
@@ -93,12 +94,12 @@ pub(crate) fn parse_cookies(req: &HttpMockRequest) -> Result<BTreeMap<String, St
     });
 
     match parsing_result {
-        None => Ok(BTreeMap::new()),
+        None => Ok(Vec::new()),
         Some(res) => match res {
             Err(err) => Err(err.to_string()),
             Ok(vec) => Ok(vec
                 .into_iter()
-                .map(|c| (c.get_name().to_lowercase(), c.get_value().to_owned()))
+                .map(|c| (c.get_name().to_owned(), c.get_value().to_owned()))
                 .collect()),
         },
     }

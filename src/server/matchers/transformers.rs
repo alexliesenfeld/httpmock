@@ -35,6 +35,6 @@ impl ToLowercaseTransformer {
 
 impl Transformer<String, String> for ToLowercaseTransformer {
     fn transform(&self, v: &String) -> Result<String, String> {
-       Ok(v.to_lowercase())
+        Ok(v.to_lowercase())
     }
 }

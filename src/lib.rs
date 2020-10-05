@@ -991,6 +991,7 @@ impl Expectations {
 
     /// Sets the cookie that needs to exist in the HTTP request.
     /// Cookie parsing follows [RFC-6265](https://tools.ietf.org/html/rfc6265.html).
+    /// **Attention**: Cookie names are **case-sensitive**.
     ///
     /// * `name` - The cookie name.
     /// * `value` - The expected cookie value.
@@ -1025,6 +1026,7 @@ impl Expectations {
 
     /// Sets the cookie that needs to exist in the HTTP request.
     /// Cookie parsing follows [RFC-6265](https://tools.ietf.org/html/rfc6265.html).
+    /// **Attention**: Cookie names are **case-sensitive**.
     ///
     /// * `name` - The cookie name
     ///

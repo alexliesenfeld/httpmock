@@ -92,7 +92,6 @@ fn json_body_object_serde_test() {
     m.assert();
     assert_eq!(response.status(), 201);
     assert_eq!(user.name, "Hans");
-
 }
 
 #[test]

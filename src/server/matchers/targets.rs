@@ -87,12 +87,7 @@ impl MultiValueTarget<String, String> for CookieTarget {
             }
         };
 
-        Some(
-            req_cookies
-                .into_iter()
-                .map(|(k, v)| (k.to_lowercase(), Some(v)))
-                .collect(),
-        )
+        Some(req_cookies.into_iter().map(|(k, v)| (k, Some(v))).collect())
     }
 }
 

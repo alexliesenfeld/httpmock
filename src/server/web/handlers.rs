@@ -239,9 +239,7 @@ fn get_scores(
         .iter()
         .enumerate()
         .filter(|(idx, r)| requests.contains_key(idx))
-        .map(|(idx, req)| {
-            (idx, get_request_distance(req, mock, matchers))
-        })
+        .map(|(idx, req)| (idx, get_request_distance(req, mock, matchers)))
         .collect()
 }
 
