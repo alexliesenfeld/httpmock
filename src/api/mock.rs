@@ -51,6 +51,15 @@ pub struct MockRef<'a> {
 }
 
 impl<'a> MockRef<'a> {
+
+    pub fn assert(&self) {
+        self.assert_async().join()
+    }
+
+    pub async fn assert_async(&self) {
+        self.assert_hits_async(1)
+    }
+
     pub fn assert_hits(&self, hits: usize) {
         self.assert_hits_async(hits).join()
     }

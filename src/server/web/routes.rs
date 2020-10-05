@@ -147,11 +147,11 @@ fn to_handler_request(req: &ServerRequestHeader, body: String) -> Result<HttpMoc
 }
 
 /// Extracts all query parameters from the URI of the given request.
-fn extract_query_params(query_string: &str) -> Result<BTreeMap<String, String>, String> {
-    let mut query_params = BTreeMap::new();
+fn extract_query_params(query_string: &str) -> Result<Vec<(String, String)>, String> {
+    let mut query_params = Vec::new();
 
     for (key, value) in QString::from(query_string) {
-        query_params.insert(key.to_string(), value.to_string());
+        query_params.push((key.to_string(), value.to_string()));
     }
 
     Ok(query_params)

@@ -19,8 +19,8 @@ use std::time::Duration;
 pub struct HttpMockRequest {
     pub path: String,
     pub method: String,
-    pub headers: Option<BTreeMap<String, String>>,
-    pub query_params: Option<BTreeMap<String, String>>,
+    pub headers: Option<Vec<(String, String)>>,
+    pub query_params: Option<Vec<(String, String)>>,
     pub body: Option<String>,
 }
 
@@ -35,12 +35,12 @@ impl HttpMockRequest {
         }
     }
 
-    pub(crate) fn with_headers(mut self, arg: BTreeMap<String, String>) -> Self {
+    pub(crate) fn with_headers(mut self, arg: Vec<(String, String)>) -> Self {
         self.headers = Some(arg);
         self
     }
 
-    pub(crate) fn with_query_params(mut self, arg: BTreeMap<String, String>) -> Self {
+    pub(crate) fn with_query_params(mut self, arg: Vec<(String, String)>) -> Self {
         self.query_params = Some(arg);
         self
     }
@@ -369,8 +369,8 @@ mod test {
         let with_path_matches = vec![Pattern::from_regex(
             Regex::new(r#"with_path_matches"#).unwrap(),
         )];
-        let mut with_headers = BTreeMap::new();
-        with_headers.insert("test".into(), "value".into());
+        let mut with_headers = Vec::new();
+        with_headers.push(("test".into(), "value".into()));
         let with_method = "GET";
         let with_body = "with_body";
         let with_body_contains = vec!["body_contains".into()];
@@ -380,8 +380,8 @@ mod test {
         let with_json_body = json!(12.5);
         let with_json_body_includes = vec![json!(12.5)];
         let with_query_param_exists = vec!["with_query_param_exists".into()];
-        let mut with_query_param = BTreeMap::new();
-        with_query_param.insert("with_query_param".into(), "value".into());
+        let mut with_query_param = Vec::new();
+        with_query_param.push(("with_query_param".into(), "value".into()));
         let with_header_exists = vec!["with_header_exists".into()];
 
         // Act

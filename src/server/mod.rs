@@ -281,7 +281,7 @@ pub(crate) struct ServerRequestHeader {
     pub method: String,
     pub path: String,
     pub query: String,
-    pub headers: BTreeMap<String, String>,
+    pub headers: Vec<(String, String)>,
 }
 
 impl ServerRequestHeader {
@@ -305,7 +305,7 @@ impl ServerRequestHeader {
         method: String,
         path: String,
         query: String,
-        headers: BTreeMap<String, String>,
+        headers: Vec<(String, String)>,
     ) -> Self {
         Self {
             method,
@@ -334,15 +334,15 @@ impl ServerResponse {
 }
 
 /// Extracts all headers from the URI of the given request.
-fn extract_headers(header_map: &HeaderMap) -> Result<BTreeMap<String, String>, String> {
-    let mut headers = BTreeMap::new();
+fn extract_headers(header_map: &HeaderMap) -> Result<Vec<(String, String)>, String> {
+    let mut headers = Vec::new();
     for (hn, hv) in header_map {
         let hn = hn.as_str().to_string();
         let hv = hv.to_str();
         if let Err(e) = hv {
             return Err(format!("error parsing headers: {}", e));
         }
-        headers.insert(hn, hv.unwrap().to_string());
+        headers.push((hn, hv.unwrap().to_string()));
     }
     Ok(headers)
 }

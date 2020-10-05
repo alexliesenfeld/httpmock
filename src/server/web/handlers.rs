@@ -354,11 +354,11 @@ mod test {
     #[test]
     fn body_matches_query_params_exact_test() {
         // Arrange
-        let mut params1 = BTreeMap::new();
-        params1.insert("k".to_string(), "v".to_string());
+        let mut params1 = Vec::new();
+        params1.push(("k".to_string(), "v".to_string()));
 
-        let mut params2 = BTreeMap::new();
-        params2.insert("h".to_string(), "o".to_string());
+        let mut params2 = Vec::new();
+        params2.push(("h".to_string(), "o".to_string()));
 
         let request1 = HttpMockRequest::new("GET".to_string(), "/test-path".to_string())
             .with_query_params(params1.clone());
@@ -490,13 +490,13 @@ mod test {
     #[test]
     fn request_matches_headers_exact_match() {
         // Arrange
-        let mut h1 = BTreeMap::new();
-        h1.insert("h1".to_string(), "v1".to_string());
-        h1.insert("h2".to_string(), "v2".to_string());
+        let mut h1 = Vec::new();
+        h1.push(("h1".to_string(), "v1".to_string()));
+        h1.push(("h2".to_string(), "v2".to_string()));
 
-        let mut h2 = BTreeMap::new();
-        h2.insert("h1".to_string(), "v1".to_string());
-        h2.insert("h2".to_string(), "v2".to_string());
+        let mut h2 = Vec::new();
+        h2.push(("h1".to_string(), "v1".to_string()));
+        h2.push(("h2".to_string(), "v2".to_string()));
 
         let req1 = HttpMockRequest::new("GET".to_string(), "/test".to_string()).with_headers(h1);
 
@@ -533,12 +533,12 @@ mod test {
     #[test]
     fn request_matches_headers_match_superset() {
         // Arrange
-        let mut h1 = BTreeMap::new();
-        h1.insert("h1".to_string(), "v1".to_string());
-        h1.insert("h2".to_string(), "v2".to_string());
+        let mut h1 = Vec::new();
+        h1.push(("h1".to_string(), "v1".to_string()));
+        h1.push(("h2".to_string(), "v2".to_string()));
 
-        let mut h2 = BTreeMap::new();
-        h2.insert("h1".to_string(), "v1".to_string());
+        let mut h2 = Vec::new();
+        h2.push(("h1".to_string(), "v1".to_string()));
 
         let req1 = HttpMockRequest::new("GET".to_string(), "/test".to_string()).with_headers(h1);
         let req2 = RequestRequirements::new().with_headers(h2);
@@ -556,9 +556,9 @@ mod test {
     #[test]
     fn request_matches_headers_no_match_empty() {
         // Arrange
-        let mut req_headers = BTreeMap::new();
-        req_headers.insert("req_headers".to_string(), "v1".to_string());
-        req_headers.insert("h2".to_string(), "v2".to_string());
+        let mut req_headers = Vec::new();
+        req_headers.push(("req_headers".to_string(), "v1".to_string()));
+        req_headers.push(("h2".to_string(), "v2".to_string()));
 
         let req =
             HttpMockRequest::new("GET".to_string(), "/test".to_string()).with_headers(req_headers);
