@@ -32,6 +32,6 @@ fn cookie_matching_test() {
         .unwrap();
 
     // Assert
+    mock.assert();
     assert_eq!(response.status(), 200);
-    assert_eq!(mock.hits(), 1);
 }

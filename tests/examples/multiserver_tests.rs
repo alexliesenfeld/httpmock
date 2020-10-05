@@ -34,7 +34,7 @@ fn multiserver_test() {
     let response = http_client.get(server1.url("/redirectTest")).unwrap();
 
     // Assert
+    redirect_mock.assert();
+    target_mock.assert();
     assert_eq!(response.status(), 200);
-    assert_eq!(redirect_mock.hits(), 1);
-    assert_eq!(target_mock.hits(), 1);
 }

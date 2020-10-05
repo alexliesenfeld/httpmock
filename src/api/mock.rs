@@ -57,7 +57,7 @@ impl<'a> MockRef<'a> {
     }
 
     pub async fn assert_async(&self) {
-        self.assert_hits_async(1)
+        self.assert_hits_async(1).await
     }
 
     pub fn assert_hits(&self, hits: usize) {

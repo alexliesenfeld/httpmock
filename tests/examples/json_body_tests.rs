@@ -36,8 +36,8 @@ fn json_value_body_test() {
         serde_json::from_str(&response.text().unwrap()).expect("cannot deserialize JSON");
 
     // Assert
+    m.assert();
     assert_eq!(response.status(), 201);
-    assert_eq!(m.hits(), 1);
     assert_eq!(user.as_object().unwrap().get("name").unwrap(), "Hans");
 }
 
@@ -89,9 +89,10 @@ fn json_body_object_serde_test() {
         serde_json::from_str(&response.text().unwrap()).expect("cannot deserialize JSON");
 
     // Assert
+    m.assert();
     assert_eq!(response.status(), 201);
     assert_eq!(user.name, "Hans");
-    assert_eq!(m.hits(), 1);
+
 }
 
 #[test]
@@ -146,6 +147,6 @@ fn partial_json_body_test() {
         .unwrap();
 
     // Assertions
+    m.assert();
     assert_eq!(response.status(), 201);
-    assert_eq!(m.hits(), 1);
 }

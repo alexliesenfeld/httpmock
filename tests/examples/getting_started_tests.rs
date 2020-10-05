@@ -27,12 +27,11 @@ fn getting_started_test() {
     // Send an HTTP request to the mock server. This simulates your code.
     let response = get(server.url("/translate?word=hello")).unwrap();
 
-    hello_mock.assert_hits(1);
+    // Ensure the specified mock was called.
+    hello_mock.assert();
 
     // Ensure the mock server did respond as specified.
     assert_eq!(response.status(), 200);
-    // Ensure the specified mock was called exactly one time.
-    assert_eq!(hello_mock.hits(), 1);
 }
 
 #[async_std::test]

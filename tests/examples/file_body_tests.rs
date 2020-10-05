@@ -19,7 +19,7 @@ fn file_body_test() {
     let mut response = isahc::get(server.url("/hello")).unwrap();
 
     // Assert
+    m.assert();
     assert_eq!(response.status(), 200);
     assert_eq!(response.text().unwrap(), "ohi!");
-    assert_eq!(m.hits(), 1);
 }

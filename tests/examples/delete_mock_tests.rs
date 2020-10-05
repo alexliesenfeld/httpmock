@@ -27,8 +27,9 @@ fn explicit_delete_mock_test() {
     .unwrap();
 
     // Assert
+    m.assert();
     assert_eq!(response.status(), 205);
-    assert_eq!(m.hits(), 1);
+
 
     // Delete the mock and send the request again
     m.delete();

@@ -25,7 +25,7 @@ fn delay_test() {
     let response = get(server.url("/delay")).unwrap();
 
     // Assert
+    mock.assert();
     assert_eq!(response.status(), 200);
-    assert_eq!(mock.hits(), 1);
     assert_eq!(start_time.elapsed().unwrap() > delay, true);
 }

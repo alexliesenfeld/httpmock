@@ -33,8 +33,8 @@ fn standalone_test() {
     .unwrap();
 
     // Assert
+    search_mock.assert();
     assert_eq!(response.status(), 202);
-    assert_eq!(search_mock.hits(), 1);
 }
 
 #[async_std::test]

@@ -23,5 +23,5 @@ fn url_matching_test() {
     get(server.url("/appointments/20200922")).unwrap();
 
     // Assert
-    assert_eq!(m.hits(), 1);
+    m.assert();
 }

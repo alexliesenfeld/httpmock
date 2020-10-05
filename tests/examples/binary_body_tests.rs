@@ -24,8 +24,8 @@ fn binary_body_test() {
     let mut response = isahc::get(server.url("/hello")).unwrap();
 
     // Assert
+    m.assert();
     assert_eq!(response.status(), 200);
-    assert_eq!(m.hits(), 1);
     assert_eq!(body_to_vec(response.body_mut()), binary_content.to_vec());
 }
 

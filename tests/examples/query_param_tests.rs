@@ -21,5 +21,5 @@ fn url_matching_test() {
     get(server.url("/search?query=Metallica")).unwrap();
 
     // Assert
-    assert_eq!(m.hits(), 1);
+    m.assert();
 }

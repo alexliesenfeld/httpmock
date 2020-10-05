@@ -51,6 +51,6 @@ fn showcase_test() {
         .unwrap();
 
     // Assert
+    m.assert();
     assert_eq!(response.status(), 200);
-    assert_eq!(m.hits(), 1);
 }

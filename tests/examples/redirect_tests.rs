@@ -22,7 +22,7 @@ fn temporary_redirect_test() {
     let body = response.text().unwrap();
 
     // Assert
-    assert_eq!(redirect_mock.hits(), 1);
+    redirect_mock.assert();
 
     // Attention!: Note that all of these values are automatically added to the response
     // (see details in mock builder method documentation).
