@@ -45,7 +45,9 @@ impl StringBodyContainsSource {
 
 impl ValueSource<String> for StringBodyContainsSource {
     fn parse_from_mock<'a>(&self, mock: &'a RequestRequirements) -> Option<Vec<&'a String>> {
-        mock.body_contains.as_ref().map(|v| v.into_iter().map(|bc| bc).collect())
+        mock.body_contains
+            .as_ref()
+            .map(|v| v.into_iter().map(|bc| bc).collect())
     }
 }
 

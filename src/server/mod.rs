@@ -32,7 +32,12 @@ use crate::server::matchers::comparators::{
     StringContainsMatchComparator, StringExactMatchComparator, StringRegexMatchComparator,
 };
 use crate::server::matchers::generic::MultiValueMatcher;
-use crate::server::matchers::sources::{BodyRegexSource, ContainsCookieSource, ContainsHeaderSource, ContainsQueryParameterSource, CookieSource, HeaderSource, JSONBodySource, MethodSource, PartialJSONBodySource, PathContainsSubstringSource, PathRegexSource, QueryParameterSource, StringBodySource, StringPathSource, StringBodyContainsSource};
+use crate::server::matchers::sources::{
+    BodyRegexSource, ContainsCookieSource, ContainsHeaderSource, ContainsQueryParameterSource,
+    CookieSource, HeaderSource, JSONBodySource, MethodSource, PartialJSONBodySource,
+    PathContainsSubstringSource, PathRegexSource, QueryParameterSource, StringBodyContainsSource,
+    StringBodySource, StringPathSource,
+};
 use crate::server::matchers::targets::{
     CookieTarget, HeaderTarget, MethodTarget, PathTarget, QueryParameterTarget,
 };
@@ -58,8 +63,7 @@ impl MockServerState {
             mocks: RwLock::new(BTreeMap::new()),
             history: RwLock::new(Vec::new()),
             id_counter: AtomicUsize::new(0),
-            matchers:
-            vec![
+            matchers: vec![
                 // method exact
                 Box::new(SingleValueMatcher {
                     entity_name: "method",

@@ -8,13 +8,13 @@ use crate::data::{
     RequestRequirements,
 };
 
+use crate::server::matchers::Matcher;
 use crate::server::util::{StringTreeMapExtension, TreeMapExtension};
 use crate::server::{Mismatch, MockServerState};
 use basic_cookies::Cookie;
 use std::cmp::Ordering;
 use std::collections::BTreeMap;
 use std::sync::Arc;
-use crate::server::matchers::Matcher;
 
 /// Contains HTTP methods which cannot have a body.
 const NON_BODY_METHODS: &[&str] = &["GET", "HEAD", "DELETE"];
