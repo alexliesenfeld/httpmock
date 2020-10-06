@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate lazy_static;
 
+mod internal;
 mod examples;
 
 use httpmock::standalone::start_standalone_server;
