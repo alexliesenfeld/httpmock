@@ -34,8 +34,8 @@
 * Extensible request matching.
 * Fully asynchronous core with synchronous and asynchronous APIs.
 * Debugging support.
-* Standalone mode with an accompanying [Docker image](https://hub.docker.com/r/alexliesenfeld/httpmock).
 * Network delay simulation.
+* Standalone mode with an accompanying [Docker image](https://hub.docker.com/r/alexliesenfeld/httpmock).
 * Support for [Regex](https://docs.rs/regex/) matching, JSON, [serde](https://crates.io/crates/serde), cookies, and more.
 
 
