@@ -383,7 +383,7 @@ impl<'a> MockRef<'a> {
 /// (see [MockRef::hits](struct.MockRef.html#method.hits)). You can also use it
 /// to explicitly delete the mock object from the server
 /// (see [MockRef::delete](struct.MockRef.html#method.delete)).
-#[deprecated(since = "0.5.0", note = "Please use new API instead (see https://github.com/alexliesenfeld/httpmock/wiki/Changelog#version-050)")]
+#[deprecated(since = "0.5.0", note = "Please use new API instead (see https://github.com/alexliesenfeld/httpmock/blob/master/CHANGELOG.md#version-050)")]
 pub struct Mock {
     mock: MockDefinition,
 }
@@ -438,7 +438,7 @@ impl Mock {
     ///
     /// assert_eq!(mock.hits(), 1);
     /// ```
-    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/wiki/Changelog#version-050)")]
+    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/blob/master/CHANGELOG.md#version-050)")]
     pub fn expect_path<S: Into<String>>(mut self, path: S) -> Self {
         self.mock.request.path = Some(path.into());
         self
@@ -461,7 +461,7 @@ impl Mock {
     ///
     /// assert_eq!(mock.hits(), 1);
     /// ```
-    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/wiki/Changelog#version-050)")]
+    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/blob/master/CHANGELOG.md#version-050)")]
     pub fn expect_path_contains<S: Into<String>>(mut self, substring: S) -> Self {
         if self.mock.request.path_contains.is_none() {
             self.mock.request.path_contains = Some(Vec::new());
@@ -495,7 +495,7 @@ impl Mock {
     ///
     /// assert_eq!(mock.hits(), 1);
     /// ```
-    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/wiki/Changelog#version-050)")]
+    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/blob/master/CHANGELOG.md#version-050)")]
     pub fn expect_path_matches<R: Into<Regex>>(mut self, regex: R) -> Self {
         if self.mock.request.path_matches.is_none() {
             self.mock.request.path_matches = Some(Vec::new());
@@ -530,7 +530,7 @@ impl Mock {
     ///
     /// assert_eq!(mock.hits(), 1);
     /// ```
-    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/wiki/Changelog#version-050)")]
+    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/blob/master/CHANGELOG.md#version-050)")]
     pub fn expect_method<M: Into<Method>>(mut self, method: M) -> Self {
         self.mock.request.method = Some(method.into().to_string());
         self
@@ -562,7 +562,7 @@ impl Mock {
     ///
     /// assert_eq!(mock.hits(), 1);
     /// ```
-    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/wiki/Changelog#version-050)")]
+    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/blob/master/CHANGELOG.md#version-050)")]
     pub fn expect_header<S: Into<String>>(mut self, name: S, value: S) -> Self {
         if self.mock.request.headers.is_none() {
             self.mock.request.headers = Some(Vec::new());
@@ -605,7 +605,7 @@ impl Mock {
     ///
     /// assert_eq!(mock.hits(), 1);
     /// ```
-    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/wiki/Changelog#version-050)")]
+    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/blob/master/CHANGELOG.md#version-050)")]
     pub fn expect_header_exists<S: Into<String>>(mut self, name: S) -> Self {
         if self.mock.request.header_exists.is_none() {
             self.mock.request.header_exists = Some(Vec::new());
@@ -649,7 +649,7 @@ impl Mock {
     ///
     /// assert_eq!(mock.hits(), 1);
     /// ```
-    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/wiki/Changelog#version-050)")]
+    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/blob/master/CHANGELOG.md#version-050)")]
     pub fn expect_cookie<S: Into<String>>(mut self, name: S, value: S) -> Self {
         if self.mock.request.cookies.is_none() {
             self.mock.request.cookies = Some(Vec::new());
@@ -693,7 +693,7 @@ impl Mock {
     ///
     /// assert_eq!(mock.hits(), 1);
     /// ```
-    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/wiki/Changelog#version-050)")]
+    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/blob/master/CHANGELOG.md#version-050)")]
     pub fn expect_cookie_exists<S: Into<String>>(mut self, name: S) -> Self {
         if self.mock.request.cookie_exists.is_none() {
             self.mock.request.cookie_exists = Some(Vec::new());
@@ -733,7 +733,7 @@ impl Mock {
     ///
     /// assert_eq!(mock.hits(), 1);
     /// ```
-    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/wiki/Changelog#version-050)")]
+    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/blob/master/CHANGELOG.md#version-050)")]
     pub fn expect_body<S: Into<String>>(mut self, body: S) -> Self {
         self.mock.request.body = Some(body.into());
         self
@@ -787,7 +787,7 @@ impl Mock {
     /// assert_eq!(response.status(), 201);
     /// assert_eq!(m.hits(), 1);
     /// ```
-    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/wiki/Changelog#version-050)")]
+    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/blob/master/CHANGELOG.md#version-050)")]
     pub fn expect_json_body_obj<'a, T>(self, body: &T) -> Self
     where
         T: Serialize + Deserialize<'a>,
@@ -834,7 +834,7 @@ impl Mock {
     /// assert_eq!(response.status(), 201);
     /// assert_eq!(m.hits(), 1);
     /// ```
-    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/wiki/Changelog#version-050)")]
+    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/blob/master/CHANGELOG.md#version-050)")]
     pub fn expect_json_body<V: Into<Value>>(mut self, body: V) -> Self {
         self.mock.request.json_body = Some(body.into());
         self
@@ -884,7 +884,7 @@ impl Mock {
     /// Please note that the JSON partial contains the full object hierachy, i.e. it needs to start
     /// from the root! It leaves out irrelevant attributes, however (`parent_attribute`
     /// and `child.other_attribute`).
-    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/wiki/Changelog#version-050)")]
+    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/blob/master/CHANGELOG.md#version-050)")]
     pub fn expect_json_body_partial<S: Into<String>>(mut self, partial_body: S) -> Self {
         if self.mock.request.json_body_includes.is_none() {
             self.mock.request.json_body_includes = Some(Vec::new());
@@ -934,7 +934,7 @@ impl Mock {
     /// assert_eq!(response.status(), 201);
     /// assert_eq!(m.hits(), 1);
     /// ```
-    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/wiki/Changelog#version-050)")]
+    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/blob/master/CHANGELOG.md#version-050)")]
     pub fn expect_body_contains<S: Into<String>>(mut self, substring: S) -> Self {
         if self.mock.request.body_contains.is_none() {
             self.mock.request.body_contains = Some(Vec::new());
@@ -981,7 +981,7 @@ impl Mock {
     /// assert_eq!(response.status(), 201);
     /// assert_eq!(m.hits(), 1);
     /// ```
-    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/wiki/Changelog#version-050)")]
+    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/blob/master/CHANGELOG.md#version-050)")]
     pub fn expect_body_matches<R: Into<Regex>>(mut self, regex: R) -> Self {
         if self.mock.request.body_matches.is_none() {
             self.mock.request.body_matches = Some(Vec::new());
@@ -1019,7 +1019,7 @@ impl Mock {
     /// // Assert
     /// assert_eq!(m.hits(), 1);
     /// ```
-    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/wiki/Changelog#version-050)")]
+    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/blob/master/CHANGELOG.md#version-050)")]
     pub fn expect_query_param<S: Into<String>>(mut self, name: S, value: S) -> Self {
         if self.mock.request.query_param.is_none() {
             self.mock.request.query_param = Some(Vec::new());
@@ -1057,7 +1057,7 @@ impl Mock {
     /// // Assert
     /// assert_eq!(m.hits(), 1);
     /// ```
-    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/wiki/Changelog#version-050)")]
+    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/blob/master/CHANGELOG.md#version-050)")]
     pub fn expect_query_param_exists<S: Into<String>>(mut self, name: S) -> Self {
         if self.mock.request.query_param_exists.is_none() {
             self.mock.request.query_param_exists = Some(Vec::new());
@@ -1098,7 +1098,7 @@ impl Mock {
     /// assert_eq!(response.status(), 200);
     /// assert_eq!(m.hits(), 1);
     /// ```
-    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/wiki/Changelog#version-050)")]
+    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/blob/master/CHANGELOG.md#version-050)")]
     pub fn expect_match(mut self, request_matcher: MockMatcherFunction) -> Self {
         if self.mock.request.matchers.is_none() {
             self.mock.request.matchers = Some(Vec::new());
@@ -1136,7 +1136,7 @@ impl Mock {
     /// assert_eq!(response.status(), 200);
     /// assert_eq!(m.hits(), 1);
     /// ```
-    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/wiki/Changelog#version-050)")]
+    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/blob/master/CHANGELOG.md#version-050)")]
     pub fn return_status(mut self, status: u16) -> Self {
         self.mock.response.status = Some(status);
         self
@@ -1167,7 +1167,7 @@ impl Mock {
     /// assert_eq!(response.text().unwrap(), "ohi!");
     /// assert_eq!(m.hits(), 1);
     /// ```
-    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/wiki/Changelog#version-050)")]
+    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/blob/master/CHANGELOG.md#version-050)")]
     pub fn return_body(mut self, body: impl AsRef<[u8]>) -> Self {
         self.mock.response.body = Some(body.as_ref().to_vec());
         self
@@ -1198,7 +1198,7 @@ impl Mock {
     /// assert_eq!(response.text().unwrap(), "ohi!");
     /// assert_eq!(m.hits(), 1);
     /// ```
-    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/wiki/Changelog#version-050)")]
+    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/blob/master/CHANGELOG.md#version-050)")]
     pub fn return_body_from_file<S: Into<String>>(
         mut self,
         relative_test_resource_path: S,
@@ -1255,7 +1255,7 @@ impl Mock {
     /// assert_eq!(m.hits(), 1);
     /// assert_eq!(user.as_object().unwrap().get("name").unwrap(), "Hans");
     /// ```
-    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/wiki/Changelog#version-050)")]
+    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/blob/master/CHANGELOG.md#version-050)")]
     pub fn return_json_body<V: Into<Value>>(mut self, body: V) -> Self {
         self.mock.response.body = Some(body.into().to_string().into_bytes());
         self
@@ -1304,7 +1304,7 @@ impl Mock {
     /// assert_eq!(user.name, "Hans");
     /// assert_eq!(m.hits(), 1);
     /// ```
-    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/wiki/Changelog#version-050)")]
+    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/blob/master/CHANGELOG.md#version-050)")]
     pub fn return_json_body_obj<T>(self, body: &T) -> Self
     where
         T: Serialize,
@@ -1342,7 +1342,7 @@ impl Mock {
     /// assert_eq!(response.status(), 200);
     /// assert_eq!(m.hits(), 1);
     /// ```
-    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/wiki/Changelog#version-050)")]
+    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/blob/master/CHANGELOG.md#version-050)")]
     pub fn return_header<S: Into<String>>(mut self, name: S, value: S) -> Self {
         if self.mock.response.headers.is_none() {
             self.mock.response.headers = Some(BTreeMap::new());
@@ -1397,7 +1397,7 @@ impl Mock {
     /// assert_eq!(body, "Moved Permanently");
     /// assert_eq!(response.headers().get("Location").unwrap().to_str().unwrap(), "http://www.google.com");
     /// ```
-    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/wiki/Changelog#version-050)")]
+    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/blob/master/CHANGELOG.md#version-050)")]
     pub fn return_permanent_redirect<S: Into<String>>(mut self, redirect_url: S) -> Self {
         // see https://developer.mozilla.org/en-US/docs/Web/HTTP/Redirections
         if self.mock.response.status.is_none() {
@@ -1449,7 +1449,7 @@ impl Mock {
     /// assert_eq!(body, "Found");
     /// assert_eq!(response.headers().get("Location").unwrap().to_str().unwrap(), "http://www.google.com");
     /// ```
-    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/wiki/Changelog#version-050)")]
+    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/blob/master/CHANGELOG.md#version-050)")]
     pub fn return_temporary_redirect<S: Into<String>>(mut self, redirect_url: S) -> Self {
         // see https://developer.mozilla.org/en-US/docs/Web/HTTP/Redirections
         if self.mock.response.status.is_none() {
@@ -1488,7 +1488,7 @@ impl Mock {
     /// assert_eq!(mock.hits(), 1);
     /// assert_eq!(start_time.elapsed().unwrap() > delay, true);
     /// ```
-    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/wiki/Changelog#version-050)")]
+    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/blob/master/CHANGELOG.md#version-050)")]
     pub fn return_with_delay<D: Into<Duration>>(mut self, duration: D) -> Self {
         self.mock.response.delay = Some(duration.into());
         self
@@ -1519,7 +1519,7 @@ impl Mock {
     ///
     /// # Panics
     /// This method will panic if there is a problem communicating with the server.
-    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/wiki/Changelog#version-050)")]
+    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/blob/master/CHANGELOG.md#version-050)")]
     pub fn create_on<'a>(self, server: &'a MockServer) -> MockRef<'a> {
         self.create_on_async(server).join()
     }
@@ -1554,7 +1554,7 @@ impl Mock {
     ///
     /// # Panics
     /// This method will panic if there is a problem communicating with the server.
-    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/wiki/Changelog#version-050)")]
+    #[deprecated(since = "0.5.0", note = "Please use the new API instead (see https://github.com/alexliesenfeld/httpmock/blob/master/CHANGELOG.md#version-050)")]
     pub async fn create_on_async<'a>(self, server: &'a MockServer) -> MockRef<'a> {
         let response = server
             .server_adapter
