@@ -26,6 +26,7 @@ where
     pub transformer: Option<Box<dyn Transformer<T, T> + Send + Sync>>,
     pub with_reason: bool,
     pub diff_with: Option<Tokenizer>,
+    pub weight: f64
 }
 
 impl<S, T> SingleValueMatcher<S, T>
@@ -104,6 +105,10 @@ where
             })
             .collect()
     }
+
+    fn weight(&self) -> f64 {
+        self.weight
+    }
 }
 
 // ************************************************************************************************
@@ -125,6 +130,7 @@ where
     pub value_transformer: Option<Box<dyn Transformer<SV, SV> + Send + Sync>>,
     pub with_reason: bool,
     pub diff_with: Option<Tokenizer>,
+    pub weight: f64
 }
 
 impl<SK, SV, TK, TV> MultiValueMatcher<SK, SV, TK, TV>
@@ -232,5 +238,9 @@ where
                 diff: None,
             })
             .collect()
+    }
+
+    fn weight(&self) -> f64 {
+        self.weight
     }
 }

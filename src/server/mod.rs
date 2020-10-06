@@ -73,6 +73,7 @@ impl MockServerState {
                     transformer: None,
                     with_reason: true,
                     diff_with: None,
+                    weight: 3.0
                 }),
                 // path exact
                 Box::new(SingleValueMatcher {
@@ -83,6 +84,7 @@ impl MockServerState {
                     transformer: None,
                     with_reason: true,
                     diff_with: Some(Tokenizer::Character),
+                    weight: 10.0
                 }),
                 // path contains
                 Box::new(SingleValueMatcher {
@@ -93,6 +95,7 @@ impl MockServerState {
                     transformer: None,
                     with_reason: true,
                     diff_with: None,
+                    weight: 10.0
                 }),
                 // path matches regex
                 Box::new(SingleValueMatcher {
@@ -103,6 +106,7 @@ impl MockServerState {
                     transformer: None,
                     with_reason: true,
                     diff_with: None,
+                    weight: 10.0
                 }),
                 // Query Param exact
                 Box::new(MultiValueMatcher {
@@ -115,6 +119,7 @@ impl MockServerState {
                     target: Box::new(QueryParameterTarget::new()),
                     with_reason: true,
                     diff_with: None,
+                    weight: 1.0
                 }),
                 // Query Param exists
                 Box::new(MultiValueMatcher {
@@ -127,6 +132,7 @@ impl MockServerState {
                     target: Box::new(QueryParameterTarget::new()),
                     with_reason: true,
                     diff_with: None,
+                    weight: 1.0
                 }),
                 // Cookie exact
                 Box::new(MultiValueMatcher {
@@ -139,6 +145,7 @@ impl MockServerState {
                     target: Box::new(CookieTarget::new()),
                     with_reason: true,
                     diff_with: None,
+                    weight: 1.0
                 }),
                 // Cookie exists
                 Box::new(MultiValueMatcher {
@@ -151,6 +158,7 @@ impl MockServerState {
                     target: Box::new(CookieTarget::new()),
                     with_reason: true,
                     diff_with: None,
+                    weight: 1.0
                 }),
                 // Header exact
                 Box::new(MultiValueMatcher {
@@ -163,6 +171,7 @@ impl MockServerState {
                     target: Box::new(HeaderTarget::new()),
                     with_reason: true,
                     diff_with: None,
+                    weight: 1.0
                 }),
                 // Header exists
                 Box::new(MultiValueMatcher {
@@ -175,6 +184,7 @@ impl MockServerState {
                     target: Box::new(HeaderTarget::new()),
                     with_reason: true,
                     diff_with: None,
+                    weight: 1.0
                 }),
                 // Box::new(CustomFunctionMatcher::new(1.0)),
                 // string body exact
@@ -186,6 +196,7 @@ impl MockServerState {
                     transformer: None,
                     with_reason: false,
                     diff_with: Some(Tokenizer::Line),
+                    weight: 0.75
                 }),
                 // string body contains
                 Box::new(SingleValueMatcher {
@@ -196,6 +207,7 @@ impl MockServerState {
                     transformer: None,
                     with_reason: false,
                     diff_with: Some(Tokenizer::Line),
+                    weight: 0.75
                 }),
                 // string body regex
                 Box::new(SingleValueMatcher {
@@ -206,6 +218,7 @@ impl MockServerState {
                     transformer: None,
                     with_reason: false,
                     diff_with: Some(Tokenizer::Line),
+                    weight: 0.75
                 }),
                 // JSON body contains
                 Box::new(SingleValueMatcher {
@@ -216,6 +229,7 @@ impl MockServerState {
                     transformer: None,
                     with_reason: false,
                     diff_with: Some(Tokenizer::Character),
+                    weight: 0.75
                 }),
                 // JSON body exact
                 Box::new(SingleValueMatcher {
@@ -226,6 +240,7 @@ impl MockServerState {
                     transformer: None,
                     with_reason: true,
                     diff_with: Some(Tokenizer::Line),
+                    weight: 0.75
                 }),
             ],
         }

@@ -162,7 +162,7 @@ pub(crate) fn find_mismatches(
     let max_hit_requests = get_max_hits_requests(&hit_counts);
     let request_scores = get_scores(&max_hit_requests, &history, &state.matchers, &mock);
     let max_scored_requests = get_max_scored_requests(&request_scores);
-    assert!(max_scored_requests.len() > 0, "??!??!!");
+
     let max_scored_request_idx = match max_scored_requests.get(0) {
         None => return Ok(None),
         Some(idx) => *idx,

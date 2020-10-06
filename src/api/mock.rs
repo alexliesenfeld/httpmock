@@ -89,8 +89,6 @@ impl<'a> MockRef<'a> {
             .await
             .expect("Cannot deserialize mock server response");
 
-        assert!(closest_match.is_some(), "!!");
-
         match closest_match {
             Some(closest_match) => {
                 let mut output = String::new();
