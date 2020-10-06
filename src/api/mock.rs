@@ -161,7 +161,8 @@ impl<'a> MockRef<'a> {
                     output.push_str("\n");
                 }
 
-                assert!(false, output);
+                eprintln!("{}", output);
+                assert_eq!("aggd", "asd");
             }
             None => {}
         }

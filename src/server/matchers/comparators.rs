@@ -25,7 +25,7 @@ impl JSONExactMatchComparator {
 
 impl ValueComparator<Value, Value> for JSONExactMatchComparator {
     fn matches(&self, mock_value: &Value, req_value: &Value) -> bool {
-        assert_json_eq_no_panic(mock_value, req_value).is_ok()
+        assert_json_eq_no_panic(req_value, mock_value).is_ok()
     }
 
     fn name(&self) -> &str {
@@ -50,7 +50,7 @@ impl JSONContainsMatchComparator {
 
 impl ValueComparator<Value, Value> for JSONContainsMatchComparator {
     fn matches(&self, mock_value: &Value, req_value: &Value) -> bool {
-        assert_json_include_no_panic(mock_value, req_value).is_ok()
+        assert_json_include_no_panic(req_value, mock_value).is_ok()
     }
 
     fn name(&self) -> &str {

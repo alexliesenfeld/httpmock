@@ -32,12 +32,7 @@ use crate::server::matchers::comparators::{
     StringContainsMatchComparator, StringExactMatchComparator, StringRegexMatchComparator,
 };
 use crate::server::matchers::generic::MultiValueMatcher;
-use crate::server::matchers::sources::{
-    BodyRegexSource, ContainsCookieSource, ContainsHeaderSource, ContainsQueryParameterSource,
-    CookieSource, HeaderSource, JSONBodySource, MethodSource, PartialJSONBodySource,
-    PathContainsSubstringSource, PathRegexSource, QueryParameterSource, StringBodySource,
-    StringPathSource,
-};
+use crate::server::matchers::sources::{BodyRegexSource, ContainsCookieSource, ContainsHeaderSource, ContainsQueryParameterSource, CookieSource, HeaderSource, JSONBodySource, MethodSource, PartialJSONBodySource, PathContainsSubstringSource, PathRegexSource, QueryParameterSource, StringBodySource, StringPathSource, StringBodyContainsSource};
 use crate::server::matchers::targets::{
     CookieTarget, HeaderTarget, MethodTarget, PathTarget, QueryParameterTarget,
 };
@@ -45,39 +40,12 @@ use matchers::generic::SingleValueMatcher;
 use matchers::targets::{JSONBodyTarget, StringBodyTarget};
 pub(crate) use matchers::{Diff, Mismatch, Tokenizer};
 
-pub(crate) struct Matchers {
-    pub custom_function_matchers: Vec<Box<dyn Matcher + Sync + Send>>,
-    pub path_matchers: Vec<Box<dyn Matcher + Sync + Send>>,
-    pub method_matchers: Vec<Box<dyn Matcher + Sync + Send>>,
-    pub headers_matchers: Vec<Box<dyn Matcher + Sync + Send>>,
-    pub query_params_matchers: Vec<Box<dyn Matcher + Sync + Send>>,
-    pub cookie_matchers: Vec<Box<dyn Matcher + Sync + Send>>,
-    pub body_matchers: Vec<Box<dyn Matcher + Sync + Send>>,
-    //pub multipart_matchers: Vec<Box<dyn Matcher + Sync + Send>>,
-}
-
-impl Matchers {
-    fn all(&self) -> Vec<&Box<dyn Matcher + Sync + Send>> {
-        let all = vec![
-            &self.custom_function_matchers,
-            &self.path_matchers,
-            &self.method_matchers,
-            &self.headers_matchers,
-            &self.query_params_matchers,
-            &self.cookie_matchers,
-            &self.body_matchers,
-        ];
-
-        all.into_iter().flatten().collect()
-    }
-}
-
 /// The shared state accessible to all handlers
 pub(crate) struct MockServerState {
     id_counter: AtomicUsize,
     pub mocks: RwLock<BTreeMap<usize, ActiveMock>>,
     pub history: RwLock<Vec<Arc<HttpMockRequest>>>,
-    pub matchers: Matchers,
+    pub matchers: Vec<Box<dyn Matcher + Sync + Send>>,
 }
 
 impl MockServerState {
@@ -90,185 +58,172 @@ impl MockServerState {
             mocks: RwLock::new(BTreeMap::new()),
             history: RwLock::new(Vec::new()),
             id_counter: AtomicUsize::new(0),
-            matchers: Matchers {
-                method_matchers: vec![
-                    // method exact
-                    Box::new(SingleValueMatcher {
-                        entity_name: "method",
-                        comparator: Box::new(StringExactMatchComparator::new(false)),
-                        source: Box::new(MethodSource::new()),
-                        target: Box::new(MethodTarget::new()),
-                        transformer: None,
-                        with_reason: true,
-                        diff_with: None,
-                    }),
-                ],
-                path_matchers: vec![
-                    // path exact
-                    Box::new(SingleValueMatcher {
-                        entity_name: "path",
-                        comparator: Box::new(StringExactMatchComparator::new(false)),
-                        source: Box::new(StringPathSource::new()),
-                        target: Box::new(PathTarget::new()),
-                        transformer: None,
-                        with_reason: true,
-                        diff_with: Some(Tokenizer::Character),
-                    }),
-                    // path contains
-                    Box::new(SingleValueMatcher {
-                        entity_name: "path",
-                        comparator: Box::new(StringContainsMatchComparator::new(true)),
-                        source: Box::new(PathContainsSubstringSource::new()),
-                        target: Box::new(PathTarget::new()),
-                        transformer: None,
-                        with_reason: true,
-                        diff_with: None,
-                    }),
-                    // path matches regex
-                    Box::new(SingleValueMatcher {
-                        entity_name: "path",
-                        comparator: Box::new(StringRegexMatchComparator::new()),
-                        source: Box::new(PathRegexSource::new()),
-                        target: Box::new(PathTarget::new()),
-                        transformer: None,
-                        with_reason: true,
-                        diff_with: None,
-                    }),
-                ],
-                body_matchers: vec![
-                    // string body exact
-                    Box::new(SingleValueMatcher {
-                        entity_name: "body",
-                        comparator: Box::new(StringExactMatchComparator::new(false)),
-                        source: Box::new(StringBodySource::new()),
-                        target: Box::new(StringBodyTarget::new()),
-                        transformer: None,
-                        with_reason: false,
-                        diff_with: Some(Tokenizer::Line),
-                    }),
-                    // string body contains
-                    Box::new(SingleValueMatcher {
-                        entity_name: "body",
-                        comparator: Box::new(StringContainsMatchComparator::new(true)),
-                        source: Box::new(StringBodySource::new()),
-                        target: Box::new(StringBodyTarget::new()),
-                        transformer: None,
-                        with_reason: false,
-                        diff_with: Some(Tokenizer::Line),
-                    }),
-                    // string body regex
-                    Box::new(SingleValueMatcher {
-                        entity_name: "body",
-                        comparator: Box::new(StringRegexMatchComparator::new()),
-                        source: Box::new(BodyRegexSource::new()),
-                        target: Box::new(StringBodyTarget::new()),
-                        transformer: None,
-                        with_reason: false,
-                        diff_with: Some(Tokenizer::Line),
-                    }),
-                    // JSON body contains
-                    Box::new(SingleValueMatcher {
-                        entity_name: "body",
-                        comparator: Box::new(JSONContainsMatchComparator::new()),
-                        source: Box::new(PartialJSONBodySource::new()),
-                        target: Box::new(JSONBodyTarget::new()),
-                        transformer: None,
-                        with_reason: false,
-                        diff_with: Some(Tokenizer::Character),
-                    }),
-                    // JSON body exact
-                    Box::new(SingleValueMatcher {
-                        entity_name: "body",
-                        comparator: Box::new(JSONExactMatchComparator::new()),
-                        source: Box::new(JSONBodySource::new()),
-                        target: Box::new(JSONBodyTarget::new()),
-                        transformer: None,
-                        with_reason: true,
-                        diff_with: Some(Tokenizer::Line),
-                    }),
-                ],
-                cookie_matchers: vec![
-                    // Cookie exact
-                    Box::new(MultiValueMatcher {
-                        entity_name: "cookie",
-                        key_comparator: Box::new(StringExactMatchComparator::new(true)),
-                        value_comparator: Box::new(StringExactMatchComparator::new(true)),
-                        key_transformer: None,
-                        value_transformer: None,
-                        source: Box::new(CookieSource::new()),
-                        target: Box::new(CookieTarget::new()),
-                        with_reason: true,
-                        diff_with: None,
-                    }),
-                    // Cookie exists
-                    Box::new(MultiValueMatcher {
-                        entity_name: "cookie",
-                        key_comparator: Box::new(StringExactMatchComparator::new(true)),
-                        value_comparator: Box::new(AnyValueComparator::new()),
-                        key_transformer: None,
-                        value_transformer: None,
-                        source: Box::new(ContainsCookieSource::new()),
-                        target: Box::new(CookieTarget::new()),
-                        with_reason: true,
-                        diff_with: None,
-                    }),
-                ],
-                headers_matchers: vec![
-                    // Header exact
-                    Box::new(MultiValueMatcher {
-                        entity_name: "header",
-                        key_comparator: Box::new(StringExactMatchComparator::new(false)),
-                        value_comparator: Box::new(StringExactMatchComparator::new(true)),
-                        key_transformer: None,
-                        value_transformer: None,
-                        source: Box::new(HeaderSource::new()),
-                        target: Box::new(HeaderTarget::new()),
-                        with_reason: true,
-                        diff_with: None,
-                    }),
-                    // Header exists
-                    Box::new(MultiValueMatcher {
-                        entity_name: "header",
-                        key_comparator: Box::new(StringExactMatchComparator::new(false)),
-                        value_comparator: Box::new(AnyValueComparator::new()),
-                        key_transformer: None,
-                        value_transformer: None,
-                        source: Box::new(ContainsHeaderSource::new()),
-                        target: Box::new(HeaderTarget::new()),
-                        with_reason: true,
-                        diff_with: None,
-                    }),
-                ],
-                query_params_matchers: vec![
-                    // Query Param exact
-                    Box::new(MultiValueMatcher {
-                        entity_name: "query parameter",
-                        key_comparator: Box::new(StringExactMatchComparator::new(true)),
-                        value_comparator: Box::new(StringExactMatchComparator::new(true)),
-                        key_transformer: None,
-                        value_transformer: None,
-                        source: Box::new(QueryParameterSource::new()),
-                        target: Box::new(QueryParameterTarget::new()),
-                        with_reason: true,
-                        diff_with: None,
-                    }),
-                    // Query Param exists
-                    Box::new(MultiValueMatcher {
-                        entity_name: "query parameter",
-                        key_comparator: Box::new(StringExactMatchComparator::new(true)),
-                        value_comparator: Box::new(AnyValueComparator::new()),
-                        key_transformer: None,
-                        value_transformer: None,
-                        source: Box::new(ContainsQueryParameterSource::new()),
-                        target: Box::new(QueryParameterTarget::new()),
-                        with_reason: true,
-                        diff_with: None,
-                    }),
-                ],
-                custom_function_matchers: vec![
-                    //Box::new(CustomFunctionMatcher::new(1.0))
-                ],
-            },
+            matchers:
+            vec![
+                // method exact
+                Box::new(SingleValueMatcher {
+                    entity_name: "method",
+                    comparator: Box::new(StringExactMatchComparator::new(false)),
+                    source: Box::new(MethodSource::new()),
+                    target: Box::new(MethodTarget::new()),
+                    transformer: None,
+                    with_reason: true,
+                    diff_with: None,
+                }),
+                // path exact
+                Box::new(SingleValueMatcher {
+                    entity_name: "path",
+                    comparator: Box::new(StringExactMatchComparator::new(false)),
+                    source: Box::new(StringPathSource::new()),
+                    target: Box::new(PathTarget::new()),
+                    transformer: None,
+                    with_reason: true,
+                    diff_with: Some(Tokenizer::Character),
+                }),
+                // path contains
+                Box::new(SingleValueMatcher {
+                    entity_name: "path",
+                    comparator: Box::new(StringContainsMatchComparator::new(true)),
+                    source: Box::new(PathContainsSubstringSource::new()),
+                    target: Box::new(PathTarget::new()),
+                    transformer: None,
+                    with_reason: true,
+                    diff_with: None,
+                }),
+                // path matches regex
+                Box::new(SingleValueMatcher {
+                    entity_name: "path",
+                    comparator: Box::new(StringRegexMatchComparator::new()),
+                    source: Box::new(PathRegexSource::new()),
+                    target: Box::new(PathTarget::new()),
+                    transformer: None,
+                    with_reason: true,
+                    diff_with: None,
+                }),
+                // Query Param exact
+                Box::new(MultiValueMatcher {
+                    entity_name: "query parameter",
+                    key_comparator: Box::new(StringExactMatchComparator::new(true)),
+                    value_comparator: Box::new(StringExactMatchComparator::new(true)),
+                    key_transformer: None,
+                    value_transformer: None,
+                    source: Box::new(QueryParameterSource::new()),
+                    target: Box::new(QueryParameterTarget::new()),
+                    with_reason: true,
+                    diff_with: None,
+                }),
+                // Query Param exists
+                Box::new(MultiValueMatcher {
+                    entity_name: "query parameter",
+                    key_comparator: Box::new(StringExactMatchComparator::new(true)),
+                    value_comparator: Box::new(AnyValueComparator::new()),
+                    key_transformer: None,
+                    value_transformer: None,
+                    source: Box::new(ContainsQueryParameterSource::new()),
+                    target: Box::new(QueryParameterTarget::new()),
+                    with_reason: true,
+                    diff_with: None,
+                }),
+                // Cookie exact
+                Box::new(MultiValueMatcher {
+                    entity_name: "cookie",
+                    key_comparator: Box::new(StringExactMatchComparator::new(true)),
+                    value_comparator: Box::new(StringExactMatchComparator::new(true)),
+                    key_transformer: None,
+                    value_transformer: None,
+                    source: Box::new(CookieSource::new()),
+                    target: Box::new(CookieTarget::new()),
+                    with_reason: true,
+                    diff_with: None,
+                }),
+                // Cookie exists
+                Box::new(MultiValueMatcher {
+                    entity_name: "cookie",
+                    key_comparator: Box::new(StringExactMatchComparator::new(true)),
+                    value_comparator: Box::new(AnyValueComparator::new()),
+                    key_transformer: None,
+                    value_transformer: None,
+                    source: Box::new(ContainsCookieSource::new()),
+                    target: Box::new(CookieTarget::new()),
+                    with_reason: true,
+                    diff_with: None,
+                }),
+                // Header exact
+                Box::new(MultiValueMatcher {
+                    entity_name: "header",
+                    key_comparator: Box::new(StringExactMatchComparator::new(false)),
+                    value_comparator: Box::new(StringExactMatchComparator::new(true)),
+                    key_transformer: None,
+                    value_transformer: None,
+                    source: Box::new(HeaderSource::new()),
+                    target: Box::new(HeaderTarget::new()),
+                    with_reason: true,
+                    diff_with: None,
+                }),
+                // Header exists
+                Box::new(MultiValueMatcher {
+                    entity_name: "header",
+                    key_comparator: Box::new(StringExactMatchComparator::new(false)),
+                    value_comparator: Box::new(AnyValueComparator::new()),
+                    key_transformer: None,
+                    value_transformer: None,
+                    source: Box::new(ContainsHeaderSource::new()),
+                    target: Box::new(HeaderTarget::new()),
+                    with_reason: true,
+                    diff_with: None,
+                }),
+                // Box::new(CustomFunctionMatcher::new(1.0)),
+                // string body exact
+                Box::new(SingleValueMatcher {
+                    entity_name: "body",
+                    comparator: Box::new(StringExactMatchComparator::new(false)),
+                    source: Box::new(StringBodySource::new()),
+                    target: Box::new(StringBodyTarget::new()),
+                    transformer: None,
+                    with_reason: false,
+                    diff_with: Some(Tokenizer::Line),
+                }),
+                // string body contains
+                Box::new(SingleValueMatcher {
+                    entity_name: "body",
+                    comparator: Box::new(StringContainsMatchComparator::new(true)),
+                    source: Box::new(StringBodyContainsSource::new()),
+                    target: Box::new(StringBodyTarget::new()),
+                    transformer: None,
+                    with_reason: false,
+                    diff_with: Some(Tokenizer::Line),
+                }),
+                // string body regex
+                Box::new(SingleValueMatcher {
+                    entity_name: "body",
+                    comparator: Box::new(StringRegexMatchComparator::new()),
+                    source: Box::new(BodyRegexSource::new()),
+                    target: Box::new(StringBodyTarget::new()),
+                    transformer: None,
+                    with_reason: false,
+                    diff_with: Some(Tokenizer::Line),
+                }),
+                // JSON body contains
+                Box::new(SingleValueMatcher {
+                    entity_name: "body",
+                    comparator: Box::new(JSONContainsMatchComparator::new()),
+                    source: Box::new(PartialJSONBodySource::new()),
+                    target: Box::new(JSONBodyTarget::new()),
+                    transformer: None,
+                    with_reason: false,
+                    diff_with: Some(Tokenizer::Character),
+                }),
+                // JSON body exact
+                Box::new(SingleValueMatcher {
+                    entity_name: "body",
+                    comparator: Box::new(JSONExactMatchComparator::new()),
+                    source: Box::new(JSONBodySource::new()),
+                    target: Box::new(JSONBodyTarget::new()),
+                    transformer: None,
+                    with_reason: true,
+                    diff_with: Some(Tokenizer::Line),
+                }),
+            ],
         }
     }
 }

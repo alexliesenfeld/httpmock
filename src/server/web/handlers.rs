@@ -9,11 +9,12 @@ use crate::data::{
 };
 
 use crate::server::util::{StringTreeMapExtension, TreeMapExtension};
-use crate::server::{Matchers, Mismatch, MockServerState};
+use crate::server::{Mismatch, MockServerState};
 use basic_cookies::Cookie;
 use std::cmp::Ordering;
 use std::collections::BTreeMap;
 use std::sync::Arc;
+use crate::server::matchers::Matcher;
 
 /// Contains HTTP methods which cannot have a body.
 const NON_BODY_METHODS: &[&str] = &["GET", "HEAD", "DELETE"];
@@ -140,7 +141,6 @@ fn request_matches(
 
     state
         .matchers
-        .all()
         .iter()
         .enumerate()
         .all(|(i, x)| x.matches(&req, mock))
@@ -200,7 +200,6 @@ fn get_request_hit_counts(
                 idx,
                 state
                     .matchers
-                    .path_matchers
                     .iter()
                     .filter(|mm| mm.matches(&req, &mock.definition.request))
                     .count(),
@@ -232,7 +231,7 @@ fn get_max_hits_requests(hit_counts: &BTreeMap<usize, usize>) -> BTreeMap<usize,
 fn get_scores(
     requests: &BTreeMap<usize, usize>,
     history: &Vec<Arc<HttpMockRequest>>,
-    matchers: &Matchers,
+    matchers: &Vec<Box<dyn Matcher + Sync + Send>>,
     mock: &ActiveMock,
 ) -> BTreeMap<usize, usize> {
     history
@@ -246,10 +245,9 @@ fn get_scores(
 fn get_request_mismatches(
     req: &Arc<HttpMockRequest>,
     mock: &ActiveMock,
-    matchers: &Matchers,
+    matchers: &Vec<Box<dyn Matcher + Sync + Send>>,
 ) -> Vec<Mismatch> {
     matchers
-        .all()
         .iter()
         .map(|mat| mat.mismatches(req, &mock.definition.request))
         .flatten()
@@ -260,10 +258,9 @@ fn get_request_mismatches(
 fn get_request_distance(
     req: &Arc<HttpMockRequest>,
     mock: &ActiveMock,
-    matchers: &Matchers,
+    matchers: &Vec<Box<dyn Matcher + Sync + Send>>,
 ) -> usize {
     matchers
-        .all()
         .iter()
         .map(|matcher| matcher.distance(req, &mock.definition.request))
         .sum()

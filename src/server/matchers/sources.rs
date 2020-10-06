@@ -33,6 +33,23 @@ impl ValueSource<String> for StringBodySource {
 }
 
 // ************************************************************************************************
+// StringBodySource
+// ************************************************************************************************
+pub(crate) struct StringBodyContainsSource {}
+
+impl StringBodyContainsSource {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+impl ValueSource<String> for StringBodyContainsSource {
+    fn parse_from_mock<'a>(&self, mock: &'a RequestRequirements) -> Option<Vec<&'a String>> {
+        mock.body_contains.as_ref().map(|v| v.into_iter().map(|bc| bc).collect())
+    }
+}
+
+// ************************************************************************************************
 // BodyRegexSource
 // ************************************************************************************************
 pub(crate) struct JSONBodySource {}
