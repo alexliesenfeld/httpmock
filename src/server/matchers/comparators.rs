@@ -2,7 +2,6 @@ use crate::data::Pattern;
 use crate::server::matchers::{distance, distance_for_opt};
 use crate::Regex;
 use assert_json_diff::{assert_json_eq_no_panic, assert_json_include_no_panic};
-use caseless::default_caseless_match_str as caseless_eq;
 use serde_json::Value;
 
 // TODO: Implement memoization for Comparators
