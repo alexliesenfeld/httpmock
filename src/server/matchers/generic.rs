@@ -26,7 +26,7 @@ where
     pub transformer: Option<Box<dyn Transformer<T, T> + Send + Sync>>,
     pub with_reason: bool,
     pub diff_with: Option<Tokenizer>,
-    pub weight: f64,
+    pub weight: usize,
 }
 
 impl<S, T> SingleValueMatcher<S, T>
@@ -34,16 +34,23 @@ where
     S: Display,
     T: Display,
 {
-    fn distance(&self, req: &HttpMockRequest, mock: &RequestRequirements) -> usize {
-        let mock_value = match self.source.parse_from_mock(mock) {
-            None => return 0,
-            Some(v) => v,
+    fn find_unmatched<'a>(
+        &self,
+        req_value: &Option<T>,
+        mock_values: &Option<Vec<&'a S>>,
+    ) -> Vec<&'a S> {
+        let mock_values = match mock_values {
+            None => return Vec::new(),
+            Some(mv) => mv.to_vec()
         };
-        let req_value = self.target.parse_from_request(req);
-        mock_value
+        let req_value = match req_value {
+            None => return mock_values,
+            Some(rv) => rv
+        };
+        mock_values
             .into_iter()
-            .map(|s| self.comparator.distance(&Some(s), &req_value.as_ref()))
-            .sum()
+            .filter(|e| !self.comparator.matches(e, req_value))
+            .collect()
     }
 }
 
@@ -55,46 +62,33 @@ where
     fn matches(&self, req: &HttpMockRequest, mock: &RequestRequirements) -> bool {
         let req_value = self.target.parse_from_request(req);
         let mock_value = self.source.parse_from_mock(mock);
-
-        match (mock_value, req_value) {
-            (Some(mv), Some(rv)) => mv.into_iter().all(|e| self.comparator.matches(e, &rv)),
-            (Some(_), None) => false,
-            _ => true,
-        }
+        self.find_unmatched(&req_value, &mock_value).is_empty()
     }
 
     fn distance(&self, req: &HttpMockRequest, mock: &RequestRequirements) -> usize {
-        0
+        let req_value = self.target.parse_from_request(req);
+        let mock_values = self.source.parse_from_mock(mock);
+        self.find_unmatched(&req_value, &mock_values)
+            .into_iter()
+            .map(|s| self.comparator.distance(&Some(s), &req_value.as_ref()))
+            .map(|d| d * self.weight)
+            .sum()
     }
 
     fn mismatches(&self, req: &HttpMockRequest, mock: &RequestRequirements) -> Vec<Mismatch> {
         let req_value = self.target.parse_from_request(req);
         let mock_value = self.source.parse_from_mock(mock);
-
-        let unmatched = match (mock_value, req_value) {
-            (Some(mv), Some(rv)) => mv
-                .into_iter()
-                .filter(|e| !self.comparator.matches(e, &rv))
-                .collect(),
-            (Some(mv), None) => mv,
-            _ => return Vec::new(),
-        };
-
-        let req_value = self
-            .target
-            .parse_from_request(req)
-            .map_or(String::new(), |v| v.to_string());
-
-        unmatched
+        self.find_unmatched(&req_value, &mock_value)
             .into_iter()
             .map(|mock_value| {
                 let mock_value = mock_value.to_string();
+                let req_value = req_value.as_ref().unwrap().to_string();
                 Mismatch {
                     title: format!("The {} does not match", self.entity_name),
                     reason: match self.with_reason {
                         true => Some(Reason {
-                            expected: format!("{}", mock_value.to_string()),
-                            actual: req_value.to_string(),
+                            expected: mock_value.to_owned(),
+                            actual: req_value.to_owned(),
                             comparison: self.comparator.name().into(),
                             best_match: false,
                         }),
@@ -104,10 +98,6 @@ where
                 }
             })
             .collect()
-    }
-
-    fn weight(&self) -> f64 {
-        self.weight
     }
 }
 
@@ -130,7 +120,7 @@ where
     pub value_transformer: Option<Box<dyn Transformer<SV, SV> + Send + Sync>>,
     pub with_reason: bool,
     pub diff_with: Option<Tokenizer>,
-    pub weight: f64,
+    pub weight: usize,
 }
 
 impl<SK, SV, TK, TV> MultiValueMatcher<SK, SV, TK, TV>
@@ -140,7 +130,7 @@ where
     TK: Display,
     TV: Display,
 {
-    fn get_unmatched<'a>(
+    fn find_unmatched<'a>(
         &self,
         req_values: &Vec<(TK, Option<TV>)>,
         mock_values: &'a Vec<(&'a SK, Option<&'a SV>)>,
@@ -164,7 +154,7 @@ where
             .collect()
     }
 
-    fn get_best_match<'a>(
+    fn find_best_match<'a>(
         &self,
         sk: &SK,
         sv: &Option<&SV>,
@@ -203,19 +193,35 @@ where
     fn matches(&self, req: &HttpMockRequest, mock: &RequestRequirements) -> bool {
         let req_values = self.target.parse_from_request(req).unwrap_or(Vec::new());
         let mock_values = self.source.parse_from_mock(mock).unwrap_or(Vec::new());
-        self.get_unmatched(&req_values, &mock_values).is_empty()
+        self.find_unmatched(&req_values, &mock_values).is_empty()
     }
 
     fn distance(&self, req: &HttpMockRequest, mock: &RequestRequirements) -> usize {
-        0
+        let req_values = self.target.parse_from_request(req).unwrap_or(Vec::new());
+        let mock_values = self.source.parse_from_mock(mock).unwrap_or(Vec::new());
+        self.find_unmatched(&req_values, &mock_values)
+            .into_iter()
+            .map(|(k, v)| (k, v, self.find_best_match(&k, v, &req_values)))
+            .map(|(k, v, best_match)| match best_match {
+                None => {
+                    self.key_comparator.distance(&Some(k), &None)
+                        + self.value_comparator.distance(v, &None)
+                }
+                Some((bmk, bmv)) => {
+                    self.key_comparator.distance(&Some(k), &Some(bmk))
+                        + self.value_comparator.distance(v, &bmv.as_ref())
+                }
+            })
+            .map(|d| d * self.weight)
+            .sum()
     }
 
     fn mismatches(&self, req: &HttpMockRequest, mock: &RequestRequirements) -> Vec<Mismatch> {
         let req_values = self.target.parse_from_request(req).unwrap_or(Vec::new());
         let mock_values = self.source.parse_from_mock(mock).unwrap_or(Vec::new());
-        self.get_unmatched(&req_values, &mock_values)
+        self.find_unmatched(&req_values, &mock_values)
             .into_iter()
-            .map(|(k, v)| (k, v, self.get_best_match(&k, v, &req_values)))
+            .map(|(k, v)| (k, v, self.find_best_match(&k, v, &req_values)))
             .map(|(k, v, best_match)| Mismatch {
                 title: match v {
                     None => format!("Expected {} with name '{}' to be present in the request but it wasn't.", self.entity_name, &k),
@@ -238,9 +244,5 @@ where
                 diff: None,
             })
             .collect()
-    }
-
-    fn weight(&self) -> f64 {
-        self.weight
     }
 }
