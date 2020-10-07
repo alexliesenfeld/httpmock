@@ -1,4 +1,3 @@
-// TODO: Implement memoization for Targets
 use crate::data::{HttpMockRequest, RequestRequirements};
 use crate::server::matchers::parse_cookies;
 use crate::server::matchers::sources::ValueSource;

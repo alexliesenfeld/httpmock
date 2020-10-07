@@ -105,21 +105,12 @@ pub(crate) fn parse_cookies(req: &HttpMockRequest) -> Result<Vec<(String, String
     }
 }
 
-fn distance(expected: &str, actual: &str) -> usize {
-    let max_distance = (expected.len() + actual.len());
-    if max_distance == 0 {
-        return 0;
-    }
-    let distance = levenshtein::levenshtein(expected, actual);
-    100 - ((max_distance - distance) / max_distance)
-}
-
-pub(crate) fn distance_for_opt<T, U>(expected: &Option<&T>, actual: &Option<&U>) -> usize
+pub(crate) fn distance_for<T, U>(expected: &Option<&T>, actual: &Option<&U>) -> usize
 where
     T: Display,
     U: Display,
 {
     let expected = expected.map_or(String::new(), |x| x.to_string());
     let actual = actual.map_or(String::new(), |x| x.to_string());
-    distance(&expected, &actual)
+    levenshtein::levenshtein(&expected, &actual)
 }

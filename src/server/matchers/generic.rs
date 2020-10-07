@@ -3,7 +3,7 @@ use crate::server::matchers::comparators::ValueComparator;
 use crate::server::matchers::sources::{MultiValueSource, ValueSource};
 use crate::server::matchers::targets::{MultiValueTarget, ValueRefTarget, ValueTarget};
 use crate::server::matchers::transformers::Transformer;
-use crate::server::matchers::{diff_str, distance, Matcher, Reason};
+use crate::server::matchers::{diff_str, Matcher, Reason};
 use crate::server::{Mismatch, Tokenizer};
 use assert_json_diff::assert_json_eq_no_panic;
 use serde_json::Value;
@@ -41,11 +41,11 @@ where
     ) -> Vec<&'a S> {
         let mock_values = match mock_values {
             None => return Vec::new(),
-            Some(mv) => mv.to_vec()
+            Some(mv) => mv.to_vec(),
         };
         let req_value = match req_value {
             None => return mock_values,
-            Some(rv) => rv
+            Some(rv) => rv,
         };
         mock_values
             .into_iter()

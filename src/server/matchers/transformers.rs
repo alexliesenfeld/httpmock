@@ -1,4 +1,3 @@
-// TODO: Implement memoization for Comparators
 pub(crate) trait Transformer<I, O> {
     fn transform(&self, v: &I) -> Result<O, String>;
 }
