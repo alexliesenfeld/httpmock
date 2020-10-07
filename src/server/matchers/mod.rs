@@ -6,7 +6,6 @@ pub(crate) mod generic;
 pub(crate) mod sources;
 pub(crate) mod targets;
 pub(crate) mod transformers;
-mod util;
 
 use basic_cookies::Cookie;
 use serde::{Deserialize, Serialize};
