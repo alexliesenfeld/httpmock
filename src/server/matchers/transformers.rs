@@ -38,10 +38,11 @@ impl Transformer<String, String> for ToLowercaseTransformer {
     }
 }
 
-
 #[cfg(test)]
 mod test {
-    use crate::server::matchers::transformers::{DecodeBase64ValueTransformer, Transformer, ToLowercaseTransformer};
+    use crate::server::matchers::transformers::{
+        DecodeBase64ValueTransformer, ToLowercaseTransformer, Transformer,
+    };
 
     #[test]
     fn base64_decode_transformer() {
@@ -55,7 +56,6 @@ mod test {
         assert_eq!(result.is_ok(), true);
         assert_eq!(result.unwrap(), "test".to_string());
     }
-
 
     #[test]
     fn base64_decode_transformer_error() {
@@ -81,6 +81,4 @@ mod test {
         assert_eq!(result.is_ok(), true);
         assert_eq!(result.unwrap(), "hello".to_string());
     }
-
 }
-
