@@ -14,18 +14,18 @@ fn headers_test() {
 
     let m = server.mock(|when, then| {
         when.path("/test")
-            .header("Authorizatiosn", "token 123456789")
+            .header("Authorization", "token 123456789")
             .header_exists("Authorization");
         then.status(201).header("Content-Length", "0");
     });
 
     // Act: Send the request and deserialize the response to JSON
-    /*let response = Request::post(&format!("http://{}/test", server.address()))
+    let response = Request::post(&format!("http://{}/test", server.address()))
     .header("Authorization", "token 123456789")
     .body(())
     .unwrap()
     .send()
-    .unwrap();*/
+    .unwrap();
 
     // Assert
     m.assert();
