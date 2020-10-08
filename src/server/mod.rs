@@ -43,7 +43,7 @@ use crate::server::matchers::targets::{
 };
 use matchers::generic::SingleValueMatcher;
 use matchers::targets::{JSONBodyTarget, StringBodyTarget};
-pub(crate) use matchers::{Diff, Mismatch, Tokenizer};
+pub(crate) use matchers::{Diff, DiffResult, Mismatch, Reason, Tokenizer};
 
 /// The shared state accessible to all handlers
 pub(crate) struct MockServerState {

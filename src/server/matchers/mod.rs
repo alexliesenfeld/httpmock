@@ -24,7 +24,7 @@ pub(crate) enum Diff {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub(crate) struct DetailedDiffResult {
+pub(crate) struct DiffResult {
     pub differences: Vec<Diff>,
     pub distance: i32,
     pub tokenizer: Tokenizer,
@@ -37,7 +37,7 @@ pub(crate) enum Tokenizer {
     Character,
 }
 
-pub(crate) fn diff_str(base: &str, edit: &str, tokenizer: Tokenizer) -> DetailedDiffResult {
+pub(crate) fn diff_str(base: &str, edit: &str, tokenizer: Tokenizer) -> DiffResult {
     let splitter = match tokenizer {
         Tokenizer::Line => "\n",
         Tokenizer::Word => " ",
@@ -45,7 +45,7 @@ pub(crate) fn diff_str(base: &str, edit: &str, tokenizer: Tokenizer) -> Detailed
     };
 
     let changes = Changeset::new(base, edit, splitter);
-    DetailedDiffResult {
+    DiffResult {
         tokenizer,
         distance: changes.distance,
         differences: changes
@@ -72,7 +72,7 @@ pub(crate) struct Reason {
 pub(crate) struct Mismatch {
     pub title: String,
     pub reason: Option<Reason>,
-    pub diff: Option<DetailedDiffResult>,
+    pub diff: Option<DiffResult>,
 }
 
 pub(crate) trait Matcher {

@@ -8,7 +8,8 @@ use std::time::Duration;
 
 use crate::data::{ActiveMock, ClosestMatch, MockDefinition, MockIdentification};
 use crate::server::web::handlers::{
-    add_new_mock, delete_all_mocks, delete_history, delete_one_mock, find_mismatches, read_one_mock,
+    add_new_mock, delete_all_mocks, delete_history, delete_one_mock, find_closest_match,
+    read_one_mock,
 };
 use crate::server::{Mismatch, MockServerState};
 use std::str::FromStr;
@@ -66,7 +67,7 @@ pub(crate) trait MockServerAdapter {
     async fn fetch_mock(&self, mock_id: usize) -> Result<ActiveMock, String>;
     async fn delete_mock(&self, mock_id: usize) -> Result<(), String>;
     async fn delete_all_mocks(&self) -> Result<(), String>;
-    async fn find_mismatches(&self, mock_id: usize) -> Result<Option<Vec<Mismatch>>, String>;
+    async fn find_closest_match(&self, mock_id: usize) -> Result<Option<ClosestMatch>, String>;
 
     async fn delete_history(&self) -> Result<(), String>;
     async fn ping(&self) -> Result<(), String>;
@@ -232,8 +233,9 @@ impl MockServerAdapter for RemoteMockServerAdapter {
         Ok(())
     }
 
-    async fn find_mismatches(&self, mock_id: usize) -> Result<Option<Vec<Mismatch>>, String> {
+    async fn find_closest_match(&self, mock_id: usize) -> Result<Option<ClosestMatch>, String> {
         Ok(None)
+        // TODO
     }
 
     async fn delete_history(&self) -> Result<(), String> {
@@ -323,8 +325,8 @@ impl MockServerAdapter for LocalMockServerAdapter {
         Ok(())
     }
 
-    async fn find_mismatches(&self, mock_id: usize) -> Result<Option<Vec<Mismatch>>, String> {
-        find_mismatches(&self.local_state, mock_id)
+    async fn find_closest_match(&self, mock_id: usize) -> Result<Option<ClosestMatch>, String> {
+        find_closest_match(&self.local_state, mock_id)
     }
 
     async fn delete_history(&self) -> Result<(), String> {

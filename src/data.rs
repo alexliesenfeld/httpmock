@@ -15,7 +15,7 @@ use std::fmt;
 use std::time::Duration;
 
 /// A general abstraction of an HTTP request of `httpmock`.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct HttpMockRequest {
     pub path: String,
     pub method: String,
@@ -332,8 +332,8 @@ impl ActiveMock {
 
 #[derive(Serialize, Deserialize)]
 pub(crate) struct ClosestMatch {
-    pub definition: RequestRequirements,
     pub request: HttpMockRequest,
+    pub request_index: usize,
     pub mismatches: Vec<Mismatch>,
 }
 

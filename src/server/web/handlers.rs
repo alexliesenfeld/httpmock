@@ -147,10 +147,10 @@ fn request_matches(
 }
 
 /// Deletes the request history.
-pub(crate) fn find_mismatches(
+pub(crate) fn find_closest_match(
     state: &MockServerState,
     mock_id: usize,
-) -> Result<Option<Vec<Mismatch>>, String> {
+) -> Result<Option<ClosestMatch>, String> {
     let mock = match read_one_mock(state, mock_id)? {
         None => return Ok(None),
         Some(v) => v,
@@ -159,17 +159,23 @@ pub(crate) fn find_mismatches(
     let mut history = state.history.write().unwrap();
 
     let hit_counts = get_request_hit_counts(state, &mock, &history);
-    let max_hit_requests = get_max_hits_requests(&hit_counts);
-    let request_scores = get_scores(&max_hit_requests, &history, &state.matchers, &mock);
-    let max_scored_requests = get_max_scored_requests(&request_scores);
+    let max_hits_requests = get_max_hits_requests(&hit_counts);
+    let request_distances = get_distances(&max_hits_requests, &history, &state.matchers, &mock);
+    let best_matches = get_min_distance_requests(&request_distances);
 
-    let max_scored_request_idx = match max_scored_requests.get(0) {
+    let closes_match_request_idx = match best_matches.get(0) {
         None => return Ok(None),
         Some(idx) => *idx,
     };
 
-    let req = history.get(max_scored_request_idx).unwrap();
-    Ok(Some(get_request_mismatches(req, &mock, &state.matchers)))
+    let req = history.get(closes_match_request_idx).unwrap();
+    let mismatches = get_request_mismatches(req, &mock, &state.matchers);
+
+    Ok(Some(ClosestMatch {
+        request: HttpMockRequest::clone(&req),
+        request_index: closes_match_request_idx,
+        mismatches
+    }))
 }
 
 /// Validates a mock request.
@@ -228,7 +234,7 @@ fn get_max_hits_requests(hit_counts: &BTreeMap<usize, usize>) -> BTreeMap<usize,
 }
 
 // Remember the maximum number of matchers that successfully matched
-fn get_scores(
+fn get_distances(
     requests: &BTreeMap<usize, usize>,
     history: &Vec<Arc<HttpMockRequest>>,
     matchers: &Vec<Box<dyn Matcher + Sync + Send>>,
@@ -267,20 +273,20 @@ fn get_request_distance(
 }
 
 // Remember the maximum number of matchers that successfully matched
-fn get_max_scored_requests(request_scores: &BTreeMap<usize, usize>) -> Vec<usize> {
+fn get_min_distance_requests(request_distances: &BTreeMap<usize, usize>) -> Vec<usize> {
     // Find the element with the maximum matches
-    let max_elem = request_scores
+    let min_elem = request_distances
         .iter()
-        .max_by(|(idx1, d1), (idx2, d2)| (**d1).cmp(d2));
+        .min_by(|(idx1, d1), (idx2, d2)| (**d1).cmp(d2));
 
-    let max = match max_elem {
+    let max = match min_elem {
         None => return Vec::new(),
         Some((_, n)) => *n,
     };
 
-    request_scores
+    request_distances
         .into_iter()
-        .filter(|(idx, score)| **score == max)
+        .filter(|(idx, distance)| **distance == max)
         .map(|(idx, _)| *idx)
         .collect()
 }

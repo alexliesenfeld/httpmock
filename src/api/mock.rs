@@ -9,10 +9,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::api::{Method, Regex};
-use crate::data::{
-    MockDefinition, MockMatcherFunction, MockServerHttpResponse, Pattern, RequestRequirements,
-};
-use crate::server::{Diff, Tokenizer};
+use crate::data::{MockDefinition, MockMatcherFunction, MockServerHttpResponse, Pattern, RequestRequirements, HttpMockRequest, ActiveMock, ClosestMatch};
+use crate::server::{Diff, DiffResult, Mismatch, Reason, Tokenizer};
 use crate::util::{get_test_resource_file_path, read_file, Join};
 use crate::MockServer;
 use std::time::Duration;
@@ -74,7 +72,7 @@ impl<'a> MockRef<'a> {
             .unwrap()
             .fetch_mock(self.id)
             .await
-            .expect("Cannot deserialize mock server response");
+            .expect("cannot deserialize mock server response");
 
         if active_mock.call_counter == hits {
             return;
@@ -85,85 +83,11 @@ impl<'a> MockRef<'a> {
             .server_adapter
             .as_ref()
             .unwrap()
-            .find_mismatches(self.id)
+            .find_closest_match(self.id)
             .await
-            .expect("Cannot deserialize mock server response");
+            .expect("Cannot contact mock server");
 
-        match closest_match {
-            Some(closest_match) => {
-                let mut output = String::new();
-                output.push_str("At least one request has been received, but none exactly matched the mock specification.\n");
-                output.push_str(&format!(
-                    "Here is a comparison with the most similar request (request number {}): \n\n",
-                    1
-                ));
-
-                for (idx, mm) in closest_match.into_iter().enumerate() {
-                    output.push_str(&format!("{} : {}", idx + 1, &mm.title));
-                    output.push_str("\n");
-                    output.push_str(&"-".repeat(90));
-                    output.push_str("\n");
-
-                    mm.reason.map(|reason| {
-                        let offsets = match reason.best_match {
-                            true => ("\t".repeat(5), "\t".repeat(2)),
-                            false => ("\t".repeat(1), "\t".repeat(2)),
-                        };
-                        let actual_text = match reason.best_match {
-                            true => "Actual (closest match):",
-                            false => "Actual:",
-                        };
-                        output.push_str(&format!(
-                            "Expected:{}[{}]\t\t{}\n",
-                            offsets.0, reason.comparison, &reason.expected
-                        ));
-                        output.push_str(&format!(
-                            "{}{}{}\t{}\n",
-                            actual_text,
-                            offsets.1,
-                            " ".repeat(reason.comparison.len() + 7),
-                            &reason.actual
-                        ));
-                    });
-
-                    mm.diff.map(|dd| {
-                        output.push_str("Diff:");
-                        if dd.differences.is_empty() {
-                            output.push_str("<empty>");
-                        }
-                        output.push_str("\n");
-
-                        dd.differences.iter().for_each(|d| {
-                            match d {
-                                Diff::Same(e) => {
-                                    output.push_str(&format!("   | {}", e));
-                                }
-                                Diff::Add(e) => {
-                                    #[cfg(feature = "color")]
-                                    output.push_str(&format!("+++| {}", e).green().to_string());
-                                    #[cfg(not(feature = "color"))]
-                                    output.push_str(&format!("+++| {}", e));
-                                }
-                                Diff::Rem(e) => {
-                                    #[cfg(feature = "color")]
-                                    output.push_str(&format!("---| {}", e).red().to_string());
-                                    #[cfg(not(feature = "color"))]
-                                    output.push_str(&format!("---| {}", e));
-                                }
-                            }
-                            output.push_str("\n")
-                        });
-                        output.push_str("\n");
-                    });
-
-                    output.push_str("\n");
-                }
-
-                eprintln!("{}", output);
-                assert_eq!("aggd", "asd");
-            }
-            None => {}
-        }
+        fail_with(closest_match)
     }
 
     /// This method returns the number of times a mock has been called at the mock server.
@@ -1659,6 +1583,103 @@ impl Default for Mock {
     fn default() -> Self {
         Self::new()
     }
+}
+
+fn create_reason_output(reason: &Reason) -> String {
+    let mut output = String::new();
+    let offsets = match reason.best_match {
+        true => ("\t".repeat(5), "\t".repeat(2)),
+        false => ("\t".repeat(1), "\t".repeat(2)),
+    };
+    let actual_text = match reason.best_match {
+        true => "Actual (closest match):",
+        false => "Actual:",
+    };
+    output.push_str(&format!(
+        "Expected:{}[{}]\t\t{}\n",
+        offsets.0, reason.comparison, &reason.expected
+    ));
+    output.push_str(&format!(
+        "{}{}{}\t{}\n",
+        actual_text,
+        offsets.1,
+        " ".repeat(reason.comparison.len() + 7),
+        &reason.actual
+    ));
+    output
+}
+
+fn create_diff_result_output(dd: &DiffResult) -> String {
+    let mut output = String::new();
+    output.push_str("Diff:");
+    if dd.differences.is_empty() {
+        output.push_str("<empty>");
+    }
+    output.push_str("\n");
+
+    dd.differences.iter().for_each(|d| {
+        match d {
+            Diff::Same(e) => {
+                output.push_str(&format!("   | {}", e));
+            }
+            Diff::Add(e) => {
+                #[cfg(feature = "color")]
+                output.push_str(&format!("+++| {}", e).green().to_string());
+                #[cfg(not(feature = "color"))]
+                output.push_str(&format!("+++| {}", e));
+            }
+            Diff::Rem(e) => {
+                #[cfg(feature = "color")]
+                output.push_str(&format!("---| {}", e).red().to_string());
+                #[cfg(not(feature = "color"))]
+                output.push_str(&format!("---| {}", e));
+            }
+        }
+        output.push_str("\n")
+    });
+    output.push_str("\n");
+    output
+}
+
+fn create_mismatch_output(idx: usize, mm: &Mismatch) -> String {
+    let mut output = String::new();
+
+    output.push_str(&format!("{} : {}", idx + 1, &mm.title));
+    output.push_str("\n");
+    output.push_str(&"-".repeat(90));
+    output.push_str("\n");
+
+    mm.reason
+        .as_ref()
+        .map(|reason| output.push_str(&create_reason_output(reason)));
+
+    mm.diff
+        .as_ref()
+        .map(|diff_result| output.push_str(&create_diff_result_output(diff_result)));
+
+    output.push_str("\n");
+    output
+}
+
+fn fail_with(closest_match: Option<ClosestMatch>) {
+    if closest_match.is_none() {
+        assert!(false, "No request has been received by the mock server.")
+    }
+    let closest_match = closest_match.unwrap();
+
+    let mut output = String::new();
+
+    output.push_str("At least one request has been received, but none exactly matched the mock specification.\n");
+    output.push_str(&format!(
+        "Here is a comparison with the most similar request (request number {}): \n\n",
+        closest_match.request_index + 1
+    ));
+
+    for (idx, mm) in closest_match.mismatches.iter().enumerate() {
+        output.push_str(&create_mismatch_output(idx, &mm));
+    }
+
+    assert!(false, output);
 }
 
 #[cfg(test)]
