@@ -3,6 +3,7 @@ extern crate lazy_static;
 
 mod examples;
 mod deprecated;
+mod internal;
 
 use httpmock::standalone::start_standalone_server;
 use std::sync::Mutex;

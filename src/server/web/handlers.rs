@@ -294,12 +294,11 @@ mod test {
     use crate::data::{
         HttpMockRequest, MockDefinition, MockServerHttpResponse, Pattern, RequestRequirements,
     };
-    use crate::server::web::handlers::{
-        add_new_mock, read_one_mock, request_matches, validate_mock_definition,
-    };
+    use crate::server::web::handlers::{add_new_mock, read_one_mock, request_matches, validate_mock_definition, verify};
     use crate::server::MockServerState;
     use regex::Regex;
     use std::sync::Arc;
+    use crate::Method;
 
     /// TODO
     #[test]
@@ -713,5 +712,34 @@ mod test {
         // Assert
         assert_eq!(result1, false);
         assert_eq!(result2, true);
+    }
+
+
+    /// This test checks if distance has influence on verification.
+    #[test]
+    fn verify_closes_match_order_test() {
+        // Arrange
+        let mut mock_server_state = MockServerState::new();
+        {
+            let mut mocks = mock_server_state.history.write().unwrap();
+            // 1: close request
+            mocks.push(Arc::new(HttpMockRequest::new(String::from("POST"), String::from("/Brians"))));
+            // 2: closest request
+            mocks.push(Arc::new(HttpMockRequest::new(String::from("GET"), String::from("/Briann"))));
+            // 3: distant request
+            mocks.push(Arc::new(HttpMockRequest::new(String::from("DELETE"), String::from("/xxxxxxx/xxxxxx"))));
+        }
+
+        let mut rr = RequestRequirements::new();
+        rr.method = Some("GET".to_string());
+        rr.path = Some("/Briann".to_string());
+
+        // Act
+        let result = verify(&mock_server_state, &rr);
+
+        // Assert
+        assert_eq!(result.as_ref().is_ok(), true);
+        assert_eq!(result.as_ref().unwrap().is_some(), true);
+        assert_eq!(result.as_ref().unwrap().as_ref().unwrap().request_index, 1);
     }
 }
