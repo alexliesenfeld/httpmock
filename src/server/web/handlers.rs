@@ -174,7 +174,7 @@ pub(crate) fn find_closest_match(
     Ok(Some(ClosestMatch {
         request: HttpMockRequest::clone(&req),
         request_index: closes_match_request_idx,
-        mismatches
+        mismatches,
     }))
 }
 

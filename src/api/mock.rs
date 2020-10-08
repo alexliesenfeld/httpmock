@@ -9,7 +9,10 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::api::{Method, Regex};
-use crate::data::{MockDefinition, MockMatcherFunction, MockServerHttpResponse, Pattern, RequestRequirements, HttpMockRequest, ActiveMock, ClosestMatch};
+use crate::data::{
+    ActiveMock, ClosestMatch, HttpMockRequest, MockDefinition, MockMatcherFunction,
+    MockServerHttpResponse, Pattern, RequestRequirements,
+};
 use crate::server::{Diff, DiffResult, Mismatch, Reason, Tokenizer};
 use crate::util::{get_test_resource_file_path, read_file, Join};
 use crate::MockServer;

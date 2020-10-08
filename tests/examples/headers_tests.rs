@@ -21,11 +21,11 @@ fn headers_test() {
 
     // Act: Send the request and deserialize the response to JSON
     /*let response = Request::post(&format!("http://{}/test", server.address()))
-        .header("Authorization", "token 123456789")
-        .body(())
-        .unwrap()
-        .send()
-        .unwrap();*/
+    .header("Authorization", "token 123456789")
+    .body(())
+    .unwrap()
+    .send()
+    .unwrap();*/
 
     // Assert
     m.assert();
