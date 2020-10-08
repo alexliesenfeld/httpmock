@@ -17,21 +17,21 @@ use std::fmt::Display;
 // here only for the reason to make them serializable/deserializable using serde.
 // *************************************************************************************************
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
-pub(crate) enum Diff {
+pub enum Diff {
     Same(String),
     Add(String),
     Rem(String),
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub(crate) struct DiffResult {
+pub struct DiffResult {
     pub differences: Vec<Diff>,
     pub distance: i32,
     pub tokenizer: Tokenizer,
 }
 
 #[derive(PartialEq, Debug, Serialize, Deserialize, Clone, Copy)]
-pub(crate) enum Tokenizer {
+pub enum Tokenizer {
     Line,
     Word,
     Character,
@@ -61,7 +61,7 @@ pub(crate) fn diff_str(base: &str, edit: &str, tokenizer: Tokenizer) -> DiffResu
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub(crate) struct Reason {
+pub struct Reason {
     pub expected: String,
     pub actual: String,
     pub comparison: String,
@@ -69,13 +69,13 @@ pub(crate) struct Reason {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub(crate) struct Mismatch {
+pub struct Mismatch {
     pub title: String,
     pub reason: Option<Reason>,
     pub diff: Option<DiffResult>,
 }
 
-pub(crate) trait Matcher {
+pub trait Matcher {
     fn matches(&self, req: &HttpMockRequest, mock: &RequestRequirements) -> bool;
     fn distance(&self, req: &HttpMockRequest, mock: &RequestRequirements) -> usize;
     fn mismatches(&self, req: &HttpMockRequest, mock: &RequestRequirements) -> Vec<Mismatch>;

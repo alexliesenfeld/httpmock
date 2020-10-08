@@ -86,7 +86,7 @@ impl<'a> MockRef<'a> {
             .server_adapter
             .as_ref()
             .unwrap()
-            .find_closest_match(self.id)
+            .verify(&active_mock.definition.request)
             .await
             .expect("Cannot contact mock server");
 

@@ -44,9 +44,10 @@ use crate::server::matchers::targets::{
 use matchers::generic::SingleValueMatcher;
 use matchers::targets::{JSONBodyTarget, StringBodyTarget};
 pub(crate) use matchers::{Diff, DiffResult, Mismatch, Reason, Tokenizer};
+use regex::internal::Input;
 
 /// The shared state accessible to all handlers
-pub(crate) struct MockServerState {
+pub struct MockServerState {
     id_counter: AtomicUsize,
     pub mocks: RwLock<BTreeMap<usize, ActiveMock>>,
     pub history: RwLock<Vec<Arc<HttpMockRequest>>>,
@@ -467,6 +468,13 @@ async fn route_request(
         }
     }
 
+    if VERIFY_PATH.is_match(&request_header.path) {
+        match request_header.method.as_str() {
+            "POST" => return routes::verify(state, body),
+            _ => {}
+        }
+    }
+
     if HISTORY_PATH.is_match(&request_header.path) {
         match request_header.method.as_str() {
             "DELETE" => return routes::delete_history(state),
@@ -519,12 +527,14 @@ lazy_static! {
     static ref MOCKS_PATH: Regex = Regex::new(r"^/__mocks$").unwrap();
     static ref MOCK_PATH: Regex = Regex::new(r"^/__mocks/([0-9]+)$").unwrap();
     static ref HISTORY_PATH: Regex = Regex::new(r"^/__history$").unwrap();
+    static ref VERIFY_PATH: Regex = Regex::new(r"^/__verify$").unwrap();
 }
 
 #[cfg(test)]
 mod test {
     use crate::server::{
-        error_response, get_path_param, map_response, ServerResponse, MOCKS_PATH, MOCK_PATH,
+        error_response, get_path_param, map_response, ServerResponse, HISTORY_PATH, MOCKS_PATH,
+        MOCK_PATH, PING_PATH, VERIFY_PATH,
     };
     use crate::Regex;
     use futures_util::TryStreamExt;
@@ -538,6 +548,18 @@ mod test {
         assert_eq!(MOCK_PATH.is_match("/__mocks"), false);
         assert_eq!(MOCK_PATH.is_match("/__mocks/345345/test"), false);
         assert_eq!(MOCK_PATH.is_match("test/__mocks/345345/test"), false);
+
+        assert_eq!(PING_PATH.is_match("/__ping"), true);
+        assert_eq!(PING_PATH.is_match("/__ping/1295473892374"), false);
+        assert_eq!(PING_PATH.is_match("test/ping/1295473892374"), false);
+
+        assert_eq!(VERIFY_PATH.is_match("/__verify"), true);
+        assert_eq!(VERIFY_PATH.is_match("/__verify/1295473892374"), false);
+        assert_eq!(VERIFY_PATH.is_match("test/verify/1295473892374"), false);
+
+        assert_eq!(HISTORY_PATH.is_match("/__history"), true);
+        assert_eq!(HISTORY_PATH.is_match("/__history/1295473892374"), false);
+        assert_eq!(HISTORY_PATH.is_match("test/history/1295473892374"), false);
 
         assert_eq!(MOCKS_PATH.is_match("/__mocks"), true);
         assert_eq!(MOCKS_PATH.is_match("/__mocks/5"), false);

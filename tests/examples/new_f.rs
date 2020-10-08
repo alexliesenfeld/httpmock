@@ -14,9 +14,7 @@ fn binary_body_test() {
     // Arrange
     let binary_content = b"\x80\x02\x03";
 
-    let server = MockServer::start();
-
-    let m = server.mock(|when, then| {
+    let m = mock(|when, then| {
         when.path("/hello");
         then.status(200).body(binary_content);
     });
@@ -28,8 +26,9 @@ fn binary_body_test() {
     server.verify(|that| {
         that.path("/p")
             .header("Accept", "*/*")
-            .query_param("putt", "abc");
-    }, 3);
+            .query_param("putt", "abc")
+            .times(3);
+    });
 
     m.assert();
     assert_eq!(response.status(), 200);

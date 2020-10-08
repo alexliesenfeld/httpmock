@@ -53,7 +53,7 @@ impl HttpMockRequest {
 
 /// A general abstraction of an HTTP response for all handlers.
 #[derive(Serialize, Deserialize, Clone)]
-pub(crate) struct MockServerHttpResponse {
+pub struct MockServerHttpResponse {
     pub status: Option<u16>,
     pub headers: Option<BTreeMap<String, String>>,
     #[serde(default, with = "opt_vector_serde_base64")]
@@ -132,7 +132,7 @@ impl fmt::Debug for MockServerHttpResponse {
 
 /// A general abstraction of an HTTP request for all handlers.
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub(crate) struct Pattern {
+pub struct Pattern {
     #[serde(with = "serde_regex")]
     pub regex: Regex,
 }
@@ -167,7 +167,7 @@ pub type MockMatcherFunction = fn(Arc<HttpMockRequest>) -> bool;
 
 /// A general abstraction of an HTTP request for all handlers.
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub(crate) struct RequestRequirements {
+pub struct RequestRequirements {
     pub path: Option<String>,
     pub path_contains: Option<Vec<String>>,
     pub path_matches: Option<Vec<Pattern>>,
@@ -288,7 +288,7 @@ impl RequestRequirements {
 
 /// A Request that is made to set a new mock.
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub(crate) struct MockDefinition {
+pub struct MockDefinition {
     pub request: RequestRequirements,
     pub response: MockServerHttpResponse,
 }
@@ -303,7 +303,7 @@ impl MockDefinition {
 }
 
 #[derive(Serialize, Deserialize)]
-pub(crate) struct MockIdentification {
+pub struct MockIdentification {
     pub mock_id: usize,
 }
 
@@ -314,7 +314,7 @@ impl MockIdentification {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
-pub(crate) struct ActiveMock {
+pub struct ActiveMock {
     pub id: usize,
     pub call_counter: usize,
     pub definition: MockDefinition,
@@ -331,14 +331,14 @@ impl ActiveMock {
 }
 
 #[derive(Serialize, Deserialize)]
-pub(crate) struct ClosestMatch {
+pub struct ClosestMatch {
     pub request: HttpMockRequest,
     pub request_index: usize,
     pub mismatches: Vec<Mismatch>,
 }
 
 #[derive(Serialize, Deserialize)]
-pub(crate) struct ErrorResponse {
+pub struct ErrorResponse {
     pub message: String,
 }
 

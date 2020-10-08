@@ -147,20 +147,15 @@ fn request_matches(
 }
 
 /// Deletes the request history.
-pub(crate) fn find_closest_match(
+pub(crate) fn verify(
     state: &MockServerState,
-    mock_id: usize,
+    mock_rr: &RequestRequirements,
 ) -> Result<Option<ClosestMatch>, String> {
-    let mock = match read_one_mock(state, mock_id)? {
-        None => return Ok(None),
-        Some(v) => v,
-    };
-
     let mut history = state.history.write().unwrap();
 
-    let hit_counts = get_request_hit_counts(state, &mock, &history);
+    let hit_counts = get_request_hit_counts(state, &mock_rr, &history);
     let max_hits_requests = get_max_hits_requests(&hit_counts);
-    let request_distances = get_distances(&max_hits_requests, &history, &state.matchers, &mock);
+    let request_distances = get_distances(&max_hits_requests, &history, &state.matchers, mock_rr);
     let best_matches = get_min_distance_requests(&request_distances);
 
     let closes_match_request_idx = match best_matches.get(0) {
@@ -169,7 +164,7 @@ pub(crate) fn find_closest_match(
     };
 
     let req = history.get(closes_match_request_idx).unwrap();
-    let mismatches = get_request_mismatches(req, &mock, &state.matchers);
+    let mismatches = get_request_mismatches(req, &mock_rr, &state.matchers);
 
     Ok(Some(ClosestMatch {
         request: HttpMockRequest::clone(&req),
@@ -195,7 +190,7 @@ fn validate_mock_definition(req: &MockDefinition) -> Result<(), String> {
 // For each request, find the number of matchers that successfully matched
 fn get_request_hit_counts(
     state: &MockServerState,
-    mock: &ActiveMock,
+    mock_rr: &RequestRequirements,
     history: &Vec<Arc<HttpMockRequest>>,
 ) -> BTreeMap<usize, usize> {
     history
@@ -207,7 +202,7 @@ fn get_request_hit_counts(
                 state
                     .matchers
                     .iter()
-                    .filter(|mm| mm.matches(&req, &mock.definition.request))
+                    .filter(|mm| mm.matches(&req, mock_rr))
                     .count(),
             )
         })
@@ -238,24 +233,24 @@ fn get_distances(
     requests: &BTreeMap<usize, usize>,
     history: &Vec<Arc<HttpMockRequest>>,
     matchers: &Vec<Box<dyn Matcher + Sync + Send>>,
-    mock: &ActiveMock,
+    mock_rr: &RequestRequirements,
 ) -> BTreeMap<usize, usize> {
     history
         .iter()
         .enumerate()
         .filter(|(idx, r)| requests.contains_key(idx))
-        .map(|(idx, req)| (idx, get_request_distance(req, mock, matchers)))
+        .map(|(idx, req)| (idx, get_request_distance(req, mock_rr, matchers)))
         .collect()
 }
 
 fn get_request_mismatches(
     req: &Arc<HttpMockRequest>,
-    mock: &ActiveMock,
+    mock_rr: &RequestRequirements,
     matchers: &Vec<Box<dyn Matcher + Sync + Send>>,
 ) -> Vec<Mismatch> {
     matchers
         .iter()
-        .map(|mat| mat.mismatches(req, &mock.definition.request))
+        .map(|mat| mat.mismatches(req, mock_rr))
         .flatten()
         .into_iter()
         .collect()
@@ -263,12 +258,12 @@ fn get_request_mismatches(
 
 fn get_request_distance(
     req: &Arc<HttpMockRequest>,
-    mock: &ActiveMock,
+    mock_rr: &RequestRequirements,
     matchers: &Vec<Box<dyn Matcher + Sync + Send>>,
 ) -> usize {
     matchers
         .iter()
-        .map(|matcher| matcher.distance(req, &mock.definition.request))
+        .map(|matcher| matcher.distance(req, mock_rr))
         .sum()
 }
 

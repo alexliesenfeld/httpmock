@@ -233,10 +233,12 @@ use tokio::task::LocalSet;
 
 use util::Join;
 
-use crate::api::{LocalMockServerAdapter, MockServerAdapter, RemoteMockServerAdapter};
-pub use crate::api::{Method, Mock, MockRef, Regex};
 use crate::server::{start_server, MockServerState};
 use crate::util::{read_env, with_retry};
+
+use crate::api::{LocalMockServerAdapter, MockRef, RemoteMockServerAdapter};
+pub use crate::api::{Method, Mock, Regex};
+use api::MockServerAdapter;
 use data::{HttpMockRequest, MockMatcherFunction};
 use futures_util::core_reexport::time::Duration;
 use serde::{Deserialize, Serialize};

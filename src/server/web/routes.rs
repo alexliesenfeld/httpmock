@@ -15,6 +15,7 @@ pub(crate) fn ping() -> Result<ServerResponse, String> {
 /// This route is responsible for adding a new mock
 pub(crate) fn add(state: &MockServerState, body: String) -> Result<ServerResponse, String> {
     let mock_def: serde_json::Result<MockDefinition> = serde_json::from_str(&body);
+
     if let Err(e) = mock_def {
         return create_json_response(500, None, ErrorResponse::new(&e));
     }
@@ -63,6 +64,22 @@ pub(crate) fn read_one(state: &MockServerState, id: usize) -> Result<ServerRespo
         Ok(mock_opt) => match mock_opt {
             Some(mock) => create_json_response(200, None, mock),
             None => create_response(404, None, None),
+        },
+    }
+}
+
+/// This route is responsible for verification
+pub(crate) fn verify(state: &MockServerState, body: String) -> Result<ServerResponse, String> {
+    let mock_rr: serde_json::Result<RequestRequirements> = serde_json::from_str(&body);
+    if let Err(e) = mock_rr {
+        return create_json_response(500, None, ErrorResponse::new(&e));
+    }
+
+    match handlers::verify(&state, &mock_rr.unwrap()) {
+        Err(e) => create_json_response(500, None, ErrorResponse::new(&e)),
+        Ok(closest_match) => match closest_match {
+            None => create_response(404, None, None),
+            Some(cm) => create_json_response(200, None, cm),
         },
     }
 }
