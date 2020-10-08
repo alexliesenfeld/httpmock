@@ -1591,7 +1591,7 @@ impl Default for Mock {
 fn create_reason_output(reason: &Reason) -> String {
     let mut output = String::new();
     let offsets = match reason.best_match {
-        true => ("\t".repeat(5), "\t".repeat(2)),
+        true => ("\t".repeat(5), "\t".repeat(1)),
         false => ("\t".repeat(1), "\t".repeat(2)),
     };
     let actual_text = match reason.best_match {
@@ -1680,7 +1680,14 @@ fn fail_with(closest_match: Option<ClosestMatch>) {
                 output.push_str(&create_mismatch_output(idx, &mm));
             }
 
-            assert!(false, output);
+            closest_match.mismatches.first().map(|mismatch| {
+                mismatch
+                    .reason
+                    .as_ref()
+                    .map(|reason| assert_eq!(reason.expected, reason.actual, "{}", output))
+            });
+
+            assert!(false, output)
         }
     }
 }

@@ -65,17 +65,6 @@ impl MockServerState {
             history: RwLock::new(Vec::new()),
             id_counter: AtomicUsize::new(0),
             matchers: vec![
-                // method exact
-                Box::new(SingleValueMatcher {
-                    entity_name: "method",
-                    comparator: Box::new(StringExactMatchComparator::new(false)),
-                    source: Box::new(MethodSource::new()),
-                    target: Box::new(MethodTarget::new()),
-                    transformer: None,
-                    with_reason: true,
-                    diff_with: None,
-                    weight: 3,
-                }),
                 // path exact
                 Box::new(SingleValueMatcher {
                     entity_name: "path",
@@ -84,7 +73,7 @@ impl MockServerState {
                     target: Box::new(PathTarget::new()),
                     transformer: None,
                     with_reason: true,
-                    diff_with: Some(Tokenizer::Character),
+                    diff_with: None,
                     weight: 10,
                 }),
                 // path contains
@@ -108,6 +97,17 @@ impl MockServerState {
                     with_reason: true,
                     diff_with: None,
                     weight: 10,
+                }),
+                // method exact
+                Box::new(SingleValueMatcher {
+                    entity_name: "method",
+                    comparator: Box::new(StringExactMatchComparator::new(false)),
+                    source: Box::new(MethodSource::new()),
+                    target: Box::new(MethodTarget::new()),
+                    transformer: None,
+                    with_reason: true,
+                    diff_with: None,
+                    weight: 3,
                 }),
                 // Query Param exact
                 Box::new(MultiValueMatcher {
@@ -229,7 +229,7 @@ impl MockServerState {
                     target: Box::new(JSONBodyTarget::new()),
                     transformer: None,
                     with_reason: false,
-                    diff_with: Some(Tokenizer::Character),
+                    diff_with: Some(Tokenizer::Line),
                     weight: 1,
                 }),
                 // JSON body exact
