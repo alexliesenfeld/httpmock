@@ -27,7 +27,7 @@ fn binary_body_test() {
 
     // Assert
     assert_eq!(response.status(), 200);
-    assert_eq!(m.times_called(), 1);
+    assert_eq!(m.hits(), 1);
     assert_eq!(body_to_vec(response.body_mut()), binary_content.to_vec());
 }
 
