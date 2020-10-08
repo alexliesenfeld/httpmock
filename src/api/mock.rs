@@ -1665,24 +1665,24 @@ fn create_mismatch_output(idx: usize, mm: &Mismatch) -> String {
 }
 
 fn fail_with(closest_match: Option<ClosestMatch>) {
-    if closest_match.is_none() {
-        assert!(false, "No request has been received by the mock server.")
+    match closest_match {
+        None => assert!(false, "No request has been received by the mock server."),
+        Some(closest_match) => {
+            let mut output = String::new();
+
+            output.push_str("At least one request has been received, but none exactly matched the mock specification.\n");
+            output.push_str(&format!(
+                "Here is a comparison with the most similar request (request number {}): \n\n",
+                closest_match.request_index + 1
+            ));
+
+            for (idx, mm) in closest_match.mismatches.iter().enumerate() {
+                output.push_str(&create_mismatch_output(idx, &mm));
+            }
+
+            assert!(false, output);
+        }
     }
-    let closest_match = closest_match.unwrap();
-
-    let mut output = String::new();
-
-    output.push_str("At least one request has been received, but none exactly matched the mock specification.\n");
-    output.push_str(&format!(
-        "Here is a comparison with the most similar request (request number {}): \n\n",
-        closest_match.request_index + 1
-    ));
-
-    for (idx, mm) in closest_match.mismatches.iter().enumerate() {
-        output.push_str(&create_mismatch_output(idx, &mm));
-    }
-
-    assert!(false, output);
 }
 
 #[cfg(test)]
