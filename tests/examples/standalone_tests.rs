@@ -5,8 +5,8 @@ use isahc::{get, get_async, Body, RequestExt};
 use crate::simulate_standalone_server;
 use httpmock::MockServer;
 use httpmock_macros::httpmock_example_test;
-use std::io::Read;
 use regex::Replacer;
+use std::io::Read;
 
 #[test]
 #[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
@@ -21,8 +21,7 @@ fn standalone_test() {
     let server = MockServer::connect("localhost:5000");
 
     let search_mock = server.mock(|when, then| {
-        when.path("/search")
-            .body("wow so large".repeat(10000000));
+        when.path("/search").body("wow so large".repeat(10000000));
         then.status(202);
     });
 
@@ -36,7 +35,6 @@ fn standalone_test() {
     // Assert
     search_mock.assert();
     assert_eq!(response.status(), 202);
-
 }
 
 #[async_std::test]

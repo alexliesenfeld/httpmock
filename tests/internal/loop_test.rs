@@ -5,8 +5,8 @@ use isahc::{get, get_async, Body, RequestExt};
 use crate::simulate_standalone_server;
 use httpmock::MockServer;
 use httpmock_macros::httpmock_example_test;
-use std::io::Read;
 use regex::Replacer;
+use std::io::Read;
 
 #[test]
 fn loop_with_standalone_test() {
@@ -32,12 +32,10 @@ fn loop_with_standalone_test() {
         search_mock.assert();
         assert_eq!(response.status(), 202);
     }
-
 }
 
 #[test]
 fn loop_with_local_test() {
-
     // Arrange
     let _ = env_logger::try_init();
 
@@ -57,5 +55,4 @@ fn loop_with_local_test() {
         search_mock.assert();
         assert_eq!(response.status(), 202);
     }
-
 }

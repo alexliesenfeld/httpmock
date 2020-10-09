@@ -5,8 +5,8 @@ use isahc::{get, get_async, Body, RequestExt};
 use crate::simulate_standalone_server;
 use httpmock::MockServer;
 use httpmock_macros::httpmock_example_test;
-use std::io::Read;
 use regex::Replacer;
+use std::io::Read;
 
 #[test]
 fn large_body_test() {
@@ -20,14 +20,13 @@ fn large_body_test() {
     let server = MockServer::connect("localhost:5000");
 
     let search_mock = server.mock(|when, then| {
-        when.path("/search")
-            .body("wow so large".repeat(10000000)); // 120 MB body
+        when.path("/search").body("wow so large".repeat(10000000)); // 120 MB body
         then.status(202);
     });
 
     // Act: Send the HTTP request
     let response = isahc::prelude::Request::post(server.url("/search"))
-        .body("wow so large".repeat(10000000))// 120 MB body
+        .body("wow so large".repeat(10000000)) // 120 MB body
         .unwrap()
         .send()
         .unwrap();
@@ -35,5 +34,4 @@ fn large_body_test() {
     // Assert
     search_mock.assert();
     assert_eq!(response.status(), 202);
-
 }

@@ -308,7 +308,10 @@ impl<'a> MockRef<'a> {
 /// (see [MockRef::hits](struct.MockRef.html#method.hits)). You can also use it
 /// to explicitly delete the mock object from the server
 /// (see [MockRef::delete](struct.MockRef.html#method.delete)).
-#[deprecated(since = "0.5.0", note = "Please use newer API (see: https://github.com/alexliesenfeld/httpmock/blob/master/CHANGELOG.md")]
+#[deprecated(
+    since = "0.5.0",
+    note = "Please use newer API (see: https://github.com/alexliesenfeld/httpmock/blob/master/CHANGELOG.md"
+)]
 pub struct Mock {
     mock: MockDefinition,
 }
