@@ -1475,7 +1475,7 @@ impl Default for Mock {
 fn create_reason_output(reason: &Reason) -> String {
     let mut output = String::new();
     let offsets = match reason.best_match {
-        true => ("\t".repeat(5), "\t".repeat(1)),
+        true => ("\t".repeat(5), "\t".repeat(2)),
         false => ("\t".repeat(1), "\t".repeat(2)),
     };
     let actual_text = match reason.best_match {
@@ -1579,11 +1579,54 @@ fn fail_with(closest_match: Option<ClosestMatch>) {
 #[cfg(test)]
 mod test {
     use crate::Mock;
+    use crate::api::mock::fail_with;
+    use crate::data::{ClosestMatch, HttpMockRequest};
+    use crate::server::{Mismatch, Reason, DiffResult, Tokenizer, Diff};
 
-    /// This test makes sure that a mock has a successful response code (200) by default.
     #[test]
-    fn fill_mock_requirements() {
-        let mock = Mock::default();
-        assert_eq!(mock.mock.response.status, None);
+    #[should_panic(expected =
+    "1 : This is a title\n\
+    ------------------------------------------------------------------------------------------\n\
+    Expected:	[equals]		/toast\n\
+    Actual:		             	/test\n\
+    Diff:\n   | t\n---| e\n+++| oa\n   | st"
+    )]
+    fn fail_with_message_test() {
+        // Arrange
+        let closest_match = ClosestMatch {
+            request: HttpMockRequest {
+                path: "/test".to_string(),
+                method: "GET".to_string(),
+                headers: None,
+                query_params: None,
+                body: None
+            },
+            request_index: 0,
+            mismatches: vec![ Mismatch {
+                title: "This is a title".to_string(),
+                reason: Some(Reason {
+                    expected: "/toast".to_string(),
+                    actual: "/test".to_string(),
+                    comparison: "equals".to_string(),
+                    best_match: false
+                }),
+                diff: Some(DiffResult {
+                    differences: vec![
+                        Diff::Same(String::from("t")),
+                        Diff::Rem(String::from("e")),
+                        Diff::Add(String::from("oa")),
+                        Diff::Same(String::from("st")),
+                    ],
+                    distance: 5,
+                    tokenizer: Tokenizer::Line
+                })
+            }]
+        };
+
+        // Act
+        fail_with(Some(closest_match));
+
+        // Assert
+
     }
 }

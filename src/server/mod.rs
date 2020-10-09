@@ -43,7 +43,7 @@ use crate::server::matchers::targets::{
 };
 use matchers::generic::SingleValueMatcher;
 use matchers::targets::{JSONBodyTarget, StringBodyTarget};
-pub(crate) use matchers::{Diff, DiffResult, Mismatch, Reason, Tokenizer};
+pub use matchers::{Diff, DiffResult, Mismatch, Reason, Tokenizer};
 use regex::internal::Input;
 
 /// The shared state accessible to all handlers
