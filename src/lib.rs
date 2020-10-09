@@ -6,7 +6,6 @@
 //! * Many built-in helpers for easy request matching.
 //! * Parallel test execution.
 //! * Extensible request matching.
-//! * Two interchangeable API DSLs for mock definition.
 //! * Fully asynchronous core with synchronous and asynchronous APIs.
 //! * Debugging support
 //! * Standalone mode with an accompanying [Docker image](https://hub.docker.com/r/alexliesenfeld/httpmock).
