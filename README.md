@@ -10,8 +10,7 @@
 [![crates.io](https://img.shields.io/crates/d/httpmock.svg)](https://crates.io/crates/httpmock)
 [![Docker](https://img.shields.io/docker/cloud/build/alexliesenfeld/httpmock)](https://hub.docker.com/r/alexliesenfeld/httpmock)
 [![Rust](https://img.shields.io/badge/rust-1.43.0%2B-blue.svg?maxAge=3600)](https://github.com/rust-lang/regex)
-[![License](https://img.shields.io/github/license/alexliesenfeld/httpmock.svg)](LICENSE)
-	
+
 </div>
 
 <p align="center">
