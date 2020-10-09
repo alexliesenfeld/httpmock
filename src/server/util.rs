@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 use std::collections::BTreeMap;
 
 /// Extends a tree map to provide additional operations.
-pub trait TreeMapExtension<K, V>
+pub(crate) trait TreeMapExtension<K, V>
 where
     K: std::cmp::Ord,
     V: std::cmp::Ord,
@@ -31,7 +31,7 @@ where
 }
 
 /// Extends a string based tree map to provide additional operations.
-pub trait StringTreeMapExtension {
+pub(crate) trait StringTreeMapExtension {
     /// Checks if a tree map contains another tree map while ignoring the case of the key.
     fn contains_with_case_insensitive_key(&self, other: &BTreeMap<String, String>) -> bool;
 
@@ -40,6 +40,9 @@ pub trait StringTreeMapExtension {
 
     /// Checks if a tree map contains a key while ignoring the case of the key.
     fn contains_case_insensitive_key(&self, key: &str) -> bool;
+
+    /// Find an element by key while ignoring the case of the key.
+    fn get_case_insensitive(&self, key: &str) -> Option<&'_ String>;
 }
 
 /// Implements [`StringTreeMapExtension`].
@@ -60,6 +63,13 @@ impl StringTreeMapExtension for BTreeMap<String, String> {
     fn contains_case_insensitive_key(&self, key: &str) -> bool {
         let key_lc = key.to_lowercase();
         self.keys().any(|k| k.to_lowercase().eq(&key_lc))
+    }
+
+    fn get_case_insensitive(&self, key: &str) -> Option<&'_ String> {
+        let key_lc = key.to_lowercase();
+        self.keys()
+            .find(|k| k.to_lowercase().eq(&key_lc))
+            .map(|key| self.get(key).unwrap())
     }
 }
 

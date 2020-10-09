@@ -1,23 +1,17 @@
 extern crate httpmock;
 
+use httpmock::Method::POST;
+use httpmock::{Mock, MockServer};
+use httpmock_macros::httpmock_example_test;
 use isahc::prelude::*;
-use isahc::{get, get_async, HttpClientBuilder};
 use serde_json::{json, Value};
-use httpmock::Method::{GET, POST};
-use httpmock::{Mock, MockServer, MockServerRequest, Regex};
-use httpmock_macros::test_executors;
-use isahc::config::RedirectPolicy;
-use std::fs::read_to_string;
-use std::time::{Duration, SystemTime};
 
-
-/// Tests and demonstrates body matching.
 #[test]
-#[test_executors] // Internal macro that executes this test in different async executors. Ignore it.
-fn json_value_body_match_test() {
+#[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
+fn json_value_body_test() {
     // Arrange
     let _ = env_logger::try_init();
-    let mock_server = MockServer::start();
+    let server = MockServer::start();
 
     let m = Mock::new()
         .expect_method(POST)
@@ -27,10 +21,10 @@ fn json_value_body_match_test() {
         .return_status(201)
         .return_header("Content-Type", "application/json")
         .return_json_body(json!({ "name": "Hans" }))
-        .create_on(&mock_server);
+        .create_on(&server);
 
     // Act: Send the request and deserialize the response to JSON
-    let mut response = Request::post(&format!("http://{}/users", mock_server.address()))
+    let mut response = Request::post(&format!("http://{}/users", server.address()))
         .header("Content-Type", "application/json")
         .body(json!({ "name": "Fred" }).to_string())
         .unwrap()
@@ -42,15 +36,13 @@ fn json_value_body_match_test() {
 
     // Assert
     assert_eq!(response.status(), 201);
-    assert_eq!(m.times_called(), 1);
+    assert_eq!(m.hits(), 1);
     assert_eq!(user.as_object().unwrap().get("name").unwrap(), "Hans");
 }
 
-
-/// Tests and demonstrates body matching.
 #[test]
-#[test_executors] // Internal macro that executes this test in different async executors. Ignore it.
-fn exact_body_match_test() {
+#[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
+fn json_body_object_serde_test() {
     // This is a temporary type that we will use for this test
     #[derive(serde::Serialize, serde::Deserialize)]
     struct TestUser {
@@ -59,7 +51,7 @@ fn exact_body_match_test() {
 
     // Arrange
     let _ = env_logger::try_init();
-    let mock_server = MockServer::start();
+    let server = MockServer::start();
 
     let m = Mock::new()
         .expect_method(POST)
@@ -73,12 +65,17 @@ fn exact_body_match_test() {
         .return_json_body_obj(&TestUser {
             name: String::from("Hans"),
         })
-        .create_on(&mock_server);
+        .create_on(&server);
 
     // Act: Send the request and deserialize the response to JSON
-    let mut response = Request::post(&format!("http://{}/users", mock_server.address()))
+    let mut response = Request::post(&format!("http://{}/users", server.address()))
         .header("Content-Type", "application/json")
-        .body(json!(&TestUser { name: "Fred".to_string() }).to_string())
+        .body(
+            json!(&TestUser {
+                name: "Fred".to_string()
+            })
+            .to_string(),
+        )
         .unwrap()
         .send()
         .unwrap();
@@ -89,15 +86,14 @@ fn exact_body_match_test() {
     // Assert
     assert_eq!(response.status(), 201);
     assert_eq!(user.name, "Hans");
-    assert_eq!(m.times_called(), 1);
+    assert_eq!(m.hits(), 1);
 }
 
-/// Tests and demonstrates matching JSON body partials.
 #[test]
-#[test_executors] // Internal macro that executes this test in different async executors. Ignore it.
-fn body_partial_json_str_test() {
+#[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
+fn partial_json_body_test() {
     let _ = env_logger::try_init();
-    let mock_server = MockServer::start();
+    let server = MockServer::start();
 
     // This is the structure that needs to be included in the request
     #[derive(serde::Serialize, serde::Deserialize)]
@@ -127,11 +123,11 @@ fn body_partial_json_str_test() {
         )
         .return_status(201)
         .return_body(r#"{"result":"success"}"#)
-        .create_on(&mock_server);
+        .create_on(&server);
 
     // Simulates application that makes the request to the mock.
     let uri = format!("http://{}/users", m.server_address());
-    let mut response = Request::post(&uri)
+    let response = Request::post(&uri)
         .header("Content-Type", "application/json")
         .header("User-Agent", "rust-test")
         .body(
@@ -149,5 +145,5 @@ fn body_partial_json_str_test() {
 
     // Assertions
     assert_eq!(response.status(), 201);
-    assert_eq!(m.times_called(), 1);
+    assert_eq!(m.hits(), 1);
 }

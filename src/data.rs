@@ -3,28 +3,29 @@ extern crate serde_regex;
 use std::cmp::Ordering;
 use std::collections::BTreeMap;
 use std::fmt::Debug;
-use std::rc::Rc;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::Relaxed;
-use std::sync::RwLock;
+use std::sync::{Arc, RwLock};
 
+use crate::server::Mismatch;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::fmt;
 use std::time::Duration;
 
-/// A general abstraction of an HTTP request for all handlers.
-#[derive(Serialize, Deserialize, Debug)]
-pub struct MockServerHttpRequest {
+/// A general abstraction of an HTTP request of `httpmock`.
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct HttpMockRequest {
     pub path: String,
     pub method: String,
-    pub headers: Option<BTreeMap<String, String>>,
-    pub query_params: Option<BTreeMap<String, String>>,
+    pub headers: Option<Vec<(String, String)>>,
+    pub query_params: Option<Vec<(String, String)>>,
     pub body: Option<String>,
 }
 
-impl MockServerHttpRequest {
-    pub fn new(method: String, path: String) -> Self {
+impl HttpMockRequest {
+    pub(crate) fn new(method: String, path: String) -> Self {
         Self {
             path,
             method,
@@ -34,49 +35,98 @@ impl MockServerHttpRequest {
         }
     }
 
-    pub fn with_headers(mut self, arg: BTreeMap<String, String>) -> Self {
+    pub(crate) fn with_headers(mut self, arg: Vec<(String, String)>) -> Self {
         self.headers = Some(arg);
         self
     }
 
-    pub fn with_query_params(mut self, arg: BTreeMap<String, String>) -> Self {
+    pub(crate) fn with_query_params(mut self, arg: Vec<(String, String)>) -> Self {
         self.query_params = Some(arg);
         self
     }
 
-    pub fn with_body(mut self, arg: String) -> Self {
+    pub(crate) fn with_body(mut self, arg: String) -> Self {
         self.body = Some(arg);
         self
     }
 }
 
 /// A general abstraction of an HTTP response for all handlers.
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct MockServerHttpResponse {
-    pub status: u16,
+    pub status: Option<u16>,
     pub headers: Option<BTreeMap<String, String>>,
-    pub body: Option<String>,
-    pub duration: Option<Duration>,
+    #[serde(default, with = "opt_vector_serde_base64")]
+    pub body: Option<Vec<u8>>,
+    pub delay: Option<Duration>,
 }
 
 impl MockServerHttpResponse {
-    pub fn new(status: u16) -> Self {
+    pub fn new() -> Self {
         Self {
-            status,
+            status: None,
             headers: None,
             body: None,
-            duration: None,
+            delay: None,
+        }
+    }
+}
+
+/// Serializes and deserializes the response body to/from a Base64 string.
+mod opt_vector_serde_base64 {
+    use serde::{Deserialize, Deserializer, Serializer};
+
+    // See the following references:
+    // https://github.com/serde-rs/serde/blob/master/serde/src/ser/impls.rs#L99
+    // https://github.com/serde-rs/serde/issues/661
+    pub fn serialize<T, S>(bytes: &Option<T>, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        T: AsRef<[u8]>,
+        S: Serializer,
+    {
+        match bytes {
+            Some(ref value) => serializer.serialize_bytes(base64::encode(value).as_bytes()),
+            None => serializer.serialize_none(),
         }
     }
 
-    pub fn with_headers(mut self, arg: BTreeMap<String, String>) -> Self {
-        self.headers = Some(arg);
-        self
+    // See the following references:
+    // https://github.com/serde-rs/serde/issues/1444
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Option<Vec<u8>>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        struct Wrapper(#[serde(deserialize_with = "from_base64")] Vec<u8>);
+
+        let v = Option::deserialize(deserializer)?;
+        Ok(v.map(|Wrapper(a)| a))
     }
 
-    pub fn with_body(mut self, arg: String) -> Self {
-        self.body = Some(arg);
-        self
+    fn from_base64<'de, D>(deserializer: D) -> Result<Vec<u8>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let vec = Vec::deserialize(deserializer)?;
+        base64::decode(vec).map_err(serde::de::Error::custom)
+    }
+}
+
+/// Prints the response body as UTF8 string
+impl fmt::Debug for MockServerHttpResponse {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("MockServerHttpResponse")
+            .field("status", &self.status)
+            .field("headers", &self.headers)
+            .field(
+                "body",
+                &self
+                    .body
+                    .as_ref()
+                    .map(|x| String::from_utf8_lossy(x.as_ref()).to_string()),
+            )
+            .field("delay", &self.delay)
+            .finish()
     }
 }
 
@@ -113,7 +163,7 @@ impl PartialEq for Pattern {
 
 impl Eq for Pattern {}
 
-pub type MockMatcherFunction = fn(Rc<MockServerHttpRequest>) -> bool;
+pub type MockMatcherFunction = fn(Arc<HttpMockRequest>) -> bool;
 
 /// A general abstraction of an HTTP request for all handlers.
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -122,15 +172,17 @@ pub struct RequestRequirements {
     pub path_contains: Option<Vec<String>>,
     pub path_matches: Option<Vec<Pattern>>,
     pub method: Option<String>,
-    pub headers: Option<BTreeMap<String, String>>,
+    pub headers: Option<Vec<(String, String)>>,
     pub header_exists: Option<Vec<String>>,
+    pub cookies: Option<Vec<(String, String)>>,
+    pub cookie_exists: Option<Vec<String>>,
     pub body: Option<String>,
     pub json_body: Option<Value>,
     pub json_body_includes: Option<Vec<Value>>,
     pub body_contains: Option<Vec<String>>,
     pub body_matches: Option<Vec<Pattern>>,
     pub query_param_exists: Option<Vec<String>>,
-    pub query_param: Option<BTreeMap<String, String>>,
+    pub query_param: Option<Vec<(String, String)>>,
 
     #[serde(skip_serializing, skip_deserializing)]
     pub matchers: Option<Vec<MockMatcherFunction>>,
@@ -145,6 +197,8 @@ impl RequestRequirements {
             method: None,
             headers: None,
             header_exists: None,
+            cookies: None,
+            cookie_exists: None,
             body: None,
             json_body: None,
             json_body_includes: None,
@@ -186,13 +240,23 @@ impl RequestRequirements {
         self
     }
 
-    pub fn with_headers(mut self, arg: BTreeMap<String, String>) -> Self {
+    pub fn with_headers(mut self, arg: Vec<(String, String)>) -> Self {
         self.headers = Some(arg);
         self
     }
 
     pub fn with_header_exists(mut self, arg: Vec<String>) -> Self {
         self.header_exists = Some(arg);
+        self
+    }
+
+    pub fn with_cookies(mut self, arg: Vec<(String, String)>) -> Self {
+        self.cookies = Some(arg);
+        self
+    }
+
+    pub fn with_cookie_exists(mut self, arg: Vec<String>) -> Self {
+        self.cookie_exists = Some(arg);
         self
     }
 
@@ -216,7 +280,7 @@ impl RequestRequirements {
         self
     }
 
-    pub fn with_query_param(mut self, arg: BTreeMap<String, String>) -> Self {
+    pub fn with_query_param(mut self, arg: Vec<(String, String)>) -> Self {
         self.query_param = Some(arg);
         self
     }
@@ -249,25 +313,6 @@ impl MockIdentification {
     }
 }
 
-/// The shared state accessible to all handlers
-pub struct MockServerState {
-    pub mocks: RwLock<BTreeMap<usize, ActiveMock>>,
-    id_counter: AtomicUsize,
-}
-
-impl MockServerState {
-    pub fn create_new_id(&self) -> usize {
-        self.id_counter.fetch_add(1, Relaxed)
-    }
-
-    pub fn new() -> Self {
-        MockServerState {
-            mocks: RwLock::new(BTreeMap::new()),
-            id_counter: AtomicUsize::new(0),
-        }
-    }
-}
-
 #[derive(Serialize, Deserialize, Clone)]
 pub struct ActiveMock {
     pub id: usize,
@@ -283,6 +328,13 @@ impl ActiveMock {
             call_counter: 0,
         }
     }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct ClosestMatch {
+    pub request: HttpMockRequest,
+    pub request_index: usize,
+    pub mismatches: Vec<Mismatch>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -303,7 +355,7 @@ impl ErrorResponse {
 
 #[cfg(test)]
 mod test {
-    use crate::server::data::{Pattern, RequestRequirements};
+    use crate::data::{Pattern, RequestRequirements};
     use regex::Regex;
     use serde_json::json;
     use std::collections::BTreeMap;
@@ -317,8 +369,8 @@ mod test {
         let with_path_matches = vec![Pattern::from_regex(
             Regex::new(r#"with_path_matches"#).unwrap(),
         )];
-        let mut with_headers = BTreeMap::new();
-        with_headers.insert("test".into(), "value".into());
+        let mut with_headers = Vec::new();
+        with_headers.push(("test".into(), "value".into()));
         let with_method = "GET";
         let with_body = "with_body";
         let with_body_contains = vec!["body_contains".into()];
@@ -328,8 +380,8 @@ mod test {
         let with_json_body = json!(12.5);
         let with_json_body_includes = vec![json!(12.5)];
         let with_query_param_exists = vec!["with_query_param_exists".into()];
-        let mut with_query_param = BTreeMap::new();
-        with_query_param.insert("with_query_param".into(), "value".into());
+        let mut with_query_param = Vec::new();
+        with_query_param.push(("with_query_param".into(), "value".into()));
         let with_header_exists = vec!["with_header_exists".into()];
 
         // Act

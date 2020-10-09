@@ -1,72 +1,151 @@
-//! `httpmock` is a Rust library that allows you to mock HTTP services in your tests.
+#![allow(warnings)]
+//! HTTP mocking library that allows you to simulate responses from HTTP based services.
 //!
 //!  # Features
-//!
-//! * Provides an HTTP mock server with HTTP/1 and HTTP/2 support.
-//! * A fully asynchronous core with synchronous and asynchronous APIs.
-//! * Compatible with all major asynchronous executors and runtimes.
-//! * Built-in request matchers with support for custom request matchers.
-//! * Parallel test execution by default.
-//! * A standalone mode with an accompanying [Docker image](https://hub.docker.com/r/alexliesenfeld/httpmock).
+//! * Simple, expressive, fluent API.
+//! * Many built-in helpers for easy request matching.
+//! * Parallel test execution.
+//! * Extensible request matching.
+//! * Fully asynchronous core with synchronous and asynchronous APIs.
+//! * Debugging support
+//! * Standalone mode with an accompanying [Docker image](https://hub.docker.com/r/alexliesenfeld/httpmock).
+//! * Network delay simulation
+//! * Support for [Regex](type.Regex.html) matching, JSON, [serde](https://crates.io/crates/serde), cookies, and more.
 
 //! # Getting Started
 //! Add `httpmock` to `Cargo.toml`:
 //!
 //! ```toml
 //! [dev-dependencies]
-//! httpmock = "0.4.5"
+//! httpmock = "0.5.0"
 //! ```
 //!
-//! You can then use `httpmock` in your tests like shown in the example below:
-//! ```rust
-//! extern crate httpmock;
-//!
-//! use httpmock::Method::{GET};
-//! use httpmock::{Mock, MockServer, MockServerRequest, Regex};
-//! use isahc::{get};
-//!
-//! #[test]
-//! fn example_test() {
-//!     // Start a local mock server for exclusive use by this test function.
-//!     let mock_server = MockServer::start();
-//!
-//!     // Create a mock on the mock server. The mock will return HTTP status code 200 whenever
-//!     // the mock server receives a GET-request with path "/hello".
-//!     let search_mock = Mock::new()
-//!         .expect_method(GET)
-//!         .expect_path("/hello")
-//!         .return_status(200)
-//!         .create_on(&mock_server);
-//!
-//!     // Send an HTTP request to the mock server. This simulates your code.
-//!     // The mock_server variable is being used to generate a mock server URL for path "/hello".
-//!     let response = get(mock_server.url("/hello")).unwrap();
-//!
-//!     // Ensure the mock server did respond as specified above.
-//!     assert_eq!(response.status(), 200);
-//!     // Ensure the specified mock responded exactly one time.
-//!     assert_eq!(search_mock.times_called(), 1);
-//! }
+//! You can then use `httpmock` as follows:
 //! ```
+//! use httpmock::MockServer;
+//! use httpmock::Method::GET;
 //!
-//! # API Usage
+//! // Start a lightweight mock server.
+//! let server = MockServer::start();
 //!
-//! Each test usually creates its own local [MockServer](struct.MockServer.html) using
-//! [MockServer::start](struct.MockServer.html#method.start). This creates a lightweight HTTP
-//! server that runs on its own port. This way tests do not conflict with each other.
+//! // Create a mock on the server.
+//! let hello_mock = server.mock(|when, then| {
+//!     when.method(GET)
+//!         .path("/translate")
+//!         .query_param("word", "hello");
+//!     then.status(200)
+//!         .header("Content-Type", "text/html")
+//!         .body("ohi");
+//! });
 //!
-//! You can use the [Mock](struct.Mock.html) structure to specify and create mocks on the
-//! mock server. It provides you all supported mocking functionality.
+//! // Send an HTTP request to the mock server. This simulates your code.
+//! let response = isahc::get(server.url("/translate?word=hello")).unwrap();
 //!
-//! ## Request Matching and Responses
-//! Other than many other libraries `httpmock` does not require you to learn a DSL-like API to
-//! specify mock behaviour. Instead, `httpmock` provides you a fluent builder API that
-//! clearly separates request matching and response attributes by using the following naming scheme:
+//! // Ensure the mock server did respond as specified.
+//! assert_eq!(response.status(), 200);
+//! // Ensure the specified mock was called exactly one time.
+//! assert_eq!(hello_mock.hits(), 1);
+//! ```
+//! # Usage
+//! To be able to configure mocks, you first need to start a mock server by calling
+//! [MockServer::start](struct.MockServer.html#method.start).
+//! This will spin up a lightweight HTTP
+//! mock server in the background and wait until the server is ready to accept requests.
 //!
+//! You can then create a [Mock](struct.Mock.html) object on the server by using the
+//! [MockServer::mock](struct.MockServer.html#method.mock) method. This method expects a closure
+//! with two parameters, that we will refer to as the `when` and `then` parameter:
+//! - The `when` parameter is of type [When](struct.When.html) and holds all request characteristics.
+//! The mock server will only respond to HTTP requests that meet all the criteria. Otherwise it
+//! will respond with HTTP status code `404` and an error message.
+//! - The `then` parameter is of type [Then](struct.Then.html) and holds all values that the mock
+//! server will respond with.
+//!
+//! # Sync / Async
+//! The internal implementation of `httpmock` is completely asynchronous. It provides you a
+//! synchronous and an asynchronous API though. If you want to schedule awaiting operations manually, then
+//! you can use the `async` variants that exist for every potentially blocking operation. For
+//! example, there is [MockServer::start_async](struct.MockServer.html#method.start_async) as an
+//! asynchronous counterpart to [MockServer::start](struct.MockServer.html#method.start). You can
+//! find similar methods throughout the entire library.
+//!
+//! # Parallelism
+//! To balance execution speed and resource consumption, [MockServer](struct.MockServer.html)s
+//! are kept in a server pool internally. This allows to run tests in parallel without overwhelming
+//! the executing machine by creating too many HTTP servers. A test will be blocked if it tries to
+//! use a [MockServer](struct.MockServer.html) (e.g. by calling
+//! [MockServer::start](struct.MockServer.html#method.start)) while the server pool is empty
+//! (i.e. all servers are occupied by other tests).
+//!
+//! [MockServer](struct.MockServer.html)s are never recreated but recycled/resetted.
+//! The pool is filled on demand up to a maximum number of 25 servers.
+//! You can override this number by using the environment variable `HTTPMOCK_MAX_SERVERS`.
+//!
+//! # Debugging
+//! `httpmock` logs against the [log](https://crates.io/crates/log) crate. This allows you to
+//! see detailed log output that contains information about `httpmock`s behaviour.
+//! You can use this log output to investigate
+//! issues, such as to find out why a request does not match a mock definition.
+//!
+//! The most useful log level is `debug`, but you can also go down to `trace` to see even more
+//! information.
+//!
+//! **Attention**: To be able to see the log output, you need to add the `--nocapture` argument
+//! when starting test execution!
+//!
+//! *Hint*: If you use the `env_logger` backend, you need to set the `RUST_LOG` environment variable to
+//! `httpmock=debug`.
+//!
+//! # API Alternatives
+//! This library provides two functionally interchangeable DSL APIs that allow you to create
+//! mocks on the server. You can choose the one you like best or use both side-by-side. For a
+//! consistent look, it is recommended to stick to one of them, though.
+//!
+//! ## When/Then API
+//! This is the default API of `httpmock`. It is concise and easy to read. The main goal
+//! is to reduce overhead emposed by this library to a bare minimum. It works well with
+//! formatting tools, such as [rustfmt](https://crates.io/crates/rustfmt) (i.e. `cargo fmt`),
+//! and can fully benefit from IDE support.
+//!
+//! ### Example
+//! ```
+//! let server = httpmock::MockServer::start();
+//!
+//! let greeting_mock = server.mock(|when, then| {
+//!     when.path("/hi");
+//!     then.status(200);
+//! });
+//!
+//! let response = isahc::get(server.url("/hi")).unwrap();
+//! assert_eq!(greeting_mock.hits(), 1);
+//! ```
+//! Note that `when` and `then` are variables. This allows you to rename them to something you
+//! like better (such as `expect`/`respond_with`).
+//!
+//! Relevant elements for this API are [MockServer::mock](struct.MockServer.html#method.mock), [When](struct.When.html) and [Then](struct.Then.html).
+//!
+//! ## Expect/Return API
+//! This is the historical API of `httpmock`. It is verbous but explicit and provides
+//! much control over mock definition reuse. You should almost never need to use it though.
+//!
+//! ### Example
+//! ```
+//! use httpmock::{MockServer, Mock};
+//! let server = MockServer::start();
+//!
+//! let greeting_mock = Mock::new()
+//!     .expect_path("/hi")
+//!     .return_status(200)
+//!     .create_on(&server);
+//!
+//! let response = isahc::get(server.url("/hi")).unwrap();
+//! assert_eq!(greeting_mock.hits(), 1);
+//! ```
+//! Please observe the following method naming scheme:
 //! - All [Mock](struct.Mock.html) methods that start with `expect` in their name set a requirement
 //! for HTTP requests (e.g. [Mock::expect_method](struct.Mock.html#method.expect_method),
-//! [Mock::expect_path](struct.Mock.html#method.expect_path), or
-//! [Mock::expect_body](struct.Mock.html#method.expect_body)).
+//! [Mock::expect_path](struct.Mock.html#method.expect_path),
+//! [Mock::expect_body](struct.Mock.html#method.expect_body), etc.).
 //! - All [Mock](struct.Mock.html) methods that start with `return` in their name define what the
 //! mock server will return in response to an HTTP request that matched all mock requirements (e.g.
 //! [Mock::return_status](struct.Mock.html#method.return_status),
@@ -75,94 +154,62 @@
 //! With this naming scheme users can benefit from IDE autocompletion to find request matchers and
 //! response attributes mostly without even looking into documentation.
 //!
-//! If a request does not match at least one mock, the server will respond with
-//! an error message and HTTP status code 404 (Not Found).
-//!
-//! ## Sync / Async
-//!
-//! The internal implementation of `httpmock` is fully asynchronous. It provides you a synchronous
-//! and an asynchronous API though. If you want to schedule awaiting operations manually, then
-//! you can use the `async` variants that exist for every potentially blocking operation. For
-//! example, there is [MockServer::start_async](struct.MockServer.html#method.start_async) as an
-//! asynchronous counterpart to [MockServer::start](struct.MockServer.html#method.start) and
-//! [Mock::create_on_async](struct.Mock.html#method.create_on_async) for
-//! [Mock::create_on](struct.Mock.html#method.create_on).
-//!
-//! # Parallelism
-//! To balance execution speed and resource consumption, `MockServer`s are kept in a server pool
-//! internally. This allows to run multiple tests in parallel without overwhelming the executing
-//! machine by creating too many HTTP servers. A test will be blocked if it tries to use a
-//! `MockServer` (e.g. by calling `MockServer::new()`) while the server pool is empty (i.e. all
-//! servers are occupied by other tests). To avoid TCP port binding issues, `MockServers` are
-//! never recreated but recycled/resetted. The pool is filled on demand up to a predefined
-//! maximum number of 25 servers. You can change this number by setting the environment
-//! variable `HTTPMOCK_MAX_SERVERS`.
-//!
 //! # Examples
-//! Fore more examples, please refer to
-//! [this crates test directory](https://github.com/alexliesenfeld/httpmock/blob/master/tests/integration_tests.rs ).
-//!
-//! # Debugging
-//! `httpmock` logs against the `log` crate. This allows you to see detailed information about
-//! `httpmock`s behaviour. For example, if you use the `env_logger` backend, you can activate debug
-//! logging by setting the `RUST_LOG` environment variable to `httpmock=debug`.
-//!
-//! Attention: To be able to see the log output, you need to add the `--nocapture` argument
-//! when starting test execution!
+//! You can find examples in the test directory in this crates Git repository:
+//! [this crates test directory](https://github.com/alexliesenfeld/httpmock/blob/master/tests ).
 //!
 //! # Standalone Mode
-//! You can use `httpmock` to run a standalone mock server that is available to multiple applications.
-//! This can be useful if you are running integration tests that involve both, real and mocked
-//! applications.
+//! You can use `httpmock` to run a standalone mock server that runs in a separate process.
+//! This allows it to be available to multiple applications, not only inside your unit and integration
+//! tests. This is useful if you want to use `httpmock` in system (or even end-to-end) tests, that
+//! require mocked services. With this feature, `httpmock` is a universal HTTP mocking tool that is
+//! useful in all stages of the development lifecycle.
 //!
+//! ## Using a Standalone Mock Server
 //! Although you can build the mock server in standalone mode yourself, it is easiest to use the
 //! accompanying [Docker image](https://hub.docker.com/r/alexliesenfeld/httpmock).
 //!
-//! ## API Usage
-//! To be able to use a standalone server from your tests, you need to change how an instance
-//! of the `MockServer` structure is created. Instead of using `MockServer::new()`, you need
-//! to connect to a remote server by using one of the `connect` methods (such as
-//! `MockServer::connect("localhost:5000")` or `MockServer::connect_from_env()`).
-//! Therefore, tests that use a local mock server do only differ in one line of code
-//! from tests that use a remote server. Otherwise, both variants are identical.
+//! To be able to use the standalone server from within your tests, you need to change how an
+//! instance of the [MockServer](struct.MockServer.html) instance is created.
+//! Instead of using [MockServer::start](struct.MockServer.html#method.start),
+//! you need to connect to a remote server by using one of the `connect` methods (such as
+//! [MockServer::connect](struct.MockServer.html#method.connect) or
+//! [MockServer::connect_from_env](struct.MockServer.html#method.connect_from_env)).
 //!
-//! ```rust
+//! ```
 //! use httpmock::{MockServer, Mock};
 //! use isahc::get;
 //!
 //! #[test]
 //! fn simple_test() {
-//!     // Arrange: Create a mock on a test local mock server
-//!     let mock_server = MockServer::connect("some-host:5000");
+//!     // Arrange
+//!     let server = MockServer::connect("some-host:5000");
 //!
-//!     let hello_mock = Mock::new()
-//!         .expect_method(GET)
-//!         .expect_path("/hello")
-//!         .return_status(200)
-//!         .create_on(&mock_server);
+//!     let hello_mock = server.mock(|when, then|{
+//!         when.path("/hello/standalone");
+//!         then.status(200);
+//!     });
 //!
-//!     // Act: Send an HTTP request to the mock server (simulates your software)
-//!     let response = get(mock_server.url("/hello")).unwrap();
+//!     // Act
+//!     let response = get(server.url("/hello/standalone")).unwrap();
 //!
-//!     // Assert: Ensure there was a response from the mock server
+//!     // Assert
 //!     assert_eq!(response.status(), 200);
-//!     assert_eq!(hello_mock.times_called(), 1);
+//!     assert_eq!(hello_mock.hits(), 1);
 //! }
 //! ```
 //!
-//! ## Parallelism
-//! Tests that use a remote mock server are executed sequentially by default. This is in
-//! contrast to tests that use a local mock server. Sequential execution is achieved by
-//! blocking all tests from further execution whenever a test requires to connect to a
-//! busy mock server.
+//! ## Standalone Parallelism
+//! To prevent interference with other tests, test functions are forced to use the standalone
+//! mock server sequentially.
+//! This means that test functions may be blocked when connecting to the remote server until
+//! it becomes free again.
+//! This is in contrast to tests that use a local mock server.
 //!
-//! ## Limitations
-//! At this time, it is not possible to use custom request matchers in combination with remote
-//! mock servers. It is planned to add this functionality in future though.
-//!
-//! ## Examples
-//! Fore more examples on how to use a remote server, please refer to
-//! [this crates test directory](https://github.com/alexliesenfeld/httpmock/blob/master/tests/standalone_tests.rs ).
+//! ## Limitations of the Standalone Mode
+//! At this time, it is not possible to use custom request matchers in combination with standalone
+//! mock servers (see [When::matches](struct.When.html#method.matches) or
+//! [Mock::expect_match](struct.Mock.html#method.expect_match)).
 //!
 //! # License
 //! `httpmock` is free software: you can redistribute it and/or modify it under the terms
@@ -185,30 +232,36 @@ use tokio::task::LocalSet;
 
 use util::Join;
 
-use crate::api::{LocalMockServerAdapter, MockServerAdapter, RemoteMockServerAdapter};
-pub use crate::api::{Method, Mock, MockRef, Regex};
-use crate::server::data::MockServerHttpRequest;
-pub use crate::server::HttpMockConfig;
 use crate::server::{start_server, MockServerState};
 use crate::util::{read_env, with_retry};
 
+use crate::api::{LocalMockServerAdapter, MockRef, RemoteMockServerAdapter};
+pub use crate::api::{Method, Mock, Regex};
+use api::MockServerAdapter;
+use data::{HttpMockRequest, MockMatcherFunction};
+use futures_util::core_reexport::time::Duration;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use std::cell::Cell;
+
 mod api;
+pub(crate) mod data;
 mod server;
-mod util;
+pub mod util;
 
 pub mod standalone {
     use std::sync::Arc;
 
-    use crate::server::HttpMockConfig;
     use crate::server::{start_server, MockServerState};
 
-    pub async fn start_standalone_server(config: HttpMockConfig) -> Result<(), String> {
+    pub async fn start_standalone_server(port: u16, expose: bool) -> Result<(), String> {
         let state = Arc::new(MockServerState::new());
-        start_server(config, &state, None).await
+        start_server(port, expose, &state, None).await
     }
 }
 
-pub type MockServerRequest = Rc<MockServerHttpRequest>;
+/// A general abstraction of an HTTP request of `httpmock`.
+pub type MockServerRequest = Arc<HttpMockRequest>;
 
 /// A mock server that is able to receive and respond to HTTP requests.
 pub struct MockServer {
@@ -226,7 +279,10 @@ impl MockServer {
             .expect("Cannot ping mock server.");
         with_retry(5, || server_adapter.delete_all_mocks())
             .await
-            .expect("Cannot reset mock server.");
+            .expect("Cannot reset mock server (task: delete mocks).");
+        with_retry(5, || server_adapter.delete_history())
+            .await
+            .expect("Cannot reset mock server (task: delete request history).");
         Self {
             server_adapter: Some(server_adapter),
             pool,
@@ -311,8 +367,8 @@ impl MockServer {
         Self::start_async().join()
     }
 
-    /// The hostname of the `MockServer`. By default, this is always `127.0.0.1`.
-    /// In standalone mode, the hostname will be the one where the remote mock server is
+    /// The hostname of the `MockServer`. By default, this is `127.0.0.1`.
+    /// In standalone mode, the hostname will be the host where the standalone mock server is
     /// running.
     pub fn host(&self) -> String {
         self.server_adapter.as_ref().unwrap().host()
@@ -326,13 +382,14 @@ impl MockServer {
     /// Builds the address for a specific path on the mock server.
     ///
     /// **Example**:
-    /// ```rust
+    /// ```
     /// // Start a local mock server for exclusive use by this test function.
-    /// let mock_server = httpmock::MockServer::start();
-    /// let expected_addr_str = format!("127.0.0.1:{}", mock_server.port());
+    /// let server = httpmock::MockServer::start();
+    ///
+    /// let expected_addr_str = format!("127.0.0.1:{}", server.port());
     ///
     /// // Get the address of the MockServer.
-    /// let addr = mock_server.address();
+    /// let addr = server.address();
     ///
     /// // Ensure the returned URL is as expected
     /// assert_eq!(expected_addr_str, addr.to_string());
@@ -344,37 +401,1041 @@ impl MockServer {
     /// Builds the URL for a specific path on the mock server.
     ///
     /// **Example**:
-    /// ```rust
+    /// ```
     /// // Start a local mock server for exclusive use by this test function.
-    /// let mock_server = httpmock::MockServer::start();
-    /// let expected_url = format!("http://127.0.0.1:{}/hello", mock_server.port());
+    /// let server = httpmock::MockServer::start();
+    ///
+    /// let expected_url = format!("http://127.0.0.1:{}/hello", server.port());
     ///
     /// // Get the URL for path "/hello".
-    /// let url = mock_server.url("/hello");
+    /// let url = server.url("/hello");
     ///
     /// // Ensure the returned URL is as expected
     /// assert_eq!(expected_url, url);
     /// ```
-    pub fn url(&self, path: &str) -> String {
-        format!("http://{}{}", self.address(), path)
+    pub fn url<S: Into<String>>(&self, path: S) -> String {
+        format!("http://{}{}", self.address(), path.into())
     }
 
     /// Builds the base URL for the mock server.
     ///
     /// **Example**:
-    /// ```rust
+    /// ```
     /// // Start a local mock server for exclusive use by this test function.
-    /// let mock_server = httpmock::MockServer::start();
-    /// let expected_url = format!("http://127.0.0.1:{}", mock_server.port());
+    /// let server = httpmock::MockServer::start();
+    ///
+    /// let expected_url = format!("http://127.0.0.1:{}", server.port());
     ///
     /// // Get the URL for path "/hello".
-    /// let url = mock_server.base_url();
+    /// let url = server.base_url();
     ///
     /// // Ensure the returned URL is as expected
     /// assert_eq!(expected_url, url);
     /// ```
     pub fn base_url(&self) -> String {
         self.url("")
+    }
+
+    /// Creates a [Mock](struct.Mock.html) object on the mock server.
+    ///
+    /// **Example**:
+    /// ```
+    /// let server = httpmock::MockServer::start();
+    ///
+    /// let mock = server.mock(|when, then| {
+    ///     when.path("/hello");
+    ///     then.status(200);
+    /// });
+    ///
+    /// assert_eq!(mock.hits(), 0);
+    /// ```
+    pub fn mock<F>(&self, config_fn: F) -> MockRef
+    where
+        F: FnOnce(Expectations, Responders),
+    {
+        self.mock_async(config_fn).join()
+    }
+
+    /// Creates a [Mock](struct.Mock.html) object on the mock server.
+    ///
+    /// **Example**:
+    /// ```
+    /// async_std::task::block_on(async {
+    ///     let server = httpmock::MockServer::start();
+    ///
+    ///     let mock = server
+    ///         .mock_async(|when, then| {
+    ///             when.path("/hello");
+    ///             then.status(200);
+    ///         })
+    ///         .await;
+    ///
+    ///     assert_eq!(mock.hits(), 0);
+    /// });
+    /// ```
+    pub async fn mock_async<'a, F>(&'a self, config_fn: F) -> MockRef<'a>
+    where
+        F: FnOnce(Expectations, Responders),
+    {
+        let mock = Rc::new(Cell::new(Mock::new()));
+        config_fn(
+            Expectations { mock: mock.clone() },
+            Responders { mock: mock.clone() },
+        );
+        mock.take().create_on_async(self).await
+    }
+}
+
+/// A builder that allows the specification of expected HTTP request values.
+pub struct Expectations {
+    pub(crate) mock: Rc<Cell<Mock>>,
+}
+
+impl Expectations {
+    /// Sets the mock server to respond to any incoming request.
+    ///
+    /// # Example
+    /// ```
+    /// use httpmock::{Mock, MockServer};
+    /// use httpmock::Method::GET;
+    /// use regex::Regex;
+    ///
+    /// let server = MockServer::start();
+    ///
+    /// let mock = server.mock(|when, then|{
+    ///     when.any_request();
+    ///     then.status(200);
+    /// });
+    ///
+    /// isahc::get(server.url("/anyPath")).unwrap();
+    ///
+    /// assert_eq!(mock.hits(), 1);
+    /// ```
+    pub fn any_request(self) -> Self {
+        // This method does nothing. It only exists to make it very explicit that
+        // the mock server will respond to any request. This is the default at this time, but
+        // may change in the future.
+        self
+    }
+
+    /// Sets the expected HTTP method.
+    ///
+    /// * `method` - The HTTP method (a [Method](enum.Method.html) or a `String`).
+    ///
+    /// # Example
+    /// ```
+    /// use httpmock::{Mock, MockServer};
+    /// use httpmock::Method::GET;
+    /// use regex::Regex;
+    ///
+    /// let server = MockServer::start();
+    ///
+    /// let mock = server.mock(|when, then|{
+    ///     when.method(GET);
+    ///     then.status(200);
+    /// });
+    ///
+    /// isahc::get(server.url("/")).unwrap();
+    ///
+    /// assert_eq!(mock.hits(), 1);
+    /// ```
+    pub fn method<M: Into<Method>>(self, method: M) -> Self {
+        self.mock.set(self.mock.take().expect_method(method));
+        self
+    }
+
+    /// Sets the expected URL path.
+    /// * `path` - The URL path.
+    ///
+    /// # Example
+    /// ```
+    /// use httpmock::{Mock, MockServer};
+    ///
+    /// let server = MockServer::start();
+    ///
+    /// let mock = server.mock(|when, then|{
+    ///     when.path_contains("/test");
+    ///     then.status(200);
+    /// });
+    ///
+    /// isahc::get(server.url("/test")).unwrap();
+    ///
+    /// assert_eq!(mock.hits(), 1);
+    /// ```
+    pub fn path<S: Into<String>>(self, path: S) -> Self {
+        self.mock.set(self.mock.take().expect_path(path));
+        self
+    }
+
+    /// Sets an substring that the URL path needs to contain.
+    /// * `substring` - The substring to match against.
+    ///
+    /// # Example
+    /// ```
+    /// use httpmock::{Mock, MockServer};
+    ///
+    /// let server = MockServer::start();
+    ///
+    /// let mock = server.mock(|when, then|{
+    ///     when.path_contains("es");
+    ///     then.status(200);
+    /// });
+    ///
+    /// isahc::get(server.url("/test")).unwrap();
+    ///
+    /// assert_eq!(mock.hits(), 1);
+    /// ```
+    pub fn path_contains<S: Into<String>>(self, substring: S) -> Self {
+        self.mock
+            .set(self.mock.take().expect_path_contains(substring));
+        self
+    }
+
+    /// Sets a regex that the URL path needs to match.
+    /// * `regex` - The regex to match against.
+    ///
+    /// # Example
+    /// ```
+    /// use httpmock::{Mock, MockServer};
+    /// use regex::Regex;
+    ///
+    /// let server = MockServer::start();
+    ///
+    /// let mock = server.mock(|when, then|{
+    ///     when.path_matches(Regex::new("le$").unwrap());
+    ///     then.status(200);
+    /// });
+    ///
+    /// isahc::get(server.url("/example")).unwrap();
+    ///
+    /// assert_eq!(mock.hits(), 1);
+    /// ```
+    pub fn path_matches<R: Into<Regex>>(self, regex: R) -> Self {
+        self.mock.set(self.mock.take().expect_path_matches(regex));
+        self
+    }
+
+    /// Sets a query parameter that needs to be provided.
+    /// * `name` - The query parameter name that will matched against.
+    /// * `value` - The value parameter name that will matched against.
+    ///
+    /// ```
+    /// // Arrange
+    /// use isahc::get;
+    /// use httpmock::{MockServer, Mock};
+    ///
+    /// let _ = env_logger::try_init();
+    /// let server = MockServer::start();
+    ///
+    /// let m = server.mock(|when, then|{
+    ///     when.query_param("query", "Metallica");
+    ///     then.status(200);
+    /// });
+    ///
+    /// // Act
+    /// get(server.url("/search?query=Metallica")).unwrap();
+    ///
+    /// // Assert
+    /// assert_eq!(m.hits(), 1);
+    /// ```
+    pub fn query_param<S: Into<String>>(self, name: S, value: S) -> Self {
+        self.mock
+            .set(self.mock.take().expect_query_param(name, value));
+        self
+    }
+
+    /// Sets a query parameter that needs to exist in an HTTP request.
+    /// * `name` - The query parameter name that will matched against.
+    ///
+    /// ```
+    /// // Arrange
+    /// use isahc::get;
+    /// use httpmock::{MockServer, Mock};
+    ///
+    /// let _ = env_logger::try_init();
+    /// let server = MockServer::start();
+    ///
+    /// let m = server.mock(|when, then| {
+    ///     when.query_param_exists("query");
+    ///     then.status(200);
+    /// });
+    ///
+    /// // Act
+    /// get(server.url("/search?query=Metallica")).unwrap();
+    ///
+    /// // Assert
+    /// assert_eq!(m.hits(), 1);
+    /// ```
+    pub fn query_param_exists<S: Into<String>>(self, name: S) -> Self {
+        self.mock
+            .set(self.mock.take().expect_query_param_exists(name));
+        self
+    }
+
+    /// Sets the required HTTP request body content.
+    ///
+    /// * `body` - The required HTTP request body.
+    ///
+    /// # Example
+    /// ```
+    /// use httpmock::{Mock, MockServer};
+    /// use httpmock::Method::GET;
+    /// use regex::Regex;
+    /// use isahc::prelude::*;
+    ///
+    /// let server = MockServer::start();
+    ///
+    /// let mock = server.mock(|when, then|{
+    ///     when.body("The Great Gatsby");
+    ///     then.status(200);
+    /// });
+    ///
+    /// Request::post(&format!("http://{}/test", server.address()))
+    ///     .body("The Great Gatsby")
+    ///     .unwrap()
+    ///     .send()
+    ///     .unwrap();
+    ///
+    /// assert_eq!(mock.hits(), 1);
+    /// ```
+    pub fn body<S: Into<String>>(self, body: S) -> Self {
+        self.mock.set(self.mock.take().expect_body(body));
+        self
+    }
+
+    /// Sets a [Regex](type.Regex.html) for the expected HTTP body.
+    ///
+    /// * `regex` - The regex that the HTTP request body will matched against.
+    ///
+    /// ```
+    /// use isahc::prelude::*;
+    /// use httpmock::Method::POST;
+    /// use httpmock::{MockServer, Mock, Regex};
+    ///
+    /// // Arrange
+    /// let _ = env_logger::try_init();
+    ///
+    /// let server = MockServer::start();
+    ///
+    /// let m = server.mock(|when, then|{
+    ///     when.method(POST)
+    ///         .path("/books")
+    ///         .body_matches(Regex::new("Fellowship").unwrap());
+    ///     then.status(201);
+    /// });
+    ///
+    /// // Act: Send the request
+    /// let response = Request::post(server.url("/books"))
+    ///     .body("The Fellowship of the Ring")
+    ///     .unwrap()
+    ///     .send()
+    ///     .unwrap();
+    ///
+    /// // Assert
+    /// assert_eq!(response.status(), 201);
+    /// assert_eq!(m.hits(), 1);
+    /// ```
+    pub fn body_matches<R: Into<Regex>>(self, regex: R) -> Self {
+        self.mock.set(self.mock.take().expect_body_matches(regex));
+        self
+    }
+
+    /// Sets the expected HTTP body substring.
+    ///
+    /// * `substring` - The substring that will matched against.
+    ///
+    /// ```
+    /// use httpmock::{MockServer, Mock, Regex};
+    /// use httpmock::Method::POST;
+    /// use isahc::prelude::*;
+    ///
+    /// // Arrange
+    /// let _ = env_logger::try_init();
+    ///
+    /// let server = MockServer::start();
+    ///
+    /// let m = server.mock(|when, then|{
+    ///     when.path("/books")
+    ///         .body_contains("Ring");
+    ///     then.status(201);
+    /// });
+    ///
+    /// // Act: Send the request
+    /// let response = Request::post(server.url("/books"))
+    ///     .body("The Fellowship of the Ring")
+    ///     .unwrap()
+    ///     .send()
+    ///     .unwrap();
+    ///
+    /// // Assert
+    /// assert_eq!(response.status(), 201);
+    /// assert_eq!(m.hits(), 1);
+    /// ```
+    pub fn body_contains<S: Into<String>>(self, substring: S) -> Self {
+        self.mock
+            .set(self.mock.take().expect_body_contains(substring));
+        self
+    }
+
+    /// Sets the expected JSON body. This method expects a [serde_json::Value](../serde_json/enum.Value.html)
+    /// that will be serialized/deserialized to/from a JSON string.
+    ///
+    /// Note that this method does not set the `Content-Type` header automatically, so you
+    /// need to provide one yourself!
+    ///
+    /// * `body` - The HTTP body object that will be serialized to JSON using serde.
+    ///
+    /// ```
+    /// use httpmock::{Mock, MockServer};
+    /// use httpmock::Method::POST;
+    /// use serde_json::json;
+    /// use isahc::prelude::*;
+    ///
+    /// // Arrange
+    /// let _ = env_logger::try_init();
+    /// let server = MockServer::start();
+    ///
+    /// let m = server.mock(|when, then|{
+    ///     when.path("/user")
+    ///         .header("Content-Type", "application/json")
+    ///         .json_body(json!({ "name": "Hans" }));
+    ///     then.status(201);
+    /// });
+    ///
+    /// // Act: Send the request and deserialize the response to JSON
+    /// let mut response = Request::post(&format!("http://{}/user", server.address()))
+    ///     .header("Content-Type", "application/json")
+    ///     .body(json!({ "name": "Hans" }).to_string())
+    ///     .unwrap()
+    ///     .send()
+    ///     .unwrap();
+    ///
+    /// // Assert
+    /// assert_eq!(response.status(), 201);
+    /// assert_eq!(m.hits(), 1);
+    /// ```
+    pub fn json_body<V: Into<serde_json::Value>>(self, value: V) -> Self {
+        self.mock.set(self.mock.take().expect_json_body(value));
+        self
+    }
+
+    /// Sets the expected JSON body. This method expects a serializable serde object
+    /// that will be serialized/deserialized to/from a JSON string.
+    ///
+    /// Note that this method does not set the "Content-Type" header automatically, so you
+    /// need to provide one yourself!
+    ///
+    /// * `body` - The HTTP body object that will be serialized to JSON using serde.
+    ///
+    /// ```
+    /// use httpmock::{MockServer, Mock};
+    /// use httpmock::Method::POST;
+    /// use serde_json::json;
+    /// use isahc::prelude::*;
+    ///
+    /// // This is a temporary type that we will use for this test
+    /// #[derive(serde::Serialize, serde::Deserialize)]
+    /// struct TestUser {
+    ///     name: String,
+    /// }
+    ///
+    /// // Arrange
+    /// let _ = env_logger::try_init();
+    /// let server = MockServer::start();
+    ///
+    /// let m = server.mock(|when, then|{
+    ///     when.path("/user")
+    ///         .header("Content-Type", "application/json")
+    ///         .json_body_obj(&TestUser {
+    ///             name: String::from("Fred"),
+    ///         });
+    ///     then.status(200);
+    /// });
+    ///
+    /// // Act: Send the request and deserialize the response to JSON
+    /// let mut response = Request::post(&format!("http://{}/user", server.address()))
+    ///     .header("Content-Type", "application/json")
+    ///     .body(json!(&TestUser {
+    ///         name: "Fred".to_string()
+    ///     }).to_string())
+    ///     .unwrap()
+    ///     .send()
+    ///     .unwrap();
+    ///
+    /// // Assert
+    /// assert_eq!(response.status(), 200);
+    /// assert_eq!(m.hits(), 1);
+    /// ```
+    pub fn json_body_obj<'a, T>(self, body: &T) -> Self
+    where
+        T: Serialize + Deserialize<'a>,
+    {
+        self.mock.set(self.mock.take().expect_json_body_obj(body));
+        self
+    }
+
+    /// Sets the expected partial JSON body.
+    ///
+    /// **Attention: The partial string needs to be a valid JSON string. It must contain
+    /// the full object hierarchy from the original JSON object but can leave out irrelevant
+    /// attributes (see example).**
+    ///
+    /// Note that this method does not set the `Content-Type` header automatically, so you
+    /// need to provide one yourself!
+    ///
+    /// String format and attribute order are irrelevant.
+    ///
+    /// * `partial_body` - The HTTP body object that will be serialized to JSON using serde.
+    ///
+    /// ## Example
+    /// Suppose your application sends the following JSON request body:
+    /// ```json
+    /// {
+    ///     "parent_attribute" : "Some parent data goes here",
+    ///     "child" : {
+    ///         "target_attribute" : "Example",
+    ///         "other_attribute" : "Another value"
+    ///     }
+    /// }
+    /// ```
+    /// If we only want to verify that `target_attribute` has value `Example` without the need
+    /// to provive a full JSON object, we can use this method as follows:
+    /// ```
+    /// use httpmock::{MockServer, Mock};
+    ///
+    /// let server = MockServer::start();
+    ///
+    /// let mut mock = server.mock(|when, then|{
+    ///     when.json_body_partial(r#"
+    ///         {
+    ///             "child" : {
+    ///                 "target_attribute" : "Example"
+    ///             }
+    ///          }
+    ///     "#);
+    ///     then.status(200);
+    /// });
+    /// ```
+    /// Please note that the JSON partial contains the full object hierachy, i.e. it needs to start
+    /// from the root! It leaves out irrelevant attributes, however (`parent_attribute`
+    /// and `child.other_attribute`).
+    pub fn json_body_partial<S: Into<String>>(self, partial: S) -> Self {
+        self.mock
+            .set(self.mock.take().expect_json_body_partial(partial));
+        self
+    }
+
+    /// Sets the expected HTTP header.
+    /// * `name` - The HTTP header name (header names are case-insensitive by RFC 2616).
+    /// * `value` - The header value.
+    ///
+    /// # Example
+    /// ```
+    /// use httpmock::{Mock, MockServer};
+    /// use httpmock::Method::GET;
+    /// use regex::Regex;
+    /// use isahc::prelude::*;
+    ///
+    /// let server = MockServer::start();
+    ///
+    /// let mock = server.mock(|when, then|{
+    ///     when.header("Authorization", "token 1234567890");
+    ///     then.status(200);
+    /// });
+    ///
+    /// Request::post(&format!("http://{}/test", server.address()))
+    ///     .header("Authorization", "token 1234567890")
+    ///     .body(())
+    ///     .unwrap()
+    ///     .send()
+    ///     .unwrap();
+    ///
+    /// assert_eq!(mock.hits(), 1);
+    /// ```
+    pub fn header<S: Into<String>>(self, name: S, value: S) -> Self {
+        self.mock.set(self.mock.take().expect_header(name, value));
+        self
+    }
+
+    /// Sets the requirement that the HTTP request needs to contain a specific header
+    /// (value is unchecked, refer to [Mock::expect_header](struct.Mock.html#method.expect_header)).
+    ///
+    /// * `name` - The HTTP header name (header names are case-insensitive by RFC 2616).
+    ///
+    /// # Example
+    /// ```
+    /// use httpmock::{Mock, MockServer};
+    /// use httpmock::Method::GET;
+    /// use regex::Regex;
+    /// use isahc::prelude::*;
+    ///
+    /// let server = MockServer::start();
+    ///
+    /// let mock = server.mock(|when, then|{
+    ///     when.header_exists("Authorization");
+    ///     then.status(200);
+    /// });
+    ///
+    /// Request::post(&format!("http://{}/test", server.address()))
+    ///     .header("Authorization", "token 1234567890")
+    ///     .body(())
+    ///     .unwrap()
+    ///     .send()
+    ///     .unwrap();
+    ///
+    /// assert_eq!(mock.hits(), 1);
+    /// ```
+    pub fn header_exists<S: Into<String>>(self, name: S) -> Self {
+        self.mock.set(self.mock.take().expect_header_exists(name));
+        self
+    }
+
+    /// Sets the cookie that needs to exist in the HTTP request.
+    /// Cookie parsing follows [RFC-6265](https://tools.ietf.org/html/rfc6265.html).
+    /// **Attention**: Cookie names are **case-sensitive**.
+    ///
+    /// * `name` - The cookie name.
+    /// * `value` - The expected cookie value.
+    ///
+    /// # Example
+    /// ```
+    /// use httpmock::{Mock, MockServer};
+    /// use httpmock::Method::GET;
+    /// use regex::Regex;
+    /// use isahc::prelude::*;
+    ///
+    /// let server = MockServer::start();
+    ///
+    /// let mock = server.mock(|when, then|{
+    ///     when.cookie("SESSIONID", "1234567890");
+    ///     then.status(200);
+    /// });
+    ///
+    /// Request::post(&format!("http://{}/test", server.address()))
+    ///     .header("Cookie", "TRACK=12345; SESSIONID=1234567890; CONSENT=1")
+    ///     .body(())
+    ///     .unwrap()
+    ///     .send()
+    ///     .unwrap();
+    ///
+    /// assert_eq!(mock.hits(), 1);
+    /// ```
+    pub fn cookie<S: Into<String>>(self, name: S, value: S) -> Self {
+        self.mock.set(self.mock.take().expect_cookie(name, value));
+        self
+    }
+
+    /// Sets the cookie that needs to exist in the HTTP request.
+    /// Cookie parsing follows [RFC-6265](https://tools.ietf.org/html/rfc6265.html).
+    /// **Attention**: Cookie names are **case-sensitive**.
+    ///
+    /// * `name` - The cookie name
+    ///
+    /// # Example
+    /// ```
+    /// use httpmock::{Mock, MockServer};
+    /// use httpmock::Method::GET;
+    /// use regex::Regex;
+    /// use isahc::prelude::*;
+    ///
+    /// let server = MockServer::start();
+    ///
+    /// let mock = server.mock(|when, then|{
+    ///     when.cookie_exists("SESSIONID");
+    ///     then.status(200);
+    /// });
+    ///
+    /// Request::post(&format!("http://{}/test", server.address()))
+    ///     .header("Cookie", "TRACK=12345; SESSIONID=1234567890; CONSENT=1")
+    ///     .body(())
+    ///     .unwrap()
+    ///     .send()
+    ///     .unwrap();
+    ///
+    /// assert_eq!(mock.hits(), 1);
+    /// ```
+    pub fn cookie_exists<S: Into<String>>(self, name: S) -> Self {
+        self.mock.set(self.mock.take().expect_cookie_exists(name));
+        self
+    }
+    /// Sets a custom matcher for expected HTTP request. If this function returns true, the request
+    /// is considered a match and the mock server will respond to the request
+    /// (given all other criteria are also met).
+    /// * `request_matcher` - The matcher function.
+    ///
+    /// ## Example:
+    /// ```
+    /// use httpmock::{MockServer, Mock, MockServerRequest};
+    ///
+    /// // Arrange
+    /// let server = MockServer::start();
+    ///
+    /// let m = server.mock(|when, then|{
+    ///    when.matches(|req: MockServerRequest| {
+    ///         req.path.contains("es")
+    ///    });
+    ///    then.status(200);
+    /// });
+    ///
+    /// // Act: Send the HTTP request
+    /// let response = isahc::get(server.url("/test")).unwrap();
+    ///
+    /// // Assert
+    /// assert_eq!(response.status(), 200);
+    /// assert_eq!(m.hits(), 1);
+    /// ```
+    pub fn matches(self, matcher: MockMatcherFunction) -> Self {
+        self.mock.set(self.mock.take().expect_match(matcher));
+        self
+    }
+}
+
+/// A builder that allows specification of HTTP response values.
+pub struct Responders {
+    pub(crate) mock: Rc<Cell<Mock>>,
+}
+
+impl Responders {
+    /// Sets the HTTP response code that will be returned by the mock server.
+    ///
+    /// * `status` - The status code.
+    ///
+    /// ## Example:
+    /// ```
+    /// use httpmock::{MockServer, Mock, MockServerRequest};
+    ///
+    /// // Arrange
+    /// let server = MockServer::start();
+    ///
+    /// let m = server.mock(|when, then|{
+    ///     when.path("/hello");
+    ///     then.status(200);
+    /// });
+    ///
+    /// // Act
+    /// let response = isahc::get(server.url("/hello")).unwrap();
+    ///
+    /// // Assert
+    /// assert_eq!(response.status(), 200);
+    /// assert_eq!(m.hits(), 1);
+    /// ```
+    pub fn status(self, status: u16) -> Self {
+        self.mock.set(self.mock.take().return_status(status));
+        self
+    }
+
+    /// Sets the HTTP response body that will be returned by the mock server.
+    ///
+    /// * `body` - The response body content.
+    ///
+    /// ## Example:
+    /// ```
+    /// use httpmock::{MockServer, Mock, MockServerRequest};
+    /// use isahc::ResponseExt;
+    ///
+    /// // Arrange
+    /// let server = MockServer::start();
+    ///
+    /// let m = server.mock(|when, then| {
+    ///     when.path("/hello");
+    ///     then.status(200)
+    ///         .body("ohi!");
+    /// });
+    ///
+    /// // Act
+    /// let mut response = isahc::get(server.url("/hello")).unwrap();
+    ///
+    /// // Assert
+    /// assert_eq!(response.status(), 200);
+    /// assert_eq!(response.text().unwrap(), "ohi!");
+    /// assert_eq!(m.hits(), 1);
+    /// ```
+    pub fn body(self, body: impl AsRef<[u8]>) -> Self {
+        self.mock.set(self.mock.take().return_body(body));
+        self
+    }
+
+    /// Sets the HTTP response body that will be returned by the mock server.
+    ///
+    /// * `body` - The response body content.
+    ///
+    /// ## Example:
+    /// ```
+    /// use httpmock::{MockServer, Mock, MockServerRequest};
+    /// use isahc::ResponseExt;
+    ///
+    /// // Arrange
+    /// let server = MockServer::start();
+    ///
+    /// let m = server.mock(|when, then|{
+    ///     when.path("/hello");
+    ///     then.status(200)
+    ///         .body_from_file("tests/resources/simple_body.txt");
+    /// });
+    ///
+    /// // Act
+    /// let mut response = isahc::get(server.url("/hello")).unwrap();
+    ///
+    /// // Assert
+    /// assert_eq!(response.status(), 200);
+    /// assert_eq!(response.text().unwrap(), "ohi!");
+    /// assert_eq!(m.hits(), 1);
+    /// ```
+    pub fn body_from_file<S: Into<String>>(self, body: S) -> Self {
+        self.mock.set(self.mock.take().return_body_from_file(body));
+        self
+    }
+
+    /// Sets the JSON body for the HTTP response that will be returned by the mock server.
+    ///
+    /// The provided JSON object needs to be both, a deserializable and serializable serde object.
+    ///
+    /// Note that this method does not set the "Content-Type" header automatically, so you need
+    /// to provide one yourself!
+    ///
+    /// * `body` -  The HTTP response body the mock server will return in the form of a
+    ///             serde_json::Value object.
+    ///
+    /// ## Example
+    /// You can use this method conveniently as follows:
+    /// ```
+    /// use httpmock::{MockServer, Mock};
+    /// use serde_json::{Value, json};
+    /// use isahc::ResponseExt;
+    /// use isahc::prelude::*;
+    ///
+    /// // Arrange
+    /// let _ = env_logger::try_init();
+    /// let server = MockServer::start();
+    ///
+    /// let m = server.mock(|when, then|{
+    ///     when.path("/user");
+    ///     then.status(200)
+    ///         .header("Content-Type", "application/json")
+    ///         .json_body(json!({ "name": "Hans" }));
+    /// });
+    ///
+    /// // Act
+    /// let mut response = isahc::get(server.url("/user")).unwrap();
+    ///
+    /// let user: Value =
+    ///     serde_json::from_str(&response.text().unwrap()).expect("cannot deserialize JSON");
+    ///
+    /// // Assert
+    /// assert_eq!(response.status(), 200);
+    /// assert_eq!(m.hits(), 1);
+    /// assert_eq!(user.as_object().unwrap().get("name").unwrap(), "Hans");
+    /// ```
+    pub fn json_body<V: Into<Value>>(self, value: V) -> Self {
+        self.mock.set(self.mock.take().return_json_body(value));
+        self
+    }
+
+    /// Sets the JSON body that will be returned by the mock server.
+    /// This method expects a serializable serde object that will be serialized/deserialized
+    /// to/from a JSON string.
+    ///
+    /// Note that this method does not set the "Content-Type" header automatically, so you
+    /// need to provide one yourself!
+    ///
+    /// * `body` - The HTTP body object that will be serialized to JSON using serde.
+    ///
+    /// ```
+    /// use httpmock::{MockServer, Mock};
+    /// use isahc::ResponseExt;
+    ///
+    /// // This is a temporary type that we will use for this example
+    /// #[derive(serde::Serialize, serde::Deserialize)]
+    /// struct TestUser {
+    ///     name: String,
+    /// }
+    ///
+    /// // Arrange
+    /// let _ = env_logger::try_init();
+    /// let server = MockServer::start();
+    ///
+    /// let m = server.mock(|when, then| {
+    ///     when.path("/user");
+    ///     then.status(200)
+    ///         .header("Content-Type", "application/json")
+    ///         .json_body_obj(&TestUser {
+    ///             name: String::from("Hans"),
+    ///         });
+    /// });
+    ///
+    /// // Act
+    /// let mut response = isahc::get(server.url("/user")).unwrap();
+    ///
+    /// let user: TestUser =
+    ///     serde_json::from_str(&response.text().unwrap()).unwrap();
+    ///
+    /// // Assert
+    /// assert_eq!(response.status(), 200);
+    /// assert_eq!(user.name, "Hans");
+    /// assert_eq!(m.hits(), 1);
+    /// ```
+    pub fn json_body_obj<T>(self, body: &T) -> Self
+    where
+        T: Serialize,
+    {
+        self.mock.set(self.mock.take().return_json_body_obj(body));
+        self
+    }
+
+    /// Sets an HTTP header that the mock server will return.
+    ///
+    /// * `name` - The name of the header.
+    /// * `value` - The value of the header.
+    ///
+    /// ## Example
+    /// You can use this method conveniently as follows:
+    /// ```
+    /// // Arrange
+    /// use httpmock::{MockServer, Mock};
+    /// use serde_json::Value;
+    /// use isahc::ResponseExt;
+    ///
+    /// let _ = env_logger::try_init();
+    /// let server = MockServer::start();
+    ///
+    /// let m = server.mock(|when, then|{
+    ///     when.path("/");
+    ///     then.status(200)
+    ///         .header("Expires", "Wed, 21 Oct 2050 07:28:00 GMT");
+    /// });
+    ///
+    /// // Act
+    /// let mut response = isahc::get(server.url("/")).unwrap();
+    ///
+    /// // Assert
+    /// assert_eq!(response.status(), 200);
+    /// assert_eq!(m.hits(), 1);
+    /// ```
+    pub fn header<S: Into<String>>(self, name: S, value: S) -> Self {
+        self.mock.set(self.mock.take().return_header(name, value));
+        self
+    }
+
+    /// Sets the HTTP response up to return a temporary redirect.
+    ///
+    /// In detail, this method will add the following information to the HTTP response:
+    /// - A "Location" header with the provided URL as its value.
+    /// - Status code will be set to 302 (if no other status code was set before).
+    /// - The response body will be set to "Found" (if no other body was set before).
+    ///
+    /// Further information: https://developer.mozilla.org/en-US/docs/Web/HTTP/Redirections
+    /// and https://tools.ietf.org/html/rfc2616#section-10.3.8.
+    ///
+    /// * `redirect_url` - THe URL to redirect to.
+    ///
+    /// ## Example
+    /// ```
+    /// // Arrange
+    /// use httpmock::MockServer;
+    /// use isahc::ResponseExt;
+    /// let _ = env_logger::try_init();
+    ///
+    /// let server = MockServer::start();
+    ///
+    /// let redirect_mock = server.mock(|when, then|{
+    ///     when.path("/redirectPath");
+    ///     then.temporary_redirect("http://www.google.com");
+    /// });
+    ///
+    /// // Act: Send the HTTP request with an HTTP client that DOES NOT FOLLOW redirects automatically!
+    /// let mut response = isahc::get(server.url("/redirectPath")).unwrap();
+    /// let body = response.text().unwrap();
+    ///
+    /// // Assert
+    /// assert_eq!(redirect_mock.hits(), 1);
+    ///
+    /// // Attention!: Note that all of these values are automatically added to the response
+    /// // (see details in mock builder method documentation).
+    /// assert_eq!(response.status(), 302);
+    /// assert_eq!(body, "Found");
+    /// assert_eq!(response.headers().get("Location").unwrap().to_str().unwrap(), "http://www.google.com");
+    /// ```
+    pub fn temporary_redirect<S: Into<String>>(mut self, redirect_url: S) -> Self {
+        self.mock
+            .set(self.mock.take().return_temporary_redirect(redirect_url));
+        self
+    }
+
+    /// Sets the HTTP response up to return a permanent redirect.
+    ///
+    /// In detail, this method will add the following information to the HTTP response:
+    /// - A "Location" header with the provided URL as its value.
+    /// - Status code will be set to 301 (if no other status code was set before).
+    /// - The response body will be set to "Moved Permanently" (if no other body was set before).
+    ///
+    /// Further information: https://developer.mozilla.org/en-US/docs/Web/HTTP/Redirections
+    /// and https://tools.ietf.org/html/rfc2616#section-10.3.8.
+    ///
+    /// * `redirect_url` - THe URL to redirect to.
+    ///
+    /// ## Example
+    /// ```
+    /// // Arrange
+    /// use httpmock::MockServer;
+    /// use isahc::ResponseExt;
+    /// let _ = env_logger::try_init();
+    ///
+    /// let server = MockServer::start();
+    ///
+    /// let redirect_mock = server.mock(|when, then|{
+    ///     when.path("/redirectPath");
+    ///     then.permanent_redirect("http://www.google.com");
+    /// });
+    ///
+    /// // Act: Send the HTTP request with an HTTP client that DOES NOT FOLLOW redirects automatically!
+    /// let mut response = isahc::get(server.url("/redirectPath")).unwrap();
+    /// let body = response.text().unwrap();
+    ///
+    /// // Assert
+    /// assert_eq!(redirect_mock.hits(), 1);
+    ///
+    /// // Attention!: Note that all of these values are automatically added to the response
+    /// // (see details in mock builder method documentation).
+    /// assert_eq!(response.status(), 301);
+    /// assert_eq!(body, "Moved Permanently");
+    /// assert_eq!(response.headers().get("Location").unwrap().to_str().unwrap(), "http://www.google.com");
+    /// ```
+    pub fn permanent_redirect<S: Into<String>>(mut self, redirect_url: S) -> Self {
+        self.mock
+            .set(self.mock.take().return_permanent_redirect(redirect_url));
+        self
+    }
+
+    /// Sets a duration that will delay the mock server response.
+    ///
+    /// * `duration` - The delay.
+    ///
+    /// ```
+    /// // Arrange
+    /// use std::time::{SystemTime, Duration};
+    /// use httpmock::{MockServer, Mock};
+    ///
+    /// let _ = env_logger::try_init();
+    /// let start_time = SystemTime::now();
+    /// let three_seconds = Duration::from_secs(3);
+    /// let server = MockServer::start();
+    ///
+    /// let mock = server.mock(|when, then| {
+    ///     when.path("/delay");
+    ///     then.status(200)
+    ///         .delay(three_seconds);
+    /// });
+    ///
+    /// // Act
+    /// let response = isahc::get(server.url("/delay")).unwrap();
+    ///
+    /// // Assert
+    /// assert_eq!(mock.hits(), 1);
+    /// assert_eq!(start_time.elapsed().unwrap() > three_seconds, true);
+    /// ```
+    pub fn delay<D: Into<Duration>>(self, duration: D) -> Self {
+        self.mock.set(self.mock.take().return_with_delay(duration));
+        self
     }
 }
 
@@ -391,10 +1452,8 @@ const LOCAL_SERVER_ADAPTER_GENERATOR: fn() -> Arc<dyn MockServerAdapter + Send +
     let server_state = state.clone();
 
     thread::spawn(move || {
-        let config = HttpMockConfig::new(0, false);
         let server_state = server_state.clone();
-
-        let srv = start_server(config, &server_state, Some(addr_sender));
+        let srv = start_server(0, false, &server_state, Some(addr_sender));
 
         let mut runtime = tokio::runtime::Builder::new()
             .enable_all()
@@ -405,7 +1464,6 @@ const LOCAL_SERVER_ADAPTER_GENERATOR: fn() -> Arc<dyn MockServerAdapter + Send +
         LocalSet::new().block_on(&mut runtime, srv)
     });
 
-    // TODO: replace this join by await
     let addr = addr_receiver.join().expect("Cannot get server address");
     Arc::new(LocalMockServerAdapter::new(addr, state))
 };

@@ -1,9 +1,10 @@
 // TODO: Remove this at some point
 #![allow(clippy::needless_lifetimes)]
-
-pub(crate) use adapter::{LocalMockServerAdapter, MockServerAdapter, RemoteMockServerAdapter};
-pub use adapter::{Method, Regex};
-pub use {mock::Mock, mock::MockRef};
+pub use adapter::{
+    local::LocalMockServerAdapter, standalone::RemoteMockServerAdapter, Method, MockServerAdapter,
+    Regex,
+};
+pub use mock::{Mock, MockRef};
 
 mod adapter;
 mod mock;

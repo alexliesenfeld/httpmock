@@ -3,7 +3,6 @@ use std::sync::Arc;
 use structopt::StructOpt;
 
 use httpmock::standalone::start_standalone_server;
-use httpmock::HttpMockConfig;
 
 /// Holds command line parameters provided by the user.
 #[derive(StructOpt, Debug)]
@@ -26,6 +25,5 @@ async fn main() {
         env!("CARGO_PKG_VERSION")
     );
 
-    let config = HttpMockConfig::new(params.port, params.expose);
-    start_standalone_server(config).await;
+    start_standalone_server(params.port, params.expose).await;
 }

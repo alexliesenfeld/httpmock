@@ -3,8 +3,9 @@ use std::collections::BTreeMap;
 use qstring::QString;
 use serde::Serialize;
 
-use crate::server::data::*;
-use crate::server::{handlers, ServerRequestHeader, ServerResponse};
+use crate::data::*;
+use crate::server::web::handlers;
+use crate::server::{MockServerState, ServerRequestHeader, ServerResponse};
 
 /// This route is responsible for adding a new mock
 pub(crate) fn ping() -> Result<ServerResponse, String> {
@@ -14,6 +15,7 @@ pub(crate) fn ping() -> Result<ServerResponse, String> {
 /// This route is responsible for adding a new mock
 pub(crate) fn add(state: &MockServerState, body: String) -> Result<ServerResponse, String> {
     let mock_def: serde_json::Result<MockDefinition> = serde_json::from_str(&body);
+
     if let Err(e) = mock_def {
         return create_json_response(500, None, ErrorResponse::new(&e));
     }
@@ -29,7 +31,7 @@ pub(crate) fn add(state: &MockServerState, body: String) -> Result<ServerRespons
 
 /// This route is responsible for deleting mocks
 pub(crate) fn delete_one(state: &MockServerState, id: usize) -> Result<ServerResponse, String> {
-    let result = handlers::delete_one(state, id);
+    let result = handlers::delete_one_mock(state, id);
     match result {
         Err(e) => create_json_response(500, None, ErrorResponse::new(&e)),
         Ok(found) => {
@@ -43,22 +45,41 @@ pub(crate) fn delete_one(state: &MockServerState, id: usize) -> Result<ServerRes
 }
 
 /// This route is responsible for deleting all mocks
-pub(crate) fn delete_all(state: &MockServerState) -> Result<ServerResponse, String> {
-    let result = handlers::delete_all(state);
-    match result {
-        Err(e) => create_json_response(500, None, ErrorResponse::new(&e)),
-        Ok(_) => create_response(202, None, None),
-    }
+pub(crate) fn delete_all_mocks(state: &MockServerState) -> Result<ServerResponse, String> {
+    handlers::delete_all_mocks(state);
+    create_response(202, None, None)
+}
+
+/// This route is responsible for deleting all mocks
+pub(crate) fn delete_history(state: &MockServerState) -> Result<ServerResponse, String> {
+    handlers::delete_history(state);
+    create_response(202, None, None)
 }
 
 /// This route is responsible for deleting mocks
 pub(crate) fn read_one(state: &MockServerState, id: usize) -> Result<ServerResponse, String> {
-    let handler_result = handlers::read_one(state, id);
+    let handler_result = handlers::read_one_mock(state, id);
     match handler_result {
         Err(e) => create_json_response(500, None, ErrorResponse { message: e }),
         Ok(mock_opt) => match mock_opt {
             Some(mock) => create_json_response(200, None, mock),
             None => create_response(404, None, None),
+        },
+    }
+}
+
+/// This route is responsible for verification
+pub(crate) fn verify(state: &MockServerState, body: String) -> Result<ServerResponse, String> {
+    let mock_rr: serde_json::Result<RequestRequirements> = serde_json::from_str(&body);
+    if let Err(e) = mock_rr {
+        return create_json_response(500, None, ErrorResponse::new(&e));
+    }
+
+    match handlers::verify(&state, &mock_rr.unwrap()) {
+        Err(e) => create_json_response(500, None, ErrorResponse::new(&e)),
+        Ok(closest_match) => match closest_match {
+            None => create_response(404, None, None),
+            Some(cm) => create_json_response(200, None, cm),
         },
     }
 }
@@ -93,7 +114,7 @@ fn to_route_response(
                 None,
                 ErrorResponse::new(&"Request did not match any route or mock"),
             ),
-            Some(res) => create_response(res.status, res.headers, res.body),
+            Some(res) => create_response(res.status.unwrap_or(200), res.headers, res.body),
         },
     }
 }
@@ -106,7 +127,7 @@ fn create_json_response<T>(
 where
     T: Serialize,
 {
-    let body = serde_json::to_string(&body);
+    let body = serde_json::to_vec(&body);
     if let Err(e) = body {
         return Err(format!("Cannot serialize body: {}", e));
     }
@@ -120,7 +141,7 @@ where
 fn create_response(
     status: u16,
     headers: Option<BTreeMap<String, String>>,
-    body: Option<String>,
+    body: Option<Vec<u8>>,
 ) -> Result<ServerResponse, String> {
     let headers = headers.unwrap_or_default();
     let body = body.unwrap_or_default();
@@ -128,16 +149,13 @@ fn create_response(
 }
 
 /// Maps the request of the serve handler to a request representation which the handlers understand
-fn to_handler_request(
-    req: &ServerRequestHeader,
-    body: String,
-) -> Result<MockServerHttpRequest, String> {
+fn to_handler_request(req: &ServerRequestHeader, body: String) -> Result<HttpMockRequest, String> {
     let query_params = extract_query_params(&req.query);
     if let Err(e) = query_params {
         return Err(format!("error parsing query_params: {}", e));
     }
 
-    let request = MockServerHttpRequest::new(req.method.to_string(), req.path.to_string())
+    let request = HttpMockRequest::new(req.method.to_string(), req.path.to_string())
         .with_headers(req.headers.clone())
         .with_query_params(query_params.unwrap())
         .with_body(body);
@@ -146,11 +164,11 @@ fn to_handler_request(
 }
 
 /// Extracts all query parameters from the URI of the given request.
-fn extract_query_params(query_string: &str) -> Result<BTreeMap<String, String>, String> {
-    let mut query_params = BTreeMap::new();
+fn extract_query_params(query_string: &str) -> Result<Vec<(String, String)>, String> {
+    let mut query_params = Vec::new();
 
     for (key, value) in QString::from(query_string) {
-        query_params.insert(key.to_string(), value.to_string());
+        query_params.push((key.to_string(), value.to_string()));
     }
 
     Ok(query_params)
@@ -161,7 +179,7 @@ async fn postprocess_response(
     result: Result<Option<MockServerHttpResponse>, String>,
 ) -> Result<Option<MockServerHttpResponse>, String> {
     if let Ok(Some(response_def)) = &result {
-        if let Some(duration) = response_def.duration {
+        if let Some(duration) = response_def.delay {
             tokio::time::delay_for(duration).await;
         }
     }

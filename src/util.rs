@@ -1,5 +1,6 @@
 use std::sync::Arc;
 use std::{
+    env,
     future::Future,
     task::{Context, Poll},
 };
@@ -7,9 +8,15 @@ use std::{
 /// Extension trait for efficiently blocking on a future.
 use crossbeam_utils::sync::{Parker, Unparker};
 use futures_util::{pin_mut, task::ArcWake};
+use std::fs::File;
+use std::io::Read;
+use std::path::{Path, PathBuf};
 
+// ===============================================================================================
+// Retry
+// ===============================================================================================
 #[doc(hidden)]
-pub async fn with_retry<T, U, F, Fut>(retries: usize, f: F) -> Result<T, U>
+pub(crate) async fn with_retry<T, U, F, Fut>(retries: usize, f: F) -> Result<T, U>
 where
     F: Fn() -> Fut,
     Fut: Future<Output = Result<T, U>>,
@@ -24,16 +31,22 @@ where
     result
 }
 
+// ===============================================================================================
+// Environment
+// ===============================================================================================
 #[doc(hidden)]
-pub fn read_env(name: &str, default: &str) -> String {
+pub(crate) fn read_env(name: &str, default: &str) -> String {
     match std::env::var(name) {
         Ok(value) => value,
         Err(_) => default.to_string(),
     }
 }
 
+// ===============================================================================================
+// Futures
+// ===============================================================================================
 #[doc(hidden)]
-pub(crate) trait Join: Future {
+pub trait Join: Future {
     fn join(self) -> <Self as Future>::Output;
 }
 
@@ -61,6 +74,38 @@ impl<F: Future> Join for F {
             }
         }
     }
+}
+
+// ===============================================================================================
+// Files
+// ===============================================================================================
+pub(crate) fn get_test_resource_file_path(relative_resource_path: &str) -> Result<PathBuf, String> {
+    match env::var("CARGO_MANIFEST_DIR") {
+        Ok(manifest_path) => Ok(Path::new(&manifest_path).join(relative_resource_path)),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
+pub(crate) fn read_file<P: AsRef<Path>>(absolute_resource_path: P) -> Result<Vec<u8>, String> {
+    let mut f = match File::open(&absolute_resource_path) {
+        Ok(mut opened_file) => opened_file,
+        Err(e) => return Err(e.to_string()),
+    };
+    let mut buffer = Vec::new();
+    match f.read_to_end(&mut buffer) {
+        Ok(len) => log::trace!(
+            "Read {} bytes from file {:?}",
+            &len,
+            &absolute_resource_path
+                .as_ref()
+                .as_os_str()
+                .to_str()
+                .expect("Invalid file path")
+        ),
+        Err(e) => return Err(e.to_string()),
+    }
+
+    Ok(buffer)
 }
 
 #[cfg(test)]

@@ -1,23 +1,15 @@
 extern crate httpmock;
-#[macro_use]
-extern crate lazy_static;
 
-use std::sync::Mutex;
-use std::thread::{spawn, JoinHandle};
+use isahc::{get, get_async, Body};
 
-use isahc::{get, get_async};
-use tokio::task::LocalSet;
+use crate::simulate_standalone_server;
+use httpmock::{Mock, MockServer};
+use httpmock_macros::httpmock_example_test;
+use std::io::Read;
 
-use actix_rt::Builder;
-use httpmock::standalone::start_standalone_server;
-use httpmock::{HttpMockConfig, Mock, MockServer};
-use httpmock_macros::test_executors;
-
-/// This test asserts that mocks can be stored, served and deleted as designed.
-// Ignore this "test_executors" macro. It runs tests in multiple async runtimes for quality assurance.
-#[test_executors]
 #[test]
-fn simple_standalone_test() {
+#[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
+fn standalone_test() {
     // This starts up a standalone server in the background running on port 5000
     simulate_standalone_server();
 
@@ -25,29 +17,29 @@ fn simple_standalone_test() {
     let _ = env_logger::try_init();
 
     // Instead of creating a new MockServer using new(), we connect to an existing remote instance.
-    let mock_server = MockServer::connect("localhost:5000");
+    let server = MockServer::connect("localhost:5000");
 
-    let search_mock = Mock::new()
+    let mock = Mock::new()
         .expect_path_contains("/search")
         .expect_query_param("query", "metallica")
         .return_status(202)
-        .create_on(&mock_server);
+        .create_on(&server);
 
     // Act: Send the HTTP request
     let response = get(&format!(
         "http://{}/search?query=metallica",
-        mock_server.address()
+        server.address()
     ))
     .unwrap();
 
     // Assert
     assert_eq!(response.status(), 202);
-    assert_eq!(search_mock.times_called(), 1);
+    assert_eq!(mock.hits(), 1);
 }
 
 /// Demonstrates how to use async structures
 #[async_std::test]
-async fn simple_standalone_test_async() {
+async fn async_standalone_test() {
     // This starts up a standalone server in the background running on port 5000
     simulate_standalone_server();
 
@@ -57,33 +49,33 @@ async fn simple_standalone_test_async() {
     // Instead of creating a new MockServer using connect_from_env_async(), we connect by
     // reading the host and port from the environment (HTTPMOCK_HOST / HTTPMOCK_PORT) or
     // falling back to defaults (localhost on port 5000)
-    let mock_server = MockServer::connect_from_env_async().await;
+    let server = MockServer::connect_from_env_async().await;
 
-    let mut search_mock = Mock::new()
+    let mut mock = Mock::new()
         .expect_path_contains("/search")
         .expect_query_param("query", "metallica")
         .return_status(202)
-        .create_on_async(&mock_server)
+        .create_on_async(&server)
         .await;
 
     // Act: Send the HTTP request
     let response = get_async(&format!(
         "http://{}/search?query=metallica",
-        mock_server.address()
+        server.address()
     ))
     .await
     .unwrap();
 
     // Assert 1
     assert_eq!(response.status(), 202);
-    assert_eq!(search_mock.times_called_async().await, 1);
+    assert_eq!(mock.hits_async().await, 1);
 
     // Act 2: Delete the mock and send a request to show that it is not present on the server anymore
-    search_mock.delete();
+    mock.delete();
     let response = get_async(&format!(
         "http://{}:{}/search?query=metallica",
-        mock_server.host(),
-        mock_server.port()
+        server.host(),
+        server.port()
     ))
     .await
     .unwrap();
@@ -103,23 +95,42 @@ fn unsupported_features() {
 
     // Instead of creating a new MockServer using connect_from_env(), we connect by reading the
     // host and port from the environment (HTTPMOCK_HOST / HTTPMOCK_PORT) or falling back to defaults
-    let mock_server = MockServer::connect_from_env();
+    let server = MockServer::connect_from_env();
 
     // Creating this mock will panic because expect_match is not supported when using
     // a remote mock server.
-    let _ = Mock::new().expect_match(|_| true).create_on(&mock_server);
+    let _ = Mock::new().expect_match(|_| true).create_on(&server);
 }
 
-/// The rest of this file is only required to simulate that a standalone mock server is
-/// running somewhere else. The tests above will is.
-fn simulate_standalone_server() {
-    let _ = STANDALONE_SERVER.lock().unwrap_or_else(|e| e.into_inner());
+#[test]
+#[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
+fn binary_body_standalone_test() {
+    let _ = env_logger::try_init();
+
+    // This starts up a standalone server in the background running on port 5000
+    simulate_standalone_server();
+
+    // Arrange
+    let binary_content = b"\x80\x02\x03\xF0\x90\x80";
+
+    let server = MockServer::connect_from_env();
+    let m = Mock::new()
+        .expect_path("/hello")
+        .return_status(200)
+        .return_body(binary_content)
+        .create_on(&server);
+
+    // Act
+    let mut response = isahc::get(server.url("/hello")).unwrap();
+
+    // Assert
+    assert_eq!(response.status(), 200);
+    assert_eq!(m.hits(), 1);
+    assert_eq!(body_to_vec(response.body_mut()), binary_content.to_vec());
 }
 
-lazy_static! {
-    static ref STANDALONE_SERVER: Mutex<JoinHandle<Result<(), String>>> = Mutex::new(spawn(|| {
-        let srv = start_standalone_server(HttpMockConfig::new(5000, false));
-        let mut runtime = tokio::runtime::Runtime::new().unwrap();
-        LocalSet::new().block_on(&mut runtime, srv)
-    }));
+fn body_to_vec(body: &mut Body) -> Vec<u8> {
+    let mut buf: Vec<u8> = Vec::new();
+    body.read_to_end(&mut buf).expect("Cannot read from body");
+    buf
 }

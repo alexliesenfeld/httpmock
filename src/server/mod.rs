@@ -4,7 +4,7 @@ use std::borrow::Borrow;
 use std::collections::BTreeMap;
 use std::net::SocketAddr;
 use std::str::FromStr;
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 use hyper::body::Buf;
 use hyper::header::HeaderValue;
@@ -16,35 +16,246 @@ use hyper::{
 };
 use regex::Regex;
 
-pub use crate::server::data::MockServerState;
+use crate::data::{ActiveMock, HttpMockRequest};
+use crate::server::matchers::Matcher;
+use crate::server::web::routes;
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering::Relaxed;
 
-pub(crate) mod data;
-pub(crate) mod handlers;
+mod matchers;
 
-mod routes;
 mod util;
+pub(crate) mod web;
 
-type GenericError = Box<dyn std::error::Error + Send + Sync>;
+use crate::server::matchers::comparators::{
+    AnyValueComparator, JSONContainsMatchComparator, JSONExactMatchComparator,
+    StringContainsMatchComparator, StringExactMatchComparator, StringRegexMatchComparator,
+};
+use crate::server::matchers::generic::MultiValueMatcher;
+use crate::server::matchers::sources::{
+    BodyRegexSource, ContainsCookieSource, ContainsHeaderSource, ContainsQueryParameterSource,
+    CookieSource, HeaderSource, JSONBodySource, MethodSource, PartialJSONBodySource,
+    PathContainsSubstringSource, PathRegexSource, QueryParameterSource, StringBodyContainsSource,
+    StringBodySource, StringPathSource,
+};
+use crate::server::matchers::targets::{
+    CookieTarget, HeaderTarget, MethodTarget, PathTarget, QueryParameterTarget,
+};
+use matchers::generic::SingleValueMatcher;
+use matchers::targets::{JSONBodyTarget, StringBodyTarget};
+pub use matchers::{Diff, DiffResult, Mismatch, Reason, Tokenizer};
+use regex::internal::Input;
 
-/// Holds server configuration properties.
-#[derive(Debug)]
-pub struct HttpMockConfig {
-    pub port: u16,
-    pub expose: bool,
+/// The shared state accessible to all handlers
+pub struct MockServerState {
+    id_counter: AtomicUsize,
+    pub mocks: RwLock<BTreeMap<usize, ActiveMock>>,
+    pub history: RwLock<Vec<Arc<HttpMockRequest>>>,
+    pub matchers: Vec<Box<dyn Matcher + Sync + Send>>,
 }
 
-impl HttpMockConfig {
-    pub fn new(port: u16, expose: bool) -> Self {
-        Self { port, expose }
+impl MockServerState {
+    pub fn create_new_id(&self) -> usize {
+        self.id_counter.fetch_add(1, Relaxed)
+    }
+
+    pub fn new() -> Self {
+        MockServerState {
+            mocks: RwLock::new(BTreeMap::new()),
+            history: RwLock::new(Vec::new()),
+            id_counter: AtomicUsize::new(0),
+            matchers: vec![
+                // path exact
+                Box::new(SingleValueMatcher {
+                    entity_name: "path",
+                    comparator: Box::new(StringExactMatchComparator::new(false)),
+                    source: Box::new(StringPathSource::new()),
+                    target: Box::new(PathTarget::new()),
+                    transformer: None,
+                    with_reason: true,
+                    diff_with: None,
+                    weight: 10,
+                }),
+                // path contains
+                Box::new(SingleValueMatcher {
+                    entity_name: "path",
+                    comparator: Box::new(StringContainsMatchComparator::new(true)),
+                    source: Box::new(PathContainsSubstringSource::new()),
+                    target: Box::new(PathTarget::new()),
+                    transformer: None,
+                    with_reason: true,
+                    diff_with: None,
+                    weight: 10,
+                }),
+                // path matches regex
+                Box::new(SingleValueMatcher {
+                    entity_name: "path",
+                    comparator: Box::new(StringRegexMatchComparator::new()),
+                    source: Box::new(PathRegexSource::new()),
+                    target: Box::new(PathTarget::new()),
+                    transformer: None,
+                    with_reason: true,
+                    diff_with: None,
+                    weight: 10,
+                }),
+                // method exact
+                Box::new(SingleValueMatcher {
+                    entity_name: "method",
+                    comparator: Box::new(StringExactMatchComparator::new(false)),
+                    source: Box::new(MethodSource::new()),
+                    target: Box::new(MethodTarget::new()),
+                    transformer: None,
+                    with_reason: true,
+                    diff_with: None,
+                    weight: 3,
+                }),
+                // Query Param exact
+                Box::new(MultiValueMatcher {
+                    entity_name: "query parameter",
+                    key_comparator: Box::new(StringExactMatchComparator::new(true)),
+                    value_comparator: Box::new(StringExactMatchComparator::new(true)),
+                    key_transformer: None,
+                    value_transformer: None,
+                    source: Box::new(QueryParameterSource::new()),
+                    target: Box::new(QueryParameterTarget::new()),
+                    with_reason: true,
+                    diff_with: None,
+                    weight: 1,
+                }),
+                // Query Param exists
+                Box::new(MultiValueMatcher {
+                    entity_name: "query parameter",
+                    key_comparator: Box::new(StringExactMatchComparator::new(true)),
+                    value_comparator: Box::new(AnyValueComparator::new()),
+                    key_transformer: None,
+                    value_transformer: None,
+                    source: Box::new(ContainsQueryParameterSource::new()),
+                    target: Box::new(QueryParameterTarget::new()),
+                    with_reason: true,
+                    diff_with: None,
+                    weight: 1,
+                }),
+                // Cookie exact
+                Box::new(MultiValueMatcher {
+                    entity_name: "cookie",
+                    key_comparator: Box::new(StringExactMatchComparator::new(true)),
+                    value_comparator: Box::new(StringExactMatchComparator::new(true)),
+                    key_transformer: None,
+                    value_transformer: None,
+                    source: Box::new(CookieSource::new()),
+                    target: Box::new(CookieTarget::new()),
+                    with_reason: true,
+                    diff_with: None,
+                    weight: 1,
+                }),
+                // Cookie exists
+                Box::new(MultiValueMatcher {
+                    entity_name: "cookie",
+                    key_comparator: Box::new(StringExactMatchComparator::new(true)),
+                    value_comparator: Box::new(AnyValueComparator::new()),
+                    key_transformer: None,
+                    value_transformer: None,
+                    source: Box::new(ContainsCookieSource::new()),
+                    target: Box::new(CookieTarget::new()),
+                    with_reason: true,
+                    diff_with: None,
+                    weight: 1,
+                }),
+                // Header exact
+                Box::new(MultiValueMatcher {
+                    entity_name: "header",
+                    key_comparator: Box::new(StringExactMatchComparator::new(false)),
+                    value_comparator: Box::new(StringExactMatchComparator::new(true)),
+                    key_transformer: None,
+                    value_transformer: None,
+                    source: Box::new(HeaderSource::new()),
+                    target: Box::new(HeaderTarget::new()),
+                    with_reason: true,
+                    diff_with: None,
+                    weight: 1,
+                }),
+                // Header exists
+                Box::new(MultiValueMatcher {
+                    entity_name: "header",
+                    key_comparator: Box::new(StringExactMatchComparator::new(false)),
+                    value_comparator: Box::new(AnyValueComparator::new()),
+                    key_transformer: None,
+                    value_transformer: None,
+                    source: Box::new(ContainsHeaderSource::new()),
+                    target: Box::new(HeaderTarget::new()),
+                    with_reason: true,
+                    diff_with: None,
+                    weight: 1,
+                }),
+                // Box::new(CustomFunctionMatcher::new(1.0)),
+                // string body exact
+                Box::new(SingleValueMatcher {
+                    entity_name: "body",
+                    comparator: Box::new(StringExactMatchComparator::new(false)),
+                    source: Box::new(StringBodySource::new()),
+                    target: Box::new(StringBodyTarget::new()),
+                    transformer: None,
+                    with_reason: false,
+                    diff_with: Some(Tokenizer::Line),
+                    weight: 1,
+                }),
+                // string body contains
+                Box::new(SingleValueMatcher {
+                    entity_name: "body",
+                    comparator: Box::new(StringContainsMatchComparator::new(true)),
+                    source: Box::new(StringBodyContainsSource::new()),
+                    target: Box::new(StringBodyTarget::new()),
+                    transformer: None,
+                    with_reason: false,
+                    diff_with: Some(Tokenizer::Line),
+                    weight: 1,
+                }),
+                // string body regex
+                Box::new(SingleValueMatcher {
+                    entity_name: "body",
+                    comparator: Box::new(StringRegexMatchComparator::new()),
+                    source: Box::new(BodyRegexSource::new()),
+                    target: Box::new(StringBodyTarget::new()),
+                    transformer: None,
+                    with_reason: false,
+                    diff_with: Some(Tokenizer::Line),
+                    weight: 1,
+                }),
+                // JSON body contains
+                Box::new(SingleValueMatcher {
+                    entity_name: "body",
+                    comparator: Box::new(JSONContainsMatchComparator::new()),
+                    source: Box::new(PartialJSONBodySource::new()),
+                    target: Box::new(JSONBodyTarget::new()),
+                    transformer: None,
+                    with_reason: false,
+                    diff_with: Some(Tokenizer::Line),
+                    weight: 1,
+                }),
+                // JSON body exact
+                Box::new(SingleValueMatcher {
+                    entity_name: "body",
+                    comparator: Box::new(JSONExactMatchComparator::new()),
+                    source: Box::new(JSONBodySource::new()),
+                    target: Box::new(JSONBodyTarget::new()),
+                    transformer: None,
+                    with_reason: true,
+                    diff_with: Some(Tokenizer::Line),
+                    weight: 1,
+                }),
+            ],
+        }
     }
 }
+
+type GenericError = Box<dyn std::error::Error + Send + Sync>;
 
 #[derive(Default, Debug)]
 pub(crate) struct ServerRequestHeader {
     pub method: String,
     pub path: String,
     pub query: String,
-    pub headers: BTreeMap<String, String>,
+    pub headers: Vec<(String, String)>,
 }
 
 impl ServerRequestHeader {
@@ -68,7 +279,7 @@ impl ServerRequestHeader {
         method: String,
         path: String,
         query: String,
-        headers: BTreeMap<String, String>,
+        headers: Vec<(String, String)>,
     ) -> Self {
         Self {
             method,
@@ -83,11 +294,11 @@ impl ServerRequestHeader {
 pub(crate) struct ServerResponse {
     pub status: u16,
     pub headers: BTreeMap<String, String>,
-    pub body: String,
+    pub body: Vec<u8>,
 }
 
 impl ServerResponse {
-    pub fn new(status: u16, headers: BTreeMap<String, String>, body: String) -> Self {
+    pub fn new(status: u16, headers: BTreeMap<String, String>, body: Vec<u8>) -> Self {
         Self {
             status,
             headers,
@@ -97,15 +308,15 @@ impl ServerResponse {
 }
 
 /// Extracts all headers from the URI of the given request.
-fn extract_headers(header_map: &HeaderMap) -> Result<BTreeMap<String, String>, String> {
-    let mut headers = BTreeMap::new();
+fn extract_headers(header_map: &HeaderMap) -> Result<Vec<(String, String)>, String> {
+    let mut headers = Vec::new();
     for (hn, hv) in header_map {
         let hn = hn.as_str().to_string();
         let hv = hv.to_str();
         if let Err(e) = hv {
             return Err(format!("error parsing headers: {}", e));
         }
-        headers.insert(hn, hv.unwrap().to_string());
+        headers.push((hn, hv.unwrap().to_string()));
     }
     Ok(headers)
 }
@@ -120,7 +331,7 @@ async fn handle_server_request(
         return Ok(error_response(format!("Cannot parse request: {}", e)));
     }
 
-    let entire_body = hyper::body::aggregate(req.into_body()).await;
+    let entire_body = hyper::body::to_bytes(req.into_body()).await;
     if let Err(e) = entire_body {
         return Ok(error_response(format!("Cannot read request body: {}", e)));
     }
@@ -150,17 +361,13 @@ async fn handle_server_request(
 /// Starts a new instance of an HTTP mock server. You should never need to use this function
 /// directly. Use it if you absolutely need to manage the low-level details of how the mock
 /// server operates.
-pub async fn start_server(
-    http_mock_config: HttpMockConfig,
+pub(crate) async fn start_server(
+    port: u16,
+    expose: bool,
     state: &Arc<MockServerState>,
     socket_addr_sender: Option<tokio::sync::oneshot::Sender<SocketAddr>>,
 ) -> Result<(), String> {
-    let port = http_mock_config.port;
-    let host = if http_mock_config.expose {
-        "0.0.0.0"
-    } else {
-        "127.0.0.1"
-    };
+    let host = if expose { "0.0.0.0" } else { "127.0.0.1" };
 
     let state = state.clone();
     let new_service = make_service_fn(move |_| {
@@ -242,7 +449,7 @@ async fn route_request(
     if MOCKS_PATH.is_match(&request_header.path) {
         match request_header.method.as_str() {
             "POST" => return routes::add(state, body),
-            "DELETE" => return routes::delete_all(state),
+            "DELETE" => return routes::delete_all_mocks(state),
             _ => {}
         }
     }
@@ -257,6 +464,20 @@ async fn route_request(
         match request_header.method.as_str() {
             "GET" => return routes::read_one(state, id),
             "DELETE" => return routes::delete_one(state, id),
+            _ => {}
+        }
+    }
+
+    if VERIFY_PATH.is_match(&request_header.path) {
+        match request_header.method.as_str() {
+            "POST" => return routes::verify(state, body),
+            _ => {}
+        }
+    }
+
+    if HISTORY_PATH.is_match(&request_header.path) {
+        match request_header.method.as_str() {
+            "DELETE" => return routes::delete_history(state),
             _ => {}
         }
     }
@@ -305,17 +526,18 @@ lazy_static! {
     static ref PING_PATH: Regex = Regex::new(r"^/__ping$").unwrap();
     static ref MOCKS_PATH: Regex = Regex::new(r"^/__mocks$").unwrap();
     static ref MOCK_PATH: Regex = Regex::new(r"^/__mocks/([0-9]+)$").unwrap();
+    static ref HISTORY_PATH: Regex = Regex::new(r"^/__history$").unwrap();
+    static ref VERIFY_PATH: Regex = Regex::new(r"^/__verify$").unwrap();
 }
 
 #[cfg(test)]
 mod test {
     use crate::server::{
-        error_response, get_path_param, map_response, ServerResponse, MOCKS_PATH, MOCK_PATH,
+        error_response, get_path_param, map_response, ServerResponse, HISTORY_PATH, MOCKS_PATH,
+        MOCK_PATH, PING_PATH, VERIFY_PATH,
     };
     use crate::Regex;
     use futures_util::TryStreamExt;
-    use hyper::Body;
-    use std::borrow::Borrow;
     use std::collections::BTreeMap;
 
     #[test]
@@ -326,6 +548,18 @@ mod test {
         assert_eq!(MOCK_PATH.is_match("/__mocks"), false);
         assert_eq!(MOCK_PATH.is_match("/__mocks/345345/test"), false);
         assert_eq!(MOCK_PATH.is_match("test/__mocks/345345/test"), false);
+
+        assert_eq!(PING_PATH.is_match("/__ping"), true);
+        assert_eq!(PING_PATH.is_match("/__ping/1295473892374"), false);
+        assert_eq!(PING_PATH.is_match("test/ping/1295473892374"), false);
+
+        assert_eq!(VERIFY_PATH.is_match("/__verify"), true);
+        assert_eq!(VERIFY_PATH.is_match("/__verify/1295473892374"), false);
+        assert_eq!(VERIFY_PATH.is_match("test/verify/1295473892374"), false);
+
+        assert_eq!(HISTORY_PATH.is_match("/__history"), true);
+        assert_eq!(HISTORY_PATH.is_match("/__history/1295473892374"), false);
+        assert_eq!(HISTORY_PATH.is_match("test/history/1295473892374"), false);
 
         assert_eq!(MOCKS_PATH.is_match("/__mocks"), true);
         assert_eq!(MOCKS_PATH.is_match("/__mocks/5"), false);
@@ -360,7 +594,7 @@ mod test {
         headers.insert(";;;".to_string(), ";;;".to_string());
 
         let res = ServerResponse {
-            body: "".to_string(),
+            body: Vec::new(),
             status: 500,
             headers,
         };
