@@ -1627,6 +1627,6 @@ mod test {
         fail_with(Some(closest_match));
 
         // Assert
-
+        // see "should panic" annotation
     }
 }
