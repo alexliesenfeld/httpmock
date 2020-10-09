@@ -53,8 +53,7 @@ async fn async_standalone_test() {
     let mut search_mock = server
         .mock_async(|when, then| {
             when.path_contains("/search")
-                .query_param("query", "metallica")
-                .body("wow so large".repeat(1000));
+                .query_param("query", "metallica");
             then.status(202);
         })
         .await;

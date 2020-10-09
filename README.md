@@ -8,9 +8,10 @@
 [![Build Status](https://dev.azure.com/alexliesenfeld/httpmock/_apis/build/status/alexliesenfeld.httpmock?branchName=master)](https://dev.azure.com/alexliesenfeld/httpmock/_build/latest?definitionId=2&branchName=master)
 [![codecov](https://codecov.io/gh/alexliesenfeld/httpmock/branch/master/graph/badge.svg)](https://codecov.io/gh/alexliesenfeld/httpmock)
 [![crates.io](https://img.shields.io/crates/d/httpmock.svg)](https://crates.io/crates/httpmock)
-[![Rust](https://img.shields.io/badge/rust-1.43.0%2B-blue.svg?maxAge=3600)](https://github.com/rust-lang/regex)
 [![Docker](https://img.shields.io/docker/cloud/build/alexliesenfeld/httpmock)](https://hub.docker.com/r/alexliesenfeld/httpmock)
-
+[![Rust](https://img.shields.io/badge/rust-1.43.0%2B-blue.svg?maxAge=3600)](https://github.com/rust-lang/regex)
+[![License](https://img.shields.io/github/license/alexliesenfeld/httpmock.svg)](LICENSE)
+	
 </div>
 
 <p align="center">
