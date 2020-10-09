@@ -1,8 +1,8 @@
 #[macro_use]
 extern crate lazy_static;
 
-mod deprecated;
 mod examples;
+mod internal;
 
 use httpmock::standalone::start_standalone_server;
 use std::sync::Mutex;

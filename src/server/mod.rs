@@ -331,7 +331,7 @@ async fn handle_server_request(
         return Ok(error_response(format!("Cannot parse request: {}", e)));
     }
 
-    let entire_body = hyper::body::aggregate(req.into_body()).await;
+    let entire_body = hyper::body::to_bytes(req.into_body()).await;
     if let Err(e) = entire_body {
         return Ok(error_response(format!("Cannot read request body: {}", e)));
     }

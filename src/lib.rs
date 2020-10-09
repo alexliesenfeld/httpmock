@@ -414,8 +414,8 @@ impl MockServer {
     /// // Ensure the returned URL is as expected
     /// assert_eq!(expected_url, url);
     /// ```
-    pub fn url(&self, path: &str) -> String {
-        format!("http://{}{}", self.address(), path)
+    pub fn url<S: Into<String>>(&self, path: S) -> String {
+        format!("http://{}{}", self.address(), path.into())
     }
 
     /// Builds the base URL for the mock server.

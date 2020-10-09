@@ -1,11 +1,12 @@
 extern crate httpmock;
 
-use isahc::{get, get_async, Body};
+use isahc::{get, get_async, Body, RequestExt};
 
 use crate::simulate_standalone_server;
 use httpmock::MockServer;
 use httpmock_macros::httpmock_example_test;
 use std::io::Read;
+use regex::Replacer;
 
 #[test]
 #[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
@@ -20,21 +21,22 @@ fn standalone_test() {
     let server = MockServer::connect("localhost:5000");
 
     let search_mock = server.mock(|when, then| {
-        when.path_contains("/search")
-            .query_param("query", "metallica");
+        when.path("/search")
+            .body("wow so large".repeat(10000000));
         then.status(202);
     });
 
     // Act: Send the HTTP request
-    let response = get(&format!(
-        "http://{}/search?query=metallica",
-        server.address()
-    ))
-    .unwrap();
+    let response = isahc::prelude::Request::post(server.url("/search"))
+        .body("wow so large".repeat(10000000))
+        .unwrap()
+        .send()
+        .unwrap();
 
     // Assert
     search_mock.assert();
     assert_eq!(response.status(), 202);
+
 }
 
 #[async_std::test]
@@ -53,7 +55,8 @@ async fn async_standalone_test() {
     let mut search_mock = server
         .mock_async(|when, then| {
             when.path_contains("/search")
-                .query_param("query", "metallica");
+                .query_param("query", "metallica")
+                .body("wow so large".repeat(1000));
             then.status(202);
         })
         .await;
