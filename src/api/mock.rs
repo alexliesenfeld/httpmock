@@ -54,18 +54,136 @@ pub struct MockRef<'a> {
 }
 
 impl<'a> MockRef<'a> {
+    /// This method asserts that the mock server received **exactly one** HTTP request that matched
+    /// all the request requirements of this mock.
+    ///
+    /// **Attention**: If you want to assert more than one request, consider using either
+    /// [MockRef::assert_hits](struct.MockRef.html#method.assert_hits) or
+    /// [MockRef::hits](struct.MockRef.html#method.hits).
+    ///
+    /// # Example
+    /// ```
+    /// // Arrange: Create mock server and a mock
+    /// use httpmock::{MockServer, Mock};
+    ///
+    /// let server = MockServer::start();
+    ///
+    /// let mut mock = server.mock(|when, then| {
+    ///     when.path("/hits");
+    ///     then.status(200);
+    /// });
+    ///
+    /// // Act: Send a request, then delete the mock from the mock and send another request.
+    /// isahc::get(server.url("/hits")).unwrap();
+    ///
+    /// // Assert: Make sure the mock server received exactly one request that matched all
+    /// // the request requirements of the mock.
+    /// mock.assert();
+    /// ```
+    /// # Panics
+    /// This method will panic if there is a problem with the (standalone) mock server.
     pub fn assert(&self) {
         self.assert_async().join()
     }
 
+    /// This method asserts that the mock server received **exactly one** HTTP request that matched
+    /// all the request requirements of this mock.
+    ///
+    /// **Attention**: If you want to assert more than one request, consider using either
+    /// [MockRef::assert_hits](struct.MockRef.html#method.assert_hits) or
+    /// [MockRef::hits](struct.MockRef.html#method.hits).
+    ///
+    /// # Example
+    /// ```
+    /// // Arrange: Create mock server and a mock
+    /// use httpmock::{MockServer, Mock};
+    ///
+    ///  async_std::task::block_on(async {
+    ///     let server = MockServer::start_async().await;
+    ///
+    ///     let mut mock = server.mock_async(|when, then| {
+    ///         when.path("/hits");
+    ///         then.status(200);
+    ///     }).await;
+    ///
+    ///     // Act: Send a request, then delete the mock from the mock and send another request.
+    ///     isahc::get_async(server.url("/hits")).await.unwrap();
+    ///
+    ///     // Assert: Make sure the mock server received exactly one request that matched all
+    ///     // the request requirements of the mock.
+    ///     mock.assert_async().await;
+    /// });
+    /// ```
+    /// # Panics
+    /// This method will panic if there is a problem with the (standalone) mock server.
     pub async fn assert_async(&self) {
         self.assert_hits_async(1).await
     }
 
+    /// This method asserts that the mock server received the provided number of HTTP requests which
+    /// matched all the request requirements of this mock.
+    ///
+    /// **Attention**: Consider using the shorthand version
+    /// [MockRef::assert](struct.MockRef.html#method.assert) if you want to assert only one hit.
+    ///
+    ///
+    /// # Example
+    /// ```
+    /// // Arrange: Create mock server and a mock
+    /// use httpmock::{MockServer, Mock};
+    /// use isahc::get;
+    ///
+    /// let server = MockServer::start();
+    ///
+    /// let mut mock = server.mock(|when, then| {
+    ///     when.path("/hits");
+    ///     then.status(200);
+    /// });
+    ///
+    /// // Act: Send a request, then delete the mock from the mock and send another request.
+    /// get(server.url("/hits")).unwrap();
+    /// get(server.url("/hits")).unwrap();
+    ///
+    /// // Assert: Make sure the mock server received exactly two requests that matched all
+    /// // the request requirements of the mock.
+    /// mock.assert_hits(2);
+    /// ```
+    /// # Panics
+    /// This method will panic if there is a problem with the (standalone) mock server.
     pub fn assert_hits(&self, hits: usize) {
         self.assert_hits_async(hits).join()
     }
 
+    /// This method asserts that the mock server received the provided number of HTTP requests which
+    /// matched all the request requirements of this mock.
+    ///
+    /// **Attention**: Consider using the shorthand version
+    /// [MockRef::assert_async](struct.MockRef.html#method.assert_async) if you want to assert only one hit.
+    ///
+    /// # Example
+    /// ```
+    /// // Arrange: Create mock server and a mock
+    /// use httpmock::{MockServer, Mock};
+    ///
+    ///  async_std::task::block_on(async {
+    ///     let server = MockServer::start_async().await;
+    ///
+    ///     let mut mock = server.mock_async(|when, then| {
+    ///         when.path("/hits");
+    ///         then.status(200);
+    ///     }).await;
+    ///
+    ///     // Act: Send a request, then delete the mock from the mock and send another request.
+    ///     isahc::get_async(server.url("/hits")).await.unwrap();
+    ///     isahc::get_async(server.url("/hits")).await.unwrap();
+    ///
+    ///     // Assert: Make sure the mock server received exactly two requests that matched all
+    ///     // the request requirements of the mock.
+    ///     mock.assert_hits_async(2).await;
+    /// });
+    /// ```
+    /// # Panics
+    /// This method will panic if there is a problem with the (standalone) mock server.
     pub async fn assert_hits_async(&self, hits: usize) {
         let active_mock = self
             .server
@@ -110,7 +228,7 @@ impl<'a> MockRef<'a> {
     /// isahc::get(server.url("/hits")).unwrap();
     ///
     /// // Assert: Make sure the mock has been called exactly one time
-    /// mock.assert();
+    /// assert_eq!(1, mock.hits());
     /// ```
     /// # Panics
     /// This method will panic if there is a problem with the (standalone) mock server.
@@ -146,7 +264,7 @@ impl<'a> MockRef<'a> {
     ///     isahc::get_async(server.url("/hits")).await.unwrap();
     ///
     ///     // Assert: Make sure the mock was called with all required attributes exactly one time.
-    ///     mock.assert_async().await;
+    ///     assert_eq!(1, mock.hits_async().await);
     /// });
     /// ```
     /// # Panics
@@ -309,7 +427,7 @@ impl<'a> MockRef<'a> {
 /// (see [MockRef::delete](struct.MockRef.html#method.delete)).
 #[deprecated(
     since = "0.5.0",
-    note = "Please use newer API (see: https://github.com/alexliesenfeld/httpmock/blob/master/CHANGELOG.md"
+    note = "Please use newer API (see: https://github.com/alexliesenfeld/httpmock/blob/master/CHANGELOG.md#version-050)"
 )]
 pub struct Mock {
     mock: MockDefinition,

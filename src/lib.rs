@@ -125,37 +125,6 @@
 //!
 //! Relevant elements for this API are [MockServer::mock](struct.MockServer.html#method.mock), [When](struct.When.html) and [Then](struct.Then.html).
 //!
-//! ## Expect/Return API
-//! This is the historical API of `httpmock`. It is verbous but explicit and provides
-//! much control over mock definition reuse. You should almost never need to use it though.
-//!
-//! ### Example
-//! ```
-//! use httpmock::{MockServer, Mock};
-//! let server = MockServer::start();
-//!
-//! let greeting_mock = Mock::new()
-//!     .expect_path("/hi")
-//!     .return_status(200)
-//!     .create_on(&server);
-//!
-//! let response = isahc::get(server.url("/hi")).unwrap();
-//!
-//! greeting_mock.assert();
-//! ```
-//! Please observe the following method naming scheme:
-//! - All [Mock](struct.Mock.html) methods that start with `expect` in their name set a requirement
-//! for HTTP requests (e.g. [Mock::expect_method](struct.Mock.html#method.expect_method),
-//! [Mock::expect_path](struct.Mock.html#method.expect_path),
-//! [Mock::expect_body](struct.Mock.html#method.expect_body), etc.).
-//! - All [Mock](struct.Mock.html) methods that start with `return` in their name define what the
-//! mock server will return in response to an HTTP request that matched all mock requirements (e.g.
-//! [Mock::return_status](struct.Mock.html#method.return_status),
-//! [Mock::return_body](struct.Mock.html#method.return_body), etc.).
-//!
-//! With this naming scheme users can benefit from IDE autocompletion to find request matchers and
-//! response attributes mostly without even looking into documentation.
-//!
 //! # Examples
 //! You can find examples in the test directory in this crates Git repository:
 //! [this crates test directory](https://github.com/alexliesenfeld/httpmock/blob/master/tests ).
@@ -240,8 +209,8 @@ use api::MockServerAdapter;
 use data::{HttpMockRequest, MockMatcherFunction};
 use util::Join;
 
-use crate::api::{LocalMockServerAdapter, MockRef, RemoteMockServerAdapter};
-pub use crate::api::{Method, Mock, Regex};
+use crate::api::{LocalMockServerAdapter, RemoteMockServerAdapter};
+pub use crate::api::{Method, Mock, MockRef, Regex};
 use crate::server::{start_server, MockServerState};
 use crate::util::{read_env, with_retry};
 
@@ -486,15 +455,12 @@ impl MockServer {
         F: FnOnce(When, Then),
     {
         let mock = Rc::new(Cell::new(Mock::new()));
-        config_fn(
-            When { mock: mock.clone() },
-            Then { mock: mock.clone() },
-        );
+        config_fn(When { mock: mock.clone() }, Then { mock: mock.clone() });
         mock.take().create_on_async(self).await
     }
 }
 
-/// A builder that allows the specification of expected HTTP request values.
+/// A type that allows the specification of HTTP request values.
 pub struct When {
     pub(crate) mock: Rc<Cell<Mock>>,
 }
@@ -1098,7 +1064,7 @@ impl When {
     }
 }
 
-/// A builder that allows specification of HTTP response values.
+/// A type that allows the specification of HTTP response values.
 pub struct Then {
     pub(crate) mock: Rc<Cell<Mock>>,
 }
