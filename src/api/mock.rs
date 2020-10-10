@@ -1448,7 +1448,7 @@ impl Mock {
     ///     let response = isahc::get_async(server.url("/delay")).await.unwrap();
     ///
     ///     // Assert
-    ///     assert_eq!(mock.assert_async().await, 1);
+    ///     mock.assert_async().await;
     /// });
     /// ```
     ///

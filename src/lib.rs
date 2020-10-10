@@ -637,7 +637,7 @@ impl Expectations {
     /// get(server.url("/search?query=Metallica")).unwrap();
     ///
     /// // Assert
-    /// mock.assert();
+    /// m.assert();
     /// ```
     pub fn query_param<S: Into<String>>(self, name: S, value: S) -> Self {
         self.mock
@@ -665,7 +665,7 @@ impl Expectations {
     /// get(server.url("/search?query=Metallica")).unwrap();
     ///
     /// // Assert
-    /// mock.assert();
+    /// m.assert();
     /// ```
     pub fn query_param_exists<S: Into<String>>(self, name: S) -> Self {
         self.mock
@@ -1082,8 +1082,8 @@ impl Expectations {
     /// let response = isahc::get(server.url("/test")).unwrap();
     ///
     /// // Assert
+    /// m.assert();
     /// assert_eq!(response.status(), 200);
-    /// mock.assert();
     /// ```
     pub fn matches(self, matcher: MockMatcherFunction) -> Self {
         self.mock.set(self.mock.take().expect_match(matcher));
@@ -1117,8 +1117,8 @@ impl Responders {
     /// let response = isahc::get(server.url("/hello")).unwrap();
     ///
     /// // Assert
+    /// m.assert();
     /// assert_eq!(response.status(), 200);
-    /// mock.assert();
     /// ```
     pub fn status(self, status: u16) -> Self {
         self.mock.set(self.mock.take().return_status(status));
@@ -1147,9 +1147,9 @@ impl Responders {
     /// let mut response = isahc::get(server.url("/hello")).unwrap();
     ///
     /// // Assert
+    /// m.assert();
     /// assert_eq!(response.status(), 200);
     /// assert_eq!(response.text().unwrap(), "ohi!");
-    /// mock.assert();
     /// ```
     pub fn body(self, body: impl AsRef<[u8]>) -> Self {
         self.mock.set(self.mock.take().return_body(body));
@@ -1178,9 +1178,9 @@ impl Responders {
     /// let mut response = isahc::get(server.url("/hello")).unwrap();
     ///
     /// // Assert
+    /// m.assert();
     /// assert_eq!(response.status(), 200);
     /// assert_eq!(response.text().unwrap(), "ohi!");
-    /// mock.assert();
     /// ```
     pub fn body_from_file<S: Into<String>>(self, body: S) -> Self {
         self.mock.set(self.mock.take().return_body_from_file(body));
