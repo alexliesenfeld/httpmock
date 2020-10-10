@@ -1,11 +1,10 @@
 extern crate httpmock;
 
-use httpmock::MockServer;
-use httpmock_macros::httpmock_example_test;
 use isahc::prelude::*;
 
+use httpmock::MockServer;
+
 #[test]
-#[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
 fn file_body_test() {
     // Arrange
     let server = MockServer::start();

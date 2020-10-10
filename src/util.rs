@@ -1,3 +1,6 @@
+use std::fs::File;
+use std::io::Read;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::{
     env,
@@ -8,9 +11,6 @@ use std::{
 /// Extension trait for efficiently blocking on a future.
 use crossbeam_utils::sync::{Parker, Unparker};
 use futures_util::{pin_mut, task::ArcWake};
-use std::fs::File;
-use std::io::Read;
-use std::path::{Path, PathBuf};
 
 // ===============================================================================================
 // Retry

@@ -1,5 +1,6 @@
 // TODO: Remove this at some point
 #![allow(clippy::needless_lifetimes)]
+
 pub use adapter::{
     local::LocalMockServerAdapter, standalone::RemoteMockServerAdapter, Method, MockServerAdapter,
     Regex,

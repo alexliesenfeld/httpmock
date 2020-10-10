@@ -4,10 +4,8 @@ use isahc::{get, get_async};
 
 use httpmock::Method::GET;
 use httpmock::{Mock, MockServer};
-use httpmock_macros::httpmock_example_test;
 
 #[test]
-#[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
 fn getting_started_test() {
     let _ = env_logger::try_init();
 
@@ -26,10 +24,10 @@ fn getting_started_test() {
     // The server variable is being used to generate a mock server URL for path "/hello".
     let response = get(server.url("/hello")).unwrap();
 
+    // Ensure the specified mock responded exactly one time.
+    hello_mock.assert();
     // Ensure the mock server did respond as specified above.
     assert_eq!(response.status(), 200);
-    // Ensure the specified mock responded exactly one time.
-    assert_eq!(hello_mock.hits(), 1);
 }
 
 #[async_std::test]
@@ -52,8 +50,8 @@ async fn async_getting_started_test() {
     let url = format!("http://{}/hello", server.address());
     let response = get_async(&url).await.unwrap();
 
+    // Ensure the specified mock responded exactly one time.
+    hello_mock.assert_async().await;
     // Ensure the mock server did respond as specified above.
     assert_eq!(response.status(), 200);
-    // Ensure the specified mock responded exactly one time.
-    assert_eq!(hello_mock.hits_async().await, 1);
 }

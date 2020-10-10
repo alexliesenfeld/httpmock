@@ -1,12 +1,13 @@
 extern crate httpmock;
 
+use std::io::Read;
+
 use isahc::{get, get_async, Body, RequestExt};
+use regex::Replacer;
+
+use httpmock::MockServer;
 
 use crate::simulate_standalone_server;
-use httpmock::MockServer;
-use httpmock_macros::httpmock_example_test;
-use regex::Replacer;
-use std::io::Read;
 
 #[test]
 fn loop_with_standalone_test() {

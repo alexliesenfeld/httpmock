@@ -1,14 +1,12 @@
 extern crate httpmock;
 
+use isahc::config::RedirectPolicy;
 use isahc::prelude::*;
 use isahc::HttpClientBuilder;
 
 use httpmock::MockServer;
-use httpmock_macros::httpmock_example_test;
-use isahc::config::RedirectPolicy;
 
 #[test]
-#[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
 fn multiserver_test() {
     // Arrange
     let _ = env_logger::try_init();

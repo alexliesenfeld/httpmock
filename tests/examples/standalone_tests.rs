@@ -1,15 +1,15 @@
 extern crate httpmock;
 
-use isahc::{get, get_async, Body, RequestExt};
-
-use crate::simulate_standalone_server;
-use httpmock::MockServer;
-use httpmock_macros::httpmock_example_test;
-use regex::Replacer;
 use std::io::Read;
 
+use isahc::{get, get_async, Body, RequestExt};
+use regex::Replacer;
+
+use httpmock::MockServer;
+
+use crate::simulate_standalone_server;
+
 #[test]
-#[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
 fn standalone_test() {
     // This starts up a standalone server in the background running on port 5000
     simulate_standalone_server();
@@ -104,7 +104,6 @@ fn unsupported_features() {
 }
 
 #[test]
-#[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
 fn binary_body_standalone_test() {
     let _ = env_logger::try_init();
 
@@ -124,8 +123,8 @@ fn binary_body_standalone_test() {
     let mut response = isahc::get(server.url("/hello")).unwrap();
 
     // Assert
+    m.assert();
     assert_eq!(response.status(), 200);
-    assert_eq!(m.hits(), 1);
     assert_eq!(body_to_vec(response.body_mut()), binary_content.to_vec());
 }
 

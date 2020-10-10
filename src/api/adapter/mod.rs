@@ -1,13 +1,12 @@
+use std::net::SocketAddr;
+use std::str::FromStr;
+use std::sync::Arc;
+use std::time::Duration;
+
 use async_trait::async_trait;
 use isahc::http::Request;
 use isahc::prelude::Configurable;
 use isahc::ResponseExt;
-use std::net::SocketAddr;
-use std::sync::Arc;
-use std::time::Duration;
-
-pub mod local;
-pub mod standalone;
 
 use crate::data::{
     ActiveMock, ClosestMatch, MockDefinition, MockIdentification, RequestRequirements,
@@ -16,7 +15,9 @@ use crate::server::web::handlers::{
     add_new_mock, delete_all_mocks, delete_history, delete_one_mock, read_one_mock, verify,
 };
 use crate::server::{Mismatch, MockServerState};
-use std::str::FromStr;
+
+pub mod local;
+pub mod standalone;
 
 /// Type alias for [regex::Regex](../regex/struct.Regex.html).
 pub type Regex = regex::Regex;

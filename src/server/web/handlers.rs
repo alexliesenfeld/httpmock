@@ -1,20 +1,19 @@
+use std::cmp::Ordering;
+use std::collections::BTreeMap;
 use std::str::FromStr;
+use std::sync::Arc;
 
 use assert_json_diff::{assert_json_eq_no_panic, assert_json_include_no_panic};
+use basic_cookies::Cookie;
 use serde_json::Value;
 
 use crate::data::{
     ActiveMock, ClosestMatch, HttpMockRequest, MockDefinition, MockServerHttpResponse,
     RequestRequirements,
 };
-
 use crate::server::matchers::Matcher;
 use crate::server::util::{StringTreeMapExtension, TreeMapExtension};
 use crate::server::{Mismatch, MockServerState};
-use basic_cookies::Cookie;
-use std::cmp::Ordering;
-use std::collections::BTreeMap;
-use std::sync::Arc;
 
 /// Contains HTTP methods which cannot have a body.
 const NON_BODY_METHODS: &[&str] = &["GET", "HEAD", "DELETE"];
@@ -290,6 +289,9 @@ fn get_min_distance_requests(request_distances: &BTreeMap<usize, usize>) -> Vec<
 mod test {
     use std::collections::BTreeMap;
     use std::rc::Rc;
+    use std::sync::Arc;
+
+    use regex::Regex;
 
     use crate::data::{
         HttpMockRequest, MockDefinition, MockServerHttpResponse, Pattern, RequestRequirements,
@@ -299,8 +301,6 @@ mod test {
     };
     use crate::server::MockServerState;
     use crate::Method;
-    use regex::Regex;
-    use std::sync::Arc;
 
     /// TODO
     #[test]

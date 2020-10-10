@@ -3,10 +3,8 @@ extern crate httpmock;
 use isahc::prelude::*;
 
 use httpmock::MockServer;
-use httpmock_macros::httpmock_example_test;
 
 #[test]
-#[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
 fn headers_test() {
     // Arrange
     let _ = env_logger::try_init();

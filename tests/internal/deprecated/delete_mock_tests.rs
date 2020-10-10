@@ -4,10 +4,8 @@ use isahc::get;
 
 use httpmock::Method::GET;
 use httpmock::{Mock, MockServer};
-use httpmock_macros::httpmock_example_test;
 
 #[test]
-#[httpmock_example_test] // Internal macro that executes this test in different async executors. Ignore it.
 fn explicit_delete_mock_test() {
     // Arrange
     let _ = env_logger::try_init();
@@ -28,8 +26,8 @@ fn explicit_delete_mock_test() {
     .unwrap();
 
     // Assert
+    m.assert();
     assert_eq!(response.status(), 205);
-    assert_eq!(m.hits(), 1);
 
     // Delete the mock and send the request again
     m.delete();

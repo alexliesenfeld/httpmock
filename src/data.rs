@@ -2,17 +2,18 @@ extern crate serde_regex;
 
 use std::cmp::Ordering;
 use std::collections::BTreeMap;
+use std::fmt;
 use std::fmt::Debug;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::Relaxed;
 use std::sync::{Arc, RwLock};
+use std::time::Duration;
 
-use crate::server::Mismatch;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::fmt;
-use std::time::Duration;
+
+use crate::server::Mismatch;
 
 /// A general abstraction of an HTTP request of `httpmock`.
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -355,10 +356,12 @@ impl ErrorResponse {
 
 #[cfg(test)]
 mod test {
-    use crate::data::{Pattern, RequestRequirements};
+    use std::collections::BTreeMap;
+
     use regex::Regex;
     use serde_json::json;
-    use std::collections::BTreeMap;
+
+    use crate::data::{Pattern, RequestRequirements};
 
     /// This test makes sure that adding the matching rules to a mock fills the struct as expected.
     #[test]

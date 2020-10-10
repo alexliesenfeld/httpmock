@@ -1,12 +1,12 @@
 extern crate httpmock;
 
-use httpmock::MockServer;
-use httpmock_macros::httpmock_example_test;
-use isahc::prelude::*;
 use std::io::Read;
 
+use isahc::prelude::*;
+
+use httpmock::MockServer;
+
 #[test]
-#[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
 fn binary_body_test() {
     let _ = env_logger::try_init();
 

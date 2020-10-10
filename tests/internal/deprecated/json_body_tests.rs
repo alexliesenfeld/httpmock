@@ -1,13 +1,12 @@
 extern crate httpmock;
 
-use httpmock::Method::POST;
-use httpmock::{Mock, MockServer};
-use httpmock_macros::httpmock_example_test;
 use isahc::prelude::*;
 use serde_json::{json, Value};
 
+use httpmock::Method::POST;
+use httpmock::{Mock, MockServer};
+
 #[test]
-#[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
 fn json_value_body_test() {
     // Arrange
     let _ = env_logger::try_init();
@@ -35,13 +34,12 @@ fn json_value_body_test() {
         serde_json::from_str(&response.text().unwrap()).expect("cannot deserialize JSON");
 
     // Assert
+    m.assert();
     assert_eq!(response.status(), 201);
-    assert_eq!(m.hits(), 1);
     assert_eq!(user.as_object().unwrap().get("name").unwrap(), "Hans");
 }
 
 #[test]
-#[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
 fn json_body_object_serde_test() {
     // This is a temporary type that we will use for this test
     #[derive(serde::Serialize, serde::Deserialize)]
@@ -84,13 +82,12 @@ fn json_body_object_serde_test() {
         serde_json::from_str(&response.text().unwrap()).expect("cannot deserialize JSON");
 
     // Assert
+    m.assert();
     assert_eq!(response.status(), 201);
     assert_eq!(user.name, "Hans");
-    assert_eq!(m.hits(), 1);
 }
 
 #[test]
-#[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
 fn partial_json_body_test() {
     let _ = env_logger::try_init();
     let server = MockServer::start();
@@ -144,6 +141,6 @@ fn partial_json_body_test() {
         .unwrap();
 
     // Assertions
+    m.assert();
     assert_eq!(response.status(), 201);
-    assert_eq!(m.hits(), 1);
 }

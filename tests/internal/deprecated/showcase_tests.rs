@@ -5,10 +5,8 @@ use serde_json::json;
 
 use httpmock::Method::POST;
 use httpmock::{Mock, MockServer, MockServerRequest, Regex};
-use httpmock_macros::httpmock_example_test;
 
 #[test]
-#[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
 fn showcase_test() {
     // This is a temporary type that we will use for this test
     #[derive(serde::Serialize, serde::Deserialize)]
@@ -51,6 +49,6 @@ fn showcase_test() {
         .unwrap();
 
     // Assert
+    m.assert();
     assert_eq!(response.status(), 200);
-    assert_eq!(m.hits(), 1);
 }

@@ -39,10 +39,9 @@ env_logger = { version = "0.7.1", optional = true }
 env_logger = "0.7.1"
 tokio-test = "0.2.1"
 async-std = { version = "1.6.4", features = ["attributes", "unstable"] }
-isahc = {version = "0.9.8", features = [ "json"] }
+isahc = { version = "0.9.8", features = ["json"] }
 syn = { version = "1.0.41", features = ["full"] }
 quote = "1.0.7"
-httpmock-macros = { path = "./lib/macros", version = "0.4.0" }
 actix-rt = "1.1.1"
 colored = "2.0.0"
 
@@ -53,8 +52,3 @@ color = ["colored"]
 [[bin]]
 name = "httpmock"
 required-features = ["standalone"]
-
-[workspace]
-members = [
-  "lib/macros"
-]

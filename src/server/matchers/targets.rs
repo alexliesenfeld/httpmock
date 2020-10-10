@@ -1,9 +1,11 @@
+use std::cell::RefCell;
+use std::collections::BTreeMap;
+
+use serde_json::Value;
+
 use crate::data::{HttpMockRequest, RequestRequirements};
 use crate::server::matchers::parse_cookies;
 use crate::server::matchers::sources::ValueSource;
-use serde_json::Value;
-use std::cell::RefCell;
-use std::collections::BTreeMap;
 
 pub(crate) trait ValueTarget<T> {
     fn parse_from_request(&self, req: &HttpMockRequest) -> Option<T>;

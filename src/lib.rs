@@ -41,10 +41,10 @@
 //! // Send an HTTP request to the mock server. This simulates your code.
 //! let response = isahc::get(server.url("/translate?word=hello")).unwrap();
 //!
+//! // Ensure the specified mock was called exactly one time.
+//! hello_mock.assert();
 //! // Ensure the mock server did respond as specified.
 //! assert_eq!(response.status(), 200);
-//! // Ensure the specified mock was called exactly one time.
-//! assert_eq!(hello_mock.hits(), 1);
 //! ```
 //! # Usage
 //! To be able to configure mocks, you first need to start a mock server by calling
@@ -117,7 +117,8 @@
 //! });
 //!
 //! let response = isahc::get(server.url("/hi")).unwrap();
-//! assert_eq!(greeting_mock.hits(), 1);
+//!
+//! greeting_mock.assert();
 //! ```
 //! Note that `when` and `then` are variables. This allows you to rename them to something you
 //! like better (such as `expect`/`respond_with`).
@@ -139,7 +140,8 @@
 //!     .create_on(&server);
 //!
 //! let response = isahc::get(server.url("/hi")).unwrap();
-//! assert_eq!(greeting_mock.hits(), 1);
+//!
+//! greeting_mock.assert();
 //! ```
 //! Please observe the following method naming scheme:
 //! - All [Mock](struct.Mock.html) methods that start with `expect` in their name set a requirement
@@ -194,8 +196,8 @@
 //!     let response = get(server.url("/hello/standalone")).unwrap();
 //!
 //!     // Assert
+//!     hello_mock.assert();
 //!     assert_eq!(response.status(), 200);
-//!     assert_eq!(hello_mock.hits(), 1);
 //! }
 //! ```
 //!
@@ -222,27 +224,26 @@
 #[macro_use]
 extern crate lazy_static;
 
+use std::cell::Cell;
 use std::net::{SocketAddr, ToSocketAddrs};
 use std::rc::Rc;
 use std::sync::Arc;
 use std::thread;
 
+use futures_util::core_reexport::time::Duration;
 use puddle::Pool;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use tokio::task::LocalSet;
 
+use api::MockServerAdapter;
+use data::{HttpMockRequest, MockMatcherFunction};
 use util::Join;
-
-use crate::server::{start_server, MockServerState};
-use crate::util::{read_env, with_retry};
 
 use crate::api::{LocalMockServerAdapter, MockRef, RemoteMockServerAdapter};
 pub use crate::api::{Method, Mock, Regex};
-use api::MockServerAdapter;
-use data::{HttpMockRequest, MockMatcherFunction};
-use futures_util::core_reexport::time::Duration;
-use serde::{Deserialize, Serialize};
-use serde_json::Value;
-use std::cell::Cell;
+use crate::server::{start_server, MockServerState};
+use crate::util::{read_env, with_retry};
 
 mod api;
 pub(crate) mod data;
@@ -447,7 +448,7 @@ impl MockServer {
     ///     then.status(200);
     /// });
     ///
-    /// assert_eq!(mock.hits(), 0);
+    /// mock.assert();
     /// ```
     pub fn mock<F>(&self, config_fn: F) -> MockRef
     where
@@ -470,7 +471,7 @@ impl MockServer {
     ///         })
     ///         .await;
     ///
-    ///     assert_eq!(mock.hits(), 0);
+    ///     mock.assert_async().await;
     /// });
     /// ```
     pub async fn mock_async<'a, F>(&'a self, config_fn: F) -> MockRef<'a>
@@ -509,7 +510,7 @@ impl Expectations {
     ///
     /// isahc::get(server.url("/anyPath")).unwrap();
     ///
-    /// assert_eq!(mock.hits(), 1);
+    /// mock.assert();
     /// ```
     pub fn any_request(self) -> Self {
         // This method does nothing. It only exists to make it very explicit that
@@ -537,7 +538,7 @@ impl Expectations {
     ///
     /// isahc::get(server.url("/")).unwrap();
     ///
-    /// assert_eq!(mock.hits(), 1);
+    /// mock.assert();
     /// ```
     pub fn method<M: Into<Method>>(self, method: M) -> Self {
         self.mock.set(self.mock.take().expect_method(method));
@@ -560,7 +561,7 @@ impl Expectations {
     ///
     /// isahc::get(server.url("/test")).unwrap();
     ///
-    /// assert_eq!(mock.hits(), 1);
+    /// mock.assert();
     /// ```
     pub fn path<S: Into<String>>(self, path: S) -> Self {
         self.mock.set(self.mock.take().expect_path(path));
@@ -583,7 +584,7 @@ impl Expectations {
     ///
     /// isahc::get(server.url("/test")).unwrap();
     ///
-    /// assert_eq!(mock.hits(), 1);
+    /// mock.assert();
     /// ```
     pub fn path_contains<S: Into<String>>(self, substring: S) -> Self {
         self.mock
@@ -608,7 +609,7 @@ impl Expectations {
     ///
     /// isahc::get(server.url("/example")).unwrap();
     ///
-    /// assert_eq!(mock.hits(), 1);
+    /// mock.assert();
     /// ```
     pub fn path_matches<R: Into<Regex>>(self, regex: R) -> Self {
         self.mock.set(self.mock.take().expect_path_matches(regex));
@@ -636,7 +637,7 @@ impl Expectations {
     /// get(server.url("/search?query=Metallica")).unwrap();
     ///
     /// // Assert
-    /// assert_eq!(m.hits(), 1);
+    /// mock.assert();
     /// ```
     pub fn query_param<S: Into<String>>(self, name: S, value: S) -> Self {
         self.mock
@@ -664,7 +665,7 @@ impl Expectations {
     /// get(server.url("/search?query=Metallica")).unwrap();
     ///
     /// // Assert
-    /// assert_eq!(m.hits(), 1);
+    /// mock.assert();
     /// ```
     pub fn query_param_exists<S: Into<String>>(self, name: S) -> Self {
         self.mock
@@ -696,7 +697,7 @@ impl Expectations {
     ///     .send()
     ///     .unwrap();
     ///
-    /// assert_eq!(mock.hits(), 1);
+    /// mock.assert();
     /// ```
     pub fn body<S: Into<String>>(self, body: S) -> Self {
         self.mock.set(self.mock.take().expect_body(body));
@@ -732,8 +733,8 @@ impl Expectations {
     ///     .unwrap();
     ///
     /// // Assert
+    /// m.assert();
     /// assert_eq!(response.status(), 201);
-    /// assert_eq!(m.hits(), 1);
     /// ```
     pub fn body_matches<R: Into<Regex>>(self, regex: R) -> Self {
         self.mock.set(self.mock.take().expect_body_matches(regex));
@@ -768,8 +769,8 @@ impl Expectations {
     ///     .unwrap();
     ///
     /// // Assert
+    /// m.assert();
     /// assert_eq!(response.status(), 201);
-    /// assert_eq!(m.hits(), 1);
     /// ```
     pub fn body_contains<S: Into<String>>(self, substring: S) -> Self {
         self.mock
@@ -811,8 +812,8 @@ impl Expectations {
     ///     .unwrap();
     ///
     /// // Assert
+    /// m.assert();
     /// assert_eq!(response.status(), 201);
-    /// assert_eq!(m.hits(), 1);
     /// ```
     pub fn json_body<V: Into<serde_json::Value>>(self, value: V) -> Self {
         self.mock.set(self.mock.take().expect_json_body(value));
@@ -863,8 +864,8 @@ impl Expectations {
     ///     .unwrap();
     ///
     /// // Assert
+    /// m.assert();
     /// assert_eq!(response.status(), 200);
-    /// assert_eq!(m.hits(), 1);
     /// ```
     pub fn json_body_obj<'a, T>(self, body: &T) -> Self
     where
@@ -950,7 +951,7 @@ impl Expectations {
     ///     .send()
     ///     .unwrap();
     ///
-    /// assert_eq!(mock.hits(), 1);
+    /// mock.assert();
     /// ```
     pub fn header<S: Into<String>>(self, name: S, value: S) -> Self {
         self.mock.set(self.mock.take().expect_header(name, value));
@@ -983,7 +984,7 @@ impl Expectations {
     ///     .send()
     ///     .unwrap();
     ///
-    /// assert_eq!(mock.hits(), 1);
+    /// mock.assert();
     /// ```
     pub fn header_exists<S: Into<String>>(self, name: S) -> Self {
         self.mock.set(self.mock.take().expect_header_exists(name));
@@ -1018,7 +1019,7 @@ impl Expectations {
     ///     .send()
     ///     .unwrap();
     ///
-    /// assert_eq!(mock.hits(), 1);
+    /// mock.assert();
     /// ```
     pub fn cookie<S: Into<String>>(self, name: S, value: S) -> Self {
         self.mock.set(self.mock.take().expect_cookie(name, value));
@@ -1052,7 +1053,7 @@ impl Expectations {
     ///     .send()
     ///     .unwrap();
     ///
-    /// assert_eq!(mock.hits(), 1);
+    /// mock.assert();
     /// ```
     pub fn cookie_exists<S: Into<String>>(self, name: S) -> Self {
         self.mock.set(self.mock.take().expect_cookie_exists(name));
@@ -1082,7 +1083,7 @@ impl Expectations {
     ///
     /// // Assert
     /// assert_eq!(response.status(), 200);
-    /// assert_eq!(m.hits(), 1);
+    /// mock.assert();
     /// ```
     pub fn matches(self, matcher: MockMatcherFunction) -> Self {
         self.mock.set(self.mock.take().expect_match(matcher));
@@ -1117,7 +1118,7 @@ impl Responders {
     ///
     /// // Assert
     /// assert_eq!(response.status(), 200);
-    /// assert_eq!(m.hits(), 1);
+    /// mock.assert();
     /// ```
     pub fn status(self, status: u16) -> Self {
         self.mock.set(self.mock.take().return_status(status));
@@ -1148,7 +1149,7 @@ impl Responders {
     /// // Assert
     /// assert_eq!(response.status(), 200);
     /// assert_eq!(response.text().unwrap(), "ohi!");
-    /// assert_eq!(m.hits(), 1);
+    /// mock.assert();
     /// ```
     pub fn body(self, body: impl AsRef<[u8]>) -> Self {
         self.mock.set(self.mock.take().return_body(body));
@@ -1179,7 +1180,7 @@ impl Responders {
     /// // Assert
     /// assert_eq!(response.status(), 200);
     /// assert_eq!(response.text().unwrap(), "ohi!");
-    /// assert_eq!(m.hits(), 1);
+    /// mock.assert();
     /// ```
     pub fn body_from_file<S: Into<String>>(self, body: S) -> Self {
         self.mock.set(self.mock.take().return_body_from_file(body));
@@ -1222,8 +1223,8 @@ impl Responders {
     ///     serde_json::from_str(&response.text().unwrap()).expect("cannot deserialize JSON");
     ///
     /// // Assert
+    /// m.assert();
     /// assert_eq!(response.status(), 200);
-    /// assert_eq!(m.hits(), 1);
     /// assert_eq!(user.as_object().unwrap().get("name").unwrap(), "Hans");
     /// ```
     pub fn json_body<V: Into<Value>>(self, value: V) -> Self {
@@ -1270,9 +1271,9 @@ impl Responders {
     ///     serde_json::from_str(&response.text().unwrap()).unwrap();
     ///
     /// // Assert
+    /// m.assert();
     /// assert_eq!(response.status(), 200);
     /// assert_eq!(user.name, "Hans");
-    /// assert_eq!(m.hits(), 1);
     /// ```
     pub fn json_body_obj<T>(self, body: &T) -> Self
     where
@@ -1308,8 +1309,8 @@ impl Responders {
     /// let mut response = isahc::get(server.url("/")).unwrap();
     ///
     /// // Assert
+    /// m.assert();
     /// assert_eq!(response.status(), 200);
-    /// assert_eq!(m.hits(), 1);
     /// ```
     pub fn header<S: Into<String>>(self, name: S, value: S) -> Self {
         self.mock.set(self.mock.take().return_header(name, value));
@@ -1430,7 +1431,7 @@ impl Responders {
     /// let response = isahc::get(server.url("/delay")).unwrap();
     ///
     /// // Assert
-    /// assert_eq!(mock.hits(), 1);
+    /// mock.assert();
     /// assert_eq!(start_time.elapsed().unwrap() > three_seconds, true);
     /// ```
     pub fn delay<D: Into<Duration>>(self, duration: D) -> Self {

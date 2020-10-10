@@ -1,13 +1,12 @@
 extern crate httpmock;
 
+use std::time::{Duration, SystemTime};
+
 use isahc::get;
 
 use httpmock::{Mock, MockServer};
-use httpmock_macros::httpmock_example_test;
-use std::time::{Duration, SystemTime};
 
 #[test]
-#[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
 fn delay_test() {
     // Arrange
     let _ = env_logger::try_init();

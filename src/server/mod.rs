@@ -4,6 +4,8 @@ use std::borrow::Borrow;
 use std::collections::BTreeMap;
 use std::net::SocketAddr;
 use std::str::FromStr;
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering::Relaxed;
 use std::sync::{Arc, RwLock};
 
 use hyper::body::Buf;
@@ -14,19 +16,14 @@ use hyper::{
     Body, HeaderMap, Request as HyperRequest, Response as HyperResponse, Result as HyperResult,
     Server, StatusCode,
 };
+use regex::internal::Input;
 use regex::Regex;
 
+use matchers::generic::SingleValueMatcher;
+use matchers::targets::{JSONBodyTarget, StringBodyTarget};
+pub use matchers::{Diff, DiffResult, Mismatch, Reason, Tokenizer};
+
 use crate::data::{ActiveMock, HttpMockRequest};
-use crate::server::matchers::Matcher;
-use crate::server::web::routes;
-use std::sync::atomic::AtomicUsize;
-use std::sync::atomic::Ordering::Relaxed;
-
-mod matchers;
-
-mod util;
-pub(crate) mod web;
-
 use crate::server::matchers::comparators::{
     AnyValueComparator, JSONContainsMatchComparator, JSONExactMatchComparator,
     StringContainsMatchComparator, StringExactMatchComparator, StringRegexMatchComparator,
@@ -41,10 +38,13 @@ use crate::server::matchers::sources::{
 use crate::server::matchers::targets::{
     CookieTarget, HeaderTarget, MethodTarget, PathTarget, QueryParameterTarget,
 };
-use matchers::generic::SingleValueMatcher;
-use matchers::targets::{JSONBodyTarget, StringBodyTarget};
-pub use matchers::{Diff, DiffResult, Mismatch, Reason, Tokenizer};
-use regex::internal::Input;
+use crate::server::matchers::Matcher;
+use crate::server::web::routes;
+
+mod matchers;
+
+mod util;
+pub(crate) mod web;
 
 /// The shared state accessible to all handlers
 pub struct MockServerState {
@@ -532,13 +532,15 @@ lazy_static! {
 
 #[cfg(test)]
 mod test {
+    use std::collections::BTreeMap;
+
+    use futures_util::TryStreamExt;
+
     use crate::server::{
         error_response, get_path_param, map_response, ServerResponse, HISTORY_PATH, MOCKS_PATH,
         MOCK_PATH, PING_PATH, VERIFY_PATH,
     };
     use crate::Regex;
-    use futures_util::TryStreamExt;
-    use std::collections::BTreeMap;
 
     #[test]
     fn route_regex_test() {

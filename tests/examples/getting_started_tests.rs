@@ -1,15 +1,13 @@
 extern crate httpmock;
 
 use isahc::{get, get_async};
+use serde_json::json;
 
 use httpmock::util::Join;
 use httpmock::Method::{GET, POST};
 use httpmock::{Mock, MockServer};
-use httpmock_macros::httpmock_example_test;
-use serde_json::json;
 
 #[test]
-#[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
 fn getting_started_test() {
     // Start a lightweight mock server.
     let server = MockServer::start();
@@ -54,8 +52,8 @@ async fn async_getting_started_test() {
     let url = format!("http://{}/hello", server.address());
     let response = get_async(&url).await.unwrap();
 
+    // Ensure the specified mock responded exactly one time.
+    hello_mock.assert_async().await;
     // Ensure the mock server did respond as specified above.
     assert_eq!(response.status(), 200);
-    // Ensure the specified mock responded exactly one time.
-    assert_eq!(hello_mock.hits_async().await, 1);
 }

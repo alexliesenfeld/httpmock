@@ -1,10 +1,10 @@
-#[cfg(feature = "color")]
-use colored::*;
-
 use std::collections::BTreeMap;
 use std::net::SocketAddr;
 use std::str::FromStr;
+use std::time::Duration;
 
+#[cfg(feature = "color")]
+use colored::*;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -16,7 +16,6 @@ use crate::data::{
 use crate::server::{Diff, DiffResult, Mismatch, Reason, Tokenizer};
 use crate::util::{get_test_resource_file_path, read_file, Join};
 use crate::MockServer;
-use std::time::Duration;
 
 /// Represents a reference to the mock object on a [MockServer](struct.MockServer.html).
 /// It can be used to spy on the mock and also perform some management operations, such as
@@ -110,8 +109,8 @@ impl<'a> MockRef<'a> {
     /// // Act: Send a request, then delete the mock from the mock and send another request.
     /// isahc::get(server.url("/hits")).unwrap();
     ///
-    /// // Assert: Fetch how often this mock has been called from the server until now
-    /// assert_eq!(mock.hits(), 1);
+    /// // Assert: Make sure the mock has been called exactly one time
+    /// mock.assert();
     /// ```
     /// # Panics
     /// This method will panic if there is a problem with the (standalone) mock server.
@@ -146,8 +145,8 @@ impl<'a> MockRef<'a> {
     ///     // Act: Send a request, then delete the mock from the mock and send another request.
     ///     isahc::get_async(server.url("/hits")).await.unwrap();
     ///
-    ///     // Assert: Fetch how often this mock has been called from the server until now
-    ///     assert_eq!(mock.hits_async().await, 1);
+    ///     // Assert: Make sure the mock was called with all required attributes exactly one time.
+    ///     mock.assert_async().await;
     /// });
     /// ```
     /// # Panics
@@ -295,8 +294,8 @@ impl<'a> MockRef<'a> {
 /// let response = isahc::get(server.url("/search?query=metallica")).unwrap();
 ///
 /// // Assert
+/// mock.assert();
 /// assert_eq!(response.status(), 202);
-/// assert_eq!(mock.hits(), 1);
 /// ```
 /// Observe how [Mock::create_on](struct.Mock.html#method.create_on) is used to create a mock object
 /// on the server. After the call completes, the mock server will start serving HTTP requests
@@ -364,7 +363,7 @@ impl Mock {
     ///
     /// isahc::get(server.url("/test")).unwrap();
     ///
-    /// assert_eq!(mock.hits(), 1);
+    /// mock.assert();
     /// ```
     pub fn expect_path<S: Into<String>>(mut self, path: S) -> Self {
         self.mock.request.path = Some(path.into());
@@ -386,7 +385,7 @@ impl Mock {
     ///
     /// isahc::get(server.url("/test")).unwrap();
     ///
-    /// assert_eq!(mock.hits(), 1);
+    /// mock.assert();
     /// ```
     pub fn expect_path_contains<S: Into<String>>(mut self, substring: S) -> Self {
         if self.mock.request.path_contains.is_none() {
@@ -419,7 +418,7 @@ impl Mock {
     ///
     /// isahc::get(server.url("/example")).unwrap();
     ///
-    /// assert_eq!(mock.hits(), 1);
+    /// mock.assert();
     /// ```
     pub fn expect_path_matches<R: Into<Regex>>(mut self, regex: R) -> Self {
         if self.mock.request.path_matches.is_none() {
@@ -453,7 +452,7 @@ impl Mock {
     ///
     /// isahc::get(server.url("/")).unwrap();
     ///
-    /// assert_eq!(mock.hits(), 1);
+    /// mock.assert();
     /// ```
     pub fn expect_method<M: Into<Method>>(mut self, method: M) -> Self {
         self.mock.request.method = Some(method.into().to_string());
@@ -484,7 +483,7 @@ impl Mock {
     ///     .send()
     ///     .unwrap();
     ///
-    /// assert_eq!(mock.hits(), 1);
+    /// mock.assert();
     /// ```
     pub fn expect_header<S: Into<String>>(mut self, name: S, value: S) -> Self {
         if self.mock.request.headers.is_none() {
@@ -526,7 +525,7 @@ impl Mock {
     ///     .send()
     ///     .unwrap();
     ///
-    /// assert_eq!(mock.hits(), 1);
+    /// mock.assert();
     /// ```
     pub fn expect_header_exists<S: Into<String>>(mut self, name: S) -> Self {
         if self.mock.request.header_exists.is_none() {
@@ -569,7 +568,7 @@ impl Mock {
     ///     .send()
     ///     .unwrap();
     ///
-    /// assert_eq!(mock.hits(), 1);
+    /// mock.assert();
     /// ```
     pub fn expect_cookie<S: Into<String>>(mut self, name: S, value: S) -> Self {
         if self.mock.request.cookies.is_none() {
@@ -612,7 +611,7 @@ impl Mock {
     ///     .send()
     ///     .unwrap();
     ///
-    /// assert_eq!(mock.hits(), 1);
+    /// mock.assert();
     /// ```
     pub fn expect_cookie_exists<S: Into<String>>(mut self, name: S) -> Self {
         if self.mock.request.cookie_exists.is_none() {
@@ -651,7 +650,7 @@ impl Mock {
     ///     .send()
     ///     .unwrap();
     ///
-    /// assert_eq!(mock.hits(), 1);
+    /// mock.assert();
     /// ```
     pub fn expect_body<S: Into<String>>(mut self, body: S) -> Self {
         self.mock.request.body = Some(body.into());
@@ -703,8 +702,8 @@ impl Mock {
     ///     .unwrap();
     ///
     /// // Assert
+    /// m.assert();
     /// assert_eq!(response.status(), 201);
-    /// assert_eq!(m.hits(), 1);
     /// ```
     pub fn expect_json_body_obj<'a, T>(self, body: &T) -> Self
     where
@@ -749,8 +748,8 @@ impl Mock {
     ///     .unwrap();
     ///
     /// // Assert
+    /// m.assert();
     /// assert_eq!(response.status(), 201);
-    /// assert_eq!(m.hits(), 1);
     /// ```
     pub fn expect_json_body<V: Into<Value>>(mut self, body: V) -> Self {
         self.mock.request.json_body = Some(body.into());
@@ -847,8 +846,8 @@ impl Mock {
     ///     .unwrap();
     ///
     /// // Assert
+    /// m.assert();
     /// assert_eq!(response.status(), 201);
-    /// assert_eq!(m.hits(), 1);
     /// ```
     pub fn expect_body_contains<S: Into<String>>(mut self, substring: S) -> Self {
         if self.mock.request.body_contains.is_none() {
@@ -893,8 +892,8 @@ impl Mock {
     ///     .unwrap();
     ///
     /// // Assert
+    /// m.assert();
     /// assert_eq!(response.status(), 201);
-    /// assert_eq!(m.hits(), 1);
     /// ```
     pub fn expect_body_matches<R: Into<Regex>>(mut self, regex: R) -> Self {
         if self.mock.request.body_matches.is_none() {
@@ -931,7 +930,7 @@ impl Mock {
     /// get(server.url("/search?query=Metallica")).unwrap();
     ///
     /// // Assert
-    /// assert_eq!(m.hits(), 1);
+    /// m.assert();
     /// ```
     pub fn expect_query_param<S: Into<String>>(mut self, name: S, value: S) -> Self {
         if self.mock.request.query_param.is_none() {
@@ -968,7 +967,7 @@ impl Mock {
     /// get(server.url("/search?query=Metallica")).unwrap();
     ///
     /// // Assert
-    /// assert_eq!(m.hits(), 1);
+    /// m.assert();
     /// ```
     pub fn expect_query_param_exists<S: Into<String>>(mut self, name: S) -> Self {
         if self.mock.request.query_param_exists.is_none() {
@@ -1007,8 +1006,8 @@ impl Mock {
     /// let response = isahc::get(server.url("/test")).unwrap();
     ///
     /// // Assert
+    /// m.assert();
     /// assert_eq!(response.status(), 200);
-    /// assert_eq!(m.hits(), 1);
     /// ```
     pub fn expect_match(mut self, request_matcher: MockMatcherFunction) -> Self {
         if self.mock.request.matchers.is_none() {
@@ -1044,8 +1043,8 @@ impl Mock {
     /// let response = isahc::get(server.url("/hello")).unwrap();
     ///
     /// // Assert
+    /// m.assert();
     /// assert_eq!(response.status(), 200);
-    /// assert_eq!(m.hits(), 1);
     /// ```
     pub fn return_status(mut self, status: u16) -> Self {
         self.mock.response.status = Some(status);
@@ -1073,9 +1072,9 @@ impl Mock {
     /// let mut response = isahc::get(server.url("/hello")).unwrap();
     ///
     /// // Assert
+    /// m.assert();
     /// assert_eq!(response.status(), 200);
     /// assert_eq!(response.text().unwrap(), "ohi!");
-    /// assert_eq!(m.hits(), 1);
     /// ```
     pub fn return_body(mut self, body: impl AsRef<[u8]>) -> Self {
         self.mock.response.body = Some(body.as_ref().to_vec());
@@ -1103,9 +1102,9 @@ impl Mock {
     /// let mut response = isahc::get(server.url("/hello")).unwrap();
     ///
     /// // Assert
+    /// m.assert();
     /// assert_eq!(response.status(), 200);
     /// assert_eq!(response.text().unwrap(), "ohi!");
-    /// assert_eq!(m.hits(), 1);
     /// ```
     pub fn return_body_from_file<S: Into<String>>(
         mut self,
@@ -1159,8 +1158,8 @@ impl Mock {
     ///     serde_json::from_str(&response.text().unwrap()).expect("cannot deserialize JSON");
     ///
     /// // Assert
+    /// m.assert();
     /// assert_eq!(response.status(), 200);
-    /// assert_eq!(m.hits(), 1);
     /// assert_eq!(user.as_object().unwrap().get("name").unwrap(), "Hans");
     /// ```
     pub fn return_json_body<V: Into<Value>>(mut self, body: V) -> Self {
@@ -1207,9 +1206,9 @@ impl Mock {
     ///     serde_json::from_str(&response.text().unwrap()).unwrap();
     ///
     /// // Assert
+    /// m.assert();
     /// assert_eq!(response.status(), 201);
     /// assert_eq!(user.name, "Hans");
-    /// assert_eq!(m.hits(), 1);
     /// ```
     pub fn return_json_body_obj<T>(self, body: &T) -> Self
     where
@@ -1245,8 +1244,8 @@ impl Mock {
     /// let mut response = isahc::get(server.url("/")).unwrap();
     ///
     /// // Assert
+    /// m.assert();
     /// assert_eq!(response.status(), 200);
-    /// assert_eq!(m.hits(), 1);
     /// ```
     pub fn return_header<S: Into<String>>(mut self, name: S, value: S) -> Self {
         if self.mock.response.headers.is_none() {
@@ -1388,7 +1387,7 @@ impl Mock {
     /// let response = isahc::get(server.url("/delay")).unwrap();
     ///
     /// // Assert
-    /// assert_eq!(mock.hits(), 1);
+    /// mock.assert();
     /// assert_eq!(start_time.elapsed().unwrap() > delay, true);
     /// ```
     pub fn return_with_delay<D: Into<Duration>>(mut self, duration: D) -> Self {
@@ -1416,7 +1415,7 @@ impl Mock {
     /// let response = isahc::get(server.url("/delay")).unwrap();
     ///
     /// // Assert
-    /// assert_eq!(mock.hits(), 1);
+    /// mock.assert();
     /// ```
     ///
     /// # Panics
@@ -1449,7 +1448,7 @@ impl Mock {
     ///     let response = isahc::get_async(server.url("/delay")).await.unwrap();
     ///
     ///     // Assert
-    ///     assert_eq!(mock.hits_async().await, 1);
+    ///     assert_eq!(mock.assert_async().await, 1);
     /// });
     /// ```
     ///

@@ -1,16 +1,17 @@
-use crate::data::{HttpMockRequest, RequestRequirements};
+use std::collections::BTreeMap;
+use std::fmt::Display;
+
+use basic_cookies::Cookie;
 use difference::{Changeset, Difference};
+use serde::{Deserialize, Serialize};
+
+use crate::data::{HttpMockRequest, RequestRequirements};
 
 pub(crate) mod comparators;
 pub(crate) mod generic;
 pub(crate) mod sources;
 pub(crate) mod targets;
 pub(crate) mod transformers;
-
-use basic_cookies::Cookie;
-use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
-use std::fmt::Display;
 
 // *************************************************************************************************
 // Diff and Change correspond to difference::Changeset and Difference structs. They are duplicated

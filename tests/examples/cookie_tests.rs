@@ -1,12 +1,11 @@
 extern crate httpmock;
 
-use httpmock::Method::GET;
-use httpmock::MockServer;
-use httpmock_macros::httpmock_example_test;
 use isahc::prelude::*;
 
+use httpmock::Method::GET;
+use httpmock::MockServer;
+
 #[test]
-#[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
 fn cookie_matching_test() {
     // Arrange
     let _ = env_logger::try_init();

@@ -1,13 +1,15 @@
 #[macro_use]
 extern crate lazy_static;
 
-mod examples;
-mod internal;
-
-use httpmock::standalone::start_standalone_server;
 use std::sync::Mutex;
 use std::thread::{spawn, JoinHandle};
+
 use tokio::task::LocalSet;
+
+use httpmock::standalone::start_standalone_server;
+
+mod examples;
+mod internal;
 
 /// ====================================================================================
 /// The rest of this file is only required to simulate that a standalone mock server is

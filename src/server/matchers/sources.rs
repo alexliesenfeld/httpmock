@@ -1,7 +1,9 @@
+use std::collections::BTreeMap;
+
+use serde_json::Value;
+
 use crate::data::{HttpMockRequest, Pattern, RequestRequirements};
 use crate::Regex;
-use serde_json::Value;
-use std::collections::BTreeMap;
 
 pub(crate) trait ValueSource<T> {
     fn parse_from_mock<'a>(&self, mock: &'a RequestRequirements) -> Option<Vec<&'a T>>;

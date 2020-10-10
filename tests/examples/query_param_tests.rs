@@ -1,11 +1,10 @@
 extern crate httpmock;
 
-use httpmock::MockServer;
-use httpmock_macros::httpmock_example_test;
 use isahc::get;
 
+use httpmock::MockServer;
+
 #[test]
-#[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
 fn url_matching_test() {
     // Arrange
     let _ = env_logger::try_init();

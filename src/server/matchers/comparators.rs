@@ -1,8 +1,9 @@
+use assert_json_diff::{assert_json_eq_no_panic, assert_json_include_no_panic};
+use serde_json::Value;
+
 use crate::data::Pattern;
 use crate::server::matchers::distance_for;
 use crate::Regex;
-use assert_json_diff::{assert_json_eq_no_panic, assert_json_include_no_panic};
-use serde_json::Value;
 
 pub trait ValueComparator<S, T> {
     fn matches(&self, mock_value: &S, req_value: &T) -> bool;
@@ -168,13 +169,14 @@ impl<T, U> ValueComparator<T, U> for AnyValueComparator {
 
 #[cfg(test)]
 mod test {
+    use serde_json::json;
+
     use crate::server::matchers::comparators::{
         AnyValueComparator, JSONContainsMatchComparator, JSONExactMatchComparator,
         StringContainsMatchComparator, StringExactMatchComparator, StringRegexMatchComparator,
         ValueComparator,
     };
     use crate::Regex;
-    use serde_json::json;
 
     fn run_test<S, T>(
         comparator: &dyn ValueComparator<S, T>,

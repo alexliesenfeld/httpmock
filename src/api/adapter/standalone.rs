@@ -1,14 +1,16 @@
+use std::borrow::Borrow;
+use std::net::SocketAddr;
+use std::sync::Arc;
+
+use async_trait::async_trait;
+use isahc::prelude::Request;
+
 use crate::api::adapter::{
     build_http_client, execute_request, http_ping, InternalHttpClient, MockServerAdapter,
 };
 use crate::data::{
     ActiveMock, ClosestMatch, MockDefinition, MockIdentification, RequestRequirements,
 };
-use async_trait::async_trait;
-use isahc::prelude::Request;
-use std::borrow::Borrow;
-use std::net::SocketAddr;
-use std::sync::Arc;
 
 #[derive(Debug)]
 pub struct RemoteMockServerAdapter {

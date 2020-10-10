@@ -1,13 +1,12 @@
 extern crate httpmock;
 
-use httpmock::Method::POST;
-use httpmock::MockServer;
-use httpmock_macros::httpmock_example_test;
 use isahc::prelude::*;
 use serde_json::{json, Value};
 
+use httpmock::Method::POST;
+use httpmock::MockServer;
+
 #[test]
-#[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
 fn json_value_body_test() {
     // Arrange
     let _ = env_logger::try_init();
@@ -42,7 +41,6 @@ fn json_value_body_test() {
 }
 
 #[test]
-#[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
 fn json_body_object_serde_test() {
     let _ = env_logger::try_init();
 
@@ -95,7 +93,6 @@ fn json_body_object_serde_test() {
 }
 
 #[test]
-#[httpmock_example_test] // Internal macro to make testing easier. Ignore it.
 fn partial_json_body_test() {
     let _ = env_logger::try_init();
     let server = MockServer::start();

@@ -1,3 +1,12 @@
+use std::borrow::Borrow;
+use std::fmt::Debug;
+use std::net::SocketAddr;
+use std::sync::Arc;
+use std::time::Duration;
+
+use async_trait::async_trait;
+use isahc::prelude::*;
+
 use crate::api::adapter::{build_http_client, http_ping, InternalHttpClient, MockServerAdapter};
 use crate::data::{
     ActiveMock, ClosestMatch, MockDefinition, MockIdentification, RequestRequirements,
@@ -6,13 +15,6 @@ use crate::server::web::handlers::{
     add_new_mock, delete_all_mocks, delete_history, delete_one_mock, read_one_mock, verify,
 };
 use crate::server::MockServerState;
-use async_trait::async_trait;
-use isahc::prelude::*;
-use std::borrow::Borrow;
-use std::fmt::Debug;
-use std::net::SocketAddr;
-use std::sync::Arc;
-use std::time::Duration;
 
 pub struct LocalMockServerAdapter {
     pub addr: SocketAddr,
