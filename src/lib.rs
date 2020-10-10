@@ -456,7 +456,7 @@ impl MockServer {
     /// ```
     pub fn mock<F>(&self, config_fn: F) -> MockRef
     where
-        F: FnOnce(Expectations, Responders),
+        F: FnOnce(When, Then),
     {
         self.mock_async(config_fn).join()
     }
@@ -483,23 +483,23 @@ impl MockServer {
     /// ```
     pub async fn mock_async<'a, F>(&'a self, config_fn: F) -> MockRef<'a>
     where
-        F: FnOnce(Expectations, Responders),
+        F: FnOnce(When, Then),
     {
         let mock = Rc::new(Cell::new(Mock::new()));
         config_fn(
-            Expectations { mock: mock.clone() },
-            Responders { mock: mock.clone() },
+            When { mock: mock.clone() },
+            Then { mock: mock.clone() },
         );
         mock.take().create_on_async(self).await
     }
 }
 
 /// A builder that allows the specification of expected HTTP request values.
-pub struct Expectations {
+pub struct When {
     pub(crate) mock: Rc<Cell<Mock>>,
 }
 
-impl Expectations {
+impl When {
     /// Sets the mock server to respond to any incoming request.
     ///
     /// # Example
@@ -1099,11 +1099,11 @@ impl Expectations {
 }
 
 /// A builder that allows specification of HTTP response values.
-pub struct Responders {
+pub struct Then {
     pub(crate) mock: Rc<Cell<Mock>>,
 }
 
-impl Responders {
+impl Then {
     /// Sets the HTTP response code that will be returned by the mock server.
     ///
     /// * `status` - The status code.
