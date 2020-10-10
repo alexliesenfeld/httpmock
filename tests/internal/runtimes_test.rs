@@ -29,10 +29,10 @@ async fn test_fn() -> u16 {
     // Instead of creating a new MockServer using new(), we connect to an existing remote instance.
     let server = MockServer::start_async().await;
 
-    let search_mock = server.mock(|when, then| {
+    let search_mock = server.mock_async(|when, then| {
         when.path("/test");
         then.status(202);
-    });
+    }).await;
 
     // Act: Send the HTTP request
     let response = get_async(server.url("/test")).await.unwrap();

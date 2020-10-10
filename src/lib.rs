@@ -441,12 +441,16 @@ impl MockServer {
     ///
     /// **Example**:
     /// ```
+    /// use isahc::get;
+    ///
     /// let server = httpmock::MockServer::start();
     ///
     /// let mock = server.mock(|when, then| {
     ///     when.path("/hello");
     ///     then.status(200);
     /// });
+    ///
+    /// get(server.url("/hello")).unwrap();
     ///
     /// mock.assert();
     /// ```
@@ -461,6 +465,7 @@ impl MockServer {
     ///
     /// **Example**:
     /// ```
+    /// use isahc::{get_async};
     /// async_std::task::block_on(async {
     ///     let server = httpmock::MockServer::start();
     ///
@@ -470,6 +475,8 @@ impl MockServer {
     ///             then.status(200);
     ///         })
     ///         .await;
+    ///
+    ///     get_async(server.url("/hello")).await.unwrap();
     ///
     ///     mock.assert_async().await;
     /// });
