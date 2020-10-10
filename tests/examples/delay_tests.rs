@@ -18,7 +18,7 @@ fn delay_test() {
 
     let mock = server.mock(|when, then| {
         when.path("/delay");
-        then.delay(delay);
+        then.status(200).delay(delay);
     });
 
     // Act: Send the HTTP request
