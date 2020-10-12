@@ -5,7 +5,7 @@ use serde_json::Value;
 
 use crate::data::{HttpMockRequest, RequestRequirements};
 use crate::server::matchers::parse_cookies;
-use crate::server::matchers::sources::ValueSource;
+use crate::server::matchers::sources::ValueRefSource;
 
 pub(crate) trait ValueTarget<T> {
     fn parse_from_request(&self, req: &HttpMockRequest) -> Option<T>;
@@ -167,5 +167,22 @@ impl MethodTarget {
 impl ValueTarget<String> for MethodTarget {
     fn parse_from_request(&self, req: &HttpMockRequest) -> Option<String> {
         Some(req.method.to_string()) // FIXME: Avoid copying here. Create a "ValueRefTarget".
+    }
+}
+
+// *************************************************************************************
+// FullRequestTarget
+// *************************************************************************************
+pub(crate) struct FullRequestTarget {}
+
+impl FullRequestTarget {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+impl ValueRefTarget<HttpMockRequest> for FullRequestTarget {
+    fn parse_from_request<'a>(&self, req: &'a HttpMockRequest) -> Option<&'a HttpMockRequest> {
+        Some(req)
     }
 }

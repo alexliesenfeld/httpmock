@@ -164,10 +164,10 @@ impl PartialEq for Pattern {
 
 impl Eq for Pattern {}
 
-pub type MockMatcherFunction = fn(Arc<HttpMockRequest>) -> bool;
+pub type MockMatcherFunction = fn(&HttpMockRequest) -> bool;
 
 /// A general abstraction of an HTTP request for all handlers.
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct RequestRequirements {
     pub path: Option<String>,
     pub path_contains: Option<Vec<String>>,
@@ -288,7 +288,7 @@ impl RequestRequirements {
 }
 
 /// A Request that is made to set a new mock.
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct MockDefinition {
     pub request: RequestRequirements,
     pub response: MockServerHttpResponse,

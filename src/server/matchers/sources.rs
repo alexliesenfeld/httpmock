@@ -2,10 +2,10 @@ use std::collections::BTreeMap;
 
 use serde_json::Value;
 
-use crate::data::{HttpMockRequest, Pattern, RequestRequirements};
+use crate::data::{HttpMockRequest, Pattern, RequestRequirements, MockMatcherFunction};
 use crate::Regex;
 
-pub(crate) trait ValueSource<T> {
+pub(crate) trait ValueRefSource<T> {
     fn parse_from_mock<'a>(&self, mock: &'a RequestRequirements) -> Option<Vec<&'a T>>;
 }
 
@@ -27,7 +27,7 @@ impl StringBodySource {
     }
 }
 
-impl ValueSource<String> for StringBodySource {
+impl ValueRefSource<String> for StringBodySource {
     fn parse_from_mock<'a>(&self, mock: &'a RequestRequirements) -> Option<Vec<&'a String>> {
         mock.body.as_ref().map(|b| vec![b])
     }
@@ -44,7 +44,7 @@ impl StringBodyContainsSource {
     }
 }
 
-impl ValueSource<String> for StringBodyContainsSource {
+impl ValueRefSource<String> for StringBodyContainsSource {
     fn parse_from_mock<'a>(&self, mock: &'a RequestRequirements) -> Option<Vec<&'a String>> {
         mock.body_contains
             .as_ref()
@@ -63,7 +63,7 @@ impl JSONBodySource {
     }
 }
 
-impl ValueSource<Value> for JSONBodySource {
+impl ValueRefSource<Value> for JSONBodySource {
     fn parse_from_mock<'a>(&self, mock: &'a RequestRequirements) -> Option<Vec<&'a Value>> {
         mock.json_body.as_ref().map(|b| vec![b])
     }
@@ -80,7 +80,7 @@ impl PartialJSONBodySource {
     }
 }
 
-impl ValueSource<Value> for PartialJSONBodySource {
+impl ValueRefSource<Value> for PartialJSONBodySource {
     fn parse_from_mock<'a>(&self, mock: &'a RequestRequirements) -> Option<Vec<&'a Value>> {
         mock.json_body_includes
             .as_ref()
@@ -99,7 +99,7 @@ impl BodyRegexSource {
     }
 }
 
-impl ValueSource<Regex> for BodyRegexSource {
+impl ValueRefSource<Regex> for BodyRegexSource {
     fn parse_from_mock<'a>(&self, mock: &'a RequestRequirements) -> Option<Vec<&'a Regex>> {
         mock.body_matches
             .as_ref()
@@ -118,7 +118,7 @@ impl MethodSource {
     }
 }
 
-impl ValueSource<String> for MethodSource {
+impl ValueRefSource<String> for MethodSource {
     fn parse_from_mock<'a>(&self, mock: &'a RequestRequirements) -> Option<Vec<&'a String>> {
         mock.method.as_ref().map(|b| vec![b])
     }
@@ -135,7 +135,7 @@ impl StringPathSource {
     }
 }
 
-impl ValueSource<String> for StringPathSource {
+impl ValueRefSource<String> for StringPathSource {
     fn parse_from_mock<'a>(&self, mock: &'a RequestRequirements) -> Option<Vec<&'a String>> {
         mock.path.as_ref().map(|b| vec![b])
     }
@@ -152,7 +152,7 @@ impl PathContainsSubstringSource {
     }
 }
 
-impl ValueSource<String> for PathContainsSubstringSource {
+impl ValueRefSource<String> for PathContainsSubstringSource {
     fn parse_from_mock<'a>(&self, mock: &'a RequestRequirements) -> Option<Vec<&'a String>> {
         mock.path_contains
             .as_ref()
@@ -171,7 +171,7 @@ impl PathRegexSource {
     }
 }
 
-impl ValueSource<Regex> for PathRegexSource {
+impl ValueRefSource<Regex> for PathRegexSource {
     fn parse_from_mock<'a>(&self, mock: &'a RequestRequirements) -> Option<Vec<&'a Regex>> {
         mock.path_matches
             .as_ref()
@@ -308,5 +308,23 @@ impl MultiValueSource<String, String> for ContainsQueryParameterSource {
         mock.query_param_exists
             .as_ref()
             .map(|v| v.into_iter().map(|v| (v, None)).collect())
+    }
+}
+
+
+// ************************************************************************************************
+// FunctionSource
+// ************************************************************************************************
+pub(crate) struct FunctionSource {}
+
+impl FunctionSource {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+impl ValueRefSource<MockMatcherFunction> for FunctionSource {
+    fn parse_from_mock<'a>(&self, mock: &'a RequestRequirements) -> Option<Vec<&'a MockMatcherFunction>> {
+        mock.matchers.as_ref().map(|b| b.iter().map(|f| f).collect())
     }
 }

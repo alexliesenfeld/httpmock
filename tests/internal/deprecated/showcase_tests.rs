@@ -4,7 +4,8 @@ use isahc::prelude::*;
 use serde_json::json;
 
 use httpmock::Method::POST;
-use httpmock::{Mock, MockServer, MockServerRequest, Regex};
+use httpmock::{Mock, MockServer, Regex};
+use self::httpmock::HttpMockRequest;
 
 #[test]
 fn showcase_test() {
@@ -31,7 +32,7 @@ fn showcase_test() {
         .expect_body_contains("number")
         .expect_body_matches(Regex::new(r#"(\d+)"#).unwrap())
         .expect_json_body(json!({ "number": 5 }))
-        .expect_match(|req: MockServerRequest| req.path.contains("es"))
+        .expect_match(|req: &HttpMockRequest| req.path.contains("es"))
         .return_status(200)
         .create_on(&server);
 

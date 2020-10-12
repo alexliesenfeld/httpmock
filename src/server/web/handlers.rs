@@ -32,7 +32,7 @@ pub(crate) fn add_new_mock(
 
     let mock_id = state.create_new_id();
     {
-        log::debug!("Adding new mock with ID={}: {:#?}", mock_id, mock_def);
+        log::debug!("Adding new mock with ID={}", mock_id);
         let mut mocks = state.mocks.write().unwrap();
         mocks.insert(mock_id, ActiveMock::new(mock_id, mock_def));
     }
@@ -132,11 +132,7 @@ fn request_matches(
     req: Arc<HttpMockRequest>,
     mock: &RequestRequirements,
 ) -> bool {
-    log::trace!(
-        "Matching incoming HTTP request {:?} against mock {:?}",
-        req,
-        mock
-    );
+    log::trace!("Matching incoming HTTP request");
 
     state
         .matchers

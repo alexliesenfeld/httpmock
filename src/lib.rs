@@ -206,7 +206,7 @@ use serde_json::Value;
 use tokio::task::LocalSet;
 
 use api::MockServerAdapter;
-use data::{HttpMockRequest, MockMatcherFunction};
+pub use data::{HttpMockRequest, MockMatcherFunction};
 use util::Join;
 
 use crate::api::{LocalMockServerAdapter, RemoteMockServerAdapter};
@@ -229,9 +229,6 @@ pub mod standalone {
         start_server(port, expose, &state, None).await
     }
 }
-
-/// A general abstraction of an HTTP request of `httpmock`.
-pub type MockServerRequest = Arc<HttpMockRequest>;
 
 /// A mock server that is able to receive and respond to HTTP requests.
 pub struct MockServer {

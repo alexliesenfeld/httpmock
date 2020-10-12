@@ -1,7 +1,7 @@
 use assert_json_diff::{assert_json_eq_no_panic, assert_json_include_no_panic};
 use serde_json::Value;
 
-use crate::data::Pattern;
+use crate::data::{Pattern, HttpMockRequest, MockMatcherFunction};
 use crate::server::matchers::distance_for;
 use crate::Regex;
 
@@ -164,6 +164,42 @@ impl<T, U> ValueComparator<T, U> for AnyValueComparator {
     }
     fn distance(&self, _: &Option<&T>, _: &Option<&U>) -> usize {
         0
+    }
+}
+
+// ************************************************************************************************
+// FunctionMatchComparator
+// ************************************************************************************************
+pub struct FunctionMatchesRequestComparator {}
+
+impl FunctionMatchesRequestComparator {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+impl ValueComparator<MockMatcherFunction, HttpMockRequest> for FunctionMatchesRequestComparator {
+    fn matches(&self, mock_value: &MockMatcherFunction, req_value: &HttpMockRequest) -> bool {
+        (*mock_value)(req_value)
+    }
+
+    fn name(&self) -> &str {
+        "matches"
+    }
+
+    fn distance(&self, mock_value: &Option<&MockMatcherFunction>, req_value: &Option<&HttpMockRequest>) -> usize {
+        let mock_value = match mock_value {
+            None => return 0,
+            Some(v) => v
+        };
+        let req_value = match req_value {
+            None => return 1,
+            Some(v) => v
+        };
+        match self.matches(mock_value, req_value) {
+            true => 0,
+            false => 1
+        }
     }
 }
 

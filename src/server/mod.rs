@@ -24,20 +24,10 @@ use matchers::targets::{JSONBodyTarget, StringBodyTarget};
 pub use matchers::{Diff, DiffResult, Mismatch, Reason, Tokenizer};
 
 use crate::data::{ActiveMock, HttpMockRequest};
-use crate::server::matchers::comparators::{
-    AnyValueComparator, JSONContainsMatchComparator, JSONExactMatchComparator,
-    StringContainsMatchComparator, StringExactMatchComparator, StringRegexMatchComparator,
-};
-use crate::server::matchers::generic::MultiValueMatcher;
-use crate::server::matchers::sources::{
-    BodyRegexSource, ContainsCookieSource, ContainsHeaderSource, ContainsQueryParameterSource,
-    CookieSource, HeaderSource, JSONBodySource, MethodSource, PartialJSONBodySource,
-    PathContainsSubstringSource, PathRegexSource, QueryParameterSource, StringBodyContainsSource,
-    StringBodySource, StringPathSource,
-};
-use crate::server::matchers::targets::{
-    CookieTarget, HeaderTarget, MethodTarget, PathTarget, QueryParameterTarget,
-};
+use crate::server::matchers::comparators::{AnyValueComparator, JSONContainsMatchComparator, JSONExactMatchComparator, StringContainsMatchComparator, StringExactMatchComparator, StringRegexMatchComparator, FunctionMatchesRequestComparator};
+use crate::server::matchers::generic::{MultiValueMatcher, FunctionValueMatcher};
+use crate::server::matchers::sources::{BodyRegexSource, ContainsCookieSource, ContainsHeaderSource, ContainsQueryParameterSource, CookieSource, HeaderSource, JSONBodySource, MethodSource, PartialJSONBodySource, PathContainsSubstringSource, PathRegexSource, QueryParameterSource, StringBodyContainsSource, StringBodySource, StringPathSource, FunctionSource};
+use crate::server::matchers::targets::{CookieTarget, HeaderTarget, MethodTarget, PathTarget, QueryParameterTarget, FullRequestTarget};
 use crate::server::matchers::Matcher;
 use crate::server::web::routes;
 
@@ -241,6 +231,15 @@ impl MockServerState {
                     transformer: None,
                     with_reason: true,
                     diff_with: Some(Tokenizer::Line),
+                    weight: 1,
+                }),
+                // User provided matcher function
+                Box::new(FunctionValueMatcher {
+                    entity_name: "user provided matcher function",
+                    comparator: Box::new(FunctionMatchesRequestComparator::new()),
+                    source: Box::new(FunctionSource::new()),
+                    target: Box::new(FullRequestTarget::new()),
+                    transformer: None,
                     weight: 1,
                 }),
             ],
