@@ -1,3 +1,6 @@
+## Version 0.6.0
+- 
+
 ## Version 0.5.0
 - ❌ _**Breaking Change**_: Function `Mock::expect_json_body` was renamed to `expect_json_body_obj`.
 - ❌ _**Breaking Change**_: Function `Mock::return_json_body` was renamed to `return_json_body_obj`.
