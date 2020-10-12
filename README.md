@@ -82,7 +82,7 @@ See the [reference docs](https://docs.rs/httpmock/) for detailed API documentati
 ## Examples
 You can find examples in the 
 [`httpmock` test directory](https://github.com/alexliesenfeld/httpmock/blob/master/tests/). 
-The [reference docs](https://docs.rs/httpmock/) also contain _**a lot**_ of examples. 
+The [reference docs](https://docs.rs/httpmock/) also contain _**a lot**_ of examples. There is an [online tutorial](https://medium.com/@alexliesenfeld/rust-http-testing-with-httpmock-3d411200669c) as well. 
 
 ## License
 `httpmock` is free software: you can redistribute it and/or modify it under the terms of the MIT Public License.
