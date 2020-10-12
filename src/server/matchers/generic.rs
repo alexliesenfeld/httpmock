@@ -8,7 +8,7 @@ use serde_json::Value;
 use crate::data::{HttpMockRequest, RequestRequirements};
 use crate::server::matchers::comparators::ValueComparator;
 use crate::server::matchers::sources::{MultiValueSource, ValueRefSource};
-use crate::server::matchers::targets::{MultiValueTarget, ValueTarget, ValueRefTarget};
+use crate::server::matchers::targets::{MultiValueTarget, ValueRefTarget, ValueTarget};
 use crate::server::matchers::transformers::Transformer;
 use crate::server::matchers::{diff_str, Matcher, Reason};
 use crate::server::{Mismatch, Tokenizer};
@@ -252,8 +252,7 @@ where
 // ************************************************************************************************
 // FunctionValueMatcher
 // ************************************************************************************************
-pub(crate) struct FunctionValueMatcher<S, T>
-{
+pub(crate) struct FunctionValueMatcher<S, T> {
     pub entity_name: &'static str,
     pub source: Box<dyn ValueRefSource<S> + Send + Sync>,
     pub target: Box<dyn ValueRefTarget<T> + Send + Sync>,
@@ -262,9 +261,7 @@ pub(crate) struct FunctionValueMatcher<S, T>
     pub weight: usize,
 }
 
-
-impl<S, T> FunctionValueMatcher<S, T>
-{
+impl<S, T> FunctionValueMatcher<S, T> {
     fn get_unmatched<'a>(
         &self,
         req_value: &Option<&T>,
@@ -275,20 +272,25 @@ impl<S, T> FunctionValueMatcher<S, T>
             Some(mv) => mv.to_vec(),
         };
         let req_value = match req_value {
-            None => return mock_values.into_iter().enumerate().map(|(idx,_)| idx).collect(),
+            None => {
+                return mock_values
+                    .into_iter()
+                    .enumerate()
+                    .map(|(idx, _)| idx)
+                    .collect()
+            }
             Some(rv) => rv,
         };
         mock_values
             .into_iter()
             .enumerate()
             .filter(|(idx, e)| !self.comparator.matches(e, req_value))
-            .map(|(idx, e)| (idx ))
+            .map(|(idx, e)| (idx))
             .collect()
     }
 }
 
-impl<S, T> Matcher for FunctionValueMatcher<S, T>
-{
+impl<S, T> Matcher for FunctionValueMatcher<S, T> {
     fn matches(&self, req: &HttpMockRequest, mock: &RequestRequirements) -> bool {
         let req_value = self.target.parse_from_request(req);
         let mock_values = self.source.parse_from_mock(mock);
@@ -306,12 +308,14 @@ impl<S, T> Matcher for FunctionValueMatcher<S, T>
         let mock_value = self.source.parse_from_mock(mock);
         self.get_unmatched(&req_value, &mock_value)
             .into_iter()
-            .map(|idx| {
-                Mismatch {
-                    title: format!("The {} at position {} does not match", self.entity_name, idx + 1),
-                    reason: None,
-                    diff: None,
-                }
+            .map(|idx| Mismatch {
+                title: format!(
+                    "The {} at position {} does not match",
+                    self.entity_name,
+                    idx + 1
+                ),
+                reason: None,
+                diff: None,
             })
             .collect()
     }

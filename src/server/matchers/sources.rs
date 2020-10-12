@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use serde_json::Value;
 
-use crate::data::{HttpMockRequest, Pattern, RequestRequirements, MockMatcherFunction};
+use crate::data::{HttpMockRequest, MockMatcherFunction, Pattern, RequestRequirements};
 use crate::Regex;
 
 pub(crate) trait ValueRefSource<T> {
@@ -311,7 +311,6 @@ impl MultiValueSource<String, String> for ContainsQueryParameterSource {
     }
 }
 
-
 // ************************************************************************************************
 // FunctionSource
 // ************************************************************************************************
@@ -324,7 +323,12 @@ impl FunctionSource {
 }
 
 impl ValueRefSource<MockMatcherFunction> for FunctionSource {
-    fn parse_from_mock<'a>(&self, mock: &'a RequestRequirements) -> Option<Vec<&'a MockMatcherFunction>> {
-        mock.matchers.as_ref().map(|b| b.iter().map(|f| f).collect())
+    fn parse_from_mock<'a>(
+        &self,
+        mock: &'a RequestRequirements,
+    ) -> Option<Vec<&'a MockMatcherFunction>> {
+        mock.matchers
+            .as_ref()
+            .map(|b| b.iter().map(|f| f).collect())
     }
 }

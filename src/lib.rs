@@ -205,19 +205,19 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tokio::task::LocalSet;
 
-use api::MockServerAdapter;
+pub use crate::api::{Method, Mock, MockRef, Regex};
 pub use data::{HttpMockRequest, MockMatcherFunction};
-use util::Join;
 
 use crate::api::{LocalMockServerAdapter, RemoteMockServerAdapter};
-pub use crate::api::{Method, Mock, MockRef, Regex};
 use crate::server::{start_server, MockServerState};
 use crate::util::{read_env, with_retry};
+use api::MockServerAdapter;
+use util::Join;
 
 mod api;
 pub(crate) mod data;
 mod server;
-pub mod util;
+pub(crate) mod util;
 
 pub mod standalone {
     use std::sync::Arc;
@@ -1036,13 +1036,13 @@ impl When {
     ///
     /// ## Example:
     /// ```
-    /// use httpmock::{MockServer, Mock, MockServerRequest};
+    /// use httpmock::{MockServer, Mock, HttpMockRequest};
     ///
     /// // Arrange
     /// let server = MockServer::start();
     ///
     /// let m = server.mock(|when, then|{
-    ///    when.matches(|req: MockServerRequest| {
+    ///    when.matches(|req: &HttpMockRequest| {
     ///         req.path.contains("es")
     ///    });
     ///    then.status(200);
@@ -1073,7 +1073,7 @@ impl Then {
     ///
     /// ## Example:
     /// ```
-    /// use httpmock::{MockServer, Mock, MockServerRequest};
+    /// use httpmock::{MockServer, Mock};
     ///
     /// // Arrange
     /// let server = MockServer::start();
@@ -1101,7 +1101,7 @@ impl Then {
     ///
     /// ## Example:
     /// ```
-    /// use httpmock::{MockServer, Mock, MockServerRequest};
+    /// use httpmock::{MockServer, Mock};
     /// use isahc::ResponseExt;
     ///
     /// // Arrange
@@ -1132,7 +1132,7 @@ impl Then {
     ///
     /// ## Example:
     /// ```
-    /// use httpmock::{MockServer, Mock, MockServerRequest};
+    /// use httpmock::{MockServer, Mock};
     /// use isahc::ResponseExt;
     ///
     /// // Arrange

@@ -1109,12 +1109,12 @@ impl Mock {
     ///
     /// ## Example:
     /// ```
-    /// use httpmock::{MockServer, Mock, MockServerRequest};
+    /// use httpmock::{MockServer, Mock, HttpMockRequest};
     ///
     /// // Arrange
     /// let server = MockServer::start();
     /// let m = Mock::new()
-    ///     .expect_match(|req: MockServerRequest| {
+    ///     .expect_match(|req: &HttpMockRequest| {
     ///         req.path.ends_with("st")
     ///     })
     ///     .return_status(200)
@@ -1148,7 +1148,7 @@ impl Mock {
     ///
     /// ## Example:
     /// ```
-    /// use httpmock::{MockServer, Mock, MockServerRequest};
+    /// use httpmock::{MockServer, Mock};
     ///
     /// // Arrange
     /// let server = MockServer::start();
@@ -1175,7 +1175,7 @@ impl Mock {
     ///
     /// ## Example:
     /// ```
-    /// use httpmock::{MockServer, Mock, MockServerRequest};
+    /// use httpmock::{MockServer, Mock};
     /// use isahc::ResponseExt;
     ///
     /// // Arrange
@@ -1205,7 +1205,7 @@ impl Mock {
     ///
     /// ## Example:
     /// ```
-    /// use httpmock::{MockServer, Mock, MockServerRequest};
+    /// use httpmock::{MockServer, Mock};
     /// use isahc::ResponseExt;
     ///
     /// // Arrange

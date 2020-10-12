@@ -24,10 +24,21 @@ use matchers::targets::{JSONBodyTarget, StringBodyTarget};
 pub use matchers::{Diff, DiffResult, Mismatch, Reason, Tokenizer};
 
 use crate::data::{ActiveMock, HttpMockRequest};
-use crate::server::matchers::comparators::{AnyValueComparator, JSONContainsMatchComparator, JSONExactMatchComparator, StringContainsMatchComparator, StringExactMatchComparator, StringRegexMatchComparator, FunctionMatchesRequestComparator};
-use crate::server::matchers::generic::{MultiValueMatcher, FunctionValueMatcher};
-use crate::server::matchers::sources::{BodyRegexSource, ContainsCookieSource, ContainsHeaderSource, ContainsQueryParameterSource, CookieSource, HeaderSource, JSONBodySource, MethodSource, PartialJSONBodySource, PathContainsSubstringSource, PathRegexSource, QueryParameterSource, StringBodyContainsSource, StringBodySource, StringPathSource, FunctionSource};
-use crate::server::matchers::targets::{CookieTarget, HeaderTarget, MethodTarget, PathTarget, QueryParameterTarget, FullRequestTarget};
+use crate::server::matchers::comparators::{
+    AnyValueComparator, FunctionMatchesRequestComparator, JSONContainsMatchComparator,
+    JSONExactMatchComparator, StringContainsMatchComparator, StringExactMatchComparator,
+    StringRegexMatchComparator,
+};
+use crate::server::matchers::generic::{FunctionValueMatcher, MultiValueMatcher};
+use crate::server::matchers::sources::{
+    BodyRegexSource, ContainsCookieSource, ContainsHeaderSource, ContainsQueryParameterSource,
+    CookieSource, FunctionSource, HeaderSource, JSONBodySource, MethodSource,
+    PartialJSONBodySource, PathContainsSubstringSource, PathRegexSource, QueryParameterSource,
+    StringBodyContainsSource, StringBodySource, StringPathSource,
+};
+use crate::server::matchers::targets::{
+    CookieTarget, FullRequestTarget, HeaderTarget, MethodTarget, PathTarget, QueryParameterTarget,
+};
 use crate::server::matchers::Matcher;
 use crate::server::web::routes;
 

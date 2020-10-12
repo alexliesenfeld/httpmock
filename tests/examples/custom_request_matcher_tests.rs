@@ -15,9 +15,7 @@ fn my_custom_request_matcher_test() {
     let server = MockServer::start();
 
     let mock = server.mock(|when, then| {
-        when.matches(|req| {
-            req.path.to_lowercase().ends_with("tests")
-        });
+        when.matches(|req| req.path.to_lowercase().ends_with("test"));
         then.status(200);
     });
 

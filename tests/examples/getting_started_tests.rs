@@ -3,7 +3,6 @@ extern crate httpmock;
 use isahc::{get, get_async};
 use serde_json::json;
 
-use httpmock::util::Join;
 use httpmock::Method::{GET, POST};
 use httpmock::{Mock, MockServer};
 
