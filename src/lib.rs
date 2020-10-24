@@ -199,11 +199,11 @@ use std::rc::Rc;
 use std::sync::Arc;
 use std::thread;
 
-use futures_util::core_reexport::time::Duration;
 use puddle::Pool;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tokio::task::LocalSet;
+use tokio::time::Duration;
 
 pub use crate::api::{Method, Mock, MockRef, Regex};
 pub use data::{HttpMockRequest, MockMatcherFunction};
