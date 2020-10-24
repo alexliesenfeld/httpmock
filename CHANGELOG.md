@@ -1,3 +1,7 @@
+## Version 0.5.1
+- Updated dependency to futures-util to fix compile errors
+- Fixed all dependency version numbers to avoid future problems with new dependency version releases.
+
 ## Version 0.5.0
 - ❌ _**Breaking Change**_: Function `Mock::expect_json_body` was renamed to `expect_json_body_obj`.
 - ❌ _**Breaking Change**_: Function `Mock::return_json_body` was renamed to `return_json_body_obj`.
