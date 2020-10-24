@@ -1,3 +1,5 @@
+## Version 0.5.2
+
 ## Version 0.5.1
 - Updated dependency to futures-util to fix compile errors
 - Fixed all dependency version numbers to avoid future problems with new dependency version releases.
