@@ -1,7 +1,10 @@
-use std::collections::BTreeMap;
 use std::net::SocketAddr;
 use std::str::FromStr;
 use std::time::Duration;
+use std::{
+    collections::BTreeMap,
+    path::{Path, PathBuf},
+};
 
 #[cfg(feature = "color")]
 use colored::*;
@@ -1201,7 +1204,9 @@ impl Mock {
 
     /// Sets the HTTP response body that will be returned by the mock server.
     ///
-    /// * `body` - The response body content.
+    /// * `resource_file_path` - The file path to the file with the response body content. The file
+    ///                          path can either be absolute or relative to the project root
+    ///                         directory.
     ///
     /// ## Example:
     /// ```
@@ -1224,18 +1229,19 @@ impl Mock {
     /// assert_eq!(response.status(), 200);
     /// assert_eq!(response.text().unwrap(), "ohi!");
     /// ```
-    pub fn return_body_from_file<S: Into<String>>(
-        mut self,
-        relative_test_resource_path: S,
-    ) -> Self {
-        let rel_path = relative_test_resource_path.into();
-        let abs_path = get_test_resource_file_path(&rel_path).expect(&format!(
-            "Cannot create absolute path from string '{}'",
-            &rel_path
-        ));
-        let content = read_file(&abs_path).expect(&format!(
+    pub fn return_body_from_file<S: Into<String>>(mut self, resource_file_path: S) -> Self {
+        let resource_file_path = resource_file_path.into();
+        let path = Path::new(&resource_file_path);
+        let absolute_path = match path.is_absolute() {
+            true => path.to_path_buf(),
+            false => get_test_resource_file_path(&resource_file_path).expect(&format!(
+                "Cannot create absolute path from string '{}'",
+                &resource_file_path
+            )),
+        };
+        let content = read_file(&absolute_path).expect(&format!(
             "Cannot read from file {}",
-            abs_path.to_str().expect("Invalid OS path")
+            absolute_path.to_str().expect("Invalid OS path")
         ));
         self.return_body(content)
     }
