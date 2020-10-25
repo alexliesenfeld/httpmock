@@ -1,7 +1,10 @@
-use std::collections::BTreeMap;
 use std::net::SocketAddr;
 use std::str::FromStr;
 use std::time::Duration;
+use std::{
+    collections::BTreeMap,
+    path::{Path, PathBuf},
+};
 
 #[cfg(feature = "color")]
 use colored::*;
@@ -1229,10 +1232,13 @@ impl Mock {
         relative_test_resource_path: S,
     ) -> Self {
         let rel_path = relative_test_resource_path.into();
-        let abs_path = get_test_resource_file_path(&rel_path).expect(&format!(
-            "Cannot create absolute path from string '{}'",
-            &rel_path
-        ));
+        let abs_path = match Path::new(&rel_path).is_absolute() {
+            true => PathBuf::from(rel_path),
+            false => get_test_resource_file_path(&rel_path).expect(&format!(
+                "Cannot create absolute path from string '{}'",
+                &rel_path
+            )),
+        };
         let content = read_file(&abs_path).expect(&format!(
             "Cannot read from file {}",
             abs_path.to_str().expect("Invalid OS path")
