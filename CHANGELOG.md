@@ -1,6 +1,7 @@
 ## Version 0.5.2
 - Updated dependencies to newest version.
 - Removed dependency version fixation from v0.5.1.
+- `Mock::return_body_from_file` and `Then::body_from_file` now accept absolute and relative file paths.
  
 ## Version 0.5.1
 - Updated dependency to futures-util to fix compile errors.
