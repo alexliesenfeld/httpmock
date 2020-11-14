@@ -9,8 +9,6 @@ use httpmock::MockServer;
 #[test]
 fn json_value_body_test() {
     // Arrange
-    let _ = env_logger::try_init();
-
     let server = MockServer::start();
 
     let m = server.mock(|when, then| {
@@ -42,16 +40,11 @@ fn json_value_body_test() {
 
 #[test]
 fn json_body_object_serde_test() {
-    let _ = env_logger::try_init();
-
     // This is a temporary type that we will use for this test
     #[derive(serde::Serialize, serde::Deserialize)]
     struct TestUser {
         name: String,
     }
-
-    // Arrange
-    let _ = env_logger::try_init();
 
     // Arrange
     let server = MockServer::start();
@@ -94,7 +87,6 @@ fn json_body_object_serde_test() {
 
 #[test]
 fn partial_json_body_test() {
-    let _ = env_logger::try_init();
     let server = MockServer::start();
 
     // This is the structure that needs to be included in the request

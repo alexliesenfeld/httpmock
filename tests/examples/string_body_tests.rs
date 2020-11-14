@@ -8,7 +8,6 @@ use httpmock::{MockServer, Regex};
 #[test]
 fn body_test() {
     // Arrange
-    let _ = env_logger::try_init();
     let server = MockServer::start();
 
     let m = server.mock(|when, then| {

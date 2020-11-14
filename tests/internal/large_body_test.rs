@@ -11,11 +11,10 @@ use crate::simulate_standalone_server;
 
 #[test]
 fn large_body_test() {
+    // Arrange
+
     // This starts up a standalone server in the background running on port 5000
     simulate_standalone_server();
-
-    // Arrange
-    let _ = env_logger::try_init();
 
     // Instead of creating a new MockServer using new(), we connect to an existing remote instance.
     let server = MockServer::connect("localhost:5000");

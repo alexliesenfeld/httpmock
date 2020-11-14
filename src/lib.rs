@@ -199,7 +199,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 use std::thread;
 
-use puddle::Pool;
+use async_object_pool::Pool;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tokio::task::LocalSet;
@@ -267,7 +267,7 @@ impl MockServer {
             .expect("Not able to resolve the provided host name to an IPv4 address");
 
         let adapter = REMOTE_SERVER_POOL_REF
-            .take(|| Arc::new(RemoteMockServerAdapter::new(addr)))
+            .take_or_create(|| Arc::new(RemoteMockServerAdapter::new(addr)))
             .await;
         Self::from(adapter, REMOTE_SERVER_POOL_REF.clone()).await
     }
@@ -311,7 +311,7 @@ impl MockServer {
     /// 'MockServer' variable gets out of scope.
     pub async fn start_async() -> Self {
         let adapter = LOCAL_SERVER_POOL_REF
-            .take(LOCAL_SERVER_ADAPTER_GENERATOR)
+            .take_or_create(LOCAL_SERVER_ADAPTER_GENERATOR)
             .await;
         Self::from(adapter, LOCAL_SERVER_POOL_REF.clone()).await
     }

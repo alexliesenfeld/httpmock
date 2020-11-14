@@ -10,8 +10,6 @@ use httpmock::{Mock, MockServer};
 // TODO: Implement custom matcher
 fn my_custom_request_matcher_test() {
     // Arrange
-    let _ = env_logger::try_init();
-
     let server = MockServer::start();
 
     let mock = server.mock(|when, then| {

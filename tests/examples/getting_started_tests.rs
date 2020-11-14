@@ -33,8 +33,6 @@ fn getting_started_test() {
 
 #[async_std::test]
 async fn async_getting_started_test() {
-    let _ = env_logger::try_init();
-
     // Start a local mock server for exclusive use by this test function.
     let server = MockServer::start_async().await;
 

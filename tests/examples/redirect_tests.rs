@@ -7,7 +7,6 @@ use httpmock::MockServer;
 #[test]
 fn temporary_redirect_test() {
     // Arrange
-    let _ = env_logger::try_init();
     let server = MockServer::start();
 
     let redirect_mock = server.mock(|when, then| {
@@ -40,7 +39,6 @@ fn temporary_redirect_test() {
 #[test]
 fn permanent_redirect_test() {
     // Arrange
-    let _ = env_logger::try_init();
     let server = MockServer::start();
 
     let redirect_mock = server.mock(|when, then| {
