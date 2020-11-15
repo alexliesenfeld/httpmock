@@ -6,7 +6,7 @@ use isahc::HttpClientBuilder;
 
 use httpmock::MockServer;
 
-// #[test]
+#[test]
 fn multi_server_test() {
     // Arrange
     let server1 = MockServer::start();
