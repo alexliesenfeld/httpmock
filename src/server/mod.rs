@@ -589,14 +589,11 @@ mod test {
         let body = async_std::task::block_on(async {
             return match hyper::body::to_bytes(body).await {
                 Ok(bytes) => bytes.to_vec(),
-                Err(e) => panic!(e)
-            }
+                Err(e) => panic!(e),
+            };
         });
 
-        assert_eq!(
-            String::from_utf8(body).unwrap(),
-            "test".to_string()
-        )
+        assert_eq!(String::from_utf8(body).unwrap(), "test".to_string())
     }
 
     /// Makes sure an error is return if there is a header parsing error
