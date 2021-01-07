@@ -16,7 +16,7 @@ serde_json = "1.0"
 serde_regex = "1.1"
 lazy_static = "1.4"
 hyper = { version = "0.14", features = ["server", "http1", "tcp"] }
-tokio = { version = "1.0", features = ["sync", "macros"] }
+tokio = { version = "1.0", features = ["sync", "macros", "rt-multi-thread"] }
 isahc = "1.0"
 base64 = "0.13"
 regex = "1.4"
