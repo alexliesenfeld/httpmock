@@ -6,7 +6,7 @@ use std::time::Duration;
 use async_trait::async_trait;
 use isahc::http::Request;
 use isahc::prelude::Configurable;
-use isahc::ResponseExt;
+use isahc::{AsyncReadResponseExt, ResponseExt};
 
 use crate::data::{
     ActiveMock, ClosestMatch, MockDefinition, MockIdentification, RequestRequirements,
@@ -119,7 +119,7 @@ async fn execute_request(
     };
 
     // Evaluate the response status
-    let body = match response.text() {
+    let body = match response.text().await {
         Err(err) => return Err(format!("cannot send request to mock server: {}", err)),
         Ok(b) => b,
     };

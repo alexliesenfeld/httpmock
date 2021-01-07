@@ -14,7 +14,11 @@ use crate::simulate_standalone_server;
 fn all_runtimes_test() {
     // Tokio
     assert_eq!(
-        tokio::runtime::Runtime::new().unwrap().block_on(test_fn()),
+        tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap()
+            .block_on(test_fn()),
         202
     );
 

@@ -267,7 +267,7 @@ impl MockServer {
             .expect("Not able to resolve the provided host name to an IPv4 address");
 
         let adapter = REMOTE_SERVER_POOL_REF
-            .take(|| Arc::new(RemoteMockServerAdapter::new(addr)))
+            .take_or_create(|| Arc::new(RemoteMockServerAdapter::new(addr)))
             .await;
         Self::from(adapter, REMOTE_SERVER_POOL_REF.clone()).await
     }
@@ -311,7 +311,7 @@ impl MockServer {
     /// 'MockServer' variable gets out of scope.
     pub async fn start_async() -> Self {
         let adapter = LOCAL_SERVER_POOL_REF
-            .take(LOCAL_SERVER_ADAPTER_GENERATOR)
+            .take_or_create(LOCAL_SERVER_ADAPTER_GENERATOR)
             .await;
         Self::from(adapter, LOCAL_SERVER_POOL_REF.clone()).await
     }
@@ -652,7 +652,7 @@ impl When {
     /// use httpmock::{Mock, MockServer};
     /// use httpmock::Method::GET;
     /// use regex::Regex;
-    /// use isahc::prelude::*;
+    /// use isahc::{prelude::*, Request};
     ///
     /// let server = MockServer::start();
     ///
@@ -679,7 +679,7 @@ impl When {
     /// * `regex` - The regex that the HTTP request body will matched against.
     ///
     /// ```
-    /// use isahc::prelude::*;
+    /// use isahc::{prelude::*, Request};
     /// use httpmock::Method::POST;
     /// use httpmock::{MockServer, Mock, Regex};
     ///
@@ -718,7 +718,7 @@ impl When {
     /// ```
     /// use httpmock::{MockServer, Mock, Regex};
     /// use httpmock::Method::POST;
-    /// use isahc::prelude::*;
+    /// use isahc::{prelude::*, Request};
     ///
     /// // Arrange
     /// let _ = env_logger::try_init();
@@ -760,7 +760,7 @@ impl When {
     /// use httpmock::{Mock, MockServer};
     /// use httpmock::Method::POST;
     /// use serde_json::json;
-    /// use isahc::prelude::*;
+    /// use isahc::{prelude::*, Request};
     ///
     /// // Arrange
     /// let _ = env_logger::try_init();
@@ -802,7 +802,7 @@ impl When {
     /// use httpmock::{MockServer, Mock};
     /// use httpmock::Method::POST;
     /// use serde_json::json;
-    /// use isahc::prelude::*;
+    /// use isahc::{prelude::*, Request};
     ///
     /// // This is a temporary type that we will use for this test
     /// #[derive(serde::Serialize, serde::Deserialize)]
@@ -905,7 +905,7 @@ impl When {
     /// use httpmock::{Mock, MockServer};
     /// use httpmock::Method::GET;
     /// use regex::Regex;
-    /// use isahc::prelude::*;
+    /// use isahc::{prelude::*, Request};
     ///
     /// let server = MockServer::start();
     ///
@@ -938,7 +938,7 @@ impl When {
     /// use httpmock::{Mock, MockServer};
     /// use httpmock::Method::GET;
     /// use regex::Regex;
-    /// use isahc::prelude::*;
+    /// use isahc::{prelude::*, Request};
     ///
     /// let server = MockServer::start();
     ///
@@ -973,7 +973,7 @@ impl When {
     /// use httpmock::{Mock, MockServer};
     /// use httpmock::Method::GET;
     /// use regex::Regex;
-    /// use isahc::prelude::*;
+    /// use isahc::{prelude::*, Request};
     ///
     /// let server = MockServer::start();
     ///
@@ -1007,7 +1007,7 @@ impl When {
     /// use httpmock::{Mock, MockServer};
     /// use httpmock::Method::GET;
     /// use regex::Regex;
-    /// use isahc::prelude::*;
+    /// use isahc::{prelude::*, Request};
     ///
     /// let server = MockServer::start();
     ///
@@ -1102,7 +1102,7 @@ impl Then {
     /// ## Example:
     /// ```
     /// use httpmock::{MockServer, Mock};
-    /// use isahc::ResponseExt;
+    /// use isahc::{prelude::*, ResponseExt};
     ///
     /// // Arrange
     /// let server = MockServer::start();
@@ -1133,7 +1133,7 @@ impl Then {
     /// ## Example:
     /// ```
     /// use httpmock::{MockServer, Mock};
-    /// use isahc::ResponseExt;
+    /// use isahc::{prelude::*, ResponseExt};
     ///
     /// // Arrange
     /// let server = MockServer::start();
@@ -1213,7 +1213,7 @@ impl Then {
     ///
     /// ```
     /// use httpmock::{MockServer, Mock};
-    /// use isahc::ResponseExt;
+    /// use isahc::{prelude::*, ResponseExt};
     ///
     /// // This is a temporary type that we will use for this example
     /// #[derive(serde::Serialize, serde::Deserialize)]
@@ -1303,7 +1303,8 @@ impl Then {
     /// ```
     /// // Arrange
     /// use httpmock::MockServer;
-    /// use isahc::ResponseExt;
+    /// use isahc::{prelude::*, ResponseExt};
+    ///
     /// let _ = env_logger::try_init();
     ///
     /// let server = MockServer::start();
@@ -1348,7 +1349,7 @@ impl Then {
     /// ```
     /// // Arrange
     /// use httpmock::MockServer;
-    /// use isahc::ResponseExt;
+    /// use isahc::{prelude::*, ResponseExt};
     /// let _ = env_logger::try_init();
     ///
     /// let server = MockServer::start();
@@ -1426,9 +1427,8 @@ const LOCAL_SERVER_ADAPTER_GENERATOR: fn() -> Arc<dyn MockServerAdapter + Send +
         let server_state = server_state.clone();
         let srv = start_server(0, false, &server_state, Some(addr_sender));
 
-        let mut runtime = tokio::runtime::Builder::new()
+        let mut runtime = tokio::runtime::Builder::new_current_thread()
             .enable_all()
-            .basic_scheduler()
             .build()
             .expect("Cannot build local tokio runtime");
 

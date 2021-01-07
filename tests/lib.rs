@@ -22,7 +22,10 @@ pub fn simulate_standalone_server() {
 lazy_static! {
     static ref STANDALONE_SERVER: Mutex<JoinHandle<Result<(), String>>> = Mutex::new(spawn(|| {
         let srv = start_standalone_server(5000, false);
-        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        let mut runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap();
         LocalSet::new().block_on(&mut runtime, srv)
     }));
 }

@@ -3,7 +3,7 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use isahc::prelude::Request;
+use isahc::Request;
 
 use crate::api::adapter::{
     build_http_client, execute_request, http_ping, InternalHttpClient, MockServerAdapter,
