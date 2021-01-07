@@ -180,7 +180,7 @@ async fn postprocess_response(
 ) -> Result<Option<MockServerHttpResponse>, String> {
     if let Ok(Some(response_def)) = &result {
         if let Some(duration) = response_def.delay {
-            tokio::time::delay_for(duration).await;
+            tokio::time::sleep(duration).await;
         }
     }
     result

@@ -1,3 +1,6 @@
+## Version 0.5.3
+- Updates dependencies
+
 ## Version 0.5.2
 - Updated dependencies to newest version.
 - Removed dependency version fixation from v0.5.1.
