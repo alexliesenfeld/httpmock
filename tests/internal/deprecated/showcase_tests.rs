@@ -1,6 +1,6 @@
 extern crate httpmock;
 
-use isahc::prelude::*;
+use isahc::{prelude::*, Request};
 use serde_json::json;
 
 use self::httpmock::HttpMockRequest;

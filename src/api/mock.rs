@@ -589,7 +589,7 @@ impl Mock {
     /// use httpmock::{Mock, MockServer};
     /// use httpmock::Method::GET;
     /// use regex::Regex;
-    /// use isahc::prelude::*;
+    /// use isahc::{prelude::*, Request};
     ///
     /// let server = MockServer::start();
     /// let mock = Mock::new()
@@ -631,7 +631,7 @@ impl Mock {
     /// use httpmock::{Mock, MockServer};
     /// use httpmock::Method::GET;
     /// use regex::Regex;
-    /// use isahc::prelude::*;
+    /// use isahc::{prelude::*, Request};
     ///
     /// let server = MockServer::start();
     /// let mock = Mock::new()
@@ -674,7 +674,7 @@ impl Mock {
     /// use httpmock::{Mock, MockServer};
     /// use httpmock::Method::GET;
     /// use regex::Regex;
-    /// use isahc::prelude::*;
+    /// use isahc::{prelude::*, Request};
     ///
     /// let server = MockServer::start();
     /// let mock = Mock::new()
@@ -717,7 +717,7 @@ impl Mock {
     /// use httpmock::{Mock, MockServer};
     /// use httpmock::Method::GET;
     /// use regex::Regex;
-    /// use isahc::prelude::*;
+    /// use isahc::{prelude::*, Request};
     ///
     /// let server = MockServer::start();
     /// let mock = Mock::new()
@@ -757,7 +757,7 @@ impl Mock {
     /// use httpmock::{Mock, MockServer};
     /// use httpmock::Method::GET;
     /// use regex::Regex;
-    /// use isahc::prelude::*;
+    /// use isahc::{prelude::*, Request};
     ///
     /// let server = MockServer::start();
     /// let mock = Mock::new()
@@ -790,7 +790,7 @@ impl Mock {
     /// use httpmock::{MockServer, Mock};
     /// use httpmock::Method::POST;
     /// use serde_json::json;
-    /// use isahc::prelude::*;
+    /// use isahc::{prelude::*, Request};
     ///
     /// // This is a temporary type that we will use for this test
     /// #[derive(serde::Serialize, serde::Deserialize)]
@@ -846,7 +846,7 @@ impl Mock {
     /// use httpmock::{Mock, MockServer};
     /// use httpmock::Method::POST;
     /// use serde_json::json;
-    /// use isahc::prelude::*;
+    /// use isahc::{prelude::*, Request};
     ///
     /// // Arrange
     /// let _ = env_logger::try_init();
@@ -945,7 +945,7 @@ impl Mock {
     /// ```
     /// use httpmock::{MockServer, Mock, Regex};
     /// use httpmock::Method::POST;
-    /// use isahc::prelude::*;
+    /// use isahc::{prelude::*, Request};
     ///
     /// // Arrange
     /// let _ = env_logger::try_init();
@@ -989,7 +989,7 @@ impl Mock {
     /// * `regex` - The regex that the HTTP request body will matched against.
     ///
     /// ```
-    /// use isahc::prelude::*;
+    /// use isahc::{prelude::*, Request};
     /// use httpmock::Method::POST;
     /// use httpmock::{MockServer, Mock, Regex};
     ///
@@ -1179,7 +1179,7 @@ impl Mock {
     /// ## Example:
     /// ```
     /// use httpmock::{MockServer, Mock};
-    /// use isahc::ResponseExt;
+    /// use isahc::{prelude::*, ResponseExt};
     ///
     /// // Arrange
     /// let server = MockServer::start();
@@ -1211,7 +1211,7 @@ impl Mock {
     /// ## Example:
     /// ```
     /// use httpmock::{MockServer, Mock};
-    /// use isahc::ResponseExt;
+    /// use isahc::{prelude::*, ResponseExt};
     ///
     /// // Arrange
     /// let server = MockServer::start();
@@ -1302,7 +1302,7 @@ impl Mock {
     ///
     /// ```
     /// use httpmock::{MockServer, Mock};
-    /// use isahc::ResponseExt;
+    /// use isahc::{prelude::*, ResponseExt};
     ///
     /// // This is a temporary type that we will use for this example
     /// #[derive(serde::Serialize, serde::Deserialize)]
@@ -1402,7 +1402,7 @@ impl Mock {
     /// ```
     /// // Arrange
     /// use httpmock::{MockServer, Mock};
-    /// use isahc::ResponseExt;
+    /// use isahc::{prelude::*, ResponseExt};
     ///
     /// let _ = env_logger::try_init();
     /// let server = MockServer::start();
@@ -1452,7 +1452,7 @@ impl Mock {
     /// ```
     /// // Arrange
     /// use httpmock::{MockServer, Mock};
-    /// use isahc::ResponseExt;
+    /// use isahc::{prelude::*, ResponseExt};
     ///
     /// let _ = env_logger::try_init();
     /// let server = MockServer::start();

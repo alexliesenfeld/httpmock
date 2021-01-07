@@ -2,7 +2,7 @@ extern crate httpmock;
 
 use std::io::Read;
 
-use isahc::prelude::*;
+use isahc::Body;
 
 use httpmock::MockServer;
 

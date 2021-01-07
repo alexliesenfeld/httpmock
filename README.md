@@ -8,7 +8,7 @@
 [![Build Status](https://dev.azure.com/alexliesenfeld/httpmock/_apis/build/status/alexliesenfeld.httpmock?branchName=master)](https://dev.azure.com/alexliesenfeld/httpmock/_build/latest?definitionId=2&branchName=master)
 [![codecov](https://codecov.io/gh/alexliesenfeld/httpmock/branch/master/graph/badge.svg)](https://codecov.io/gh/alexliesenfeld/httpmock)
 [![crates.io](https://img.shields.io/crates/d/httpmock.svg)](https://crates.io/crates/httpmock)
-[![Rust](https://img.shields.io/badge/rust-1.43.0%2B-blue.svg?maxAge=3600)](https://github.com/rust-lang/regex)
+[![Rust](https://img.shields.io/badge/rust-1.45%2B-blue.svg?maxAge=3600)](https://github.com/rust-lang/rust/blob/master/RELEASES.md#version-1452-2020-08-03)
 [![License](https://img.shields.io/github/license/alexliesenfeld/httpmock.svg)](LICENSE)
 	
 </div>
@@ -43,7 +43,7 @@ Add `httpmock` to `Cargo.toml`:
 
 ```toml
 [dev-dependencies]
-httpmock = "0.5.2"
+httpmock = "0.5.3"
 ```
 You can then use `httpmock` as follows:
 ```rust
@@ -82,7 +82,7 @@ See the [reference docs](https://docs.rs/httpmock/) for detailed API documentati
 ## Examples
 You can find examples in the 
 [`httpmock` test directory](https://github.com/alexliesenfeld/httpmock/blob/master/tests/). 
-The [reference docs](https://docs.rs/httpmock/) also contain _**a lot**_ of examples. There is an [online tutorial](https://medium.com/@alexliesenfeld/rust-http-testing-with-httpmock-3d411200669c) as well. 
+The [reference docs](https://docs.rs/httpmock/) also contain _**a lot**_ of examples. There is an [online tutorial](https://dev.to/alexliesenfeld/rust-http-testing-with-httpmock-2mi0) as well. 
 
 ## License
 `httpmock` is free software: you can redistribute it and/or modify it under the terms of the MIT Public License.

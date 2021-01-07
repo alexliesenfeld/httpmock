@@ -347,8 +347,7 @@ async fn handle_server_request(
     }
 
     let the_body = entire_body.unwrap();
-    let body_bytes = the_body.bytes();
-    let body = String::from_utf8(body_bytes.to_vec());
+    let body = String::from_utf8(the_body.to_vec());
 
     if let Err(e) = body {
         return Ok(error_response(format!("Cannot read body: {}", e)));
@@ -551,6 +550,8 @@ mod test {
         MOCK_PATH, PING_PATH, VERIFY_PATH,
     };
     use crate::Regex;
+    use hyper::body::Bytes;
+    use hyper::Error;
 
     #[test]
     fn route_regex_test() {
@@ -585,17 +586,14 @@ mod test {
         let res = error_response("test".into());
         let (parts, body) = res.into_parts();
 
-        let body = async_std::task::block_on({
-            body.try_fold(Vec::new(), |mut data, chunk| async move {
-                data.extend_from_slice(&chunk);
-                Ok(data)
-            })
+        let body = async_std::task::block_on(async {
+            return match hyper::body::to_bytes(body).await {
+                Ok(bytes) => bytes.to_vec(),
+                Err(e) => panic!(e),
+            };
         });
 
-        assert_eq!(
-            String::from_utf8(body.unwrap()).unwrap(),
-            "test".to_string()
-        )
+        assert_eq!(String::from_utf8(body).unwrap(), "test".to_string())
     }
 
     /// Makes sure an error is return if there is a header parsing error

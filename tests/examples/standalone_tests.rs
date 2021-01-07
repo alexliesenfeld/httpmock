@@ -2,7 +2,7 @@ extern crate httpmock;
 
 use std::io::Read;
 
-use isahc::{get, get_async, Body, RequestExt};
+use isahc::{get, get_async, Body, Request, RequestExt};
 use regex::Replacer;
 
 use httpmock::MockServer;
@@ -25,7 +25,7 @@ fn standalone_test() {
     });
 
     // Act: Send the HTTP request
-    let response = isahc::prelude::Request::post(server.url("/search"))
+    let response = Request::post(server.url("/search"))
         .body("wow so large".repeat(10000000))
         .unwrap()
         .send()
