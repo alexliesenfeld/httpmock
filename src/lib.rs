@@ -17,7 +17,7 @@
 //!
 //! ```toml
 //! [dev-dependencies]
-//! httpmock = "0.5.2"
+//! httpmock = "0.5.3"
 //! ```
 //!
 //! You can then use `httpmock` as follows:
@@ -199,7 +199,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 use std::thread;
 
-use puddle::Pool;
+use async_object_pool::Pool;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tokio::task::LocalSet;
