@@ -387,6 +387,61 @@ impl<'a> MockRef<'a> {
     }
 }
 
+/// The [MockRefExt](trait.MockRefExt.html) trait extends the [MockRef](struct.MockRef.html)
+/// structure with some additional functionality, that is usually not required.
+pub trait MockRefExt<'a> {
+
+    /// Creates a new [MockRef](struct.MockRef.html) instance that references an already existing
+    /// mock on a [MockServer](struct.MockServer.html). This functionality is usually not required.
+    /// You can use it if for you need to recreate [MockRef](struct.MockRef.html) instances
+    ///.
+    /// * `id` - The ID of the existing mock ot the [MockServer](struct.MockServer.html).
+    /// * `mock_server` - The [MockServer](struct.MockServer.html) to which the
+    /// [MockRef](struct.MockRef.html) instance will reference.
+    ///
+    /// # Example
+    /// ```
+    /// use httpmock::{MockServer, MockRef, MockRefExt};
+    /// use isahc::get;
+    ///
+    /// // Arrange
+    /// let server = MockServer::start();
+    /// let mock_ref = server.mock(|when, then| {
+    ///     when.path("/test");
+    ///     then.status(202);
+    /// });
+    ///
+    /// // Store away the mock ID for later usage and drop the MockRef instance.
+    /// let mock_id = mock_ref.id();
+    /// drop(mock_ref);
+    ///
+    /// // Act: Send the HTTP request
+    /// let response = get(server.url("/test")).unwrap();
+    ///
+    /// // Create a new MockRef instance that references the earlier mock at the MockServer.
+    /// let mock_ref = MockRef::new(mock_id, &server);
+    ///
+    /// // Use the recreated MockRef as usual.
+    /// mock_ref.assert();
+    /// assert_eq!(response.status(), 202);
+    /// ```
+    fn new(id: usize, mock_server: &'a MockServer) -> MockRef<'a>;
+
+    /// Returns the ID that the mock was assigned to on the
+    /// [MockServer](struct.MockServer.html).
+    fn id(&self) -> usize;
+}
+
+impl<'a> MockRefExt<'a> for MockRef<'a> {
+    fn new(id: usize, mock_server: &'a MockServer) -> MockRef<'a> {
+        MockRef { id, server: mock_server }
+    }
+
+    fn id(&self) -> usize {
+        self.id
+    }
+}
+
 /// The [Mock](struct.Mock.html) structure holds a definition for a request/response scenario
 /// that can be used to configure a [MockServer](struct.MockServer.html).
 ///
@@ -429,8 +484,8 @@ impl<'a> MockRef<'a> {
 /// to explicitly delete the mock object from the server
 /// (see [MockRef::delete](struct.MockRef.html#method.delete)).
 #[deprecated(
-    since = "0.5.0",
-    note = "Please use newer API (see: https://github.com/alexliesenfeld/httpmock/blob/master/CHANGELOG.md#version-050)"
+since = "0.5.0",
+note = "Please use newer API (see: https://github.com/alexliesenfeld/httpmock/blob/master/CHANGELOG.md#version-050)"
 )]
 pub struct Mock {
     mock: MockDefinition,
@@ -827,8 +882,8 @@ impl Mock {
     /// assert_eq!(response.status(), 201);
     /// ```
     pub fn expect_json_body_obj<'a, T>(self, body: &T) -> Self
-    where
-        T: Serialize + Deserialize<'a>,
+        where
+            T: Serialize + Deserialize<'a>,
     {
         let json_value = serde_json::to_value(body).expect("Cannot serialize json body to JSON");
         self.expect_json_body(json_value)
@@ -1335,8 +1390,8 @@ impl Mock {
     /// assert_eq!(user.name, "Hans");
     /// ```
     pub fn return_json_body_obj<T>(self, body: &T) -> Self
-    where
-        T: Serialize,
+        where
+            T: Serialize,
     {
         let json_body =
             serde_json::to_value(body).expect("cannot serialize json body to JSON string ");
@@ -1638,15 +1693,15 @@ fn create_diff_result_output(dd: &DiffResult) -> String {
             }
             Diff::Add(e) => {
                 #[cfg(feature = "color")]
-                output.push_str(&format!("+++| {}", e).green().to_string());
+                    output.push_str(&format!("+++| {}", e).green().to_string());
                 #[cfg(not(feature = "color"))]
-                output.push_str(&format!("+++| {}", e));
+                    output.push_str(&format!("+++| {}", e));
             }
             Diff::Rem(e) => {
                 #[cfg(feature = "color")]
-                output.push_str(&format!("---| {}", e).red().to_string());
+                    output.push_str(&format!("---| {}", e).red().to_string());
                 #[cfg(not(feature = "color"))]
-                output.push_str(&format!("---| {}", e));
+                    output.push_str(&format!("---| {}", e));
             }
         }
         output.push_str("\n")
