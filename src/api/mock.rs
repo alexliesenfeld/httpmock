@@ -390,7 +390,6 @@ impl<'a> MockRef<'a> {
 /// The [MockRefExt](trait.MockRefExt.html) trait extends the [MockRef](struct.MockRef.html)
 /// structure with some additional functionality, that is usually not required.
 pub trait MockRefExt<'a> {
-
     /// Creates a new [MockRef](struct.MockRef.html) instance that references an already existing
     /// mock on a [MockServer](struct.MockServer.html). This functionality is usually not required.
     /// You can use it if for you need to recreate [MockRef](struct.MockRef.html) instances
@@ -434,7 +433,10 @@ pub trait MockRefExt<'a> {
 
 impl<'a> MockRefExt<'a> for MockRef<'a> {
     fn new(id: usize, mock_server: &'a MockServer) -> MockRef<'a> {
-        MockRef { id, server: mock_server }
+        MockRef {
+            id,
+            server: mock_server,
+        }
     }
 
     fn id(&self) -> usize {
@@ -484,8 +486,8 @@ impl<'a> MockRefExt<'a> for MockRef<'a> {
 /// to explicitly delete the mock object from the server
 /// (see [MockRef::delete](struct.MockRef.html#method.delete)).
 #[deprecated(
-since = "0.5.0",
-note = "Please use newer API (see: https://github.com/alexliesenfeld/httpmock/blob/master/CHANGELOG.md#version-050)"
+    since = "0.5.0",
+    note = "Please use newer API (see: https://github.com/alexliesenfeld/httpmock/blob/master/CHANGELOG.md#version-050)"
 )]
 pub struct Mock {
     mock: MockDefinition,
@@ -882,8 +884,8 @@ impl Mock {
     /// assert_eq!(response.status(), 201);
     /// ```
     pub fn expect_json_body_obj<'a, T>(self, body: &T) -> Self
-        where
-            T: Serialize + Deserialize<'a>,
+    where
+        T: Serialize + Deserialize<'a>,
     {
         let json_value = serde_json::to_value(body).expect("Cannot serialize json body to JSON");
         self.expect_json_body(json_value)
@@ -1390,8 +1392,8 @@ impl Mock {
     /// assert_eq!(user.name, "Hans");
     /// ```
     pub fn return_json_body_obj<T>(self, body: &T) -> Self
-        where
-            T: Serialize,
+    where
+        T: Serialize,
     {
         let json_body =
             serde_json::to_value(body).expect("cannot serialize json body to JSON string ");
@@ -1693,15 +1695,15 @@ fn create_diff_result_output(dd: &DiffResult) -> String {
             }
             Diff::Add(e) => {
                 #[cfg(feature = "color")]
-                    output.push_str(&format!("+++| {}", e).green().to_string());
+                output.push_str(&format!("+++| {}", e).green().to_string());
                 #[cfg(not(feature = "color"))]
-                    output.push_str(&format!("+++| {}", e));
+                output.push_str(&format!("+++| {}", e));
             }
             Diff::Rem(e) => {
                 #[cfg(feature = "color")]
-                    output.push_str(&format!("---| {}", e).red().to_string());
+                output.push_str(&format!("---| {}", e).red().to_string());
                 #[cfg(not(feature = "color"))]
-                    output.push_str(&format!("---| {}", e));
+                output.push_str(&format!("---| {}", e));
             }
         }
         output.push_str("\n")
