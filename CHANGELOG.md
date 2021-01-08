@@ -1,5 +1,6 @@
 ## Version 0.5.4
-- TODO
+- A new extension trait `MockRefExt` was added that extends the `MockRef` structure with additional but usually 
+not required functionality.  
 
 ## Version 0.5.3
 - Updates dependencies
