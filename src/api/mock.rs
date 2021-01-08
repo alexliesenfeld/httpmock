@@ -424,6 +424,8 @@ pub trait MockRefExt<'a> {
     /// mock_ref.assert();
     /// assert_eq!(response.status(), 202);
     /// ```
+    /// Refer to [`Issue 26`][https://github.com/alexliesenfeld/httpmock/issues/26] for more
+    /// information.
     fn new(id: usize, mock_server: &'a MockServer) -> MockRef<'a>;
 
     /// Returns the ID that the mock was assigned to on the
