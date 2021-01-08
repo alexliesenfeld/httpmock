@@ -52,11 +52,14 @@ use crate::MockServer;
 /// assert_eq!(response2.status(), 404);
 /// ```
 pub struct MockRef<'a> {
-    id: usize,
+    pub id: usize,
     server: &'a MockServer,
 }
 
 impl<'a> MockRef<'a> {
+    pub fn new(id: usize, server: &'a MockServer) -> Self {
+        Self { id, server }
+    }
     /// This method asserts that the mock server received **exactly one** HTTP request that matched
     /// all the request requirements of this mock.
     ///

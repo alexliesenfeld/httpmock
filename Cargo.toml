@@ -45,6 +45,8 @@ quote = "1.0"
 actix-rt = "2.0.0-beta"
 colored = "2.0"
 
+owning_ref = "0.4.1"
+
 [features]
 standalone = ["structopt", "env_logger"]
 color = ["colored"]
