@@ -7,7 +7,6 @@ use httpmock::MockServer;
 #[test]
 fn headers_test() {
     // Arrange
-    let _ = env_logger::try_init();
     let server = MockServer::start();
 
     let m = server.mock(|when, then| {
@@ -27,5 +26,5 @@ fn headers_test() {
 
     // Assert
     m.assert();
-    //assert_eq!(response.status(), 201);
+    assert_eq!(response.status(), 201);
 }

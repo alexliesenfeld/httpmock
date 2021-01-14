@@ -5,7 +5,7 @@ pub use adapter::{
     local::LocalMockServerAdapter, standalone::RemoteMockServerAdapter, Method, MockServerAdapter,
     Regex,
 };
-pub use mock::{Mock, MockRef};
+pub use mock::{Mock, MockRef, MockRefExt};
 
 mod adapter;
 mod mock;

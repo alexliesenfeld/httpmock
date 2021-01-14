@@ -8,8 +8,6 @@ use httpmock::MockServer;
 
 #[test]
 fn binary_body_test() {
-    let _ = env_logger::try_init();
-
     // Arrange
     let binary_content = b"\x80\x02\x03";
 

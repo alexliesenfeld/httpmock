@@ -8,7 +8,6 @@ use httpmock::MockServer;
 #[test]
 fn cookie_matching_test() {
     // Arrange
-    let _ = env_logger::try_init();
     let server = MockServer::start();
 
     let mock = server.mock(|when, then| {

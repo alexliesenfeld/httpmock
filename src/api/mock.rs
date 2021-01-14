@@ -387,6 +387,65 @@ impl<'a> MockRef<'a> {
     }
 }
 
+/// The [MockRefExt](trait.MockRefExt.html) trait extends the [MockRef](struct.MockRef.html)
+/// structure with some additional functionality, that is usually not required.
+pub trait MockRefExt<'a> {
+    /// Creates a new [MockRef](struct.MockRef.html) instance that references an already existing
+    /// mock on a [MockServer](struct.MockServer.html). This functionality is usually not required.
+    /// You can use it if for you need to recreate [MockRef](struct.MockRef.html) instances
+    ///.
+    /// * `id` - The ID of the existing mock ot the [MockServer](struct.MockServer.html).
+    /// * `mock_server` - The [MockServer](struct.MockServer.html) to which the
+    /// [MockRef](struct.MockRef.html) instance will reference.
+    ///
+    /// # Example
+    /// ```
+    /// use httpmock::{MockServer, MockRef, MockRefExt};
+    /// use isahc::get;
+    ///
+    /// // Arrange
+    /// let server = MockServer::start();
+    /// let mock_ref = server.mock(|when, then| {
+    ///     when.path("/test");
+    ///     then.status(202);
+    /// });
+    ///
+    /// // Store away the mock ID for later usage and drop the MockRef instance.
+    /// let mock_id = mock_ref.id();
+    /// drop(mock_ref);
+    ///
+    /// // Act: Send the HTTP request
+    /// let response = get(server.url("/test")).unwrap();
+    ///
+    /// // Create a new MockRef instance that references the earlier mock at the MockServer.
+    /// let mock_ref = MockRef::new(mock_id, &server);
+    ///
+    /// // Use the recreated MockRef as usual.
+    /// mock_ref.assert();
+    /// assert_eq!(response.status(), 202);
+    /// ```
+    /// Refer to [`Issue 26`][https://github.com/alexliesenfeld/httpmock/issues/26] for more
+    /// information.
+    fn new(id: usize, mock_server: &'a MockServer) -> MockRef<'a>;
+
+    /// Returns the ID that the mock was assigned to on the
+    /// [MockServer](struct.MockServer.html).
+    fn id(&self) -> usize;
+}
+
+impl<'a> MockRefExt<'a> for MockRef<'a> {
+    fn new(id: usize, mock_server: &'a MockServer) -> MockRef<'a> {
+        MockRef {
+            id,
+            server: mock_server,
+        }
+    }
+
+    fn id(&self) -> usize {
+        self.id
+    }
+}
+
 /// The [Mock](struct.Mock.html) structure holds a definition for a request/response scenario
 /// that can be used to configure a [MockServer](struct.MockServer.html).
 ///

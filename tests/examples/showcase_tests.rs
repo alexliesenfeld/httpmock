@@ -16,7 +16,6 @@ fn showcase_test() {
     }
 
     // Arrange
-    let _ = env_logger::try_init();
     let server = MockServer::start();
 
     let m = server.mock(|when, then| {

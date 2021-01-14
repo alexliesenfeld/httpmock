@@ -1,5 +1,10 @@
+## Version 0.5.4
+- A new extension trait `MockRefExt` was added that extends the `MockRef` structure with additional but usually 
+not required functionality.  
+
 ## Version 0.5.3
-- Updates dependencies
+- This is a maintenance release that updates all dependencies to the most recent version.
+- This release bumps the minimal Rust version from 1.43+ to 1.45+.
 
 ## Version 0.5.2
 - Updated dependencies to newest version.

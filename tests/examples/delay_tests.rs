@@ -9,7 +9,6 @@ use httpmock::{Mock, MockServer};
 #[test]
 fn delay_test() {
     // Arrange
-    let _ = env_logger::try_init();
     let start_time = SystemTime::now();
     let delay = Duration::from_secs(3);
 

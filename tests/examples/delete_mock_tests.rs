@@ -8,7 +8,6 @@ use httpmock::MockServer;
 #[test]
 fn explicit_delete_mock_test() {
     // Arrange
-    let _ = env_logger::try_init();
     let server = MockServer::start();
 
     let mut m = server.mock(|when, then| {

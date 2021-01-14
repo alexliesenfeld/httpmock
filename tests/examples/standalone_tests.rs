@@ -11,11 +11,10 @@ use crate::simulate_standalone_server;
 
 #[test]
 fn standalone_test() {
+    // Arrange
+
     // This starts up a standalone server in the background running on port 5000
     simulate_standalone_server();
-
-    // Arrange
-    let _ = env_logger::try_init();
 
     // Instead of creating a new MockServer using new(), we connect to an existing remote instance.
     let server = MockServer::connect("localhost:5000");
@@ -39,11 +38,10 @@ fn standalone_test() {
 
 #[async_std::test]
 async fn async_standalone_test() {
+    // Arrange
+
     // This starts up a standalone server in the background running on port 5000
     simulate_standalone_server();
-
-    // Arrange
-    let _ = env_logger::try_init();
 
     // Instead of creating a new MockServer using connect_from_env_async(), we connect by
     // reading the host and port from the environment (HTTPMOCK_HOST / HTTPMOCK_PORT) or
@@ -87,7 +85,7 @@ async fn async_standalone_test() {
 #[test]
 #[should_panic]
 fn unsupported_features() {
-    let _ = env_logger::try_init();
+    // Arrange
 
     // This starts up a standalone server in the background running on port 5000
     simulate_standalone_server();
@@ -105,12 +103,11 @@ fn unsupported_features() {
 
 #[test]
 fn binary_body_standalone_test() {
-    let _ = env_logger::try_init();
+    // Arrange
 
     // This starts up a standalone server in the background running on port 5000
     simulate_standalone_server();
 
-    // Arrange
     let binary_content = b"\x80\x02\x03\xF0\x90\x80";
 
     let server = MockServer::connect_from_env();
