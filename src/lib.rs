@@ -205,7 +205,7 @@ use serde_json::Value;
 use tokio::task::LocalSet;
 use tokio::time::Duration;
 
-pub use crate::api::{Method, Mock, MockRef, Regex};
+pub use crate::api::{Method, Mock, MockRef, MockRefExt, Regex};
 pub use data::{HttpMockRequest, MockMatcherFunction};
 
 use crate::api::{LocalMockServerAdapter, RemoteMockServerAdapter};

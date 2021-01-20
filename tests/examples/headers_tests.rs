@@ -26,5 +26,5 @@ fn headers_test() {
 
     // Assert
     m.assert();
-    //assert_eq!(response.status(), 201);
+    assert_eq!(response.status(), 201);
 }
