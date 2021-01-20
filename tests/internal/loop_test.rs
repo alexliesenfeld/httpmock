@@ -4,7 +4,7 @@ use std::cell::RefCell;
 use std::io::Read;
 use std::rc::Rc;
 
-use isahc::{Body, get, get_async, RequestExt};
+use isahc::{get, get_async, Body, RequestExt};
 use owning_ref::OwningRef;
 use regex::Replacer;
 
