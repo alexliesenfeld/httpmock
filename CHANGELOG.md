@@ -1,3 +1,6 @@
+## Version 0.5.5
+- A bug has been fixed that prevented to use a request body in DELETE requests.  
+
 ## Version 0.5.4
 - A new extension trait `MockRefExt` was added that extends the `MockRef` structure with additional but usually 
 not required functionality.  

@@ -16,7 +16,7 @@ use crate::server::util::{StringTreeMapExtension, TreeMapExtension};
 use crate::server::{Mismatch, MockServerState};
 
 /// Contains HTTP methods which cannot have a body.
-const NON_BODY_METHODS: &[&str] = &["GET", "HEAD", "DELETE"];
+const NON_BODY_METHODS: &[&str] = &["GET", "HEAD"];
 
 /// Adds a new mock to the internal state.
 pub(crate) fn add_new_mock(
