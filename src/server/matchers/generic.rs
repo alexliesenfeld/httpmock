@@ -2,7 +2,6 @@ use std::collections::BTreeMap;
 use std::fmt::Display;
 use std::net::ToSocketAddrs;
 
-use assert_json_diff::assert_json_eq_no_panic;
 use serde_json::Value;
 
 use crate::data::{HttpMockRequest, RequestRequirements};
