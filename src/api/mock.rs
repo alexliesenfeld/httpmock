@@ -52,6 +52,8 @@ use crate::MockServer;
 /// assert_eq!(response2.status(), 404);
 /// ```
 pub struct MockRef<'a> {
+    // Please find the reason why id is public in
+    // https://github.com/alexliesenfeld/httpmock/issues/26.
     pub id: usize,
     server: &'a MockServer,
 }
