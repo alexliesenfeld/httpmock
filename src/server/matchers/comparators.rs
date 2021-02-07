@@ -1,4 +1,4 @@
-use assert_json_diff::{assert_json_matches_no_panic, CompareMode};
+use assert_json_diff::{assert_json_matches_no_panic, CompareMode, Config};
 use serde_json::Value;
 
 use crate::data::{HttpMockRequest, MockMatcherFunction, Pattern};
@@ -24,7 +24,7 @@ impl JSONExactMatchComparator {
 
 impl ValueComparator<Value, Value> for JSONExactMatchComparator {
     fn matches(&self, mock_value: &Value, req_value: &Value) -> bool {
-        let config = assert_json_diff::Config::new(CompareMode::Strict);
+        let config = Config::new(CompareMode::Strict);
         assert_json_matches_no_panic(req_value, mock_value, config).is_ok()
     }
 
@@ -50,7 +50,7 @@ impl JSONContainsMatchComparator {
 
 impl ValueComparator<Value, Value> for JSONContainsMatchComparator {
     fn matches(&self, mock_value: &Value, req_value: &Value) -> bool {
-        let config = assert_json_diff::Config::new(CompareMode::Inclusive);
+        let config = Config::new(CompareMode::Inclusive);
         assert_json_matches_no_panic(req_value, mock_value, config).is_ok()
     }
 
