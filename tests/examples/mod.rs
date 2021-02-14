@@ -3,6 +3,7 @@ mod cookie_tests;
 mod custom_request_matcher_tests;
 mod delay_tests;
 mod delete_mock_tests;
+mod encoding_tests;
 mod file_body_tests;
 mod getting_started_tests;
 mod headers_tests;

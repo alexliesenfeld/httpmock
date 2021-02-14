@@ -63,6 +63,12 @@ impl From<&str> for Method {
     }
 }
 
+impl Into<String> for Method {
+    fn into(self) -> String {
+        self.to_string()
+    }
+}
+
 impl std::fmt::Display for Method {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         std::fmt::Debug::fmt(self, f)
