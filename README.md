@@ -1,6 +1,5 @@
 <div align="center">
 <h1>httpmock</h1>
-<span><iframe src="https://ghbtns.com/github-btn.html?user=alexliesenfeld&repo=httpmock&type=star&count=true"></iframe></span>
 </div>
 
 <p align="center">HTTP mocking library for Rust.</p>
