@@ -1489,6 +1489,7 @@ impl Mock {
     /// assert_eq!(body, "Moved Permanently");
     /// assert_eq!(response.headers().get("Location").unwrap().to_str().unwrap(), "http://www.google.com");
     /// ```
+    #[deprecated(since = "0.5.6", note = "Please use desired response code and headers instead")]
     pub fn return_permanent_redirect<S: Into<String>>(mut self, redirect_url: S) -> Self {
         // see https://developer.mozilla.org/en-US/docs/Web/HTTP/Redirections
         if self.mock.response.status.is_none() {
@@ -1540,6 +1541,7 @@ impl Mock {
     /// assert_eq!(body, "Found");
     /// assert_eq!(response.headers().get("Location").unwrap().to_str().unwrap(), "http://www.google.com");
     /// ```
+    #[deprecated(since = "0.5.6", note = "Please use desired response code and headers instead")]
     pub fn return_temporary_redirect<S: Into<String>>(mut self, redirect_url: S) -> Self {
         // see https://developer.mozilla.org/en-US/docs/Web/HTTP/Redirections
         if self.mock.response.status.is_none() {

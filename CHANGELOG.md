@@ -1,3 +1,6 @@
+## Version 0.5.6 
+- A bug has been fixed that caused false positive warnings in the log output. 
+
 ## Version 0.5.5
 - A bug has been fixed that prevented to use a request body in DELETE requests.  
 
