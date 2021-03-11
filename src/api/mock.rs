@@ -206,12 +206,26 @@ impl<'a> MockRef<'a> {
             return;
         }
 
+        if active_mock.call_counter > hits {
+            assert_eq!(
+                hits, active_mock.call_counter,
+                "The number of requests was higher than expected"
+            )
+        }
+
+        if active_mock.call_counter > 0 {
+            assert_eq!(
+                hits, active_mock.call_counter,
+                "Mock object did not receive enough calls"
+            )
+        }
+
         let closest_match = self
             .server
             .server_adapter
             .as_ref()
             .unwrap()
-            .verify(&active_mock.definition.request)
+            .find_closest_non_matching_request(&active_mock.definition.request)
             .await
             .expect("Cannot contact mock server");
 
@@ -1489,7 +1503,10 @@ impl Mock {
     /// assert_eq!(body, "Moved Permanently");
     /// assert_eq!(response.headers().get("Location").unwrap().to_str().unwrap(), "http://www.google.com");
     /// ```
-    #[deprecated(since = "0.5.6", note = "Please use desired response code and headers instead")]
+    #[deprecated(
+        since = "0.5.6",
+        note = "Please use desired response code and headers instead"
+    )]
     pub fn return_permanent_redirect<S: Into<String>>(mut self, redirect_url: S) -> Self {
         // see https://developer.mozilla.org/en-US/docs/Web/HTTP/Redirections
         if self.mock.response.status.is_none() {
@@ -1541,7 +1558,10 @@ impl Mock {
     /// assert_eq!(body, "Found");
     /// assert_eq!(response.headers().get("Location").unwrap().to_str().unwrap(), "http://www.google.com");
     /// ```
-    #[deprecated(since = "0.5.6", note = "Please use desired response code and headers instead")]
+    #[deprecated(
+        since = "0.5.6",
+        note = "Please use desired response code and headers instead"
+    )]
     pub fn return_temporary_redirect<S: Into<String>>(mut self, redirect_url: S) -> Self {
         // see https://developer.mozilla.org/en-US/docs/Web/HTTP/Redirections
         if self.mock.response.status.is_none() {

@@ -172,7 +172,7 @@ impl MockServerAdapter for RemoteMockServerAdapter {
         Ok(())
     }
 
-    async fn verify(&self, mock_rr: &RequestRequirements) -> Result<Option<ClosestMatch>, String> {
+    async fn find_closest_non_matching_request(&self, mock_rr: &RequestRequirements) -> Result<Option<ClosestMatch>, String> {
         // Serialize to JSON
         let json = match serde_json::to_string(mock_rr) {
             Err(err) => return Err(format!("Cannot serialize mock object to JSON: {}", err)),
@@ -180,7 +180,7 @@ impl MockServerAdapter for RemoteMockServerAdapter {
         };
 
         // Send the request to the mock server
-        let request_url = format!("http://{}/__verify", &self.address());
+        let request_url = format!("http://{}/__nearest-neighbour", &self.address());
         let request = Request::builder()
             .method("POST")
             .uri(request_url)

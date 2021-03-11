@@ -69,13 +69,13 @@ pub(crate) fn read_one(state: &MockServerState, id: usize) -> Result<ServerRespo
 }
 
 /// This route is responsible for verification
-pub(crate) fn verify(state: &MockServerState, body: String) -> Result<ServerResponse, String> {
+pub(crate) fn find_nearest_neighbour(state: &MockServerState, body: String) -> Result<ServerResponse, String> {
     let mock_rr: serde_json::Result<RequestRequirements> = serde_json::from_str(&body);
     if let Err(e) = mock_rr {
         return create_json_response(500, None, ErrorResponse::new(&e));
     }
 
-    match handlers::verify(&state, &mock_rr.unwrap()) {
+    match handlers::find_closest_non_matching_request(&state, &mock_rr.unwrap()) {
         Err(e) => create_json_response(500, None, ErrorResponse::new(&e)),
         Ok(closest_match) => match closest_match {
             None => create_response(404, None, None),

@@ -1,5 +1,6 @@
 extern crate httpmock;
 
+use self::httpmock::MockRef;
 use crate::simulate_standalone_server;
 use httpmock::MockServer;
 use isahc::get;
@@ -7,7 +8,6 @@ use regex::Replacer;
 use std::cell::RefCell;
 use std::io::Read;
 use std::rc::Rc;
-use self::httpmock::MockRef;
 
 #[test]
 fn loop_with_standalone_test() {

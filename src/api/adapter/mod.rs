@@ -12,7 +12,8 @@ use crate::data::{
     ActiveMock, ClosestMatch, MockDefinition, MockIdentification, RequestRequirements,
 };
 use crate::server::web::handlers::{
-    add_new_mock, delete_all_mocks, delete_history, delete_one_mock, read_one_mock, verify,
+    add_new_mock, delete_all_mocks, delete_history, delete_one_mock,
+    find_closest_non_matching_request, read_one_mock,
 };
 use crate::server::{Mismatch, MockServerState};
 
@@ -78,7 +79,7 @@ pub trait MockServerAdapter {
     async fn fetch_mock(&self, mock_id: usize) -> Result<ActiveMock, String>;
     async fn delete_mock(&self, mock_id: usize) -> Result<(), String>;
     async fn delete_all_mocks(&self) -> Result<(), String>;
-    async fn verify(&self, rr: &RequestRequirements) -> Result<Option<ClosestMatch>, String>;
+    async fn find_closest_non_matching_request(&self, rr: &RequestRequirements) -> Result<Option<ClosestMatch>, String>;
     async fn delete_history(&self) -> Result<(), String>;
     async fn ping(&self) -> Result<(), String>;
 }

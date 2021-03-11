@@ -1327,7 +1327,10 @@ impl Then {
     /// assert_eq!(body, "Found");
     /// assert_eq!(response.headers().get("Location").unwrap().to_str().unwrap(), "http://www.google.com");
     /// ```
-    #[deprecated(since = "0.5.6", note = "Please use desired response code and headers instead")]
+    #[deprecated(
+        since = "0.5.6",
+        note = "Please use desired response code and headers instead"
+    )]
     pub fn temporary_redirect<S: Into<String>>(mut self, redirect_url: S) -> Self {
         self.mock
             .set(self.mock.take().return_temporary_redirect(redirect_url));

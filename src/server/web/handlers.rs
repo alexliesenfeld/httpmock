@@ -132,7 +132,6 @@ fn request_matches(
     mock: &RequestRequirements,
 ) -> bool {
     log::trace!("Matching incoming HTTP request");
-
     state
         .matchers
         .iter()
@@ -141,15 +140,18 @@ fn request_matches(
 }
 
 /// Deletes the request history.
-pub(crate) fn verify(
+pub(crate) fn find_closest_non_matching_request(
     state: &MockServerState,
     mock_rr: &RequestRequirements,
 ) -> Result<Option<ClosestMatch>, String> {
     let mut history = state.history.write().unwrap();
 
-    let hit_counts = get_request_hit_counts(state, &mock_rr, &history);
-    let max_hits_requests = get_max_hits_requests(&hit_counts);
-    let request_distances = get_distances(&max_hits_requests, &history, &state.matchers, mock_rr);
+    let non_matching_requests: Vec<&Arc<HttpMockRequest>> = history
+        .iter()
+        .filter(|a| !request_matches(state, (*a).clone(), mock_rr))
+        .collect();
+
+    let request_distances = get_distances(&non_matching_requests, &state.matchers, mock_rr);
     let best_matches = get_min_distance_requests(&request_distances);
 
     let closes_match_request_idx = match best_matches.get(0) {
@@ -157,7 +159,7 @@ pub(crate) fn verify(
         Some(idx) => *idx,
     };
 
-    let req = history.get(closes_match_request_idx).unwrap();
+    let req = non_matching_requests.get(closes_match_request_idx).unwrap();
     let mismatches = get_request_mismatches(req, &mock_rr, &state.matchers);
 
     Ok(Some(ClosestMatch {
@@ -181,58 +183,15 @@ fn validate_mock_definition(req: &MockDefinition) -> Result<(), String> {
     Ok(())
 }
 
-// For each request, find the number of matchers that successfully matched
-fn get_request_hit_counts(
-    state: &MockServerState,
-    mock_rr: &RequestRequirements,
-    history: &Vec<Arc<HttpMockRequest>>,
-) -> BTreeMap<usize, usize> {
-    history
-        .iter()
-        .enumerate()
-        .map(|(idx, req)| {
-            (
-                idx,
-                state
-                    .matchers
-                    .iter()
-                    .filter(|mm| mm.matches(&req, mock_rr))
-                    .count(),
-            )
-        })
-        .collect()
-}
-
-// Remember the maximum number of matchers that successfully matched
-fn get_max_hits_requests(hit_counts: &BTreeMap<usize, usize>) -> BTreeMap<usize, usize> {
-    // Find the element with the maximum matches
-    let max_hits_req = hit_counts
-        .iter()
-        .max_by(|(idx1, num1), (idx2, num2)| num1.cmp(num2));
-
-    let max_hits = match max_hits_req {
-        None => return BTreeMap::new(),
-        Some((_, n)) => *n,
-    };
-
-    hit_counts
-        .into_iter()
-        .filter(|(a, b)| **b == max_hits)
-        .map(|(a, b)| (*a, *b))
-        .collect()
-}
-
 // Remember the maximum number of matchers that successfully matched
 fn get_distances(
-    requests: &BTreeMap<usize, usize>,
-    history: &Vec<Arc<HttpMockRequest>>,
+    history: &Vec<&Arc<HttpMockRequest>>,
     matchers: &Vec<Box<dyn Matcher + Sync + Send>>,
     mock_rr: &RequestRequirements,
 ) -> BTreeMap<usize, usize> {
     history
         .iter()
         .enumerate()
-        .filter(|(idx, r)| requests.contains_key(idx))
         .map(|(idx, req)| (idx, get_request_distance(req, mock_rr, matchers)))
         .collect()
 }
@@ -292,7 +251,8 @@ mod test {
         HttpMockRequest, MockDefinition, MockServerHttpResponse, Pattern, RequestRequirements,
     };
     use crate::server::web::handlers::{
-        add_new_mock, read_one_mock, request_matches, validate_mock_definition, verify,
+        add_new_mock, find_closest_non_matching_request, read_one_mock, request_matches,
+        validate_mock_definition,
     };
     use crate::server::MockServerState;
     use crate::Method;
@@ -713,7 +673,7 @@ mod test {
 
     /// This test checks if distance has influence on verification.
     #[test]
-    fn verify_closes_match_order_test() {
+    fn verify_closest_non_matching_request_test() {
         // Arrange
         let mut mock_server_state = MockServerState::new();
         {
@@ -740,11 +700,11 @@ mod test {
         rr.path = Some("/Briann".to_string());
 
         // Act
-        let result = verify(&mock_server_state, &rr);
+        let result = find_closest_non_matching_request(&mock_server_state, &rr);
 
         // Assert
         assert_eq!(result.as_ref().is_ok(), true);
         assert_eq!(result.as_ref().unwrap().is_some(), true);
-        assert_eq!(result.as_ref().unwrap().as_ref().unwrap().request_index, 1);
+        assert_eq!(result.as_ref().unwrap().as_ref().unwrap().request_index, 0);
     }
 }
