@@ -140,7 +140,7 @@ fn request_matches(
 }
 
 /// Deletes the request history.
-pub(crate) fn find_closest_non_matching_request(
+pub(crate) fn verify(
     state: &MockServerState,
     mock_rr: &RequestRequirements,
 ) -> Result<Option<ClosestMatch>, String> {
@@ -251,7 +251,7 @@ mod test {
         HttpMockRequest, MockDefinition, MockServerHttpResponse, Pattern, RequestRequirements,
     };
     use crate::server::web::handlers::{
-        add_new_mock, find_closest_non_matching_request, read_one_mock, request_matches,
+        add_new_mock, verify, read_one_mock, request_matches,
         validate_mock_definition,
     };
     use crate::server::MockServerState;
@@ -673,7 +673,7 @@ mod test {
 
     /// This test checks if distance has influence on verification.
     #[test]
-    fn verify_closest_non_matching_request_test() {
+    fn verify_test() {
         // Arrange
         let mut mock_server_state = MockServerState::new();
         {
@@ -700,7 +700,7 @@ mod test {
         rr.path = Some("/Briann".to_string());
 
         // Act
-        let result = find_closest_non_matching_request(&mock_server_state, &rr);
+        let result = verify(&mock_server_state, &rr);
 
         // Assert
         assert_eq!(result.as_ref().is_ok(), true);

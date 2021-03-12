@@ -480,7 +480,7 @@ async fn route_request(
 
     if VERIFY_PATH.is_match(&request_header.path) {
         match request_header.method.as_str() {
-            "POST" => return routes::find_nearest_neighbour(state, body),
+            "POST" => return routes::verify(state, body),
             _ => {}
         }
     }
@@ -537,7 +537,7 @@ lazy_static! {
     static ref MOCKS_PATH: Regex = Regex::new(r"^/__mocks$").unwrap();
     static ref MOCK_PATH: Regex = Regex::new(r"^/__mocks/([0-9]+)$").unwrap();
     static ref HISTORY_PATH: Regex = Regex::new(r"^/__history$").unwrap();
-    static ref VERIFY_PATH: Regex = Regex::new(r"^/__nearest-neighbour$").unwrap();
+    static ref VERIFY_PATH: Regex = Regex::new(r"^/__verify$").unwrap();
 }
 
 #[cfg(test)]
@@ -567,8 +567,11 @@ mod test {
         assert_eq!(PING_PATH.is_match("/__ping/1295473892374"), false);
         assert_eq!(PING_PATH.is_match("test/ping/1295473892374"), false);
 
-        assert_eq!(VERIFY_PATH.is_match("/__nearest-neighbour"), true);
-        assert_eq!(VERIFY_PATH.is_match("/__nearest-neighbour/1295473892374"), false);
+        assert_eq!(VERIFY_PATH.is_match("/__verify"), true);
+        assert_eq!(
+            VERIFY_PATH.is_match("/__verify/1295473892374"),
+            false
+        );
         assert_eq!(VERIFY_PATH.is_match("test/verify/1295473892374"), false);
 
         assert_eq!(HISTORY_PATH.is_match("/__history"), true);

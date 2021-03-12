@@ -208,15 +208,11 @@ impl<'a> MockRef<'a> {
 
         if active_mock.call_counter > hits {
             assert_eq!(
-                hits, active_mock.call_counter,
-                "The number of requests was higher than expected"
-            )
-        }
-
-        if active_mock.call_counter > 0 {
-            assert_eq!(
-                hits, active_mock.call_counter,
-                "Mock object did not receive enough calls"
+                active_mock.call_counter,
+                hits,
+                "The number of matching requests was higher than expected (expected {} but was {})",
+                hits,
+                active_mock.call_counter
             )
         }
 
@@ -225,11 +221,11 @@ impl<'a> MockRef<'a> {
             .server_adapter
             .as_ref()
             .unwrap()
-            .find_closest_non_matching_request(&active_mock.definition.request)
+            .verify(&active_mock.definition.request)
             .await
             .expect("Cannot contact mock server");
 
-        fail_with(closest_match)
+        fail_with(active_mock.call_counter, hits, closest_match)
     }
 
     /// This method returns the number of times a mock has been called at the mock server.
@@ -1761,15 +1757,17 @@ fn create_mismatch_output(idx: usize, mm: &Mismatch) -> String {
     output
 }
 
-fn fail_with(closest_match: Option<ClosestMatch>) {
+fn fail_with(actual_hits: usize, expected_hits: usize, closest_match: Option<ClosestMatch>) {
     match closest_match {
         None => assert!(false, "No request has been received by the mock server."),
         Some(closest_match) => {
             let mut output = String::new();
-
-            output.push_str("At least one request has been received, but none exactly matched the mock specification.\n");
             output.push_str(&format!(
-                "Here is a comparison with the most similar request (request number {}): \n\n",
+                "{} of {} expected requests matched the mock specification, .\n",
+                actual_hits, expected_hits
+            ));
+            output.push_str(&format!(
+                "Here is a comparison with the most similar non-matching request (request number {}): \n\n",
                 closest_match.request_index + 1
             ));
 
@@ -1835,7 +1833,7 @@ mod test {
         };
 
         // Act
-        fail_with(Some(closest_match));
+        fail_with(1, 2, Some(closest_match));
 
         // Assert
         // see "should panic" annotation
