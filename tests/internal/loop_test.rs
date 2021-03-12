@@ -1,13 +1,13 @@
 extern crate httpmock;
 
-use std::io::Read;
-
-use isahc::{get, get_async, Body, RequestExt};
-use regex::Replacer;
-
-use httpmock::MockServer;
-
+use self::httpmock::MockRef;
 use crate::simulate_standalone_server;
+use httpmock::MockServer;
+use isahc::get;
+use regex::Replacer;
+use std::cell::RefCell;
+use std::io::Read;
+use std::rc::Rc;
 
 #[test]
 fn loop_with_standalone_test() {
@@ -41,6 +41,13 @@ fn loop_with_local_test() {
     // Instead of creating a new MockServer using new(), we connect to an existing remote instance.
     let server = MockServer::start();
 
+    let mock = server.mock(|when, then| {
+        when.path("/test")
+            .path_contains("test")
+            .query_param("myQueryParam", "überschall");
+        then.status(202);
+    });
+
     for x in 0..1000 {
         let search_mock = server.mock(|when, then| {
             when.path(format!("/test/{}", x));
@@ -52,6 +59,7 @@ fn loop_with_local_test() {
 
         // Assert
         search_mock.assert();
+
         assert_eq!(response.status(), 202);
     }
 }

@@ -41,6 +41,7 @@ use crate::server::matchers::targets::{
 };
 use crate::server::matchers::Matcher;
 use crate::server::web::routes;
+use std::iter::Map;
 
 mod matchers;
 
@@ -567,7 +568,10 @@ mod test {
         assert_eq!(PING_PATH.is_match("test/ping/1295473892374"), false);
 
         assert_eq!(VERIFY_PATH.is_match("/__verify"), true);
-        assert_eq!(VERIFY_PATH.is_match("/__verify/1295473892374"), false);
+        assert_eq!(
+            VERIFY_PATH.is_match("/__verify/1295473892374"),
+            false
+        );
         assert_eq!(VERIFY_PATH.is_match("test/verify/1295473892374"), false);
 
         assert_eq!(HISTORY_PATH.is_match("/__history"), true);

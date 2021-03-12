@@ -52,11 +52,16 @@ use crate::MockServer;
 /// assert_eq!(response2.status(), 404);
 /// ```
 pub struct MockRef<'a> {
-    id: usize,
+    // Please find the reason why id is public in
+    // https://github.com/alexliesenfeld/httpmock/issues/26.
+    pub id: usize,
     server: &'a MockServer,
 }
 
 impl<'a> MockRef<'a> {
+    pub fn new(id: usize, server: &'a MockServer) -> Self {
+        Self { id, server }
+    }
     /// This method asserts that the mock server received **exactly one** HTTP request that matched
     /// all the request requirements of this mock.
     ///
@@ -201,6 +206,16 @@ impl<'a> MockRef<'a> {
             return;
         }
 
+        if active_mock.call_counter > hits {
+            assert_eq!(
+                active_mock.call_counter,
+                hits,
+                "The number of matching requests was higher than expected (expected {} but was {})",
+                hits,
+                active_mock.call_counter
+            )
+        }
+
         let closest_match = self
             .server
             .server_adapter
@@ -210,7 +225,7 @@ impl<'a> MockRef<'a> {
             .await
             .expect("Cannot contact mock server");
 
-        fail_with(closest_match)
+        fail_with(active_mock.call_counter, hits, closest_match)
     }
 
     /// This method returns the number of times a mock has been called at the mock server.
@@ -1484,6 +1499,10 @@ impl Mock {
     /// assert_eq!(body, "Moved Permanently");
     /// assert_eq!(response.headers().get("Location").unwrap().to_str().unwrap(), "http://www.google.com");
     /// ```
+    #[deprecated(
+        since = "0.5.6",
+        note = "Please use desired response code and headers instead"
+    )]
     pub fn return_permanent_redirect<S: Into<String>>(mut self, redirect_url: S) -> Self {
         // see https://developer.mozilla.org/en-US/docs/Web/HTTP/Redirections
         if self.mock.response.status.is_none() {
@@ -1535,6 +1554,10 @@ impl Mock {
     /// assert_eq!(body, "Found");
     /// assert_eq!(response.headers().get("Location").unwrap().to_str().unwrap(), "http://www.google.com");
     /// ```
+    #[deprecated(
+        since = "0.5.6",
+        note = "Please use desired response code and headers instead"
+    )]
     pub fn return_temporary_redirect<S: Into<String>>(mut self, redirect_url: S) -> Self {
         // see https://developer.mozilla.org/en-US/docs/Web/HTTP/Redirections
         if self.mock.response.status.is_none() {
@@ -1734,15 +1757,17 @@ fn create_mismatch_output(idx: usize, mm: &Mismatch) -> String {
     output
 }
 
-fn fail_with(closest_match: Option<ClosestMatch>) {
+fn fail_with(actual_hits: usize, expected_hits: usize, closest_match: Option<ClosestMatch>) {
     match closest_match {
         None => assert!(false, "No request has been received by the mock server."),
         Some(closest_match) => {
             let mut output = String::new();
-
-            output.push_str("At least one request has been received, but none exactly matched the mock specification.\n");
             output.push_str(&format!(
-                "Here is a comparison with the most similar request (request number {}): \n\n",
+                "{} of {} expected requests matched the mock specification, .\n",
+                actual_hits, expected_hits
+            ));
+            output.push_str(&format!(
+                "Here is a comparison with the most similar non-matching request (request number {}): \n\n",
                 closest_match.request_index + 1
             ));
 
@@ -1808,7 +1833,7 @@ mod test {
         };
 
         // Act
-        fail_with(Some(closest_match));
+        fail_with(1, 2, Some(closest_match));
 
         // Assert
         // see "should panic" annotation

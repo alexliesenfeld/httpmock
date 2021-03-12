@@ -1,3 +1,8 @@
+## Version 0.5.6 
+- A bug has been fixed that caused false positive warnings in the log output.
+- Updated all dependencies to the most recent versions.
+- Assertion error messages (`MockRef::assert` and `MockRef::assert_hits`) now contain more details.
+
 ## Version 0.5.5
 - A bug has been fixed that prevented to use a request body in DELETE requests.  
 

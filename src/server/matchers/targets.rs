@@ -56,7 +56,7 @@ impl ValueTarget<Value> for JSONBodyTarget {
 
         match serde_json::from_str(body.unwrap()) {
             Err(e) => {
-                log::warn!("Cannot parse json value: {}", e);
+                log::trace!("Cannot parse json value: {}", e);
                 None
             }
             Ok(v) => Some(v),
