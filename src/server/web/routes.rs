@@ -69,10 +69,7 @@ pub(crate) fn read_one(state: &MockServerState, id: usize) -> Result<ServerRespo
 }
 
 /// This route is responsible for verification
-pub(crate) fn verify(
-    state: &MockServerState,
-    body: String,
-) -> Result<ServerResponse, String> {
+pub(crate) fn verify(state: &MockServerState, body: String) -> Result<ServerResponse, String> {
     let mock_rr: serde_json::Result<RequestRequirements> = serde_json::from_str(&body);
     if let Err(e) = mock_rr {
         return create_json_response(500, None, ErrorResponse::new(&e));

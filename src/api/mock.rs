@@ -208,11 +208,9 @@ impl<'a> MockRef<'a> {
 
         if active_mock.call_counter > hits {
             assert_eq!(
-                active_mock.call_counter,
-                hits,
+                active_mock.call_counter, hits,
                 "The number of matching requests was higher than expected (expected {} but was {})",
-                hits,
-                active_mock.call_counter
+                hits, active_mock.call_counter
             )
         }
 
