@@ -12,8 +12,7 @@ use crate::data::{
     ActiveMock, ClosestMatch, MockDefinition, MockIdentification, RequestRequirements,
 };
 use crate::server::web::handlers::{
-    add_new_mock, delete_all_mocks, delete_history, delete_one_mock,
-    verify, read_one_mock,
+    add_new_mock, delete_all_mocks, delete_history, delete_one_mock, read_one_mock, verify,
 };
 use crate::server::MockServerState;
 
@@ -74,10 +73,7 @@ impl MockServerAdapter for LocalMockServerAdapter {
         Ok(())
     }
 
-    async fn verify(
-        &self,
-        mock_rr: &RequestRequirements,
-    ) -> Result<Option<ClosestMatch>, String> {
+    async fn verify(&self, mock_rr: &RequestRequirements) -> Result<Option<ClosestMatch>, String> {
         verify(&self.local_state, mock_rr)
     }
 

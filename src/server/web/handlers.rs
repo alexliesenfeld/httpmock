@@ -251,8 +251,7 @@ mod test {
         HttpMockRequest, MockDefinition, MockServerHttpResponse, Pattern, RequestRequirements,
     };
     use crate::server::web::handlers::{
-        add_new_mock, verify, read_one_mock, request_matches,
-        validate_mock_definition,
+        add_new_mock, read_one_mock, request_matches, validate_mock_definition, verify,
     };
     use crate::server::MockServerState;
     use crate::Method;
