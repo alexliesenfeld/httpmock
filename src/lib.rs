@@ -587,6 +587,10 @@ impl When {
     }
 
     /// Sets a query parameter that needs to be provided.
+    ///
+    /// Attention!: The request query keys and values are implicitly *allowed, but is not required*
+    /// to be urlencoded! The value you pass here, however, must be in plain text (i.e. not encoded)!
+    ///
     /// * `name` - The query parameter name that will matched against.
     /// * `value` - The value parameter name that will matched against.
     ///
@@ -616,6 +620,10 @@ impl When {
     }
 
     /// Sets a query parameter that needs to exist in an HTTP request.
+    ///
+    /// Attention!: The request query key is implicitly *allowed, but is not required* to be
+    /// urlencoded! The value you pass here, however, must be in plain text (i.e. not encoded)!
+    ///
     /// * `name` - The query parameter name that will matched against.
     ///
     /// ```
