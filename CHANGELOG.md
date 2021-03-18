@@ -1,3 +1,7 @@
+## Version 0.5.7
+- Dockerfile Rust version has been fixed
+- Documentation on query parameters has been enhanced.
+
 ## Version 0.5.6 
 - A bug has been fixed that caused false positive warnings in the log output.
 - Updated all dependencies to the most recent versions.
