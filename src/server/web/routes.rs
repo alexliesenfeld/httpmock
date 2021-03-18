@@ -167,10 +167,17 @@ fn to_handler_request(req: &ServerRequestHeader, body: String) -> Result<HttpMoc
 fn extract_query_params(query_string: &str) -> Result<Vec<(String, String)>, String> {
     let mut query_params = Vec::new();
 
-    for (key, value) in QString::from(query_string) {
-        query_params.push((key.to_string(), value.to_string()));
+    let r = queryst::parse(query_string).unwrap();
+    let a = r.as_array();
+
+    if Some(aa) = a {
+        for (key, value) in a {
+            println!("{}", query_string);
+            query_params.push((key.to_string(), value.to_string()));
+        }
     }
 
+    println!("{:?}", query_params);
     Ok(query_params)
 }
 

@@ -30,18 +30,14 @@ use crate::server::matchers::comparators::{
     StringRegexMatchComparator,
 };
 use crate::server::matchers::generic::{FunctionValueMatcher, MultiValueMatcher};
-use crate::server::matchers::sources::{
-    BodyRegexSource, ContainsCookieSource, ContainsHeaderSource, ContainsQueryParameterSource,
-    CookieSource, FunctionSource, HeaderSource, JSONBodySource, MethodSource,
-    PartialJSONBodySource, PathContainsSubstringSource, PathRegexSource, QueryParameterSource,
-    StringBodyContainsSource, StringBodySource, StringPathSource,
-};
+use crate::server::matchers::sources::{BodyRegexSource, ContainsCookieSource, ContainsHeaderSource, ContainsQueryParameterSource, CookieSource, FunctionSource, HeaderSource, JSONBodySource, MethodSource, PartialJSONBodySource, PathContainsSubstringSource, PathRegexSource, QueryParameterSource, StringBodyContainsSource, StringBodySource, StringPathSource, QueryParameterUrlencodedSource};
 use crate::server::matchers::targets::{
     CookieTarget, FullRequestTarget, HeaderTarget, MethodTarget, PathTarget, QueryParameterTarget,
 };
 use crate::server::matchers::Matcher;
 use crate::server::web::routes;
 use std::iter::Map;
+use crate::server::matchers::transformers::DecodeURLEncodingValueTransformer;
 
 mod matchers;
 
@@ -132,6 +128,19 @@ impl MockServerState {
                     key_transformer: None,
                     value_transformer: None,
                     source: Box::new(ContainsQueryParameterSource::new()),
+                    target: Box::new(QueryParameterTarget::new()),
+                    with_reason: true,
+                    diff_with: None,
+                    weight: 1,
+                }),
+                // Query Param urlencoded exact
+                Box::new(MultiValueMatcher {
+                    entity_name: "query parameter (urlencoded)",
+                    key_comparator: Box::new(StringExactMatchComparator::new(true)),
+                    value_comparator: Box::new(StringExactMatchComparator::new(true)),
+                    key_transformer: Some(Box::new(DecodeURLEncodingValueTransformer::new())),
+                    value_transformer: Some(Box::new(DecodeURLEncodingValueTransformer::new())),
+                    source: Box::new(QueryParameterUrlencodedSource::new()),
                     target: Box::new(QueryParameterTarget::new()),
                     with_reason: true,
                     diff_with: None,

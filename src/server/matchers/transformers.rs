@@ -24,6 +24,24 @@ impl Transformer<String, String> for DecodeBase64ValueTransformer {
 // ************************************************************************************************
 // Base64ValueTransformer
 // ************************************************************************************************
+pub(crate) struct DecodeURLEncodingValueTransformer {}
+
+impl DecodeURLEncodingValueTransformer {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+impl Transformer<String, String> for DecodeURLEncodingValueTransformer {
+    fn transform(&self, v: &String) -> Result<String, String> {
+        println!("{}", v);
+        urlencoding::decode(v).map_err(|err| err.to_string())
+    }
+}
+
+// ************************************************************************************************
+// Base64ValueTransformer
+// ************************************************************************************************
 pub(crate) struct ToLowercaseTransformer {}
 
 impl ToLowercaseTransformer {

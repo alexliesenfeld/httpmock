@@ -184,6 +184,7 @@ pub struct RequestRequirements {
     pub body_matches: Option<Vec<Pattern>>,
     pub query_param_exists: Option<Vec<String>>,
     pub query_param: Option<Vec<(String, String)>>,
+    pub query_param_urlencoded: Option<Vec<(String, String)>>,
 
     #[serde(skip_serializing, skip_deserializing)]
     pub matchers: Option<Vec<MockMatcherFunction>>,
@@ -207,6 +208,7 @@ impl RequestRequirements {
             body_matches: None,
             query_param_exists: None,
             query_param: None,
+            query_param_urlencoded: None,
             matchers: None,
         }
     }

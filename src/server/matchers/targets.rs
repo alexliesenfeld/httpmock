@@ -127,8 +127,8 @@ impl QueryParameterTarget {
 
 impl MultiValueTarget<String, String> for QueryParameterTarget {
     fn parse_from_request(&self, req: &HttpMockRequest) -> Option<Vec<(String, Option<String>)>> {
-        req.query_params.as_ref().map(|headers| {
-            headers
+        req.query_params.as_ref().map(|query_params| {
+            query_params
                 .into_iter()
                 .map(|(k, v)| (k.to_string(), Some(v.to_string())))
                 .collect()

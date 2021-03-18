@@ -529,6 +529,7 @@ impl Mock {
                     body_matches: None,
                     query_param_exists: None,
                     query_param: None,
+                    query_param_urlencoded: None,
                     matchers: None,
                 },
                 response: MockServerHttpResponse {
@@ -1133,6 +1134,45 @@ impl Mock {
         self.mock
             .request
             .query_param
+            .as_mut()
+            .unwrap()
+            .push((name.into(), value.into()));
+
+        self
+    }
+
+    /// Sets the expected query parameter key and value. Both values are expected to be provided
+    /// here as plain values (i.e. not urlencoded).
+    /// * `name` - The query parameter name that will matched against.
+    /// * `value` - The value parameter name that will matched against.
+    ///
+    /// ```
+    /// // Arrange
+    /// use isahc::get;
+    /// use httpmock::{MockServer, Mock};
+    ///
+    /// let _ = env_logger::try_init();
+    /// let server = MockServer::start();
+    ///
+    /// let m = Mock::new()
+    ///     .expect_query_param_urlencoded("query", "Motörhead")
+    ///     .return_status(200)
+    ///     .create_on(&server);
+    ///
+    /// // Act
+    /// get(server.url("/search?query=Mot%C3%B6rhead")).unwrap();
+    ///
+    /// // Assert
+    /// m.assert();
+    /// ```
+    pub fn expect_query_param_urlencoded<S: Into<String>>(mut self, name: S, value: S) -> Self {
+        if self.mock.request.query_param.is_none() {
+            self.mock.request.query_param_urlencoded = Some(Vec::new());
+        }
+
+        self.mock
+            .request
+            .query_param_urlencoded
             .as_mut()
             .unwrap()
             .push((name.into(), value.into()));

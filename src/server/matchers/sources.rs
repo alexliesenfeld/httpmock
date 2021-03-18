@@ -312,6 +312,28 @@ impl MultiValueSource<String, String> for ContainsQueryParameterSource {
 }
 
 // ************************************************************************************************
+// QueryParameterUrlencodedSource
+// ************************************************************************************************
+pub(crate) struct QueryParameterUrlencodedSource {}
+
+impl QueryParameterUrlencodedSource {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+impl MultiValueSource<String, String> for QueryParameterUrlencodedSource {
+    fn parse_from_mock<'a>(
+        &self,
+        mock: &'a RequestRequirements,
+    ) -> Option<Vec<(&'a String, Option<&'a String>)>> {
+        mock.query_param_urlencoded
+            .as_ref()
+            .map(|v| v.into_iter().map(|(k, v)| (k, Some(v))).collect())
+    }
+}
+
+// ************************************************************************************************
 // FunctionSource
 // ************************************************************************************************
 pub(crate) struct FunctionSource {}

@@ -615,6 +615,36 @@ impl When {
         self
     }
 
+    /// Sets a query parameter key and value that need to be provided in plain text here
+    /// (i.e. not encoded).
+    /// * `name` - The query parameter name that will matched against.
+    /// * `value` - The value parameter name that will matched against.
+    ///
+    /// ```
+    /// // Arrange
+    /// use isahc::get;
+    /// use httpmock::{MockServer, Mock};
+    ///
+    /// let _ = env_logger::try_init();
+    /// let server = MockServer::start();
+    ///
+    /// let m = server.mock(|when, then|{
+    ///     when.query_param_urlencoded("query", "Motörhead");
+    ///     then.status(200);
+    /// });
+    ///
+    /// // Act
+    /// get(server.url("/search?query=Mot%C3%B6rhead")).unwrap();
+    ///
+    /// // Assert
+    /// m.assert();
+    /// ```
+    pub fn query_param_urlencoded<S: Into<String>>(self, name: S, value: S) -> Self {
+        self.mock
+            .set(self.mock.take().expect_query_param_urlencoded(name, value));
+        self
+    }
+
     /// Sets a query parameter that needs to exist in an HTTP request.
     /// * `name` - The query parameter name that will matched against.
     ///

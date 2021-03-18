@@ -19,9 +19,11 @@ hyper = { version = "0.14", features = ["server", "http1", "tcp"] }
 tokio = { version = "1.3", features = ["sync", "macros", "rt-multi-thread"] }
 isahc = "1.1"
 base64 = "0.13"
+urlencoding = "1.1.1"
 regex = "1.4"
 log = "0.4"
 qstring = "0.7"
+queryst = "2.1.0"
 assert-json-diff = "2.0"
 async-trait = "0.1"
 async-object-pool = "0.1"
