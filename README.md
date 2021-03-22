@@ -8,7 +8,7 @@
 [![Build Status](https://dev.azure.com/alexliesenfeld/httpmock/_apis/build/status/alexliesenfeld.httpmock?branchName=master)](https://dev.azure.com/alexliesenfeld/httpmock/_build/latest?definitionId=2&branchName=master)
 [![codecov](https://codecov.io/gh/alexliesenfeld/httpmock/branch/master/graph/badge.svg)](https://codecov.io/gh/alexliesenfeld/httpmock)
 [![crates.io](https://img.shields.io/crates/d/httpmock.svg)](https://crates.io/crates/httpmock)
-[![Rust](https://img.shields.io/badge/rust-1.45%2B-blue.svg?maxAge=3600)](https://github.com/rust-lang/rust/blob/master/RELEASES.md#version-1452-2020-08-03)
+[![Rust](https://img.shields.io/badge/rust-1.46%2B-blue.svg?maxAge=3600)](https://github.com/rust-lang/rust/blob/master/RELEASES.md#version-1460-2020-08-27)
 [![License](https://img.shields.io/github/license/alexliesenfeld/httpmock.svg)](LICENSE)
 	
 </div>
