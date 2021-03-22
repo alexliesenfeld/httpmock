@@ -7,6 +7,7 @@ use async_trait::async_trait;
 use isahc::http::Request;
 use isahc::prelude::Configurable;
 use isahc::{AsyncReadResponseExt, ResponseExt};
+use serde::{Deserialize, Serialize};
 
 use crate::data::{
     ActiveMock, ClosestMatch, MockDefinition, MockIdentification, RequestRequirements,
@@ -25,7 +26,7 @@ pub type Regex = regex::Regex;
 pub type InternalHttpClient = isahc::HttpClient;
 
 /// Represents an HTTP method.
-#[derive(Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub enum Method {
     GET,
     HEAD,
@@ -87,7 +88,7 @@ async fn http_ping(
     server_addr: &SocketAddr,
     http_client: &InternalHttpClient,
 ) -> Result<(), String> {
-    let request_url = format!("http://{}/__ping", server_addr);
+    let request_url = format!("http://{}/__httpmock__/ping", server_addr);
     let request = Request::builder()
         .method("GET")
         .uri(request_url)

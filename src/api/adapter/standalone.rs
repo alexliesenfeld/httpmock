@@ -61,7 +61,7 @@ impl MockServerAdapter for RemoteMockServerAdapter {
         };
 
         // Send the request to the mock server
-        let request_url = format!("http://{}/__mocks", &self.address());
+        let request_url = format!("http://{}/__httpmock__/mocks", &self.address());
         let request = Request::builder()
             .method("POST")
             .uri(request_url)
@@ -93,7 +93,7 @@ impl MockServerAdapter for RemoteMockServerAdapter {
 
     async fn fetch_mock(&self, mock_id: usize) -> Result<ActiveMock, String> {
         // Send the request to the mock server
-        let request_url = format!("http://{}/__mocks/{}", &self.address(), mock_id);
+        let request_url = format!("http://{}/__httpmock__/mocks/{}", &self.address(), mock_id);
         let request = Request::builder()
             .method("GET")
             .uri(request_url)
@@ -124,7 +124,7 @@ impl MockServerAdapter for RemoteMockServerAdapter {
 
     async fn delete_mock(&self, mock_id: usize) -> Result<(), String> {
         // Send the request to the mock server
-        let request_url = format!("http://{}/__mocks/{}", &self.address(), mock_id);
+        let request_url = format!("http://{}/__httpmock__/mocks/{}", &self.address(), mock_id);
         let request = Request::builder()
             .method("DELETE")
             .uri(request_url)
@@ -149,7 +149,7 @@ impl MockServerAdapter for RemoteMockServerAdapter {
 
     async fn delete_all_mocks(&self) -> Result<(), String> {
         // Send the request to the mock server
-        let request_url = format!("http://{}/__mocks", &self.address());
+        let request_url = format!("http://{}/__httpmock__/mocks", &self.address());
         let request = Request::builder()
             .method("DELETE")
             .uri(request_url)
@@ -180,7 +180,7 @@ impl MockServerAdapter for RemoteMockServerAdapter {
         };
 
         // Send the request to the mock server
-        let request_url = format!("http://{}/__verify", &self.address());
+        let request_url = format!("http://{}/__httpmock__/verify", &self.address());
         let request = Request::builder()
             .method("POST")
             .uri(request_url)
@@ -216,7 +216,7 @@ impl MockServerAdapter for RemoteMockServerAdapter {
 
     async fn delete_history(&self) -> Result<(), String> {
         // Send the request to the mock server
-        let request_url = format!("http://{}/__history", &self.address());
+        let request_url = format!("http://{}/__httpmock__/history", &self.address());
         let request = Request::builder()
             .method("DELETE")
             .uri(request_url)

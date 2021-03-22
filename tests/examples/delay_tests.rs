@@ -4,7 +4,7 @@ use std::time::{Duration, SystemTime};
 
 use isahc::get;
 
-use httpmock::{Mock, MockServer};
+use httpmock::MockServer;
 
 #[test]
 fn delay_test() {

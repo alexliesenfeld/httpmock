@@ -4,8 +4,6 @@ use isahc::get;
 
 use httpmock::{MockServer, Regex};
 
-use self::httpmock::Mock;
-
 #[test]
 fn url_matching_test() {
     // Arrange

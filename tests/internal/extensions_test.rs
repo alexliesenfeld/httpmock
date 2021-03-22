@@ -1,13 +1,8 @@
 extern crate httpmock;
 
 use self::httpmock::MockRef;
-use crate::simulate_standalone_server;
 use httpmock::MockServer;
-use isahc::get;
-use regex::Replacer;
 use std::cell::RefCell;
-use std::io::Read;
-use std::rc::Rc;
 
 // Test for issue https://github.com/alexliesenfeld/httpmock/issues/26
 #[test]

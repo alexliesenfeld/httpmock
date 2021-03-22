@@ -1,10 +1,10 @@
 extern crate httpmock;
 
 use isahc::{get, get_async};
-use serde_json::json;
 
-use httpmock::Method::{GET, POST};
-use httpmock::{Mock, MockServer};
+use self::httpmock::Mock;
+use httpmock::Method::GET;
+use httpmock::MockServer;
 
 #[test]
 fn getting_started_test() {

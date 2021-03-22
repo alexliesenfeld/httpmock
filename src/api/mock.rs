@@ -1453,7 +1453,7 @@ impl Mock {
     /// ```
     pub fn return_header<S: Into<String>>(mut self, name: S, value: S) -> Self {
         if self.mock.response.headers.is_none() {
-            self.mock.response.headers = Some(BTreeMap::new());
+            self.mock.response.headers = Some(Vec::new());
         }
 
         self.mock
@@ -1461,7 +1461,7 @@ impl Mock {
             .headers
             .as_mut()
             .unwrap()
-            .insert(name.into(), value.into());
+            .push((name.into(), value.into()));
 
         self
     }

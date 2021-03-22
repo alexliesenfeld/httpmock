@@ -209,6 +209,7 @@ pub use crate::api::{Method, Mock, MockRef, MockRefExt, Regex};
 pub use data::{HttpMockRequest, MockMatcherFunction};
 
 use crate::api::{LocalMockServerAdapter, RemoteMockServerAdapter};
+use crate::data::Pattern;
 use crate::server::{start_server, MockServerState};
 use crate::util::{read_env, with_retry};
 use api::MockServerAdapter;
@@ -217,18 +218,8 @@ use util::Join;
 mod api;
 pub(crate) mod data;
 mod server;
+pub mod standalone;
 pub(crate) mod util;
-
-pub mod standalone {
-    use std::sync::Arc;
-
-    use crate::server::{start_server, MockServerState};
-
-    pub async fn start_standalone_server(port: u16, expose: bool) -> Result<(), String> {
-        let state = Arc::new(MockServerState::new());
-        start_server(port, expose, &state, None).await
-    }
-}
 
 /// A mock server that is able to receive and respond to HTTP requests.
 pub struct MockServer {
@@ -1437,7 +1428,7 @@ const LOCAL_SERVER_ADAPTER_GENERATOR: fn() -> Arc<dyn MockServerAdapter + Send +
 
     thread::spawn(move || {
         let server_state = server_state.clone();
-        let srv = start_server(0, false, &server_state, Some(addr_sender));
+        let srv = start_server(0, false, &server_state, Some(addr_sender), false);
 
         let mut runtime = tokio::runtime::Builder::new_current_thread()
             .enable_all()
@@ -1460,4 +1451,43 @@ lazy_static! {
     };
     static ref REMOTE_SERVER_POOL_REF: Arc<Pool<Arc<dyn MockServerAdapter + Send + Sync>>> =
         Arc::new(Pool::new(1));
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+pub struct NameValuePair {
+    name: String,
+    value: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct YAMLRequestRequirements {
+    pub path: Option<String>,
+    pub path_contains: Option<Vec<String>>,
+    pub path_matches: Option<Vec<String>>,
+    pub method: Option<Method>,
+    pub header: Option<Vec<NameValuePair>>,
+    pub header_exists: Option<Vec<String>>,
+    pub cookie: Option<Vec<NameValuePair>>,
+    pub cookie_exists: Option<Vec<String>>,
+    pub body: Option<String>,
+    pub json_body: Option<Value>,
+    pub json_body_partial: Option<Vec<Value>>,
+    pub body_contains: Option<Vec<String>>,
+    pub body_matches: Option<Vec<String>>,
+    pub query_param_exists: Option<Vec<String>>,
+    pub query_param: Option<Vec<NameValuePair>>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct YAMLHTTPResponse {
+    pub status: Option<u16>,
+    pub header: Option<Vec<NameValuePair>>,
+    pub body: Option<String>,
+    pub delay: Option<u64>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct YAMLMockDefinition {
+    when: YAMLRequestRequirements,
+    then: YAMLHTTPResponse,
 }

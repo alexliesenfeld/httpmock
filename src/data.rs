@@ -56,7 +56,7 @@ impl HttpMockRequest {
 #[derive(Serialize, Deserialize, Clone)]
 pub struct MockServerHttpResponse {
     pub status: Option<u16>,
-    pub headers: Option<BTreeMap<String, String>>,
+    pub headers: Option<Vec<(String, String)>>,
     #[serde(default, with = "opt_vector_serde_base64")]
     pub body: Option<Vec<u8>>,
     pub delay: Option<Duration>,
@@ -319,14 +319,16 @@ pub struct ActiveMock {
     pub id: usize,
     pub call_counter: usize,
     pub definition: MockDefinition,
+    pub is_static: bool,
 }
 
 impl ActiveMock {
-    pub fn new(id: usize, mock_definition: MockDefinition) -> Self {
+    pub fn new(id: usize, mock_definition: MockDefinition, is_static: bool) -> Self {
         ActiveMock {
             id,
             definition: mock_definition,
             call_counter: 0,
+            is_static,
         }
     }
 }

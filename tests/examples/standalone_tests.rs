@@ -2,8 +2,7 @@ extern crate httpmock;
 
 use std::io::Read;
 
-use isahc::{get, get_async, Body, Request, RequestExt};
-use regex::Replacer;
+use isahc::{get_async, Body, Request, RequestExt};
 
 use httpmock::MockServer;
 

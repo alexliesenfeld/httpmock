@@ -6,6 +6,8 @@ use serde::Serialize;
 use crate::data::*;
 use crate::server::web::handlers;
 use crate::server::{MockServerState, ServerRequestHeader, ServerResponse};
+use std::time::Instant;
+use tokio::time::Duration;
 
 /// This route is responsible for adding a new mock
 pub(crate) fn ping() -> Result<ServerResponse, String> {
@@ -21,7 +23,7 @@ pub(crate) fn add(state: &MockServerState, body: String) -> Result<ServerRespons
     }
     let mock_def = mock_def.unwrap();
 
-    let result = handlers::add_new_mock(&state, mock_def);
+    let result = handlers::add_new_mock(&state, mock_def, false);
 
     match result {
         Err(e) => create_json_response(500, None, ErrorResponse::new(&e)),
@@ -92,14 +94,16 @@ pub(crate) async fn serve(
     body: String,
 ) -> Result<ServerResponse, String> {
     let handler_request_result = to_handler_request(&req, body);
-    match handler_request_result {
+    let result = match handler_request_result {
         Ok(handler_request) => {
             let handler_response = handlers::find_mock(&state, handler_request);
             let handler_response = postprocess_response(handler_response).await;
             to_route_response(handler_response)
         }
         Err(e) => create_json_response(500, None, ErrorResponse::new(&e)),
-    }
+    };
+
+    return result;
 }
 
 /// Maps the result of the serve handler to an HTTP response which the web framework understands
@@ -121,7 +125,7 @@ fn to_route_response(
 
 fn create_json_response<T>(
     status: u16,
-    headers: Option<BTreeMap<String, String>>,
+    headers: Option<Vec<(String, String)>>,
     body: T,
 ) -> Result<ServerResponse, String>
 where
@@ -133,14 +137,14 @@ where
     }
 
     let mut headers = headers.unwrap_or_default();
-    headers.insert("Content-Type".to_string(), "application/json".to_string());
+    headers.push(("Content-Type".to_string(), "application/json".to_string()));
 
     create_response(status, Some(headers), Some(body.unwrap()))
 }
 
 fn create_response(
     status: u16,
-    headers: Option<BTreeMap<String, String>>,
+    headers: Option<Vec<(String, String)>>,
     body: Option<Vec<u8>>,
 ) -> Result<ServerResponse, String> {
     let headers = headers.unwrap_or_default();

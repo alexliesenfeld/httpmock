@@ -48,7 +48,7 @@ impl MockServerAdapter for LocalMockServerAdapter {
     }
 
     async fn create_mock(&self, mock: &MockDefinition) -> Result<MockIdentification, String> {
-        let id = add_new_mock(&self.local_state, mock.clone())?;
+        let id = add_new_mock(&self.local_state, mock.clone(), false)?;
         Ok(MockIdentification::new(id))
     }
 

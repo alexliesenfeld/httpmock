@@ -41,7 +41,11 @@ use crate::server::matchers::targets::{
 };
 use crate::server::matchers::Matcher;
 use crate::server::web::routes;
+use futures_util::task::Spawn;
+use std::future::Future;
 use std::iter::Map;
+use std::time::Instant;
+use tokio::signal::unix::SignalKind;
 
 mod matchers;
 
@@ -304,12 +308,12 @@ impl ServerRequestHeader {
 #[derive(Default, Debug)]
 pub(crate) struct ServerResponse {
     pub status: u16,
-    pub headers: BTreeMap<String, String>,
+    pub headers: Vec<(String, String)>,
     pub body: Vec<u8>,
 }
 
 impl ServerResponse {
-    pub fn new(status: u16, headers: BTreeMap<String, String>, body: Vec<u8>) -> Self {
+    pub fn new(status: u16, headers: Vec<(String, String)>, body: Vec<u8>) -> Self {
         Self {
             status,
             headers,
@@ -330,6 +334,39 @@ fn extract_headers(header_map: &HeaderMap) -> Result<Vec<(String, String)>, Stri
         headers.push((hn, hv.unwrap().to_string()));
     }
     Ok(headers)
+}
+
+async fn access_log_middleware<T>(
+    req: HyperRequest<Body>,
+    state: Arc<MockServerState>,
+    print_access_log: bool,
+    next: fn(req: HyperRequest<Body>, state: Arc<MockServerState>) -> T,
+) -> HyperResult<HyperResponse<Body>>
+where
+    T: Future<Output = HyperResult<HyperResponse<Body>>>,
+{
+    let time_request_received = Instant::now();
+
+    let request_method = req.method().to_string();
+    let request_uri = req.uri().to_string();
+    let request_http_version = format!("{:?}", &req.version());
+
+    let result = next(req, state).await;
+
+    if print_access_log && !request_uri.starts_with(&format!("{}/", BASE_PATH)) {
+        if let Ok(response) = &result {
+            log::info!(
+                "\"{} {} {:?}\" {} {}",
+                request_method,
+                request_uri,
+                request_http_version,
+                response.status().as_u16(),
+                time_request_received.elapsed().as_millis()
+            );
+        }
+    };
+
+    return result;
 }
 
 async fn handle_server_request(
@@ -368,6 +405,21 @@ async fn handle_server_request(
     Ok(response.unwrap())
 }
 
+async fn shutdown_signal() {
+    let mut hangup_stream = tokio::signal::unix::signal(SignalKind::hangup())
+        .expect("Cannot install SIGINT signal handler");
+    let mut sigint_stream = tokio::signal::unix::signal(SignalKind::interrupt())
+        .expect("Cannot install SIGINT signal handler");
+    let mut sigterm_stream = tokio::signal::unix::signal(SignalKind::terminate())
+        .expect("Cannot install SIGINT signal handler");
+
+    tokio::select! {
+        val = hangup_stream.recv() => log::trace!("Received SIGINT"),
+        val = sigint_stream.recv() => log::trace!("Received SIGINT"),
+        val = sigterm_stream.recv() => log::trace!("Received SIGTERM"),
+    }
+}
+
 /// Starts a new instance of an HTTP mock server. You should never need to use this function
 /// directly. Use it if you absolutely need to manage the low-level details of how the mock
 /// server operates.
@@ -376,6 +428,7 @@ pub(crate) async fn start_server(
     expose: bool,
     state: &Arc<MockServerState>,
     socket_addr_sender: Option<tokio::sync::oneshot::Sender<SocketAddr>>,
+    print_access_log: bool,
 ) -> Result<(), String> {
     let host = if expose { "0.0.0.0" } else { "127.0.0.1" };
 
@@ -385,15 +438,18 @@ pub(crate) async fn start_server(
         async move {
             Ok::<_, GenericError>(service_fn(move |req: HyperRequest<Body>| {
                 let state = state.clone();
-                handle_server_request(req, state)
+                access_log_middleware(req, state, print_access_log, handle_server_request)
             }))
         }
     });
 
     let server = Server::bind(&format!("{}:{}", host, port).parse().unwrap()).serve(new_service);
+    let addr = server.local_addr();
 
+    // And now add a graceful shutdown signal...
+    let graceful = server.with_graceful_shutdown(shutdown_signal());
     if let Some(socket_addr_sender) = socket_addr_sender {
-        if let Err(e) = socket_addr_sender.send(server.local_addr()) {
+        if let Err(e) = socket_addr_sender.send(addr) {
             return Err(format!(
                 "Cannot send socket information to the test thread: {:?}",
                 e
@@ -401,8 +457,8 @@ pub(crate) async fn start_server(
         }
     }
 
-    log::info!("Listening on {}", server.local_addr());
-    if let Err(e) = server.await {
+    log::info!("Listening on {}", addr);
+    if let Err(e) = graceful.await {
         return Err(format!("Err: {}", e));
     }
 
@@ -532,12 +588,14 @@ fn error_response(body: String) -> HyperResponse<Body> {
         .expect("Cannot build route error response")
 }
 
+static BASE_PATH: &'static str = "/__httpmock__";
+
 lazy_static! {
-    static ref PING_PATH: Regex = Regex::new(r"^/__ping$").unwrap();
-    static ref MOCKS_PATH: Regex = Regex::new(r"^/__mocks$").unwrap();
-    static ref MOCK_PATH: Regex = Regex::new(r"^/__mocks/([0-9]+)$").unwrap();
-    static ref HISTORY_PATH: Regex = Regex::new(r"^/__history$").unwrap();
-    static ref VERIFY_PATH: Regex = Regex::new(r"^/__verify$").unwrap();
+    static ref PING_PATH: Regex = Regex::new(&format!(r"^{}/ping$", BASE_PATH)).unwrap();
+    static ref MOCKS_PATH: Regex = Regex::new(&format!(r"^{}/mocks$", BASE_PATH)).unwrap();
+    static ref MOCK_PATH: Regex = Regex::new(&format!(r"^{}/mocks/([0-9]+)$", BASE_PATH)).unwrap();
+    static ref HISTORY_PATH: Regex = Regex::new(&format!("r^{}/history$", BASE_PATH)).unwrap();
+    static ref VERIFY_PATH: Regex = Regex::new(&format!(r"^{}/verify$", BASE_PATH)).unwrap();
 }
 
 #[cfg(test)]
@@ -556,29 +614,44 @@ mod test {
 
     #[test]
     fn route_regex_test() {
-        assert_eq!(MOCK_PATH.is_match("/__mocks/1"), true);
-        assert_eq!(MOCK_PATH.is_match("/__mocks/1295473892374"), true);
-        assert_eq!(MOCK_PATH.is_match("/__mocks/abc"), false);
-        assert_eq!(MOCK_PATH.is_match("/__mocks"), false);
-        assert_eq!(MOCK_PATH.is_match("/__mocks/345345/test"), false);
-        assert_eq!(MOCK_PATH.is_match("test/__mocks/345345/test"), false);
+        assert_eq!(MOCK_PATH.is_match("/__httpmock__/mocks/1"), true);
+        assert_eq!(
+            MOCK_PATH.is_match("/__httpmock__/mocks/1295473892374"),
+            true
+        );
+        assert_eq!(MOCK_PATH.is_match("/__httpmock__/mocks/abc"), false);
+        assert_eq!(MOCK_PATH.is_match("/__httpmock__/mocks"), false);
+        assert_eq!(MOCK_PATH.is_match("/__httpmock__/mocks/345345/test"), false);
+        assert_eq!(
+            MOCK_PATH.is_match("test/__httpmock__/mocks/345345/test"),
+            false
+        );
 
-        assert_eq!(PING_PATH.is_match("/__ping"), true);
-        assert_eq!(PING_PATH.is_match("/__ping/1295473892374"), false);
+        assert_eq!(PING_PATH.is_match("/__httpmock__/ping"), true);
+        assert_eq!(
+            PING_PATH.is_match("/__httpmock__/ping/1295473892374"),
+            false
+        );
         assert_eq!(PING_PATH.is_match("test/ping/1295473892374"), false);
 
-        assert_eq!(VERIFY_PATH.is_match("/__verify"), true);
-        assert_eq!(VERIFY_PATH.is_match("/__verify/1295473892374"), false);
+        assert_eq!(VERIFY_PATH.is_match("/__httpmock__/verify"), true);
+        assert_eq!(
+            VERIFY_PATH.is_match("/__httpmock__/verify/1295473892374"),
+            false
+        );
         assert_eq!(VERIFY_PATH.is_match("test/verify/1295473892374"), false);
 
-        assert_eq!(HISTORY_PATH.is_match("/__history"), true);
-        assert_eq!(HISTORY_PATH.is_match("/__history/1295473892374"), false);
+        assert_eq!(HISTORY_PATH.is_match("/__httpmock__/history"), true);
+        assert_eq!(
+            HISTORY_PATH.is_match("/__httpmock__/history/1295473892374"),
+            false
+        );
         assert_eq!(HISTORY_PATH.is_match("test/history/1295473892374"), false);
 
-        assert_eq!(MOCKS_PATH.is_match("/__mocks"), true);
-        assert_eq!(MOCKS_PATH.is_match("/__mocks/5"), false);
-        assert_eq!(MOCKS_PATH.is_match("test/__mocks/5"), false);
-        assert_eq!(MOCKS_PATH.is_match("test/__mocks/567"), false);
+        assert_eq!(MOCKS_PATH.is_match("/__httpmock__/mocks"), true);
+        assert_eq!(MOCKS_PATH.is_match("/__httpmock__/mocks/5"), false);
+        assert_eq!(MOCKS_PATH.is_match("test/__httpmock__/mocks/5"), false);
+        assert_eq!(MOCKS_PATH.is_match("test/__httpmock__/mocks/567"), false);
     }
 
     /// Make sure passing an empty string to the error response does not result in an error.
@@ -601,8 +674,8 @@ mod test {
     #[test]
     fn response_header_key_parsing_error_test() {
         // Arrange
-        let mut headers = BTreeMap::new();
-        headers.insert(";;;".to_string(), ";;;".to_string());
+        let mut headers = Vec::new();
+        headers.push((";;;".to_string(), ";;;".to_string()));
 
         let res = ServerResponse {
             body: Vec::new(),
@@ -627,7 +700,7 @@ mod test {
     #[test]
     fn get_path_param_regex_error_test() {
         // Arrange
-        let re = Regex::new(r"^/__mocks/([0-9]+)$").unwrap();
+        let re = Regex::new(r"^/__httpmock__/mocks/([0-9]+)$").unwrap();
 
         // Act
         let result = get_path_param(&re, 0, "");
@@ -646,15 +719,15 @@ mod test {
     #[test]
     fn get_path_param_index_error_test() {
         // Arrange
-        let re = Regex::new(r"^/__mocks/([0-9]+)$").unwrap();
+        let re = Regex::new(r"^/__httpmock__/mocks/([0-9]+)$").unwrap();
 
         // Act
-        let result = get_path_param(&re, 5, "/__mocks/5");
+        let result = get_path_param(&re, 5, "/__httpmock__/mocks/5");
 
         // Assert
         assert_eq!(result.is_err(), true);
         assert_eq!(
-            "Error capturing resource id in request path: /__mocks/5",
+            "Error capturing resource id in request path: /__httpmock__/mocks/5",
             result.err().unwrap()
         );
     }
@@ -662,10 +735,10 @@ mod test {
     #[test]
     fn get_path_param_number_error_test() {
         // Arrange
-        let re = Regex::new(r"^/__mocks/([0-9]+)$").unwrap();
+        let re = Regex::new(r"^/__httpmock__/mocks/([0-9]+)$").unwrap();
 
         // Act
-        let result = get_path_param(&re, 0, "/__mocks/9999999999999999999999999");
+        let result = get_path_param(&re, 0, "/__httpmock__/mocks/9999999999999999999999999");
 
         // Assert
         assert_eq!(result.is_err(), true);

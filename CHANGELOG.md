@@ -1,6 +1,8 @@
 ## Version 0.5.7
-- Dockerfile Rust version has been fixed
+- Added static mock support based on YAML files for standalone mode.
+- Dockerfile Rust version has been fixed.
 - Documentation on query parameters has been enhanced.
+- Bumped minimum Rust version to 1.46 due to transitive dependency.
 
 ## Version 0.5.6 
 - A bug has been fixed that caused false positive warnings in the log output.

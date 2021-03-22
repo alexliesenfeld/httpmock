@@ -1,14 +1,8 @@
 extern crate httpmock;
 
-use std::future::Future;
-use std::io::Read;
-
-use isahc::{get, get_async, Body, RequestExt};
-use regex::Replacer;
+use isahc::get_async;
 
 use httpmock::MockServer;
-
-use crate::simulate_standalone_server;
 
 #[test]
 fn all_runtimes_test() {

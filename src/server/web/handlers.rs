@@ -21,6 +21,7 @@ const NON_BODY_METHODS: &[&str] = &["GET", "HEAD"];
 pub(crate) fn add_new_mock(
     state: &MockServerState,
     mock_def: MockDefinition,
+    is_static: bool,
 ) -> Result<usize, String> {
     let result = validate_mock_definition(&mock_def);
 
@@ -33,7 +34,7 @@ pub(crate) fn add_new_mock(
     {
         log::debug!("Adding new mock with ID={}", mock_id);
         let mut mocks = state.mocks.write().unwrap();
-        mocks.insert(mock_id, ActiveMock::new(mock_id, mock_def));
+        mocks.insert(mock_id, ActiveMock::new(mock_id, mock_def, is_static));
     }
 
     Result::Ok(mock_id)
@@ -59,6 +60,11 @@ pub(crate) fn delete_one_mock(state: &MockServerState, id: usize) -> Result<bool
     let result;
     {
         let mut mocks = state.mocks.write().unwrap();
+        if let Some(m) = mocks.get(&id) {
+            if m.is_static {
+                return Err(format!("Cannot delete static mock with ID {}", id));
+            }
+        }
         result = mocks.remove(&id);
     }
 
@@ -69,7 +75,16 @@ pub(crate) fn delete_one_mock(state: &MockServerState, id: usize) -> Result<bool
 /// Deletes all mocks.
 pub(crate) fn delete_all_mocks(state: &MockServerState) {
     let mut mocks = state.mocks.write().unwrap();
-    mocks.clear();
+    let ids: Vec<usize> = mocks
+        .iter()
+        .filter(|(k, v)| !v.is_static)
+        .map(|(k, v)| *k)
+        .collect();
+
+    ids.iter().for_each(|k| {
+        mocks.remove(k);
+    });
+
     log::trace!("Deleted all mocks");
 }
 
@@ -122,6 +137,7 @@ pub(crate) fn find_mock(
         "Could not match any mock to the following request: {:#?}",
         req
     );
+
     Result::Ok(None)
 }
 
@@ -610,7 +626,7 @@ mod test {
         let mock_def = MockDefinition::new(req, res);
 
         // Act
-        let result = add_new_mock(&state, mock_def);
+        let result = add_new_mock(&state, mock_def, false);
 
         // Assert
         assert_eq!(result.is_err(), true);
