@@ -405,6 +405,7 @@ async fn handle_server_request(
     Ok(response.unwrap())
 }
 
+#[cfg(not(target_os = "windows"))]
 async fn shutdown_signal() {
     let mut hangup_stream = tokio::signal::unix::signal(SignalKind::hangup())
         .expect("Cannot install SIGINT signal handler");
@@ -418,6 +419,13 @@ async fn shutdown_signal() {
         val = sigint_stream.recv() => log::trace!("Received SIGINT"),
         val = sigterm_stream.recv() => log::trace!("Received SIGTERM"),
     }
+}
+
+#[cfg(target_os = "windows")]
+async fn shutdown_signal() {
+    tokio::signal::ctrl_c()
+        .await
+        .expect("Cannot install CTRL+C signal handler");
 }
 
 /// Starts a new instance of an HTTP mock server. You should never need to use this function
