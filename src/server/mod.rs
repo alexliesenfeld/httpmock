@@ -594,7 +594,7 @@ lazy_static! {
     static ref PING_PATH: Regex = Regex::new(&format!(r"^{}/ping$", BASE_PATH)).unwrap();
     static ref MOCKS_PATH: Regex = Regex::new(&format!(r"^{}/mocks$", BASE_PATH)).unwrap();
     static ref MOCK_PATH: Regex = Regex::new(&format!(r"^{}/mocks/([0-9]+)$", BASE_PATH)).unwrap();
-    static ref HISTORY_PATH: Regex = Regex::new(&format!("r^{}/history$", BASE_PATH)).unwrap();
+    static ref HISTORY_PATH: Regex = Regex::new(&format!(r"^{}/history$", BASE_PATH)).unwrap();
     static ref VERIFY_PATH: Regex = Regex::new(&format!(r"^{}/verify$", BASE_PATH)).unwrap();
 }
 
@@ -642,6 +642,8 @@ mod test {
         assert_eq!(VERIFY_PATH.is_match("test/verify/1295473892374"), false);
 
         assert_eq!(HISTORY_PATH.is_match("/__httpmock__/history"), true);
+        println!("{:?}", HISTORY_PATH.as_str());
+
         assert_eq!(
             HISTORY_PATH.is_match("/__httpmock__/history/1295473892374"),
             false
