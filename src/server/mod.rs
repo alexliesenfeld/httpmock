@@ -45,7 +45,6 @@ use futures_util::task::Spawn;
 use std::future::Future;
 use std::iter::Map;
 use std::time::Instant;
-use tokio::signal::unix::SignalKind;
 
 mod matchers;
 
@@ -407,12 +406,14 @@ async fn handle_server_request(
 
 #[cfg(not(target_os = "windows"))]
 async fn shutdown_signal() {
-    let mut hangup_stream = tokio::signal::unix::signal(SignalKind::hangup())
+    let mut hangup_stream = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::hangup())
         .expect("Cannot install SIGINT signal handler");
-    let mut sigint_stream = tokio::signal::unix::signal(SignalKind::interrupt())
-        .expect("Cannot install SIGINT signal handler");
-    let mut sigterm_stream = tokio::signal::unix::signal(SignalKind::terminate())
-        .expect("Cannot install SIGINT signal handler");
+    let mut sigint_stream =
+        tokio::signal::unix::signal(tokio::signal::unix::SignalKind::interrupt())
+            .expect("Cannot install SIGINT signal handler");
+    let mut sigterm_stream =
+        tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+            .expect("Cannot install SIGINT signal handler");
 
     tokio::select! {
         val = hangup_stream.recv() => log::trace!("Received SIGINT"),
