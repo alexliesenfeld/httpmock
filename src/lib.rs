@@ -1460,7 +1460,7 @@ pub struct NameValuePair {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct YAMLRequestRequirements {
+struct YAMLRequestRequirements {
     pub path: Option<String>,
     pub path_contains: Option<Vec<String>>,
     pub path_matches: Option<Vec<String>>,
@@ -1479,7 +1479,7 @@ pub struct YAMLRequestRequirements {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct YAMLHTTPResponse {
+struct YAMLHTTPResponse {
     pub status: Option<u16>,
     pub header: Option<Vec<NameValuePair>>,
     pub body: Option<String>,
@@ -1487,7 +1487,7 @@ pub struct YAMLHTTPResponse {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct YAMLMockDefinition {
+struct YAMLMockDefinition {
     when: YAMLRequestRequirements,
     then: YAMLHTTPResponse,
 }
