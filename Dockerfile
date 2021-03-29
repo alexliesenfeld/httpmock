@@ -5,7 +5,7 @@ FROM rust:1.46 as builder
 WORKDIR /usr/src/httpmock
 
 COPY Cargo.toml .
-COPY Cargo.lock .
+
 COPY src/ ./src/
 
 RUN cargo install --features="standalone" --path .
