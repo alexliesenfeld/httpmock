@@ -36,7 +36,7 @@
 * Network delay simulation.
 * Support for [Regex](https://docs.rs/regex/) matching, JSON, [serde](https://crates.io/crates/serde), cookies, and more.
 * Standalone mode with an accompanying [Docker image](https://hub.docker.com/r/alexliesenfeld/httpmock).
-* Support for [mock specification based on YAML files](https://github.com/alexliesenfeld/httpmock/blob/master/src/lib.rs#L185-L201).
+* Optional support for [mock specification based on YAML files](https://github.com/alexliesenfeld/httpmock/blob/master/src/lib.rs#L185-L201).
 
 
 ## Getting Started
