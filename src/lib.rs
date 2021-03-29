@@ -182,6 +182,24 @@
 //! mock servers (see [When::matches](struct.When.html#method.matches) or
 //! [Mock::expect_match](struct.Mock.html#method.expect_match)).
 //!
+//! ## Standalone Mode with YAML Mock Definition Files
+//! The standalone server can also be used to read mock definitions from YAML files on startup once
+//! and serve the mocked endpoints until the server is shut down again. These `static` mocks
+//! cannot be deleted at runtime (even by Rust-based tests that use the mock server) and exist
+//! for the entire uptime of the mock server.
+//!
+//! The definition files follow the standard `httpmock` API that you would also use in regular
+//! Rust tests. Please find an example mock definition file in the `httpmock` Github repository
+//! [here in this crates test directory](https://github.com/alexliesenfeld/httpmock/blob/master/tests/resources/static_yaml_mock.yaml).
+//!
+//! You can start the mock server with static mock support as follows:
+//! * If you use the [Docker image from this creates repository](https://github.com/alexliesenfeld/httpmock/blob/master/Dockerfile)
+//! or from [Dockerhub](https://hub.docker.com/r/alexliesenfeld/httpmock), you just need to mount a
+//! volume with all your mock specification files to the `/mocks` directory within the container.
+//! * If you build `httpmock` from source and use the binary, then you can pass the path to
+//! the directory containing all your mock specification files using the `--static-mock-dir`
+//! parameter. Example: `httpmock --expose --static-mock-dir=/mocks`.
+//!
 //! # License
 //! `httpmock` is free software: you can redistribute it and/or modify it under the terms
 //! of the MIT Public License.
