@@ -15,8 +15,8 @@ pub(crate) fn ping() -> Result<ServerResponse, String> {
 }
 
 /// This route is responsible for adding a new mock
-pub(crate) fn add(state: &MockServerState, body: String) -> Result<ServerResponse, String> {
-    let mock_def: serde_json::Result<MockDefinition> = serde_json::from_str(&body);
+pub(crate) fn add(state: &MockServerState, body: Vec<u8>) -> Result<ServerResponse, String> {
+    let mock_def: serde_json::Result<MockDefinition> = serde_json::from_slice(&body);
 
     if let Err(e) = mock_def {
         return create_json_response(500, None, ErrorResponse::new(&e));
@@ -71,8 +71,8 @@ pub(crate) fn read_one(state: &MockServerState, id: usize) -> Result<ServerRespo
 }
 
 /// This route is responsible for verification
-pub(crate) fn verify(state: &MockServerState, body: String) -> Result<ServerResponse, String> {
-    let mock_rr: serde_json::Result<RequestRequirements> = serde_json::from_str(&body);
+pub(crate) fn verify(state: &MockServerState, body: Vec<u8>) -> Result<ServerResponse, String> {
+    let mock_rr: serde_json::Result<RequestRequirements> = serde_json::from_slice(&body);
     if let Err(e) = mock_rr {
         return create_json_response(500, None, ErrorResponse::new(&e));
     }
@@ -91,7 +91,7 @@ pub(crate) fn verify(state: &MockServerState, body: String) -> Result<ServerResp
 pub(crate) async fn serve(
     state: &MockServerState,
     req: &ServerRequestHeader,
-    body: String,
+    body: Vec<u8>,
 ) -> Result<ServerResponse, String> {
     let handler_request_result = to_handler_request(&req, body);
     let result = match handler_request_result {
@@ -153,7 +153,7 @@ fn create_response(
 }
 
 /// Maps the request of the serve handler to a request representation which the handlers understand
-fn to_handler_request(req: &ServerRequestHeader, body: String) -> Result<HttpMockRequest, String> {
+fn to_handler_request(req: &ServerRequestHeader, body: Vec<u8>) -> Result<HttpMockRequest, String> {
     let query_params = extract_query_params(&req.query);
     if let Err(e) = query_params {
         return Err(format!("error parsing query_params: {}", e));

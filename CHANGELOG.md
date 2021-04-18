@@ -1,3 +1,7 @@
+## Version 0.5.8
+- A bug has been fixed that prevented to use the mock server for requests containing a `multipart/form-data` 
+  request body with binary data.
+
 ## Version 0.5.7
 - Added static mock support based on YAML files for standalone mode.
 - Dockerfile Rust version has been fixed.

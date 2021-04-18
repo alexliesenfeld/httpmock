@@ -378,20 +378,17 @@ async fn handle_server_request(
         return Ok(error_response(format!("Cannot parse request: {}", e)));
     }
 
-    let entire_body = hyper::body::to_bytes(req.into_body()).await;
-    if let Err(e) = entire_body {
+    let body = hyper::body::to_bytes(req.into_body()).await;
+    if let Err(e) = body {
         return Ok(error_response(format!("Cannot read request body: {}", e)));
     }
 
-    let the_body = entire_body.unwrap();
-    let body = String::from_utf8(the_body.to_vec());
-
-    if let Err(e) = body {
-        return Ok(error_response(format!("Cannot read body: {}", e)));
-    }
-
-    let routing_result =
-        route_request(state.borrow(), &request_header.unwrap(), body.unwrap()).await;
+    let routing_result = route_request(
+        state.borrow(),
+        &request_header.unwrap(),
+        body.unwrap().to_vec(),
+    )
+    .await;
     if let Err(e) = routing_result {
         return Ok(error_response(format!("Request handler error: {}", e)));
     }
@@ -511,7 +508,7 @@ fn map_response(route_response: ServerResponse) -> Result<HyperResponse<Body>, S
 async fn route_request(
     state: &MockServerState,
     request_header: &ServerRequestHeader,
-    body: String,
+    body: Vec<u8>,
 ) -> Result<ServerResponse, String> {
     log::trace!("Routing incoming request: {:?}", request_header);
 
