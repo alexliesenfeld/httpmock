@@ -32,7 +32,9 @@ impl StringBodyTarget {
 
 impl ValueTarget<String> for StringBodyTarget {
     fn parse_from_request(&self, req: &HttpMockRequest) -> Option<String> {
-        req.body.as_ref().map(|b| String::from_utf8_lossy(b).to_string()) // FIXME: Avoid copying here. Create a "ValueRefTarget".
+        req.body
+            .as_ref()
+            .map(|b| String::from_utf8_lossy(b).to_string()) // FIXME: Avoid copying here. Create a "ValueRefTarget".
     }
 }
 

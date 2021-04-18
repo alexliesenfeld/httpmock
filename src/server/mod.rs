@@ -383,8 +383,12 @@ async fn handle_server_request(
         return Ok(error_response(format!("Cannot read request body: {}", e)));
     }
 
-    let routing_result =
-        route_request(state.borrow(), &request_header.unwrap(), body.unwrap().to_vec()).await;
+    let routing_result = route_request(
+        state.borrow(),
+        &request_header.unwrap(),
+        body.unwrap().to_vec(),
+    )
+    .await;
     if let Err(e) = routing_result {
         return Ok(error_response(format!("Request handler error: {}", e)));
     }
