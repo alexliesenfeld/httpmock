@@ -300,9 +300,9 @@ mod test {
     fn body_contains_test() {
         // Arrange
         let request1 = HttpMockRequest::new("GET".to_string(), "/test-path".to_string())
-            .with_body("test".to_string());
+            .with_body("test".as_bytes().to_vec());
         let request2 = HttpMockRequest::new("GET".to_string(), "/test-path".to_string())
-            .with_body("test".to_string());
+            .with_body("test".as_bytes().to_vec());
 
         let requirements1 = RequestRequirements::new().with_body_contains(vec!["xxx".to_string()]);
         let requirements2 = RequestRequirements::new().with_body_contains(vec!["es".to_string()]);
@@ -424,7 +424,7 @@ mod test {
     fn request_matches_body_match() {
         // Arrange
         let req1 = HttpMockRequest::new("GET".to_string(), "/test".to_string())
-            .with_body("test".to_string());
+            .with_body("test".as_bytes().to_vec());
 
         let req2 = RequestRequirements::new().with_body("test".to_string());
 
@@ -441,7 +441,7 @@ mod test {
     fn request_matches_body_no_match() {
         // Arrange
         let req1 = HttpMockRequest::new("GET".to_string(), "/test".to_string())
-            .with_body("some text".to_string());
+            .with_body("some text".as_bytes().to_vec());
 
         let req2 = RequestRequirements::new().with_body("some other text".to_string());
 
@@ -482,7 +482,7 @@ mod test {
     fn request_matches_query_param() {
         // Arrange
         let req1 = HttpMockRequest::new("GET".to_string(), "/test".to_string())
-            .with_body("test".to_string());
+            .with_body("test".as_bytes().to_vec());
 
         let req2 = RequestRequirements::new().with_body("test".to_string());
 

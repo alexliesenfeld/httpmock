@@ -22,7 +22,7 @@ pub struct HttpMockRequest {
     pub method: String,
     pub headers: Option<Vec<(String, String)>>,
     pub query_params: Option<Vec<(String, String)>>,
-    pub body: Option<String>,
+    pub body: Option<Vec<u8>>,
 }
 
 impl HttpMockRequest {
@@ -46,7 +46,7 @@ impl HttpMockRequest {
         self
     }
 
-    pub(crate) fn with_body(mut self, arg: String) -> Self {
+    pub(crate) fn with_body(mut self, arg: Vec<u8>) -> Self {
         self.body = Some(arg);
         self
     }
