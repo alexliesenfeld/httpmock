@@ -88,7 +88,7 @@ The [reference docs](https://docs.rs/httpmock/) also contain _**a lot**_ of exam
 You can use `httpmock` to run a standalone mock server that is executed in a separate process. There is a 
 [Docker image](https://hub.docker.com/r/alexliesenfeld/httpmock) available at Dockerhub to get started quickly.
 
-The standalone mode allows you to use `httpmock` to mock HTTP based APIs for many API clients, not only the ones 
+The standalone mode allows you to mock HTTP based APIs for many API clients, not only the ones 
 inside your Rust tests, but also completely different programs running on remote hosts. 
 This is especially useful if you want to use `httpmock` in system or end-to-end tests, that require mocked services 
 (such as REST APIs, data stores, authentication providers, etc.).
