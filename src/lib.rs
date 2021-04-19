@@ -1,17 +1,18 @@
 #![allow(warnings)]
 //! HTTP mocking library that allows you to simulate responses from HTTP based services.
 //!
-//!  # Features
+//! # Features
 //! * Simple, expressive, fluent API.
 //! * Many built-in helpers for easy request matching.
 //! * Parallel test execution.
 //! * Extensible request matching.
 //! * Fully asynchronous core with synchronous and asynchronous APIs.
-//! * Debugging support
+//! * [Advanced verification and debugging support](https://dev.to/alexliesenfeld/rust-http-testing-with-httpmock-2mi0#verification)
+//! * [Network delay simulation](https://github.com/alexliesenfeld/httpmock/blob/master/tests/examples/delay_tests.rs).
+//! * Support for [Regex](https://docs.rs/regex/) matching, JSON, [serde](https://crates.io/crates/serde), cookies, and more.
 //! * Standalone mode with an accompanying [Docker image](https://hub.docker.com/r/alexliesenfeld/httpmock).
-//! * Network delay simulation
-//! * Support for [Regex](type.Regex.html) matching, JSON, [serde](https://crates.io/crates/serde), cookies, and more.
-
+//! * Support for [mock specification based on YAML files](https://github.com/alexliesenfeld/httpmock/blob/master/src/lib.rs#L185-L201).
+//!
 //! # Getting Started
 //! Add `httpmock` to `Cargo.toml`:
 //!
