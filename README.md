@@ -98,7 +98,7 @@ Please refer to [the docs](https://docs.rs/httpmock/0.5.8/httpmock/#standalone-m
 ### File Based Mock Specification
 For convenience, the standalone mode also allows you to use YAML files for mock specification, so you do not need to
 use Rust or any other programming language at all. The mock specification file schema is very similar to the `httpmock` 
-Rust API, so it's easy to jump between the two. Please find an example mock definition file 
+Rust API, so it's easy to jump between the two. Please find an example mock specification file 
 [here](https://github.com/alexliesenfeld/httpmock/blob/master/tests/resources/static_yaml_mock.yaml). 
 
 Please refer to [the docs](https://github.com/alexliesenfeld/httpmock/blob/master/src/lib.rs#L185-L201) 
