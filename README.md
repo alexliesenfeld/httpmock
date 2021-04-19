@@ -32,12 +32,11 @@
 * Parallel test execution.
 * Extensible request matching.
 * Fully asynchronous core with synchronous and asynchronous APIs.
-* Debugging support.
-* Network delay simulation.
+* [Advanced verification and debugging support](https://dev.to/alexliesenfeld/rust-http-testing-with-httpmock-2mi0#verification).
+* [Network delay simulation](https://github.com/alexliesenfeld/httpmock/blob/master/tests/examples/delay_tests.rs).
 * Support for [Regex](https://docs.rs/regex/) matching, JSON, [serde](https://crates.io/crates/serde), cookies, and more.
 * Standalone mode with an accompanying [Docker image](https://hub.docker.com/r/alexliesenfeld/httpmock).
-* Support for [mock specification based on YAML files](https://github.com/alexliesenfeld/httpmock/blob/master/src/lib.rs#L185-L201).
-
+* Support for [mock specification based on YAML files](https://github.com/alexliesenfeld/httpmock/tree/develop#file-based-mock-specification).
 
 ## Getting Started
 Add `httpmock` to `Cargo.toml`:
@@ -84,6 +83,26 @@ See the [reference docs](https://docs.rs/httpmock/) for detailed API documentati
 You can find examples in the 
 [`httpmock` test directory](https://github.com/alexliesenfeld/httpmock/blob/master/tests/). 
 The [reference docs](https://docs.rs/httpmock/) also contain _**a lot**_ of examples. There is an [online tutorial](https://dev.to/alexliesenfeld/rust-http-testing-with-httpmock-2mi0) as well. 
+
+## Standalone Mock Server
+You can use `httpmock` to run a standalone mock server that is executed in a separate process. There is a 
+[Docker image](https://hub.docker.com/r/alexliesenfeld/httpmock) available at Dockerhub to get started quickly.
+
+The standalone mode allows you to mock HTTP based APIs for many API clients, not only the ones 
+inside your Rust tests, but also completely different programs running on remote hosts. 
+This is especially useful if you want to use `httpmock` in system or end-to-end tests, that require mocked services 
+(such as REST APIs, data stores, authentication providers, etc.).
+
+Please refer to [the docs](https://docs.rs/httpmock/0.5.8/httpmock/#standalone-mode) for more information
+
+### File Based Mock Specification
+For convenience, the standalone mode also allows you to use YAML files for mock specification, so you do not need to
+use Rust or any other programming language at all. The mock specification file schema is very similar to the `httpmock` 
+Rust API, so it's easy to jump between the two. Please find an example mock specification file 
+[here](https://github.com/alexliesenfeld/httpmock/blob/master/tests/resources/static_yaml_mock.yaml). 
+
+Please refer to [the docs](https://github.com/alexliesenfeld/httpmock/blob/master/src/lib.rs#L185-L201) 
+for more information.
 
 ## License
 `httpmock` is free software: you can redistribute it and/or modify it under the terms of the MIT Public License.
