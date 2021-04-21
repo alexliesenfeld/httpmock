@@ -47,8 +47,7 @@ httpmock = "0.5"
 ```
 You can then use `httpmock` as follows:
 ```rust
-use httpmock::MockServer;
-use httpmock::Method::GET;
+use httpmock::prelude::*;
 
 // Start a lightweight mock server.
 let server = MockServer::start();

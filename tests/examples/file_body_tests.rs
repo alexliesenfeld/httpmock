@@ -1,8 +1,5 @@
-extern crate httpmock;
-
 use isahc::prelude::*;
-
-use httpmock::MockServer;
+use httpmock::prelude::*;
 
 #[test]
 fn file_body_test() {

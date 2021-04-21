@@ -1,8 +1,5 @@
-extern crate httpmock;
-
 use isahc::get;
-
-use httpmock::MockServer;
+use httpmock::prelude::*;
 
 #[test]
 // TODO: Implement custom matcher

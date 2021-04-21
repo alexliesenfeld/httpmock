@@ -1,10 +1,7 @@
-extern crate httpmock;
-
 use isahc::config::RedirectPolicy;
 use isahc::prelude::*;
 use isahc::HttpClientBuilder;
-
-use httpmock::MockServer;
+use httpmock::prelude::*;
 
 #[test]
 fn multi_server_test() {

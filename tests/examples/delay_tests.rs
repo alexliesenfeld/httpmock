@@ -1,10 +1,6 @@
-extern crate httpmock;
-
 use std::time::{Duration, SystemTime};
-
 use isahc::get;
-
-use httpmock::MockServer;
+use httpmock::prelude::*;
 
 #[test]
 fn delay_test() {

@@ -1,8 +1,5 @@
-extern crate httpmock;
-
 use isahc::get;
-
-use httpmock::{MockServer, Regex};
+use httpmock::prelude::*;
 
 #[test]
 fn url_matching_test() {

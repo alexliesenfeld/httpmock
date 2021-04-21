@@ -1,10 +1,5 @@
-extern crate httpmock;
-
 use isahc::{get, get_async};
-
-use self::httpmock::Mock;
-use httpmock::Method::GET;
-use httpmock::MockServer;
+use httpmock::prelude::*;
 
 #[test]
 fn getting_started_test() {
@@ -31,6 +26,7 @@ fn getting_started_test() {
     assert_eq!(response.status(), 200);
 }
 
+#[deprecated(since = "0.5.0", note = "Please use 'hits' function instead")]
 #[async_std::test]
 async fn async_getting_started_test() {
     // Start a local mock server for exclusive use by this test function.
@@ -38,12 +34,12 @@ async fn async_getting_started_test() {
 
     // Create a mock on the mock server. The mock will return HTTP status code 200 whenever
     // the mock server receives a GET-request with path "/hello".
-    let hello_mock = Mock::new()
-        .expect_method(GET)
-        .expect_path("/hello")
-        .return_status(200)
-        .create_on_async(&server)
-        .await;
+    // Create a mock on the server.
+    let hello_mock = server.mock_async(|when, then| {
+        when.method("GET")
+            .path("/hello");
+        then.status(200);
+    }).await;
 
     // Send an HTTP request to the mock server. This simulates your code.
     let url = format!("http://{}/hello", server.address());

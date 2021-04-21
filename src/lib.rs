@@ -23,8 +23,7 @@
 //!
 //! You can then use `httpmock` as follows:
 //! ```
-//! use httpmock::MockServer;
-//! use httpmock::Method::GET;
+//! use httpmock::prelude::*;
 //!
 //! // Start a lightweight mock server.
 //! let server = MockServer::start();
@@ -149,7 +148,7 @@
 //! [MockServer::connect_from_env](struct.MockServer.html#method.connect_from_env)).
 //!
 //! ```
-//! use httpmock::{MockServer, Mock};
+//! use httpmock::prelude::*;
 //! use isahc::get;
 //!
 //! #[test]
@@ -239,6 +238,20 @@ pub(crate) mod data;
 mod server;
 pub mod standalone;
 pub(crate) mod util;
+
+pub mod prelude {
+    #[doc(no_inline)]
+    pub use crate::{
+        MockServer,
+        HttpMockRequest,
+        Regex,
+        Method::GET,
+        Method::POST,
+        Method::PUT,
+        Method::DELETE,
+        Method::OPTIONS,
+    };
+}
 
 /// A mock server that is able to receive and respond to HTTP requests.
 pub struct MockServer {
@@ -477,9 +490,7 @@ impl When {
     ///
     /// # Example
     /// ```
-    /// use httpmock::{Mock, MockServer};
-    /// use httpmock::Method::GET;
-    /// use regex::Regex;
+    /// use httpmock::prelude::*;
     ///
     /// let server = MockServer::start();
     ///
@@ -505,9 +516,7 @@ impl When {
     ///
     /// # Example
     /// ```
-    /// use httpmock::{Mock, MockServer};
-    /// use httpmock::Method::GET;
-    /// use regex::Regex;
+    /// use httpmock::prelude::*;
     ///
     /// let server = MockServer::start();
     ///
@@ -530,7 +539,7 @@ impl When {
     ///
     /// # Example
     /// ```
-    /// use httpmock::{Mock, MockServer};
+    /// use httpmock::prelude::*;
     ///
     /// let server = MockServer::start();
     ///
@@ -553,7 +562,7 @@ impl When {
     ///
     /// # Example
     /// ```
-    /// use httpmock::{Mock, MockServer};
+    /// use httpmock::prelude::*;
     ///
     /// let server = MockServer::start();
     ///
@@ -577,8 +586,7 @@ impl When {
     ///
     /// # Example
     /// ```
-    /// use httpmock::{Mock, MockServer};
-    /// use regex::Regex;
+    /// use httpmock::prelude::*;
     ///
     /// let server = MockServer::start();
     ///
@@ -607,7 +615,7 @@ impl When {
     /// ```
     /// // Arrange
     /// use isahc::get;
-    /// use httpmock::{MockServer, Mock};
+    /// use httpmock::prelude::*;
     ///
     /// let _ = env_logger::try_init();
     /// let server = MockServer::start();
@@ -639,7 +647,7 @@ impl When {
     /// ```
     /// // Arrange
     /// use isahc::get;
-    /// use httpmock::{MockServer, Mock};
+    /// use httpmock::prelude::*;
     ///
     /// let _ = env_logger::try_init();
     /// let server = MockServer::start();
@@ -667,9 +675,7 @@ impl When {
     ///
     /// # Example
     /// ```
-    /// use httpmock::{Mock, MockServer};
-    /// use httpmock::Method::GET;
-    /// use regex::Regex;
+    /// use httpmock::prelude::*;
     /// use isahc::{prelude::*, Request};
     ///
     /// let server = MockServer::start();
@@ -698,8 +704,7 @@ impl When {
     ///
     /// ```
     /// use isahc::{prelude::*, Request};
-    /// use httpmock::Method::POST;
-    /// use httpmock::{MockServer, Mock, Regex};
+    /// use httpmock::prelude::*;
     ///
     /// // Arrange
     /// let _ = env_logger::try_init();
@@ -734,8 +739,7 @@ impl When {
     /// * `substring` - The substring that will matched against.
     ///
     /// ```
-    /// use httpmock::{MockServer, Mock, Regex};
-    /// use httpmock::Method::POST;
+    /// use httpmock::prelude::*;
     /// use isahc::{prelude::*, Request};
     ///
     /// // Arrange
@@ -775,8 +779,7 @@ impl When {
     /// * `body` - The HTTP body object that will be serialized to JSON using serde.
     ///
     /// ```
-    /// use httpmock::{Mock, MockServer};
-    /// use httpmock::Method::POST;
+    /// use httpmock::prelude::*;
     /// use serde_json::json;
     /// use isahc::{prelude::*, Request};
     ///
@@ -817,8 +820,7 @@ impl When {
     /// * `body` - The HTTP body object that will be serialized to JSON using serde.
     ///
     /// ```
-    /// use httpmock::{MockServer, Mock};
-    /// use httpmock::Method::POST;
+    /// use httpmock::prelude::*;
     /// use serde_json::json;
     /// use isahc::{prelude::*, Request};
     ///
@@ -890,7 +892,7 @@ impl When {
     /// If we only want to verify that `target_attribute` has value `Example` without the need
     /// to provive a full JSON object, we can use this method as follows:
     /// ```
-    /// use httpmock::{MockServer, Mock};
+    /// use httpmock::prelude::*;
     ///
     /// let server = MockServer::start();
     ///
@@ -920,9 +922,7 @@ impl When {
     ///
     /// # Example
     /// ```
-    /// use httpmock::{Mock, MockServer};
-    /// use httpmock::Method::GET;
-    /// use regex::Regex;
+    /// use httpmock::prelude::*;
     /// use isahc::{prelude::*, Request};
     ///
     /// let server = MockServer::start();
@@ -953,9 +953,7 @@ impl When {
     ///
     /// # Example
     /// ```
-    /// use httpmock::{Mock, MockServer};
-    /// use httpmock::Method::GET;
-    /// use regex::Regex;
+    /// use httpmock::prelude::*;
     /// use isahc::{prelude::*, Request};
     ///
     /// let server = MockServer::start();
@@ -988,9 +986,7 @@ impl When {
     ///
     /// # Example
     /// ```
-    /// use httpmock::{Mock, MockServer};
-    /// use httpmock::Method::GET;
-    /// use regex::Regex;
+    /// use httpmock::prelude::*;
     /// use isahc::{prelude::*, Request};
     ///
     /// let server = MockServer::start();
@@ -1022,9 +1018,7 @@ impl When {
     ///
     /// # Example
     /// ```
-    /// use httpmock::{Mock, MockServer};
-    /// use httpmock::Method::GET;
-    /// use regex::Regex;
+    /// use httpmock::prelude::*;
     /// use isahc::{prelude::*, Request};
     ///
     /// let server = MockServer::start();
@@ -1054,7 +1048,7 @@ impl When {
     ///
     /// ## Example:
     /// ```
-    /// use httpmock::{MockServer, Mock, HttpMockRequest};
+    /// use httpmock::prelude::*;
     ///
     /// // Arrange
     /// let server = MockServer::start();
@@ -1091,7 +1085,7 @@ impl Then {
     ///
     /// ## Example:
     /// ```
-    /// use httpmock::{MockServer, Mock};
+    /// use httpmock::prelude::*;
     ///
     /// // Arrange
     /// let server = MockServer::start();

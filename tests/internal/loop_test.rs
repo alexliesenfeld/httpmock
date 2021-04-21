@@ -1,7 +1,7 @@
 extern crate httpmock;
 
 use crate::simulate_standalone_server;
-use httpmock::MockServer;
+use httpmock::prelude::*;
 use isahc::get;
 
 #[test]

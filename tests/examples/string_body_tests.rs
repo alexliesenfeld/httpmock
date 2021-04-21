@@ -1,9 +1,5 @@
-extern crate httpmock;
-
 use isahc::{prelude::*, Request};
-
-use httpmock::Method::POST;
-use httpmock::{MockServer, Regex};
+use httpmock::prelude::*;
 
 #[test]
 fn body_test() {

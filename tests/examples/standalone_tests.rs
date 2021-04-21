@@ -1,10 +1,6 @@
-extern crate httpmock;
-
 use std::io::Read;
-
 use isahc::{get_async, Body, Request, RequestExt};
-
-use httpmock::MockServer;
+use httpmock::prelude::*;
 
 use crate::simulate_standalone_server;
 

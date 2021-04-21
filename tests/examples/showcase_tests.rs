@@ -1,11 +1,6 @@
-extern crate httpmock;
-
 use isahc::{prelude::*, Request};
 use serde_json::json;
-
-use self::httpmock::HttpMockRequest;
-use httpmock::Method::POST;
-use httpmock::{MockServer, Regex};
+use httpmock::prelude::*;
 
 #[test]
 fn showcase_test() {

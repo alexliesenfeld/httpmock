@@ -1,10 +1,6 @@
-extern crate httpmock;
-
 use isahc::{prelude::*, Request};
 use serde_json::{json, Value};
-
-use httpmock::Method::POST;
-use httpmock::MockServer;
+use httpmock::prelude::*;
 
 #[test]
 fn json_value_body_test() {
