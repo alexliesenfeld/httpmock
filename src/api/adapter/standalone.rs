@@ -65,7 +65,7 @@ impl MockServerAdapter for RemoteMockServerAdapter {
         let request = Request::builder()
             .method("POST")
             .uri(request_url)
-            .header("Content-Type", "application/json")
+            .header("content-type", "application/json")
             .body(json)
             .unwrap();
 
@@ -184,7 +184,7 @@ impl MockServerAdapter for RemoteMockServerAdapter {
         let request = Request::builder()
             .method("POST")
             .uri(request_url)
-            .header("Content-Type", "application/json")
+            .header("content-type", "application/json")
             .body(json)
             .unwrap();
 

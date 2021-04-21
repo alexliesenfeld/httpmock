@@ -15,16 +15,16 @@ fn json_value_body_test() {
     let m = Mock::new()
         .expect_method(POST)
         .expect_path("/users")
-        .expect_header("Content-Type", "application/json")
+        .expect_header("content-type", "application/json")
         .expect_json_body(json!({ "name": "Fred" }))
         .return_status(201)
-        .return_header("Content-Type", "application/json")
+        .return_header("content-type", "application/json")
         .return_json_body(json!({ "name": "Hans" }))
         .create_on(&server);
 
     // Act: Send the request and deserialize the response to JSON
     let mut response = Request::post(&format!("http://{}/users", server.address()))
-        .header("Content-Type", "application/json")
+        .header("content-type", "application/json")
         .body(json!({ "name": "Fred" }).to_string())
         .unwrap()
         .send()
@@ -54,12 +54,12 @@ fn json_body_object_serde_test() {
     let m = Mock::new()
         .expect_method(POST)
         .expect_path("/users")
-        .expect_header("Content-Type", "application/json")
+        .expect_header("content-type", "application/json")
         .expect_json_body_obj(&TestUser {
             name: String::from("Fred"),
         })
         .return_status(201)
-        .return_header("Content-Type", "application/json")
+        .return_header("content-type", "application/json")
         .return_json_body_obj(&TestUser {
             name: String::from("Hans"),
         })
@@ -67,7 +67,7 @@ fn json_body_object_serde_test() {
 
     // Act: Send the request and deserialize the response to JSON
     let mut response = Request::post(&format!("http://{}/users", server.address()))
-        .header("Content-Type", "application/json")
+        .header("content-type", "application/json")
         .body(
             json!(&TestUser {
                 name: "Fred".to_string()
@@ -125,7 +125,7 @@ fn partial_json_body_test() {
     // Simulates application that makes the request to the mock.
     let uri = format!("http://{}/users", m.server_address());
     let response = Request::post(&uri)
-        .header("Content-Type", "application/json")
+        .header("content-type", "application/json")
         .header("User-Agent", "rust-test")
         .body(
             serde_json::to_string(&ParentStructure {

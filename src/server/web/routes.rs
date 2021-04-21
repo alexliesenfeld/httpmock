@@ -137,7 +137,7 @@ where
     }
 
     let mut headers = headers.unwrap_or_default();
-    headers.push(("Content-Type".to_string(), "application/json".to_string()));
+    headers.push(("content-type".to_string(), "application/json".to_string()));
 
     create_response(status, Some(headers), Some(body.unwrap()))
 }

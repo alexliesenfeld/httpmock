@@ -34,7 +34,7 @@
 //!         .path("/translate")
 //!         .query_param("word", "hello");
 //!     then.status(200)
-//!         .header("Content-Type", "text/html")
+//!         .header("content-type", "text/html")
 //!         .body("ohi");
 //! });
 //!
@@ -773,7 +773,7 @@ impl When {
     /// Sets the expected JSON body. This method expects a [serde_json::Value](../serde_json/enum.Value.html)
     /// that will be serialized/deserialized to/from a JSON string.
     ///
-    /// Note that this method does not set the `Content-Type` header automatically, so you
+    /// Note that this method does not set the `content-type` header automatically, so you
     /// need to provide one yourself!
     ///
     /// * `body` - The HTTP body object that will be serialized to JSON using serde.
@@ -789,14 +789,14 @@ impl When {
     ///
     /// let m = server.mock(|when, then|{
     ///     when.path("/user")
-    ///         .header("Content-Type", "application/json")
+    ///         .header("content-type", "application/json")
     ///         .json_body(json!({ "name": "Hans" }));
     ///     then.status(201);
     /// });
     ///
     /// // Act: Send the request and deserialize the response to JSON
     /// let mut response = Request::post(&format!("http://{}/user", server.address()))
-    ///     .header("Content-Type", "application/json")
+    ///     .header("content-type", "application/json")
     ///     .body(json!({ "name": "Hans" }).to_string())
     ///     .unwrap()
     ///     .send()
@@ -814,7 +814,7 @@ impl When {
     /// Sets the expected JSON body. This method expects a serializable serde object
     /// that will be serialized/deserialized to/from a JSON string.
     ///
-    /// Note that this method does not set the "Content-Type" header automatically, so you
+    /// Note that this method does not set the "content-type" header automatically, so you
     /// need to provide one yourself!
     ///
     /// * `body` - The HTTP body object that will be serialized to JSON using serde.
@@ -836,7 +836,7 @@ impl When {
     ///
     /// let m = server.mock(|when, then|{
     ///     when.path("/user")
-    ///         .header("Content-Type", "application/json")
+    ///         .header("content-type", "application/json")
     ///         .json_body_obj(&TestUser {
     ///             name: String::from("Fred"),
     ///         });
@@ -845,7 +845,7 @@ impl When {
     ///
     /// // Act: Send the request and deserialize the response to JSON
     /// let mut response = Request::post(&format!("http://{}/user", server.address()))
-    ///     .header("Content-Type", "application/json")
+    ///     .header("content-type", "application/json")
     ///     .body(json!(&TestUser {
     ///         name: "Fred".to_string()
     ///     }).to_string())
@@ -871,7 +871,7 @@ impl When {
     /// the full object hierarchy from the original JSON object but can leave out irrelevant
     /// attributes (see example).**
     ///
-    /// Note that this method does not set the `Content-Type` header automatically, so you
+    /// Note that this method does not set the `content-type` header automatically, so you
     /// need to provide one yourself!
     ///
     /// String format and attribute order are irrelevant.
@@ -1173,7 +1173,7 @@ impl Then {
     ///
     /// The provided JSON object needs to be both, a deserializable and serializable serde object.
     ///
-    /// Note that this method does not set the "Content-Type" header automatically, so you need
+    /// Note that this method does not set the "content-type" header automatically, so you need
     /// to provide one yourself!
     ///
     /// * `body` -  The HTTP response body the mock server will return in the form of a
@@ -1194,7 +1194,7 @@ impl Then {
     /// let m = server.mock(|when, then|{
     ///     when.path("/user");
     ///     then.status(200)
-    ///         .header("Content-Type", "application/json")
+    ///         .header("content-type", "application/json")
     ///         .json_body(json!({ "name": "Hans" }));
     /// });
     ///
@@ -1218,7 +1218,7 @@ impl Then {
     /// This method expects a serializable serde object that will be serialized/deserialized
     /// to/from a JSON string.
     ///
-    /// Note that this method does not set the "Content-Type" header automatically, so you
+    /// Note that this method does not set the "content-type" header automatically, so you
     /// need to provide one yourself!
     ///
     /// * `body` - The HTTP body object that will be serialized to JSON using serde.
@@ -1240,7 +1240,7 @@ impl Then {
     /// let m = server.mock(|when, then| {
     ///     when.path("/user");
     ///     then.status(200)
-    ///         .header("Content-Type", "application/json")
+    ///         .header("content-type", "application/json")
     ///         .json_body_obj(&TestUser {
     ///             name: String::from("Hans"),
     ///         });

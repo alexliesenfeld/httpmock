@@ -26,7 +26,7 @@ fn showcase_test() {
         .expect_query_param("myQueryParam", "überschall")
         .expect_query_param_exists("myQueryParam")
         .expect_path_matches(Regex::new(r#"test"#).unwrap())
-        .expect_header("Content-Type", "application/json")
+        .expect_header("content-type", "application/json")
         .expect_header_exists("User-Agent")
         .expect_body("{\"number\":5}")
         .expect_body_contains("number")
@@ -42,7 +42,7 @@ fn showcase_test() {
         server.address()
     );
     let response = Request::post(&uri)
-        .header("Content-Type", "application/json")
+        .header("content-type", "application/json")
         .header("User-Agent", "rust-test")
         .body(serde_json::to_string(&TransferItem { number: 5 }).unwrap())
         .unwrap()

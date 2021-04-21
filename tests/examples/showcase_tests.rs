@@ -20,7 +20,7 @@ fn showcase_test() {
             .query_param("myQueryParam", "überschall")
             .query_param_exists("myQueryParam")
             .path_matches(Regex::new(r#"test"#).unwrap())
-            .header("Content-Type", "application/json")
+            .header("content-type", "application/json")
             .header_exists("User-Agent")
             .body("{\"number\":5}")
             .body_contains("number")
@@ -36,7 +36,7 @@ fn showcase_test() {
         server.address()
     );
     let response = Request::post(&uri)
-        .header("Content-Type", "application/json")
+        .header("content-type", "application/json")
         .header("User-Agent", "rust-test")
         .body(serde_json::to_string(&TransferItem { number: 5 }).unwrap())
         .unwrap()

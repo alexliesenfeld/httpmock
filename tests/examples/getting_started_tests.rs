@@ -12,7 +12,7 @@ fn getting_started_test() {
             .path("/translate")
             .query_param("word", "hello");
         then.status(200)
-            .header("Content-Type", "text/html; charset=UTF-8")
+            .header("content-type", "text/html; charset=UTF-8")
             .body("Привет");
     });
 
