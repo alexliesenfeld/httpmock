@@ -1,6 +1,6 @@
+use httpmock::prelude::*;
 use isahc::get as http_get;
 use ureq::get as httpget;
-use httpmock::prelude::*;
 
 #[test]
 fn url_param_matching_test() {

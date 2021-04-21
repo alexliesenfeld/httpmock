@@ -1,3 +1,13 @@
+## Version 0.6.0
+- Old [Mock](https://docs.rs/httpmock/0.4.5/httpmock/struct.Mock.html) structure based API was deprecated 
+  starting from version 0.5.0 and was removed with this version. Please switch to the new API based on the 
+  [When](https://docs.rs/httpmock/0.5.8/httpmock/struct.When.html) / 
+  [Then](https://docs.rs/httpmock/0.5.8/httpmock/struct.When.html) structures.
+- The two methods `MockRef::times_called` and `MockRef::times_called_async` were deprecated since version 0.5.0 and 
+  have now been removed.
+- A [prelude module](https://github.com/alexliesenfeld/httpmock#getting-started) was added to shorten imports 
+  that are usually required when using `httpmock` in tests.
+  
 ## Version 0.5.8
 - A bug has been fixed that prevented to use the mock server for requests containing a `multipart/form-data` 
   request body with binary data.

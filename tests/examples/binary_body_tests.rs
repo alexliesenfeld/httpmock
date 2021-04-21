@@ -1,6 +1,6 @@
-use std::io::Read;
-use isahc::Body;
 use httpmock::prelude::*;
+use isahc::Body;
+use std::io::Read;
 
 #[test]
 fn binary_body_test() {

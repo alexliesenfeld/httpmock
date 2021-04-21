@@ -1,5 +1,5 @@
-use isahc::get;
 use httpmock::prelude::*;
+use isahc::get;
 
 #[test]
 fn explicit_delete_mock_test() {

@@ -1,5 +1,5 @@
-use isahc::{prelude::*, Request};
 use httpmock::prelude::*;
+use isahc::{prelude::*, Request};
 
 #[test]
 fn cookie_matching_test() {

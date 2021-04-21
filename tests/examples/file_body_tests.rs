@@ -1,5 +1,5 @@
-use isahc::prelude::*;
 use httpmock::prelude::*;
+use isahc::prelude::*;
 
 #[test]
 fn file_body_test() {

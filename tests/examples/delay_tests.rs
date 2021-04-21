@@ -1,6 +1,6 @@
-use std::time::{Duration, SystemTime};
-use isahc::get;
 use httpmock::prelude::*;
+use isahc::get;
+use std::time::{Duration, SystemTime};
 
 #[test]
 fn delay_test() {

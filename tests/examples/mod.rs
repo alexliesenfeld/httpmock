@@ -9,7 +9,6 @@ mod headers_tests;
 mod json_body_tests;
 mod multiserver_tests;
 mod query_param_tests;
-mod redirect_tests;
 mod showcase_tests;
 mod standalone_tests;
 mod string_body_tests;

@@ -1,6 +1,6 @@
-use std::io::Read;
-use isahc::{get_async, Body, Request, RequestExt};
 use httpmock::prelude::*;
+use isahc::{get_async, Body, Request, RequestExt};
+use std::io::Read;
 
 use crate::simulate_standalone_server;
 

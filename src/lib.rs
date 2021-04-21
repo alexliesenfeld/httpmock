@@ -18,7 +18,7 @@
 //!
 //! ```toml
 //! [dev-dependencies]
-//! httpmock = "0.5"
+//! httpmock = "0.6"
 //! ```
 //!
 //! You can then use `httpmock` as follows:
@@ -223,14 +223,17 @@ use serde_json::Value;
 use tokio::task::LocalSet;
 use tokio::time::Duration;
 
-pub use crate::api::{Method, Mock, MockRef, MockRefExt, Regex};
+pub use crate::api::{Method, MockRef, MockRefExt, Regex};
 pub use data::{HttpMockRequest, MockMatcherFunction};
 
 use crate::api::{LocalMockServerAdapter, RemoteMockServerAdapter};
-use crate::data::Pattern;
+use crate::data::{MockDefinition, MockServerHttpResponse, Pattern, RequestRequirements};
 use crate::server::{start_server, MockServerState};
-use crate::util::{read_env, with_retry};
+use crate::util::{get_test_resource_file_path, read_env, read_file, with_retry};
 use api::MockServerAdapter;
+use std::borrow::BorrowMut;
+use std::path::Path;
+use std::str::FromStr;
 use util::Join;
 
 mod api;
@@ -242,14 +245,8 @@ pub(crate) mod util;
 pub mod prelude {
     #[doc(no_inline)]
     pub use crate::{
-        MockServer,
-        HttpMockRequest,
-        Regex,
-        Method::GET,
-        Method::POST,
-        Method::PUT,
-        Method::DELETE,
-        Method::OPTIONS,
+        HttpMockRequest, Method::DELETE, Method::GET, Method::OPTIONS, Method::POST, Method::PUT,
+        MockServer, Regex,
     };
 }
 
@@ -470,19 +467,43 @@ impl MockServer {
     ///     mock.assert_async().await;
     /// });
     /// ```
-    pub async fn mock_async<'a, F>(&'a self, config_fn: F) -> MockRef<'a>
+    pub async fn mock_async<'a, F>(&'a self, spec_fn: F) -> MockRef<'a>
     where
         F: FnOnce(When, Then),
     {
-        let mock = Rc::new(Cell::new(Mock::new()));
-        config_fn(When { mock: mock.clone() }, Then { mock: mock.clone() });
-        mock.take().create_on_async(self).await
+        let mut req = Rc::new(Cell::new(RequestRequirements::new()));
+        let mut res = Rc::new(Cell::new(MockServerHttpResponse::new()));
+
+        spec_fn(
+            When {
+                expectations: req.clone(),
+            },
+            Then {
+                response_template: res.clone(),
+            },
+        );
+
+        let response = self
+            .server_adapter
+            .as_ref()
+            .unwrap()
+            .create_mock(&MockDefinition {
+                request: req.take(),
+                response: res.take(),
+            })
+            .await
+            .expect("Cannot deserialize mock server response");
+
+        MockRef {
+            id: response.mock_id,
+            server: self,
+        }
     }
 }
 
 /// A type that allows the specification of HTTP request values.
 pub struct When {
-    pub(crate) mock: Rc<Cell<Mock>>,
+    pub(crate) expectations: Rc<Cell<RequestRequirements>>,
 }
 
 impl When {
@@ -529,8 +550,10 @@ impl When {
     ///
     /// mock.assert();
     /// ```
-    pub fn method<M: Into<Method>>(self, method: M) -> Self {
-        self.mock.set(self.mock.take().expect_method(method));
+    pub fn method<M: Into<Method>>(mut self, method: M) -> Self {
+        update_cell(&self.expectations, |e| {
+            e.method = Some(method.into().to_string())
+        });
         self
     }
 
@@ -552,8 +575,10 @@ impl When {
     ///
     /// mock.assert();
     /// ```
-    pub fn path<S: Into<String>>(self, path: S) -> Self {
-        self.mock.set(self.mock.take().expect_path(path));
+    pub fn path<S: Into<String>>(mut self, path: S) -> Self {
+        update_cell(&self.expectations, |e| {
+            e.path = Some(path.into());
+        });
         self
     }
 
@@ -575,9 +600,13 @@ impl When {
     ///
     /// mock.assert();
     /// ```
-    pub fn path_contains<S: Into<String>>(self, substring: S) -> Self {
-        self.mock
-            .set(self.mock.take().expect_path_contains(substring));
+    pub fn path_contains<S: Into<String>>(mut self, substring: S) -> Self {
+        update_cell(&self.expectations, |e| {
+            if e.path_contains.is_none() {
+                e.path_contains = Some(Vec::new());
+            }
+            e.path_contains.as_mut().unwrap().push(substring.into());
+        });
         self
     }
 
@@ -599,8 +628,16 @@ impl When {
     ///
     /// mock.assert();
     /// ```
-    pub fn path_matches<R: Into<Regex>>(self, regex: R) -> Self {
-        self.mock.set(self.mock.take().expect_path_matches(regex));
+    pub fn path_matches<R: Into<Regex>>(mut self, regex: R) -> Self {
+        update_cell(&self.expectations, |e| {
+            if e.path_matches.is_none() {
+                e.path_matches = Some(Vec::new());
+            }
+            e.path_matches
+                .as_mut()
+                .unwrap()
+                .push(Pattern::from_regex(regex.into()));
+        });
         self
     }
 
@@ -631,9 +668,16 @@ impl When {
     /// // Assert
     /// m.assert();
     /// ```
-    pub fn query_param<S: Into<String>>(self, name: S, value: S) -> Self {
-        self.mock
-            .set(self.mock.take().expect_query_param(name, value));
+    pub fn query_param<S: Into<String>>(mut self, name: S, value: S) -> Self {
+        update_cell(&self.expectations, |e| {
+            if e.query_param.is_none() {
+                e.query_param = Some(Vec::new());
+            }
+            e.query_param
+                .as_mut()
+                .unwrap()
+                .push((name.into(), value.into()));
+        });
         self
     }
 
@@ -663,9 +707,13 @@ impl When {
     /// // Assert
     /// m.assert();
     /// ```
-    pub fn query_param_exists<S: Into<String>>(self, name: S) -> Self {
-        self.mock
-            .set(self.mock.take().expect_query_param_exists(name));
+    pub fn query_param_exists<S: Into<String>>(mut self, name: S) -> Self {
+        update_cell(&self.expectations, |e| {
+            if e.query_param_exists.is_none() {
+                e.query_param_exists = Some(Vec::new());
+            }
+            e.query_param_exists.as_mut().unwrap().push(name.into());
+        });
         self
     }
 
@@ -693,8 +741,10 @@ impl When {
     ///
     /// mock.assert();
     /// ```
-    pub fn body<S: Into<String>>(self, body: S) -> Self {
-        self.mock.set(self.mock.take().expect_body(body));
+    pub fn body<S: Into<String>>(mut self, body: S) -> Self {
+        update_cell(&self.expectations, |e| {
+            e.body = Some(body.into());
+        });
         self
     }
 
@@ -729,8 +779,16 @@ impl When {
     /// m.assert();
     /// assert_eq!(response.status(), 201);
     /// ```
-    pub fn body_matches<R: Into<Regex>>(self, regex: R) -> Self {
-        self.mock.set(self.mock.take().expect_body_matches(regex));
+    pub fn body_matches<R: Into<Regex>>(mut self, regex: R) -> Self {
+        update_cell(&self.expectations, |e| {
+            if e.body_matches.is_none() {
+                e.body_matches = Some(Vec::new());
+            }
+            e.body_matches
+                .as_mut()
+                .unwrap()
+                .push(Pattern::from_regex(regex.into()));
+        });
         self
     }
 
@@ -764,9 +822,13 @@ impl When {
     /// m.assert();
     /// assert_eq!(response.status(), 201);
     /// ```
-    pub fn body_contains<S: Into<String>>(self, substring: S) -> Self {
-        self.mock
-            .set(self.mock.take().expect_body_contains(substring));
+    pub fn body_contains<S: Into<String>>(mut self, substring: S) -> Self {
+        update_cell(&self.expectations, |e| {
+            if e.body_contains.is_none() {
+                e.body_contains = Some(Vec::new());
+            }
+            e.body_contains.as_mut().unwrap().push(substring.into());
+        });
         self
     }
 
@@ -806,8 +868,10 @@ impl When {
     /// m.assert();
     /// assert_eq!(response.status(), 201);
     /// ```
-    pub fn json_body<V: Into<serde_json::Value>>(self, value: V) -> Self {
-        self.mock.set(self.mock.take().expect_json_body(value));
+    pub fn json_body<V: Into<serde_json::Value>>(mut self, value: V) -> Self {
+        update_cell(&self.expectations, |e| {
+            e.json_body = Some(value.into());
+        });
         self
     }
 
@@ -861,8 +925,8 @@ impl When {
     where
         T: Serialize + Deserialize<'a>,
     {
-        self.mock.set(self.mock.take().expect_json_body_obj(body));
-        self
+        let json_value = serde_json::to_value(body).expect("Cannot serialize json body to JSON");
+        self.json_body(json_value)
     }
 
     /// Sets the expected partial JSON body.
@@ -910,9 +974,15 @@ impl When {
     /// Please note that the JSON partial contains the full object hierachy, i.e. it needs to start
     /// from the root! It leaves out irrelevant attributes, however (`parent_attribute`
     /// and `child.other_attribute`).
-    pub fn json_body_partial<S: Into<String>>(self, partial: S) -> Self {
-        self.mock
-            .set(self.mock.take().expect_json_body_partial(partial));
+    pub fn json_body_partial<S: Into<String>>(mut self, partial: S) -> Self {
+        update_cell(&self.expectations, |e| {
+            if e.json_body_includes.is_none() {
+                e.json_body_includes = Some(Vec::new());
+            }
+            let value = Value::from_str(&partial.into())
+                .expect("cannot convert JSON string to serde value");
+            e.json_body_includes.as_mut().unwrap().push(value);
+        });
         self
     }
 
@@ -941,8 +1011,16 @@ impl When {
     ///
     /// mock.assert();
     /// ```
-    pub fn header<S: Into<String>>(self, name: S, value: S) -> Self {
-        self.mock.set(self.mock.take().expect_header(name, value));
+    pub fn header<S: Into<String>>(mut self, name: S, value: S) -> Self {
+        update_cell(&self.expectations, |e| {
+            if e.headers.is_none() {
+                e.headers = Some(Vec::new());
+            }
+            e.headers
+                .as_mut()
+                .unwrap()
+                .push((name.into(), value.into()));
+        });
         self
     }
 
@@ -972,8 +1050,13 @@ impl When {
     ///
     /// mock.assert();
     /// ```
-    pub fn header_exists<S: Into<String>>(self, name: S) -> Self {
-        self.mock.set(self.mock.take().expect_header_exists(name));
+    pub fn header_exists<S: Into<String>>(mut self, name: S) -> Self {
+        update_cell(&self.expectations, |e| {
+            if e.header_exists.is_none() {
+                e.header_exists = Some(Vec::new());
+            }
+            e.header_exists.as_mut().unwrap().push(name.into());
+        });
         self
     }
 
@@ -1005,8 +1088,16 @@ impl When {
     ///
     /// mock.assert();
     /// ```
-    pub fn cookie<S: Into<String>>(self, name: S, value: S) -> Self {
-        self.mock.set(self.mock.take().expect_cookie(name, value));
+    pub fn cookie<S: Into<String>>(mut self, name: S, value: S) -> Self {
+        update_cell(&self.expectations, |e| {
+            if e.cookies.is_none() {
+                e.cookies = Some(Vec::new());
+            }
+            e.cookies
+                .as_mut()
+                .unwrap()
+                .push((name.into(), value.into()));
+        });
         self
     }
 
@@ -1037,8 +1128,16 @@ impl When {
     ///
     /// mock.assert();
     /// ```
-    pub fn cookie_exists<S: Into<String>>(self, name: S) -> Self {
-        self.mock.set(self.mock.take().expect_cookie_exists(name));
+    pub fn cookie_exists<S: Into<String>>(mut self, name: S) -> Self {
+        update_cell(&self.expectations, |e| {
+            if e.cookie_exists.is_none() {
+                e.cookie_exists = Some(Vec::new());
+            }
+            e.cookie_exists
+                .as_mut()
+                .unwrap()
+                .push(name.into());
+        });
         self
     }
     /// Sets a custom matcher for expected HTTP request. If this function returns true, the request
@@ -1067,15 +1166,23 @@ impl When {
     /// m.assert();
     /// assert_eq!(response.status(), 200);
     /// ```
-    pub fn matches(self, matcher: MockMatcherFunction) -> Self {
-        self.mock.set(self.mock.take().expect_match(matcher));
+    pub fn matches(mut self, matcher: MockMatcherFunction) -> Self {
+        update_cell(&self.expectations, |e| {
+            if e.matchers.is_none() {
+                e.matchers = Some(Vec::new());
+            }
+            e.matchers
+                .as_mut()
+                .unwrap()
+                .push(matcher);
+        });
         self
     }
 }
 
 /// A type that allows the specification of HTTP response values.
 pub struct Then {
-    pub(crate) mock: Rc<Cell<Mock>>,
+    pub(crate) response_template: Rc<Cell<MockServerHttpResponse>>,
 }
 
 impl Then {
@@ -1102,8 +1209,10 @@ impl Then {
     /// m.assert();
     /// assert_eq!(response.status(), 200);
     /// ```
-    pub fn status(self, status: u16) -> Self {
-        self.mock.set(self.mock.take().return_status(status));
+    pub fn status(mut self, status: u16) -> Self {
+        update_cell(&self.response_template, |r| {
+            r.status = Some(status);
+        });
         self
     }
 
@@ -1113,7 +1222,7 @@ impl Then {
     ///
     /// ## Example:
     /// ```
-    /// use httpmock::{MockServer, Mock};
+    /// use httpmock::prelude::*;
     /// use isahc::{prelude::*, ResponseExt};
     ///
     /// // Arrange
@@ -1133,8 +1242,10 @@ impl Then {
     /// assert_eq!(response.status(), 200);
     /// assert_eq!(response.text().unwrap(), "ohi!");
     /// ```
-    pub fn body(self, body: impl AsRef<[u8]>) -> Self {
-        self.mock.set(self.mock.take().return_body(body));
+    pub fn body(mut self, body: impl AsRef<[u8]>) -> Self {
+        update_cell(&self.response_template, |r| {
+            r.body = Some(body.as_ref().to_vec());
+        });
         self
     }
 
@@ -1144,7 +1255,7 @@ impl Then {
     ///
     /// ## Example:
     /// ```
-    /// use httpmock::{MockServer, Mock};
+    /// use httpmock::prelude::*;
     /// use isahc::{prelude::*, ResponseExt};
     ///
     /// // Arrange
@@ -1164,9 +1275,21 @@ impl Then {
     /// assert_eq!(response.status(), 200);
     /// assert_eq!(response.text().unwrap(), "ohi!");
     /// ```
-    pub fn body_from_file<S: Into<String>>(self, body: S) -> Self {
-        self.mock.set(self.mock.take().return_body_from_file(body));
-        self
+    pub fn body_from_file<S: Into<String>>(mut self, resource_file_path: S) -> Self {
+        let resource_file_path = resource_file_path.into();
+        let path = Path::new(&resource_file_path);
+        let absolute_path = match path.is_absolute() {
+            true => path.to_path_buf(),
+            false => get_test_resource_file_path(&resource_file_path).expect(&format!(
+                "Cannot create absolute path from string '{}'",
+                &resource_file_path
+            )),
+        };
+        let content = read_file(&absolute_path).expect(&format!(
+            "Cannot read from file {}",
+            absolute_path.to_str().expect("Invalid OS path")
+        ));
+        self.body(content)
     }
 
     /// Sets the JSON body for the HTTP response that will be returned by the mock server.
@@ -1182,7 +1305,7 @@ impl Then {
     /// ## Example
     /// You can use this method conveniently as follows:
     /// ```
-    /// use httpmock::{MockServer, Mock};
+    /// use httpmock::prelude::*;
     /// use serde_json::{Value, json};
     /// use isahc::ResponseExt;
     /// use isahc::prelude::*;
@@ -1209,8 +1332,10 @@ impl Then {
     /// assert_eq!(response.status(), 200);
     /// assert_eq!(user.as_object().unwrap().get("name").unwrap(), "Hans");
     /// ```
-    pub fn json_body<V: Into<Value>>(self, value: V) -> Self {
-        self.mock.set(self.mock.take().return_json_body(value));
+    pub fn json_body<V: Into<Value>>(mut self, body: V) -> Self {
+        update_cell(&self.response_template, |r| {
+            r.body = Some(body.into().to_string().into_bytes());
+        });
         self
     }
 
@@ -1224,7 +1349,7 @@ impl Then {
     /// * `body` - The HTTP body object that will be serialized to JSON using serde.
     ///
     /// ```
-    /// use httpmock::{MockServer, Mock};
+    /// use httpmock::prelude::*;
     /// use isahc::{prelude::*, ResponseExt};
     ///
     /// // This is a temporary type that we will use for this example
@@ -1261,8 +1386,9 @@ impl Then {
     where
         T: Serialize,
     {
-        self.mock.set(self.mock.take().return_json_body_obj(body));
-        self
+        let json_body =
+            serde_json::to_value(body).expect("cannot serialize json body to JSON string ");
+        self.json_body(json_body)
     }
 
     /// Sets an HTTP header that the mock server will return.
@@ -1274,7 +1400,7 @@ impl Then {
     /// You can use this method conveniently as follows:
     /// ```
     /// // Arrange
-    /// use httpmock::{MockServer, Mock};
+    /// use httpmock::prelude::*;
     /// use serde_json::Value;
     /// use isahc::ResponseExt;
     ///
@@ -1294,103 +1420,16 @@ impl Then {
     /// m.assert();
     /// assert_eq!(response.status(), 200);
     /// ```
-    pub fn header<S: Into<String>>(self, name: S, value: S) -> Self {
-        self.mock.set(self.mock.take().return_header(name, value));
-        self
-    }
-
-    /// Sets the HTTP response up to return a temporary redirect.
-    ///
-    /// In detail, this method will add the following information to the HTTP response:
-    /// - A "Location" header with the provided URL as its value.
-    /// - Status code will be set to 302 (if no other status code was set before).
-    /// - The response body will be set to "Found" (if no other body was set before).
-    ///
-    /// Further information: https://developer.mozilla.org/en-US/docs/Web/HTTP/Redirections
-    /// and https://tools.ietf.org/html/rfc2616#section-10.3.8.
-    ///
-    /// * `redirect_url` - THe URL to redirect to.
-    ///
-    /// ## Example
-    /// ```
-    /// // Arrange
-    /// use httpmock::MockServer;
-    /// use isahc::{prelude::*, ResponseExt};
-    ///
-    /// let _ = env_logger::try_init();
-    ///
-    /// let server = MockServer::start();
-    ///
-    /// let redirect_mock = server.mock(|when, then|{
-    ///     when.path("/redirectPath");
-    ///     then.temporary_redirect("http://www.google.com");
-    /// });
-    ///
-    /// // Act: Send the HTTP request with an HTTP client that DOES NOT FOLLOW redirects automatically!
-    /// let mut response = isahc::get(server.url("/redirectPath")).unwrap();
-    /// let body = response.text().unwrap();
-    ///
-    /// // Assert
-    /// assert_eq!(redirect_mock.hits(), 1);
-    ///
-    /// // Attention!: Note that all of these values are automatically added to the response
-    /// // (see details in mock builder method documentation).
-    /// assert_eq!(response.status(), 302);
-    /// assert_eq!(body, "Found");
-    /// assert_eq!(response.headers().get("Location").unwrap().to_str().unwrap(), "http://www.google.com");
-    /// ```
-    #[deprecated(
-        since = "0.5.6",
-        note = "Please use desired response code and headers instead"
-    )]
-    pub fn temporary_redirect<S: Into<String>>(mut self, redirect_url: S) -> Self {
-        self.mock
-            .set(self.mock.take().return_temporary_redirect(redirect_url));
-        self
-    }
-
-    /// Sets the HTTP response up to return a permanent redirect.
-    ///
-    /// In detail, this method will add the following information to the HTTP response:
-    /// - A "Location" header with the provided URL as its value.
-    /// - Status code will be set to 301 (if no other status code was set before).
-    /// - The response body will be set to "Moved Permanently" (if no other body was set before).
-    ///
-    /// Further information: https://developer.mozilla.org/en-US/docs/Web/HTTP/Redirections
-    /// and https://tools.ietf.org/html/rfc2616#section-10.3.8.
-    ///
-    /// * `redirect_url` - THe URL to redirect to.
-    ///
-    /// ## Example
-    /// ```
-    /// // Arrange
-    /// use httpmock::MockServer;
-    /// use isahc::{prelude::*, ResponseExt};
-    /// let _ = env_logger::try_init();
-    ///
-    /// let server = MockServer::start();
-    ///
-    /// let redirect_mock = server.mock(|when, then|{
-    ///     when.path("/redirectPath");
-    ///     then.permanent_redirect("http://www.google.com");
-    /// });
-    ///
-    /// // Act: Send the HTTP request with an HTTP client that DOES NOT FOLLOW redirects automatically!
-    /// let mut response = isahc::get(server.url("/redirectPath")).unwrap();
-    /// let body = response.text().unwrap();
-    ///
-    /// // Assert
-    /// assert_eq!(redirect_mock.hits(), 1);
-    ///
-    /// // Attention!: Note that all of these values are automatically added to the response
-    /// // (see details in mock builder method documentation).
-    /// assert_eq!(response.status(), 301);
-    /// assert_eq!(body, "Moved Permanently");
-    /// assert_eq!(response.headers().get("Location").unwrap().to_str().unwrap(), "http://www.google.com");
-    /// ```
-    pub fn permanent_redirect<S: Into<String>>(mut self, redirect_url: S) -> Self {
-        self.mock
-            .set(self.mock.take().return_permanent_redirect(redirect_url));
+    pub fn header<S: Into<String>>(mut self, name: S, value: S) -> Self {
+        update_cell(&self.response_template, |r| {
+            if r.headers.is_none() {
+                r.headers = Some(Vec::new());
+            }
+            r.headers
+                .as_mut()
+                .unwrap()
+                .push((name.into(), value.into()));
+        });
         self
     }
 
@@ -1401,7 +1440,7 @@ impl Then {
     /// ```
     /// // Arrange
     /// use std::time::{SystemTime, Duration};
-    /// use httpmock::{MockServer, Mock};
+    /// use httpmock::prelude::*;
     ///
     /// let _ = env_logger::try_init();
     /// let start_time = SystemTime::now();
@@ -1421,8 +1460,10 @@ impl Then {
     /// mock.assert();
     /// assert_eq!(start_time.elapsed().unwrap() > three_seconds, true);
     /// ```
-    pub fn delay<D: Into<Duration>>(self, duration: D) -> Self {
-        self.mock.set(self.mock.take().return_with_delay(duration));
+    pub fn delay<D: Into<Duration>>(mut self, duration: D) -> Self {
+        update_cell(&self.response_template, |r| {
+            r.delay = Some(duration.into());
+        });
         self
     }
 }
@@ -1432,6 +1473,12 @@ impl Drop for MockServer {
         let adapter = self.server_adapter.take().unwrap();
         self.pool.put(adapter).join();
     }
+}
+
+fn update_cell<T: Sized + Default, F: FnOnce(&mut T)>(v: &Cell<T>, f: F) {
+    let mut vv = v.take();
+    f(&mut vv);
+    v.set(vv);
 }
 
 const LOCAL_SERVER_ADAPTER_GENERATOR: fn() -> Arc<dyn MockServerAdapter + Send + Sync> = || {

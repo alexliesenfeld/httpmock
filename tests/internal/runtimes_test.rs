@@ -1,5 +1,5 @@
-use isahc::get_async;
 use httpmock::prelude::*;
+use isahc::get_async;
 
 #[test]
 fn all_runtimes_test() {

@@ -1,6 +1,6 @@
+use httpmock::prelude::*;
 use isahc::{prelude::*, Request};
 use serde_json::json;
-use httpmock::prelude::*;
 
 #[test]
 fn showcase_test() {

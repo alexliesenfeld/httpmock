@@ -73,6 +73,12 @@ impl MockServerHttpResponse {
     }
 }
 
+impl Default for MockServerHttpResponse {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// Serializes and deserializes the response body to/from a Base64 string.
 mod opt_vector_serde_base64 {
     use serde::{Deserialize, Deserializer, Serializer};
@@ -187,6 +193,12 @@ pub struct RequestRequirements {
 
     #[serde(skip_serializing, skip_deserializing)]
     pub matchers: Option<Vec<MockMatcherFunction>>,
+}
+
+impl Default for RequestRequirements {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl RequestRequirements {
