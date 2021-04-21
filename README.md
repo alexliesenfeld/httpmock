@@ -8,9 +8,9 @@
 [![Build Status](https://dev.azure.com/alexliesenfeld/httpmock/_apis/build/status/alexliesenfeld.httpmock?branchName=master)](https://dev.azure.com/alexliesenfeld/httpmock/_build/latest?definitionId=2&branchName=master)
 [![codecov](https://codecov.io/gh/alexliesenfeld/httpmock/branch/master/graph/badge.svg)](https://codecov.io/gh/alexliesenfeld/httpmock)
 [![crates.io](https://img.shields.io/crates/d/httpmock.svg)](https://crates.io/crates/httpmock)
+[![Mentioned in Awesome](https://camo.githubusercontent.com/e5d3197f63169393ee5695f496402136b412d5e3b1d77dc5aa80805fdd5e7edb/68747470733a2f2f617765736f6d652e72652f6d656e74696f6e65642d62616467652e737667)](https://github.com/rust-unofficial/awesome-rust#testing)
 [![Rust](https://img.shields.io/badge/rust-1.46%2B-blue.svg?maxAge=3600)](https://github.com/rust-lang/rust/blob/master/RELEASES.md#version-1460-2020-08-27)
-[![License](https://img.shields.io/github/license/alexliesenfeld/httpmock.svg)](LICENSE)
-	
+
 </div>
 
 <p align="center">
@@ -90,7 +90,7 @@ You can use `httpmock` to run a standalone mock server that is executed in a sep
 
 The standalone mode allows you to mock HTTP based APIs for many API clients, not only the ones 
 inside your Rust tests, but also completely different programs running on remote hosts. 
-This is especially useful if you want to use `httpmock` in system or end-to-end tests, that require mocked services 
+This is especially useful if you want to use `httpmock` in system or end-to-end tests that require mocked services 
 (such as REST APIs, data stores, authentication providers, etc.).
 
 Please refer to [the docs](https://docs.rs/httpmock/0.5.8/httpmock/#standalone-mode) for more information
