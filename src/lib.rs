@@ -1133,10 +1133,7 @@ impl When {
             if e.cookie_exists.is_none() {
                 e.cookie_exists = Some(Vec::new());
             }
-            e.cookie_exists
-                .as_mut()
-                .unwrap()
-                .push(name.into());
+            e.cookie_exists.as_mut().unwrap().push(name.into());
         });
         self
     }
@@ -1171,10 +1168,7 @@ impl When {
             if e.matchers.is_none() {
                 e.matchers = Some(Vec::new());
             }
-            e.matchers
-                .as_mut()
-                .unwrap()
-                .push(matcher);
+            e.matchers.as_mut().unwrap().push(matcher);
         });
         self
     }
