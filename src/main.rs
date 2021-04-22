@@ -14,6 +14,8 @@ pub struct CommandLineParameters {
     pub static_mock_dir: Option<PathBuf>,
     #[structopt(short, long)]
     pub disable_access_log: bool,
+    #[structopt(short, long, default_value = "250")]
+    pub history_limit: usize,
 }
 
 #[tokio::main]
@@ -40,6 +42,7 @@ async fn main() {
         params.expose,
         params.static_mock_dir,
         !params.disable_access_log,
+        params.history_limit
     )
     .await
     .expect("an error occurred during mock server execution");

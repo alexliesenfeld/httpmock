@@ -58,8 +58,9 @@ pub async fn start_standalone_server(
     expose: bool,
     static_mock_dir_path: Option<PathBuf>,
     print_access_log: bool,
+    history_limit: usize,
 ) -> Result<(), String> {
-    let state = Arc::new(MockServerState::new());
+    let state = Arc::new(MockServerState::new(history_limit));
 
     #[cfg(feature = "standalone")]
     static_mock_dir_path.map(|path| {

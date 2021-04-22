@@ -102,9 +102,11 @@ pub(crate) fn find_mock(
     req: HttpMockRequest,
 ) -> Result<Option<MockServerHttpResponse>, String> {
     let req = Arc::new(req);
-
     {
         let mut history = state.history.write().unwrap();
+        if history.len() > 100 {
+            history.remove(0);
+        }
         history.push(req.clone());
     }
 
@@ -160,7 +162,7 @@ pub(crate) fn verify(
     state: &MockServerState,
     mock_rr: &RequestRequirements,
 ) -> Result<Option<ClosestMatch>, String> {
-    let mut history = state.history.write().unwrap();
+    let mut history = state.history.read().unwrap();
 
     let non_matching_requests: Vec<&Arc<HttpMockRequest>> = history
         .iter()
@@ -309,9 +311,9 @@ mod test {
 
         // Act
         let does_match1 =
-            request_matches(&MockServerState::new(), Arc::new(request1), &requirements1);
+            request_matches(&MockServerState::default(), Arc::new(request1), &requirements1);
         let does_match2 =
-            request_matches(&MockServerState::new(), Arc::new(request2), &requirements2);
+            request_matches(&MockServerState::default(), Arc::new(request2), &requirements2);
 
         // Assert
         assert_eq!(false, does_match1);
@@ -337,9 +339,9 @@ mod test {
 
         // Act
         let does_match1 =
-            request_matches(&MockServerState::new(), Arc::new(request1), &requirements1);
+            request_matches(&MockServerState::default(), Arc::new(request1), &requirements1);
         let does_match2 =
-            request_matches(&MockServerState::new(), Arc::new(request2), &requirements2);
+            request_matches(&MockServerState::default(), Arc::new(request2), &requirements2);
 
         // Assert
         assert_eq!(false, does_match1);
@@ -364,7 +366,7 @@ mod test {
         let req2 = RequestRequirements::new().with_path("/test-path".to_string());
 
         // Act
-        let does_match = request_matches(&MockServerState::new(), Arc::new(req1), &req2);
+        let does_match = request_matches(&MockServerState::default(), Arc::new(req1), &req2);
 
         // Assert
         assert_eq!(true, does_match);
@@ -380,7 +382,7 @@ mod test {
         let req2 = RequestRequirements::new().with_path("/another-path".to_string());
 
         // Act
-        let does_match = request_matches(&MockServerState::new(), Arc::new(req1), &req2);
+        let does_match = request_matches(&MockServerState::default(), Arc::new(req1), &req2);
 
         // Assert
         assert_eq!(false, does_match);
@@ -396,7 +398,7 @@ mod test {
         let req2 = RequestRequirements::new().with_method("GET".to_string());
 
         // Act
-        let does_match = request_matches(&MockServerState::new(), Arc::new(req1), &req2);
+        let does_match = request_matches(&MockServerState::default(), Arc::new(req1), &req2);
 
         // Assert
         assert_eq!(true, does_match);
@@ -412,7 +414,7 @@ mod test {
         let req2 = RequestRequirements::new().with_method("POST".to_string());
 
         // Act
-        let does_match = request_matches(&MockServerState::new(), Arc::new(req1), &req2);
+        let does_match = request_matches(&MockServerState::default(), Arc::new(req1), &req2);
 
         // Assert
         assert_eq!(false, does_match);
@@ -429,7 +431,7 @@ mod test {
         let req2 = RequestRequirements::new().with_body("test".to_string());
 
         // Act
-        let does_match = request_matches(&MockServerState::new(), Arc::new(req1), &req2);
+        let does_match = request_matches(&MockServerState::default(), Arc::new(req1), &req2);
 
         // Assert
         assert_eq!(true, does_match);
@@ -446,7 +448,7 @@ mod test {
         let req2 = RequestRequirements::new().with_body("some other text".to_string());
 
         // Act
-        let does_match = request_matches(&MockServerState::new(), Arc::new(req1), &req2);
+        let does_match = request_matches(&MockServerState::default(), Arc::new(req1), &req2);
 
         // Assert
         assert_eq!(false, does_match);
@@ -470,7 +472,7 @@ mod test {
         let req2 = RequestRequirements::new().with_headers(h2);
 
         // Act
-        let does_match = request_matches(&MockServerState::new(), Arc::new(req1), &req2);
+        let does_match = request_matches(&MockServerState::default(), Arc::new(req1), &req2);
 
         // Assert
         assert_eq!(true, does_match);
@@ -487,7 +489,7 @@ mod test {
         let req2 = RequestRequirements::new().with_body("test".to_string());
 
         // Act
-        let does_match = request_matches(&MockServerState::new(), Arc::new(req1), &req2);
+        let does_match = request_matches(&MockServerState::default(), Arc::new(req1), &req2);
 
         // Assert
         assert_eq!(true, does_match);
@@ -511,7 +513,7 @@ mod test {
         let req2 = RequestRequirements::new().with_headers(h2);
 
         // Act
-        let does_match = request_matches(&MockServerState::new(), Arc::new(req1), &req2);
+        let does_match = request_matches(&MockServerState::default(), Arc::new(req1), &req2);
 
         // Assert
         assert_eq!(true, does_match); // matches, because request contains more headers than the mock expects
@@ -533,7 +535,7 @@ mod test {
         let mock = RequestRequirements::new();
 
         // Act
-        let does_match_1 = request_matches(&MockServerState::new(), Arc::new(req), &mock);
+        let does_match_1 = request_matches(&MockServerState::default(), Arc::new(req), &mock);
 
         // Assert
         assert_eq!(true, does_match_1); // effectively empty because mock does not expect any headers
@@ -548,7 +550,7 @@ mod test {
         let req2 = RequestRequirements::new();
 
         // Act
-        let does_match = request_matches(&MockServerState::new(), Arc::new(req1), &req2);
+        let does_match = request_matches(&MockServerState::default(), Arc::new(req1), &req2);
 
         // Assert
         assert_eq!(true, does_match);
@@ -611,7 +613,7 @@ mod test {
     #[test]
     fn add_new_mock_validation_error() {
         // Arrange
-        let state = MockServerState::new();
+        let state = MockServerState::default();
         let mut req = RequestRequirements::new();
         req.method = Some("GET".into());
         req.body = Some("body".into());
@@ -638,7 +640,7 @@ mod test {
     #[test]
     fn read_one_returns_none_test() {
         // Arrange
-        let state = MockServerState::new();
+        let state = MockServerState::default();
 
         // Act
         let result = read_one_mock(&state, 6);
@@ -659,8 +661,8 @@ mod test {
         mock2.path_contains = Some(vec!["es".into()]);
 
         // Act
-        let result1 = request_matches(&MockServerState::new(), msr.clone(), &mock1);
-        let result2 = request_matches(&MockServerState::new(), msr.clone(), &mock2);
+        let result1 = request_matches(&MockServerState::default(), msr.clone(), &mock1);
+        let result2 = request_matches(&MockServerState::default(), msr.clone(), &mock2);
 
         // Assert
         assert_eq!(result1, false);
@@ -678,8 +680,8 @@ mod test {
         mock2.path_matches = Some(vec![Pattern::from_regex(Regex::new(r#"test"#).unwrap())]);
 
         // Act
-        let result1 = request_matches(&MockServerState::new(), msr.clone(), &mock1);
-        let result2 = request_matches(&MockServerState::new(), msr.clone(), &mock2);
+        let result1 = request_matches(&MockServerState::default(), msr.clone(), &mock1);
+        let result2 = request_matches(&MockServerState::default(), msr.clone(), &mock2);
 
         // Assert
         assert_eq!(result1, false);
@@ -690,7 +692,7 @@ mod test {
     #[test]
     fn verify_test() {
         // Arrange
-        let mut mock_server_state = MockServerState::new();
+        let mut mock_server_state = MockServerState::default();
         {
             let mut mocks = mock_server_state.history.write().unwrap();
             // 1: close request

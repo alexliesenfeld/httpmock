@@ -36,7 +36,7 @@ fn loop_with_local_test() {
     // Instead of creating a new MockServer using new(), we connect to an existing remote instance.
     let server = MockServer::start();
 
-    let mock = server.mock(|when, then| {
+    let _mock = server.mock(|when, then| {
         when.path("/test")
             .path_contains("test")
             .query_param("myQueryParam", "überschall");

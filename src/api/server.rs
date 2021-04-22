@@ -272,7 +272,7 @@ impl Drop for MockServer {
 
 const LOCAL_SERVER_ADAPTER_GENERATOR: fn() -> Arc<dyn MockServerAdapter + Send + Sync> = || {
     let (addr_sender, addr_receiver) = tokio::sync::oneshot::channel::<SocketAddr>();
-    let state = Arc::new(MockServerState::new());
+    let state = Arc::new(MockServerState::default());
     let server_state = state.clone();
 
     thread::spawn(move || {

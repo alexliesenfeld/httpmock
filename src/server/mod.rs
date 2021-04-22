@@ -53,6 +53,7 @@ pub(crate) mod web;
 /// The shared state accessible to all handlers
 pub struct MockServerState {
     id_counter: AtomicUsize,
+    history_limit: usize,
     pub mocks: RwLock<BTreeMap<usize, ActiveMock>>,
     pub history: RwLock<Vec<Arc<HttpMockRequest>>>,
     pub matchers: Vec<Box<dyn Matcher + Sync + Send>>,
@@ -63,9 +64,10 @@ impl MockServerState {
         self.id_counter.fetch_add(1, Relaxed)
     }
 
-    pub fn new() -> Self {
+    pub fn new(history_limit: usize) -> Self {
         MockServerState {
             mocks: RwLock::new(BTreeMap::new()),
+            history_limit,
             history: RwLock::new(Vec::new()),
             id_counter: AtomicUsize::new(0),
             matchers: vec![
@@ -258,6 +260,12 @@ impl MockServerState {
                 }),
             ],
         }
+    }
+}
+
+impl Default for MockServerState {
+    fn default() -> Self {
+        MockServerState::new(usize::MAX)
     }
 }
 
