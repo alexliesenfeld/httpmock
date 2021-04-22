@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use serde_json::Value;
 
-use crate::data::{HttpMockRequest, MockMatcherFunction, Pattern, RequestRequirements};
+use crate::common::data::{MockMatcherFunction, RequestRequirements};
 use crate::Regex;
 
 pub(crate) trait ValueRefSource<T> {

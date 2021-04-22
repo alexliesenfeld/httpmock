@@ -1,16 +1,57 @@
 use std::sync::Arc;
 
-use crate::data::{MockDefinition, MockServerHttpResponse, Pattern, RequestRequirements};
+use crate::common::data::{MockDefinition, MockServerHttpResponse, Pattern, RequestRequirements};
+use crate::common::util::read_file;
 use crate::server::web::handlers::add_new_mock;
 use crate::server::{start_server, MockServerState};
-use crate::util::read_file;
-use crate::{NameValuePair, YAMLMockDefinition};
+use crate::Method;
 use regex::Regex;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::fs;
 use std::fs::read_dir;
 use std::path::PathBuf;
 use std::str::FromStr;
 use tokio::time::Duration;
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+pub struct NameValuePair {
+    name: String,
+    value: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct YAMLRequestRequirements {
+    pub path: Option<String>,
+    pub path_contains: Option<Vec<String>>,
+    pub path_matches: Option<Vec<String>>,
+    pub method: Option<Method>,
+    pub header: Option<Vec<NameValuePair>>,
+    pub header_exists: Option<Vec<String>>,
+    pub cookie: Option<Vec<NameValuePair>>,
+    pub cookie_exists: Option<Vec<String>>,
+    pub body: Option<String>,
+    pub json_body: Option<Value>,
+    pub json_body_partial: Option<Vec<Value>>,
+    pub body_contains: Option<Vec<String>>,
+    pub body_matches: Option<Vec<String>>,
+    pub query_param_exists: Option<Vec<String>>,
+    pub query_param: Option<Vec<NameValuePair>>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct YAMLHTTPResponse {
+    pub status: Option<u16>,
+    pub header: Option<Vec<NameValuePair>>,
+    pub body: Option<String>,
+    pub delay: Option<u64>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct YAMLMockDefinition {
+    when: YAMLRequestRequirements,
+    then: YAMLHTTPResponse,
+}
 
 pub async fn start_standalone_server(
     port: u16,

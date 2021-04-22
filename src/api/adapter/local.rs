@@ -8,9 +8,7 @@ use async_trait::async_trait;
 use isahc::prelude::*;
 
 use crate::api::adapter::{build_http_client, http_ping, InternalHttpClient, MockServerAdapter};
-use crate::data::{
-    ActiveMock, ClosestMatch, MockDefinition, MockIdentification, RequestRequirements,
-};
+use crate::common::data::{ActiveMock, ClosestMatch, MockDefinition, MockRef, RequestRequirements};
 use crate::server::web::handlers::{
     add_new_mock, delete_all_mocks, delete_history, delete_one_mock, read_one_mock, verify,
 };
@@ -47,9 +45,9 @@ impl MockServerAdapter for LocalMockServerAdapter {
         &self.addr
     }
 
-    async fn create_mock(&self, mock: &MockDefinition) -> Result<MockIdentification, String> {
+    async fn create_mock(&self, mock: &MockDefinition) -> Result<MockRef, String> {
         let id = add_new_mock(&self.local_state, mock.clone(), false)?;
-        Ok(MockIdentification::new(id))
+        Ok(MockRef::new(id))
     }
 
     async fn fetch_mock(&self, mock_id: usize) -> Result<ActiveMock, String> {

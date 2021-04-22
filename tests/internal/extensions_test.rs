@@ -1,7 +1,7 @@
 extern crate httpmock;
 
-use self::httpmock::MockRef;
-use httpmock::MockServer;
+use self::httpmock::prelude::*;
+use self::httpmock::Mock;
 use std::cell::RefCell;
 
 // Test for issue https://github.com/alexliesenfeld/httpmock/issues/26
@@ -32,6 +32,6 @@ fn wrapper_test() {
     sw.mocks.borrow_mut().push(MyMockWrapper { id: mock.id });
     drop(mock);
 
-    let mock = MockRef::new(sw.mocks.borrow_mut().get(0).unwrap().id, &sw.server);
+    let mock = Mock::new(sw.mocks.borrow_mut().get(0).unwrap().id, &sw.server);
     mock.hits();
 }

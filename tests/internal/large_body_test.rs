@@ -1,8 +1,5 @@
-extern crate httpmock;
-
+use httpmock::prelude::*;
 use isahc::{Request, RequestExt};
-
-use httpmock::MockServer;
 
 use crate::simulate_standalone_server;
 

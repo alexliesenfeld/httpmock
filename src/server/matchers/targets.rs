@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 
 use serde_json::Value;
 
-use crate::data::{HttpMockRequest, RequestRequirements};
+use crate::common::data::HttpMockRequest;
 use crate::server::matchers::parse_cookies;
 use crate::server::matchers::sources::ValueRefSource;
 

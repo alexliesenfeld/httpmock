@@ -21,9 +21,8 @@ use regex::Regex;
 
 use matchers::generic::SingleValueMatcher;
 use matchers::targets::{JSONBodyTarget, StringBodyTarget};
-pub use matchers::{Diff, DiffResult, Mismatch, Reason, Tokenizer};
 
-use crate::data::{ActiveMock, HttpMockRequest};
+use crate::common::data::{ActiveMock, HttpMockRequest, Tokenizer};
 use crate::server::matchers::comparators::{
     AnyValueComparator, FunctionMatchesRequestComparator, JSONContainsMatchComparator,
     JSONExactMatchComparator, StringContainsMatchComparator, StringExactMatchComparator,

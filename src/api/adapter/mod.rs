@@ -9,13 +9,10 @@ use isahc::prelude::Configurable;
 use isahc::{AsyncReadResponseExt, ResponseExt};
 use serde::{Deserialize, Serialize};
 
-use crate::data::{
-    ActiveMock, ClosestMatch, MockDefinition, MockIdentification, RequestRequirements,
-};
+use crate::common::data::{ActiveMock, ClosestMatch, MockDefinition, MockRef, RequestRequirements};
 use crate::server::web::handlers::{
     add_new_mock, delete_all_mocks, delete_history, delete_one_mock, read_one_mock, verify,
 };
-use crate::server::{Mismatch, MockServerState};
 
 pub mod local;
 pub mod standalone;
@@ -75,7 +72,7 @@ pub trait MockServerAdapter {
     fn host(&self) -> String;
     fn port(&self) -> u16;
     fn address(&self) -> &SocketAddr;
-    async fn create_mock(&self, mock: &MockDefinition) -> Result<MockIdentification, String>;
+    async fn create_mock(&self, mock: &MockDefinition) -> Result<MockRef, String>;
     async fn fetch_mock(&self, mock_id: usize) -> Result<ActiveMock, String>;
     async fn delete_mock(&self, mock_id: usize) -> Result<(), String>;
     async fn delete_all_mocks(&self) -> Result<(), String>;

@@ -6,13 +6,13 @@ use std::sync::Arc;
 use basic_cookies::Cookie;
 use serde_json::Value;
 
-use crate::data::{
-    ActiveMock, ClosestMatch, HttpMockRequest, MockDefinition, MockServerHttpResponse,
+use crate::common::data::{
+    ActiveMock, ClosestMatch, HttpMockRequest, Mismatch, MockDefinition, MockServerHttpResponse,
     RequestRequirements,
 };
 use crate::server::matchers::Matcher;
 use crate::server::util::{StringTreeMapExtension, TreeMapExtension};
-use crate::server::{Mismatch, MockServerState};
+use crate::server::MockServerState;
 
 /// Contains HTTP methods which cannot have a body.
 const NON_BODY_METHODS: &[&str] = &["GET", "HEAD"];
@@ -263,7 +263,7 @@ mod test {
 
     use regex::Regex;
 
-    use crate::data::{
+    use crate::common::data::{
         HttpMockRequest, MockDefinition, MockServerHttpResponse, Pattern, RequestRequirements,
     };
     use crate::server::web::handlers::{

@@ -7,6 +7,8 @@
   have now been removed.
 - A [prelude module](https://github.com/alexliesenfeld/httpmock#getting-started) was added to shorten imports 
   that are usually required when using `httpmock` in tests.
+- The struct `MockRef` has been renamed to `Mock`. 
+- Trait `MockRefExt` has been renamed to `MockExt`.
   
 ## Version 0.5.8
 - A bug has been fixed that prevented to use the mock server for requests containing a `multipart/form-data` 

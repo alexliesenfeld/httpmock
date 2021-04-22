@@ -11,14 +11,11 @@ use colored::*;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::api::server::MockServer;
 use crate::api::{Method, Regex};
-use crate::data::{
-    ActiveMock, ClosestMatch, HttpMockRequest, MockDefinition, MockMatcherFunction,
-    MockServerHttpResponse, Pattern, RequestRequirements,
-};
-use crate::server::{Diff, DiffResult, Mismatch, Reason, Tokenizer};
-use crate::util::{get_test_resource_file_path, read_file, Join};
-use crate::MockServer;
+
+use crate::common::data::{ClosestMatch, Diff, DiffResult, Mismatch, Reason};
+use crate::common::util::{get_test_resource_file_path, read_file, Join};
 
 /// Represents a reference to the mock object on a [MockServer](struct.MockServer.html).
 /// It can be used to spy on the mock and also perform some management operations, such as
@@ -51,14 +48,14 @@ use crate::MockServer;
 /// assert_eq!(response1.status(), 202);
 /// assert_eq!(response2.status(), 404);
 /// ```
-pub struct MockRef<'a> {
+pub struct Mock<'a> {
     // Please find the reason why id is public in
     // https://github.com/alexliesenfeld/httpmock/issues/26.
     pub id: usize,
     pub(crate) server: &'a MockServer,
 }
 
-impl<'a> MockRef<'a> {
+impl<'a> Mock<'a> {
     pub fn new(id: usize, server: &'a MockServer) -> Self {
         Self { id, server }
     }
@@ -66,8 +63,8 @@ impl<'a> MockRef<'a> {
     /// all the request requirements of this mock.
     ///
     /// **Attention**: If you want to assert more than one request, consider using either
-    /// [MockRef::assert_hits](struct.MockRef.html#method.assert_hits) or
-    /// [MockRef::hits](struct.MockRef.html#method.hits).
+    /// [Mock::assert_hits](struct.Mock.html#method.assert_hits) or
+    /// [Mock::hits](struct.Mock.html#method.hits).
     ///
     /// # Example
     /// ```
@@ -98,8 +95,8 @@ impl<'a> MockRef<'a> {
     /// all the request requirements of this mock.
     ///
     /// **Attention**: If you want to assert more than one request, consider using either
-    /// [MockRef::assert_hits](struct.MockRef.html#method.assert_hits) or
-    /// [MockRef::hits](struct.MockRef.html#method.hits).
+    /// [Mock::assert_hits](struct.Mock.html#method.assert_hits) or
+    /// [Mock::hits](struct.Mock.html#method.hits).
     ///
     /// # Example
     /// ```
@@ -132,7 +129,7 @@ impl<'a> MockRef<'a> {
     /// matched all the request requirements of this mock.
     ///
     /// **Attention**: Consider using the shorthand version
-    /// [MockRef::assert](struct.MockRef.html#method.assert) if you want to assert only one hit.
+    /// [Mock::assert](struct.Mock.html#method.assert) if you want to assert only one hit.
     ///
     ///
     /// # Example
@@ -166,7 +163,7 @@ impl<'a> MockRef<'a> {
     /// matched all the request requirements of this mock.
     ///
     /// **Attention**: Consider using the shorthand version
-    /// [MockRef::assert_async](struct.MockRef.html#method.assert_async) if you want to assert only one hit.
+    /// [Mock::assert_async](struct.Mock.html#method.assert_async) if you want to assert only one hit.
     ///
     /// # Example
     /// ```
@@ -325,7 +322,7 @@ impl<'a> MockRef<'a> {
     }
 
     /// Deletes this mock from the mock server. This method is the asynchronous equivalent of
-    /// [MockRef::delete](struct.MockRef.html#method.delete).
+    /// [Mock::delete](struct.Mock.html#method.delete).
     ///
     /// # Example
     /// ```
@@ -386,20 +383,20 @@ impl<'a> MockRef<'a> {
     }
 }
 
-/// The [MockRefExt](trait.MockRefExt.html) trait extends the [MockRef](struct.MockRef.html)
+/// The [MockExt](trait.MockExt.html) trait extends the [Mock](struct.Mock.html)
 /// structure with some additional functionality, that is usually not required.
-pub trait MockRefExt<'a> {
-    /// Creates a new [MockRef](struct.MockRef.html) instance that references an already existing
+pub trait MockExt<'a> {
+    /// Creates a new [Mock](struct.Mock.html) instance that references an already existing
     /// mock on a [MockServer](struct.MockServer.html). This functionality is usually not required.
-    /// You can use it if for you need to recreate [MockRef](struct.MockRef.html) instances
+    /// You can use it if for you need to recreate [Mock](struct.Mock.html) instances
     ///.
     /// * `id` - The ID of the existing mock ot the [MockServer](struct.MockServer.html).
     /// * `mock_server` - The [MockServer](struct.MockServer.html) to which the
-    /// [MockRef](struct.MockRef.html) instance will reference.
+    /// [Mock](struct.Mock.html) instance will reference.
     ///
     /// # Example
     /// ```
-    /// use httpmock::{MockServer, MockRef, MockRefExt};
+    /// use httpmock::{MockServer, Mock, MockExt};
     /// use isahc::get;
     ///
     /// // Arrange
@@ -409,32 +406,32 @@ pub trait MockRefExt<'a> {
     ///     then.status(202);
     /// });
     ///
-    /// // Store away the mock ID for later usage and drop the MockRef instance.
+    /// // Store away the mock ID for later usage and drop the Mock instance.
     /// let mock_id = mock_ref.id();
     /// drop(mock_ref);
     ///
     /// // Act: Send the HTTP request
     /// let response = get(server.url("/test")).unwrap();
     ///
-    /// // Create a new MockRef instance that references the earlier mock at the MockServer.
-    /// let mock_ref = MockRef::new(mock_id, &server);
+    /// // Create a new Mock instance that references the earlier mock at the MockServer.
+    /// let mock_ref = Mock::new(mock_id, &server);
     ///
-    /// // Use the recreated MockRef as usual.
+    /// // Use the recreated Mock as usual.
     /// mock_ref.assert();
     /// assert_eq!(response.status(), 202);
     /// ```
     /// Refer to [`Issue 26`][https://github.com/alexliesenfeld/httpmock/issues/26] for more
     /// information.
-    fn new(id: usize, mock_server: &'a MockServer) -> MockRef<'a>;
+    fn new(id: usize, mock_server: &'a MockServer) -> Mock<'a>;
 
     /// Returns the ID that the mock was assigned to on the
     /// [MockServer](struct.MockServer.html).
     fn id(&self) -> usize;
 }
 
-impl<'a> MockRefExt<'a> for MockRef<'a> {
-    fn new(id: usize, mock_server: &'a MockServer) -> MockRef<'a> {
-        MockRef {
+impl<'a> MockExt<'a> for Mock<'a> {
+    fn new(id: usize, mock_server: &'a MockServer) -> Mock<'a> {
+        Mock {
             id,
             server: mock_server,
         }
@@ -554,8 +551,9 @@ fn fail_with(actual_hits: usize, expected_hits: usize, closest_match: Option<Clo
 #[cfg(test)]
 mod test {
     use crate::api::mock::fail_with;
-    use crate::data::{ClosestMatch, HttpMockRequest};
-    use crate::server::{Diff, DiffResult, Mismatch, Reason, Tokenizer};
+    use crate::common::data::{
+        ClosestMatch, Diff, DiffResult, HttpMockRequest, Mismatch, Reason, Tokenizer,
+    };
 
     #[test]
     #[should_panic(expected = "1 : This is a title\n\

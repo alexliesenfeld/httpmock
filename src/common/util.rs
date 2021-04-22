@@ -11,6 +11,16 @@ use std::{
 /// Extension trait for efficiently blocking on a future.
 use crossbeam_utils::sync::{Parker, Unparker};
 use futures_util::{pin_mut, task::ArcWake};
+use std::cell::Cell;
+
+// ===============================================================================================
+// Misc
+// ===============================================================================================
+pub(crate) fn update_cell<T: Sized + Default, F: FnOnce(&mut T)>(v: &Cell<T>, f: F) {
+    let mut vv = v.take();
+    f(&mut vv);
+    v.set(vv);
+}
 
 // ===============================================================================================
 // Retry
@@ -110,7 +120,7 @@ pub(crate) fn read_file<P: AsRef<Path>>(absolute_resource_path: P) -> Result<Vec
 
 #[cfg(test)]
 mod test {
-    use crate::util::{with_retry, Join};
+    use crate::common::util::{with_retry, Join};
 
     #[test]
     fn with_retry_error_test() {
