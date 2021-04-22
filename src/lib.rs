@@ -230,13 +230,13 @@ use api::spec::{Then, When};
 use api::MockServerAdapter;
 use common::util::Join;
 
+use api::{LocalMockServerAdapter, RemoteMockServerAdapter};
 pub use api::{Method, Mock, MockExt, MockServer, Regex};
 use server::{start_server, MockServerState};
-use api::{LocalMockServerAdapter, RemoteMockServerAdapter};
 
 mod api;
-mod server;
 mod common;
+mod server;
 pub mod standalone;
 
 pub mod prelude {

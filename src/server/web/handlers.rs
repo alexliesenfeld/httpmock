@@ -310,10 +310,16 @@ mod test {
         let requirements2 = RequestRequirements::new().with_body_contains(vec!["es".to_string()]);
 
         // Act
-        let does_match1 =
-            request_matches(&MockServerState::default(), Arc::new(request1), &requirements1);
-        let does_match2 =
-            request_matches(&MockServerState::default(), Arc::new(request2), &requirements2);
+        let does_match1 = request_matches(
+            &MockServerState::default(),
+            Arc::new(request1),
+            &requirements1,
+        );
+        let does_match2 = request_matches(
+            &MockServerState::default(),
+            Arc::new(request2),
+            &requirements2,
+        );
 
         // Assert
         assert_eq!(false, does_match1);
@@ -338,10 +344,16 @@ mod test {
         let requirements2 = RequestRequirements::new().with_query_param(params1.clone());
 
         // Act
-        let does_match1 =
-            request_matches(&MockServerState::default(), Arc::new(request1), &requirements1);
-        let does_match2 =
-            request_matches(&MockServerState::default(), Arc::new(request2), &requirements2);
+        let does_match1 = request_matches(
+            &MockServerState::default(),
+            Arc::new(request1),
+            &requirements1,
+        );
+        let does_match2 = request_matches(
+            &MockServerState::default(),
+            Arc::new(request2),
+            &requirements2,
+        );
 
         // Assert
         assert_eq!(false, does_match1);

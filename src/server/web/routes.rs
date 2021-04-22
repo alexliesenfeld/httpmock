@@ -105,7 +105,6 @@ pub(crate) async fn serve(
         }
         Err(e) => create_json_response(500, None, ErrorResponse::new(&e)),
     };
-
     return result;
 }
 

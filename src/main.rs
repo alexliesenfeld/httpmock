@@ -42,7 +42,7 @@ async fn main() {
         params.expose,
         params.static_mock_dir,
         !params.disable_access_log,
-        params.history_limit
+        params.history_limit,
     )
     .await
     .expect("an error occurred during mock server execution");
