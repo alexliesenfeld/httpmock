@@ -43,7 +43,7 @@ Add `httpmock` to `Cargo.toml`:
 
 ```toml
 [dev-dependencies]
-httpmock = "0.5"
+httpmock = "0.6"
 ```
 You can then use `httpmock` as follows:
 ```rust

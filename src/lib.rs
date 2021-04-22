@@ -230,15 +230,14 @@ use api::spec::{Then, When};
 use api::MockServerAdapter;
 use common::util::Join;
 
-use crate::api::{LocalMockServerAdapter, RemoteMockServerAdapter};
-pub use crate::api::{Method, Mock, MockExt, MockServer, Regex};
-use crate::server::{start_server, MockServerState};
+pub use api::{Method, Mock, MockExt, MockServer, Regex};
+use server::{start_server, MockServerState};
+use api::{LocalMockServerAdapter, RemoteMockServerAdapter};
 
 mod api;
 mod server;
-pub mod standalone;
-
 mod common;
+pub mod standalone;
 
 pub mod prelude {
     #[doc(no_inline)]
