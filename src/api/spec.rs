@@ -227,6 +227,35 @@ impl When {
         self
     }
 
+    /// Sets a query parameter that needs to be provided.
+    /// TODO: Create example
+    /// ```
+    pub fn x_www_form_urlencoded<S: Into<String>>(mut self, key: S, value: S) -> Self {
+        update_cell(&self.expectations, |e| {
+            if e.x_www_form_urlencoded.is_none() {
+                e.x_www_form_urlencoded = Some(Vec::new());
+            }
+            e.x_www_form_urlencoded
+                .as_mut()
+                .unwrap()
+                .push((key.into(), value.into()));
+        });
+        self
+    }
+
+    /// Sets a query parameter that needs to exist in an HTTP request.
+    /// TODO: Implement test + create docs
+    /// ```
+    pub fn x_www_form_urlencoded_key_exists<S: Into<String>>(mut self, key: S) -> Self {
+        update_cell(&self.expectations, |e| {
+            if e.x_www_form_urlencoded_key_exists.is_none() {
+                e.x_www_form_urlencoded_key_exists = Some(Vec::new());
+            }
+            e.x_www_form_urlencoded_key_exists.as_mut().unwrap().push(key.into());
+        });
+        self
+    }
+
     /// Sets the required HTTP request body content.
     ///
     /// * `body` - The required HTTP request body.

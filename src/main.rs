@@ -1,11 +1,14 @@
+use clap::{AppSettings, Clap};
 use httpmock::standalone::start_standalone_server;
 use std::env;
 use std::path::PathBuf;
-use clap::{AppSettings, Clap};
 
 /// Holds command line parameters provided by the user.
 #[derive(Clap, Debug)]
-#[clap(version = "0.6", author = "Alexander Liesenfeld <alexander.liesenfeld@outlook.com>")]
+#[clap(
+    version = "0.6",
+    author = "Alexander Liesenfeld <alexander.liesenfeld@outlook.com>"
+)]
 #[clap(setting = AppSettings::ColoredHelp)]
 struct ExecutionParameters {
     #[clap(short, long, env = "HTTPMOCK_PORT", default_value = "5000")]
@@ -16,7 +19,12 @@ struct ExecutionParameters {
     pub mock_files_dir: Option<PathBuf>,
     #[clap(short, long, env = "HTTPMOCK_DISABLE_ACCESS_LOG")]
     pub disable_access_log: bool,
-    #[clap(short, long, env = "HTTPMOCK_REQUEST_HISTORY_LIMIT", default_value = "100")]
+    #[clap(
+        short,
+        long,
+        env = "HTTPMOCK_REQUEST_HISTORY_LIMIT",
+        default_value = "100"
+    )]
     pub request_history_limit: usize,
 }
 

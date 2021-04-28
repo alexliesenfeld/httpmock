@@ -29,15 +29,8 @@ use crate::server::matchers::comparators::{
     StringRegexMatchComparator,
 };
 use crate::server::matchers::generic::{FunctionValueMatcher, MultiValueMatcher};
-use crate::server::matchers::sources::{
-    BodyRegexSource, ContainsCookieSource, ContainsHeaderSource, ContainsQueryParameterSource,
-    CookieSource, FunctionSource, HeaderSource, JSONBodySource, MethodSource,
-    PartialJSONBodySource, PathContainsSubstringSource, PathRegexSource, QueryParameterSource,
-    StringBodyContainsSource, StringBodySource, StringPathSource,
-};
-use crate::server::matchers::targets::{
-    CookieTarget, FullRequestTarget, HeaderTarget, MethodTarget, PathTarget, QueryParameterTarget,
-};
+use crate::server::matchers::sources::{BodyRegexSource, ContainsCookieSource, ContainsHeaderSource, ContainsQueryParameterSource, CookieSource, FunctionSource, HeaderSource, JSONBodySource, MethodSource, PartialJSONBodySource, PathContainsSubstringSource, PathRegexSource, QueryParameterSource, StringBodyContainsSource, StringBodySource, StringPathSource, XWWWFormUrlencodedSource, ContainsXWWWFormUrlencodedKeySource};
+use crate::server::matchers::targets::{CookieTarget, FullRequestTarget, HeaderTarget, MethodTarget, PathTarget, QueryParameterTarget, XWWWFormUrlEncodedBodyTarget};
 use crate::server::matchers::Matcher;
 use crate::server::web::routes;
 use futures_util::task::Spawn;
@@ -247,6 +240,32 @@ impl MockServerState {
                     transformer: None,
                     with_reason: true,
                     diff_with: Some(Tokenizer::Line),
+                    weight: 1,
+                }),
+                // Query Param exact
+                Box::new(MultiValueMatcher {
+                    entity_name: "x-www-form-urlencoded body key/value pair",
+                    key_comparator: Box::new(StringExactMatchComparator::new(true)),
+                    value_comparator: Box::new(StringExactMatchComparator::new(true)),
+                    key_transformer: None,
+                    value_transformer: None,
+                    source: Box::new(XWWWFormUrlencodedSource::new()),
+                    target: Box::new(XWWWFormUrlEncodedBodyTarget::new()),
+                    with_reason: true,
+                    diff_with: None,
+                    weight: 1,
+                }),
+                // Query Param exists
+                Box::new(MultiValueMatcher {
+                    entity_name: "x-www-form-urlencoded body key/value pair",
+                    key_comparator: Box::new(StringExactMatchComparator::new(true)),
+                    value_comparator: Box::new(AnyValueComparator::new()),
+                    key_transformer: None,
+                    value_transformer: None,
+                    source: Box::new(ContainsXWWWFormUrlencodedKeySource::new()),
+                    target: Box::new(XWWWFormUrlEncodedBodyTarget::new()),
+                    with_reason: true,
+                    diff_with: None,
                     weight: 1,
                 }),
                 // User provided matcher function
