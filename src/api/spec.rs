@@ -235,7 +235,7 @@ impl When {
     /// use isahc::{prelude::*, Request};
     ///
     /// // Arrange
-    /// let server = MockServer::connect("127.0.0.1:5000");
+    /// let server = MockServer::start();
     ///
     /// let m = server.mock(|when, then| {
     ///    when.method(POST)
@@ -278,7 +278,7 @@ impl When {
     /// use isahc::{prelude::*, Request};
     ///
     /// // Arrange
-    /// let server = MockServer::connect("127.0.0.1:5000");
+    /// let server = MockServer::start();
     ///
     /// let m = server.mock(|when, then| {
     ///    when.method(POST)
