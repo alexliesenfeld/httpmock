@@ -227,10 +227,37 @@ impl When {
         self
     }
 
-    /// Sets a query parameter that needs to be provided.
-    /// TODO: Create example
+    /// Sets a requirement for a tuple in an x-www-form-urlencoded request body.
+    /// Please refer to https://url.spec.whatwg.org/#application/x-www-form-urlencoded for more
+    /// information.
     /// ```
-    pub fn x_www_form_urlencoded<S: Into<String>>(mut self, key: S, value: S) -> Self {
+    /// use httpmock::prelude::*;
+    /// use isahc::{prelude::*, Request};
+    ///
+    /// // Arrange
+    /// let server = MockServer::connect("127.0.0.1:5000");
+    ///
+    /// let m = server.mock(|when, then| {
+    ///    when.method(POST)
+    ///        .path("/example")
+    ///        .header("content-type", "application/x-www-form-urlencoded")
+    ///        .x_www_form_urlencoded_tuple("name", "Peter Griffin")
+    ///        .x_www_form_urlencoded_tuple("town", "Quahog");
+    ///    then.status(202);
+    /// });
+    ///
+    /// let response = Request::post(server.url("/example"))
+    ///    .header("content-type", "application/x-www-form-urlencoded")
+    ///    .body("name=Peter%20Griffin&town=Quahog")
+    ///    .unwrap()
+    ///    .send()
+    ///    .unwrap();
+    ///
+    /// // Assert
+    /// m.assert();
+    /// assert_eq!(response.status(), 202);
+    /// ```
+    pub fn x_www_form_urlencoded_tuple<S: Into<String>>(mut self, key: S, value: S) -> Self {
         update_cell(&self.expectations, |e| {
             if e.x_www_form_urlencoded.is_none() {
                 e.x_www_form_urlencoded = Some(Vec::new());
@@ -243,15 +270,45 @@ impl When {
         self
     }
 
-    /// Sets a query parameter that needs to exist in an HTTP request.
-    /// TODO: Implement test + create docs
+    /// Sets a requirement for a tuple key in an x-www-form-urlencoded request body.
+    /// Please refer to https://url.spec.whatwg.org/#application/x-www-form-urlencoded for more
+    /// information.
+    /// ```
+    /// use httpmock::prelude::*;
+    /// use isahc::{prelude::*, Request};
+    ///
+    /// // Arrange
+    /// let server = MockServer::connect("127.0.0.1:5000");
+    ///
+    /// let m = server.mock(|when, then| {
+    ///    when.method(POST)
+    ///        .path("/example")
+    ///        .header("content-type", "application/x-www-form-urlencoded")
+    ///        .x_www_form_urlencoded_key_exists("name")
+    ///        .x_www_form_urlencoded_key_exists("town");
+    ///    then.status(202);
+    /// });
+    ///
+    /// let response = Request::post(server.url("/example"))
+    ///    .header("content-type", "application/x-www-form-urlencoded")
+    ///    .body("name=Peter%20Griffin&town=Quahog")
+    ///    .unwrap()
+    ///    .send()
+    ///    .unwrap();
+    ///
+    /// // Assert
+    /// m.assert();
+    /// assert_eq!(response.status(), 202);
     /// ```
     pub fn x_www_form_urlencoded_key_exists<S: Into<String>>(mut self, key: S) -> Self {
         update_cell(&self.expectations, |e| {
             if e.x_www_form_urlencoded_key_exists.is_none() {
                 e.x_www_form_urlencoded_key_exists = Some(Vec::new());
             }
-            e.x_www_form_urlencoded_key_exists.as_mut().unwrap().push(key.into());
+            e.x_www_form_urlencoded_key_exists
+                .as_mut()
+                .unwrap()
+                .push(key.into());
         });
         self
     }

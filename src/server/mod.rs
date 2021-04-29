@@ -29,8 +29,17 @@ use crate::server::matchers::comparators::{
     StringRegexMatchComparator,
 };
 use crate::server::matchers::generic::{FunctionValueMatcher, MultiValueMatcher};
-use crate::server::matchers::sources::{BodyRegexSource, ContainsCookieSource, ContainsHeaderSource, ContainsQueryParameterSource, CookieSource, FunctionSource, HeaderSource, JSONBodySource, MethodSource, PartialJSONBodySource, PathContainsSubstringSource, PathRegexSource, QueryParameterSource, StringBodyContainsSource, StringBodySource, StringPathSource, XWWWFormUrlencodedSource, ContainsXWWWFormUrlencodedKeySource};
-use crate::server::matchers::targets::{CookieTarget, FullRequestTarget, HeaderTarget, MethodTarget, PathTarget, QueryParameterTarget, XWWWFormUrlEncodedBodyTarget};
+use crate::server::matchers::sources::{
+    BodyRegexSource, ContainsCookieSource, ContainsHeaderSource, ContainsQueryParameterSource,
+    ContainsXWWWFormUrlencodedKeySource, CookieSource, FunctionSource, HeaderSource,
+    JSONBodySource, MethodSource, PartialJSONBodySource, PathContainsSubstringSource,
+    PathRegexSource, QueryParameterSource, StringBodyContainsSource, StringBodySource,
+    StringPathSource, XWWWFormUrlencodedSource,
+};
+use crate::server::matchers::targets::{
+    CookieTarget, FullRequestTarget, HeaderTarget, MethodTarget, PathTarget, QueryParameterTarget,
+    XWWWFormUrlEncodedBodyTarget,
+};
 use crate::server::matchers::Matcher;
 use crate::server::web::routes;
 use futures_util::task::Spawn;
@@ -244,7 +253,7 @@ impl MockServerState {
                 }),
                 // Query Param exact
                 Box::new(MultiValueMatcher {
-                    entity_name: "x-www-form-urlencoded body key/value pair",
+                    entity_name: "x-www-form-urlencoded body tuple",
                     key_comparator: Box::new(StringExactMatchComparator::new(true)),
                     value_comparator: Box::new(StringExactMatchComparator::new(true)),
                     key_transformer: None,
@@ -257,7 +266,7 @@ impl MockServerState {
                 }),
                 // Query Param exists
                 Box::new(MultiValueMatcher {
-                    entity_name: "x-www-form-urlencoded body key/value pair",
+                    entity_name: "x-www-form-urlencoded body tuple",
                     key_comparator: Box::new(StringExactMatchComparator::new(true)),
                     value_comparator: Box::new(AnyValueComparator::new()),
                     key_transformer: None,

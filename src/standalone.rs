@@ -11,9 +11,9 @@ use tokio::time::Duration;
 
 use crate::common::data::{MockDefinition, MockServerHttpResponse, Pattern, RequestRequirements};
 use crate::common::util::read_file;
-use crate::Method;
-use crate::server::{MockServerState, start_server};
 use crate::server::web::handlers::add_new_mock;
+use crate::server::{start_server, MockServerState};
+use crate::Method;
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct NameValuePair {
@@ -39,7 +39,7 @@ struct YAMLRequestRequirements {
     pub query_param_exists: Option<Vec<String>>,
     pub query_param: Option<Vec<NameValuePair>>,
     pub x_www_form_urlencoded_key_exists: Option<Vec<String>>,
-    pub x_www_form_urlencoded: Option<Vec<NameValuePair>>,
+    pub x_www_form_urlencoded_tuple: Option<Vec<NameValuePair>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -66,7 +66,7 @@ pub async fn start_standalone_server(
     let state = Arc::new(MockServerState::new(history_limit));
 
     #[cfg(feature = "standalone")]
-        static_mock_dir_path.map(|path| {
+    static_mock_dir_path.map(|path| {
         read_static_mocks(path)
             .into_iter()
             .map(|d| map_to_mock_definition(d))
@@ -123,7 +123,7 @@ fn map_to_mock_definition(yaml_definition: YAMLMockDefinition) -> MockDefinition
             body_matches: to_pattern_vec(yaml_definition.when.body_matches),
             query_param_exists: yaml_definition.when.query_param_exists,
             query_param: to_pair_vec(yaml_definition.when.query_param),
-            x_www_form_urlencoded: to_pair_vec(yaml_definition.when.x_www_form_urlencoded),
+            x_www_form_urlencoded: to_pair_vec(yaml_definition.when.x_www_form_urlencoded_tuple),
             x_www_form_urlencoded_key_exists: yaml_definition.when.x_www_form_urlencoded_key_exists,
             matchers: None,
         },
