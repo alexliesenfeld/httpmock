@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 
 use serde_json::Value;
 
-use crate::data::{HttpMockRequest, RequestRequirements};
+use crate::common::data::HttpMockRequest;
 use crate::server::matchers::parse_cookies;
 use crate::server::matchers::sources::ValueRefSource;
 
@@ -186,5 +186,27 @@ impl FullRequestTarget {
 impl ValueRefTarget<HttpMockRequest> for FullRequestTarget {
     fn parse_from_request<'a>(&self, req: &'a HttpMockRequest) -> Option<&'a HttpMockRequest> {
         Some(req)
+    }
+}
+
+// *************************************************************************************
+// XWWWFormUrlEncodedBodyTarget
+// *************************************************************************************
+pub(crate) struct XWWWFormUrlEncodedBodyTarget {}
+
+impl XWWWFormUrlEncodedBodyTarget {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+impl MultiValueTarget<String, String> for XWWWFormUrlEncodedBodyTarget {
+    fn parse_from_request(&self, req: &HttpMockRequest) -> Option<Vec<(String, Option<String>)>> {
+        req.body.as_ref().map(|body| {
+            form_urlencoded::parse(body)
+                .into_owned()
+                .map(|(k, v)| (k, Some(v)))
+                .collect()
+        })
     }
 }

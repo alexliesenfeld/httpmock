@@ -1,9 +1,5 @@
-extern crate httpmock;
-
+use httpmock::prelude::*;
 use isahc::{prelude::*, Request};
-
-use httpmock::Method::GET;
-use httpmock::MockServer;
 
 #[test]
 fn cookie_matching_test() {

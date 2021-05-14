@@ -5,38 +5,15 @@ use basic_cookies::Cookie;
 use difference::{Changeset, Difference};
 use serde::{Deserialize, Serialize};
 
-use crate::data::{HttpMockRequest, RequestRequirements};
+use crate::common::data::{
+    Diff, DiffResult, HttpMockRequest, Mismatch, RequestRequirements, Tokenizer,
+};
 
 pub(crate) mod comparators;
 pub(crate) mod generic;
 pub(crate) mod sources;
 pub(crate) mod targets;
 pub(crate) mod transformers;
-
-// *************************************************************************************************
-// Diff and Change correspond to difference::Changeset and Difference structs. They are duplicated
-// here only for the reason to make them serializable/deserializable using serde.
-// *************************************************************************************************
-#[derive(PartialEq, Debug, Serialize, Deserialize)]
-pub enum Diff {
-    Same(String),
-    Add(String),
-    Rem(String),
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct DiffResult {
-    pub differences: Vec<Diff>,
-    pub distance: i32,
-    pub tokenizer: Tokenizer,
-}
-
-#[derive(PartialEq, Debug, Serialize, Deserialize, Clone, Copy)]
-pub enum Tokenizer {
-    Line,
-    Word,
-    Character,
-}
 
 pub(crate) fn diff_str(base: &str, edit: &str, tokenizer: Tokenizer) -> DiffResult {
     let splitter = match tokenizer {
@@ -59,21 +36,6 @@ pub(crate) fn diff_str(base: &str, edit: &str, tokenizer: Tokenizer) -> DiffResu
             })
             .collect(),
     }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Reason {
-    pub expected: String,
-    pub actual: String,
-    pub comparison: String,
-    pub best_match: bool,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Mismatch {
-    pub title: String,
-    pub reason: Option<Reason>,
-    pub diff: Option<DiffResult>,
 }
 
 pub trait Matcher {

@@ -39,6 +39,11 @@ when:
     }
   json_body_partial:
     - '{ "key" : "value" }'
+  x_www_form_urlencoded_tuple:
+    - name: query
+      value: Peter Griffin
+  x_www_form_urlencoded_key_exists:
+    - query
 then:
   status: 200
   header:

@@ -1,7 +1,7 @@
 use assert_json_diff::{assert_json_matches_no_panic, CompareMode, Config};
 use serde_json::Value;
 
-use crate::data::{HttpMockRequest, MockMatcherFunction, Pattern};
+use crate::common::data::{HttpMockRequest, MockMatcherFunction};
 use crate::server::matchers::distance_for;
 use crate::Regex;
 

@@ -13,8 +13,6 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::server::Mismatch;
-
 /// A general abstraction of an HTTP request of `httpmock`.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct HttpMockRequest {
@@ -26,7 +24,7 @@ pub struct HttpMockRequest {
 }
 
 impl HttpMockRequest {
-    pub(crate) fn new(method: String, path: String) -> Self {
+    pub fn new(method: String, path: String) -> Self {
         Self {
             path,
             method,
@@ -36,17 +34,17 @@ impl HttpMockRequest {
         }
     }
 
-    pub(crate) fn with_headers(mut self, arg: Vec<(String, String)>) -> Self {
+    pub fn with_headers(mut self, arg: Vec<(String, String)>) -> Self {
         self.headers = Some(arg);
         self
     }
 
-    pub(crate) fn with_query_params(mut self, arg: Vec<(String, String)>) -> Self {
+    pub fn with_query_params(mut self, arg: Vec<(String, String)>) -> Self {
         self.query_params = Some(arg);
         self
     }
 
-    pub(crate) fn with_body(mut self, arg: Vec<u8>) -> Self {
+    pub fn with_body(mut self, arg: Vec<u8>) -> Self {
         self.body = Some(arg);
         self
     }
@@ -70,6 +68,12 @@ impl MockServerHttpResponse {
             body: None,
             delay: None,
         }
+    }
+}
+
+impl Default for MockServerHttpResponse {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -184,9 +188,17 @@ pub struct RequestRequirements {
     pub body_matches: Option<Vec<Pattern>>,
     pub query_param_exists: Option<Vec<String>>,
     pub query_param: Option<Vec<(String, String)>>,
+    pub x_www_form_urlencoded_key_exists: Option<Vec<String>>,
+    pub x_www_form_urlencoded: Option<Vec<(String, String)>>,
 
     #[serde(skip_serializing, skip_deserializing)]
     pub matchers: Option<Vec<MockMatcherFunction>>,
+}
+
+impl Default for RequestRequirements {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl RequestRequirements {
@@ -207,6 +219,8 @@ impl RequestRequirements {
             body_matches: None,
             query_param_exists: None,
             query_param: None,
+            x_www_form_urlencoded: None,
+            x_www_form_urlencoded_key_exists: None,
             matchers: None,
         }
     }
@@ -304,11 +318,11 @@ impl MockDefinition {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct MockIdentification {
+pub struct MockRef {
     pub mock_id: usize,
 }
 
-impl MockIdentification {
+impl MockRef {
     pub fn new(mock_id: usize) -> Self {
         Self { mock_id }
     }
@@ -356,6 +370,46 @@ impl ErrorResponse {
     }
 }
 
+// *************************************************************************************************
+// Diff and Change correspond to difference::Changeset and Difference structs. They are duplicated
+// here only for the reason to make them serializable/deserializable using serde.
+// *************************************************************************************************
+#[derive(PartialEq, Debug, Serialize, Deserialize)]
+pub enum Diff {
+    Same(String),
+    Add(String),
+    Rem(String),
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DiffResult {
+    pub differences: Vec<Diff>,
+    pub distance: i32,
+    pub tokenizer: Tokenizer,
+}
+
+#[derive(PartialEq, Debug, Serialize, Deserialize, Clone, Copy)]
+pub enum Tokenizer {
+    Line,
+    Word,
+    Character,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Reason {
+    pub expected: String,
+    pub actual: String,
+    pub comparison: String,
+    pub best_match: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Mismatch {
+    pub title: String,
+    pub reason: Option<Reason>,
+    pub diff: Option<DiffResult>,
+}
+
 #[cfg(test)]
 mod test {
     use std::collections::BTreeMap;
@@ -363,7 +417,7 @@ mod test {
     use regex::Regex;
     use serde_json::json;
 
-    use crate::data::{Pattern, RequestRequirements};
+    use crate::common::data::{Pattern, RequestRequirements};
 
     /// This test makes sure that adding the matching rules to a mock fills the struct as expected.
     #[test]

@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use serde_json::Value;
 
-use crate::data::{HttpMockRequest, MockMatcherFunction, Pattern, RequestRequirements};
+use crate::common::data::{MockMatcherFunction, RequestRequirements};
 use crate::Regex;
 
 pub(crate) trait ValueRefSource<T> {
@@ -306,6 +306,50 @@ impl MultiValueSource<String, String> for ContainsQueryParameterSource {
         mock: &'a RequestRequirements,
     ) -> Option<Vec<(&'a String, Option<&'a String>)>> {
         mock.query_param_exists
+            .as_ref()
+            .map(|v| v.into_iter().map(|v| (v, None)).collect())
+    }
+}
+
+// ************************************************************************************************
+// QueryParameterSource
+// ************************************************************************************************
+pub(crate) struct XWWWFormUrlencodedSource {}
+
+impl XWWWFormUrlencodedSource {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+impl MultiValueSource<String, String> for XWWWFormUrlencodedSource {
+    fn parse_from_mock<'a>(
+        &self,
+        mock: &'a RequestRequirements,
+    ) -> Option<Vec<(&'a String, Option<&'a String>)>> {
+        mock.x_www_form_urlencoded
+            .as_ref()
+            .map(|v| v.into_iter().map(|(k, v)| (k, Some(v))).collect())
+    }
+}
+
+// ************************************************************************************************
+// ContainsQueryParameterSource
+// ************************************************************************************************
+pub(crate) struct ContainsXWWWFormUrlencodedKeySource {}
+
+impl ContainsXWWWFormUrlencodedKeySource {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+impl MultiValueSource<String, String> for ContainsXWWWFormUrlencodedKeySource {
+    fn parse_from_mock<'a>(
+        &self,
+        mock: &'a RequestRequirements,
+    ) -> Option<Vec<(&'a String, Option<&'a String>)>> {
+        mock.x_www_form_urlencoded_key_exists
             .as_ref()
             .map(|v| v.into_iter().map(|v| (v, None)).collect())
     }

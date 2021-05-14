@@ -33,7 +33,7 @@
 * Extensible request matching.
 * Fully asynchronous core with synchronous and asynchronous APIs.
 * [Advanced verification and debugging support](https://dev.to/alexliesenfeld/rust-http-testing-with-httpmock-2mi0#verification).
-* [Network delay simulation](https://github.com/alexliesenfeld/httpmock/blob/master/tests/examples/delay_tests.rs).
+* Network delay simulation.
 * Support for [Regex](https://docs.rs/regex/) matching, JSON, [serde](https://crates.io/crates/serde), cookies, and more.
 * Standalone mode with an accompanying [Docker image](https://hub.docker.com/r/alexliesenfeld/httpmock).
 * Support for [mock specification based on YAML files](https://github.com/alexliesenfeld/httpmock/tree/master#file-based-mock-specification).
@@ -43,12 +43,11 @@ Add `httpmock` to `Cargo.toml`:
 
 ```toml
 [dev-dependencies]
-httpmock = "0.5"
+httpmock = "0.6"
 ```
 You can then use `httpmock` as follows:
 ```rust
-use httpmock::MockServer;
-use httpmock::Method::GET;
+use httpmock::prelude::*;
 
 // Start a lightweight mock server.
 let server = MockServer::start();
@@ -59,7 +58,7 @@ let hello_mock = server.mock(|when, then| {
         .path("/translate")
         .query_param("word", "hello");
     then.status(200)
-        .header("Content-Type", "text/html; charset=UTF-8")
+        .header("content-type", "text/html; charset=UTF-8")
         .body("Привет");
 });
 
@@ -68,6 +67,7 @@ let response = isahc::get(server.url("/translate?word=hello")).unwrap();
 
 // Ensure the specified mock was called exactly one time (or fail with a detailed error description).
 hello_mock.assert();
+
 // Ensure the mock server did respond as specified.
 assert_eq!(response.status(), 200);
 ```

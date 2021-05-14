@@ -1,24 +1,69 @@
-use std::sync::Arc;
-
-use crate::data::{MockDefinition, MockServerHttpResponse, Pattern, RequestRequirements};
-use crate::server::web::handlers::add_new_mock;
-use crate::server::{start_server, MockServerState};
-use crate::util::read_file;
-use crate::{NameValuePair, YAMLMockDefinition};
-use regex::Regex;
 use std::fs;
 use std::fs::read_dir;
 use std::path::PathBuf;
 use std::str::FromStr;
+use std::sync::Arc;
+
+use regex::Regex;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use tokio::time::Duration;
+
+use crate::common::data::{MockDefinition, MockServerHttpResponse, Pattern, RequestRequirements};
+use crate::common::util::read_file;
+use crate::server::web::handlers::add_new_mock;
+use crate::server::{start_server, MockServerState};
+use crate::Method;
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+pub struct NameValuePair {
+    name: String,
+    value: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct YAMLRequestRequirements {
+    pub path: Option<String>,
+    pub path_contains: Option<Vec<String>>,
+    pub path_matches: Option<Vec<String>>,
+    pub method: Option<Method>,
+    pub header: Option<Vec<NameValuePair>>,
+    pub header_exists: Option<Vec<String>>,
+    pub cookie: Option<Vec<NameValuePair>>,
+    pub cookie_exists: Option<Vec<String>>,
+    pub body: Option<String>,
+    pub json_body: Option<Value>,
+    pub json_body_partial: Option<Vec<Value>>,
+    pub body_contains: Option<Vec<String>>,
+    pub body_matches: Option<Vec<String>>,
+    pub query_param_exists: Option<Vec<String>>,
+    pub query_param: Option<Vec<NameValuePair>>,
+    pub x_www_form_urlencoded_key_exists: Option<Vec<String>>,
+    pub x_www_form_urlencoded_tuple: Option<Vec<NameValuePair>>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct YAMLHTTPResponse {
+    pub status: Option<u16>,
+    pub header: Option<Vec<NameValuePair>>,
+    pub body: Option<String>,
+    pub delay: Option<u64>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct YAMLMockDefinition {
+    when: YAMLRequestRequirements,
+    then: YAMLHTTPResponse,
+}
 
 pub async fn start_standalone_server(
     port: u16,
     expose: bool,
     static_mock_dir_path: Option<PathBuf>,
     print_access_log: bool,
+    history_limit: usize,
 ) -> Result<(), String> {
-    let state = Arc::new(MockServerState::new());
+    let state = Arc::new(MockServerState::new(history_limit));
 
     #[cfg(feature = "standalone")]
     static_mock_dir_path.map(|path| {
@@ -78,6 +123,8 @@ fn map_to_mock_definition(yaml_definition: YAMLMockDefinition) -> MockDefinition
             body_matches: to_pattern_vec(yaml_definition.when.body_matches),
             query_param_exists: yaml_definition.when.query_param_exists,
             query_param: to_pair_vec(yaml_definition.when.query_param),
+            x_www_form_urlencoded: to_pair_vec(yaml_definition.when.x_www_form_urlencoded_tuple),
+            x_www_form_urlencoded_key_exists: yaml_definition.when.x_www_form_urlencoded_key_exists,
             matchers: None,
         },
         response: MockServerHttpResponse {

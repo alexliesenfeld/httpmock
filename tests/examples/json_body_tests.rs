@@ -1,10 +1,6 @@
-extern crate httpmock;
-
+use httpmock::prelude::*;
 use isahc::{prelude::*, Request};
 use serde_json::{json, Value};
-
-use httpmock::Method::POST;
-use httpmock::MockServer;
 
 #[test]
 fn json_value_body_test() {
@@ -14,16 +10,16 @@ fn json_value_body_test() {
     let m = server.mock(|when, then| {
         when.method(POST)
             .path("/users")
-            .header("Content-Type", "application/json")
+            .header("content-type", "application/json")
             .json_body(json!({ "name": "Fred" }));
         then.status(201)
-            .header("Content-Type", "application/json")
+            .header("content-type", "application/json")
             .json_body(json!({ "name": "Hans" }));
     });
 
     // Act: Send the request and deserialize the response to JSON
     let mut response = Request::post(&format!("http://{}/users", server.address()))
-        .header("Content-Type", "application/json")
+        .header("content-type", "application/json")
         .body(json!({ "name": "Fred" }).to_string())
         .unwrap()
         .send()
@@ -52,12 +48,12 @@ fn json_body_object_serde_test() {
     let m = server.mock(|when, then| {
         when.method(POST)
             .path("/users")
-            .header("Content-Type", "application/json")
+            .header("content-type", "application/json")
             .json_body_obj(&TestUser {
                 name: String::from("Fred"),
             });
         then.status(201)
-            .header("Content-Type", "application/json")
+            .header("content-type", "application/json")
             .json_body_obj(&TestUser {
                 name: String::from("Hans"),
             });
@@ -65,7 +61,7 @@ fn json_body_object_serde_test() {
 
     // Act: Send the request and deserialize the response to JSON
     let mut response = Request::post(&format!("http://{}/users", server.address()))
-        .header("Content-Type", "application/json")
+        .header("content-type", "application/json")
         .body(
             json!(&TestUser {
                 name: "Fred".to_string()
@@ -119,7 +115,7 @@ fn partial_json_body_test() {
     // Simulates application that makes the request to the mock.
     let uri = format!("http://{}/users", m.server_address());
     let response = Request::post(&uri)
-        .header("Content-Type", "application/json")
+        .header("content-type", "application/json")
         .header("User-Agent", "rust-test")
         .body(
             serde_json::to_string(&ParentStructure {

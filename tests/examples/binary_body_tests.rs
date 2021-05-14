@@ -1,10 +1,6 @@
-extern crate httpmock;
-
-use std::io::Read;
-
+use httpmock::prelude::*;
 use isahc::Body;
-
-use httpmock::MockServer;
+use std::io::Read;
 
 #[test]
 fn binary_body_test() {

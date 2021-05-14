@@ -4,13 +4,12 @@ use std::net::ToSocketAddrs;
 
 use serde_json::Value;
 
-use crate::data::{HttpMockRequest, RequestRequirements};
+use crate::common::data::{HttpMockRequest, Mismatch, Reason, RequestRequirements, Tokenizer};
 use crate::server::matchers::comparators::ValueComparator;
 use crate::server::matchers::sources::{MultiValueSource, ValueRefSource};
 use crate::server::matchers::targets::{MultiValueTarget, ValueRefTarget, ValueTarget};
 use crate::server::matchers::transformers::Transformer;
-use crate::server::matchers::{diff_str, Matcher, Reason};
-use crate::server::{Mismatch, Tokenizer};
+use crate::server::matchers::{diff_str, Matcher};
 
 // ************************************************************************************************
 // SingleValueMatcher

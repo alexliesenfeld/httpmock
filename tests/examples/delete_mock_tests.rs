@@ -1,9 +1,5 @@
-extern crate httpmock;
-
+use httpmock::prelude::*;
 use isahc::get;
-
-use httpmock::Method::GET;
-use httpmock::MockServer;
 
 #[test]
 fn explicit_delete_mock_test() {
