@@ -10,7 +10,7 @@
   that are usually required when using `httpmock` in tests.
 - The struct `MockRef` has been renamed to `Mock`. 
 - Trait `MockRefExt` has been renamed to `MockExt`.
-- Added support for x-ww-form-urlencoded request bodies.
+- Added support for x-www-form-urlencoded request bodies.
 
 ### Standalone Mock Server
 - Standalone server now has a request history limit that can be adjusted.
