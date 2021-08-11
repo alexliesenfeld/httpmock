@@ -15,13 +15,13 @@ fn standalone_test() {
     let server = MockServer::connect("localhost:5000");
 
     let search_mock = server.mock(|when, then| {
-        when.path("/search").body("wow so large".repeat(10000000));
+        when.path("/search").body("wow so large".repeat(1000000));
         then.status(202);
     });
 
     // Act: Send the HTTP request
     let response = Request::post(server.url("/search"))
-        .body("wow so large".repeat(10000000))
+        .body("wow so large".repeat(1000000))
         .unwrap()
         .send()
         .unwrap();
