@@ -14,13 +14,13 @@ fn large_body_test() {
     let server = MockServer::connect("localhost:5000");
 
     let search_mock = server.mock(|when, then| {
-        when.path("/search").body("wow so large".repeat(10000000)); // 120 MB body
+        when.path("/search").body("wow so large".repeat(1000000)); // ~12 MB body
         then.status(202);
     });
 
     // Act: Send the HTTP request
     let response = Request::post(server.url("/search"))
-        .body("wow so large".repeat(10000000)) // 120 MB body
+        .body("wow so large".repeat(1000000)) // ~12 MB body
         .unwrap()
         .send()
         .unwrap();
