@@ -1,8 +1,5 @@
-extern crate httpmock;
-
+use httpmock::prelude::*;
 use isahc::{prelude::*, Request};
-
-use httpmock::MockServer;
 
 #[test]
 fn headers_test() {

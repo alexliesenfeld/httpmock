@@ -1,10 +1,5 @@
-extern crate httpmock;
-
+use httpmock::prelude::*;
 use isahc::{get, get_async};
-
-use self::httpmock::Mock;
-use httpmock::Method::GET;
-use httpmock::MockServer;
 
 #[test]
 fn getting_started_test() {
@@ -17,7 +12,7 @@ fn getting_started_test() {
             .path("/translate")
             .query_param("word", "hello");
         then.status(200)
-            .header("Content-Type", "text/html; charset=UTF-8")
+            .header("content-type", "text/html; charset=UTF-8")
             .body("Привет");
     });
 
@@ -38,11 +33,12 @@ async fn async_getting_started_test() {
 
     // Create a mock on the mock server. The mock will return HTTP status code 200 whenever
     // the mock server receives a GET-request with path "/hello".
-    let hello_mock = Mock::new()
-        .expect_method(GET)
-        .expect_path("/hello")
-        .return_status(200)
-        .create_on_async(&server)
+    // Create a mock on the server.
+    let hello_mock = server
+        .mock_async(|when, then| {
+            when.method("GET").path("/hello");
+            then.status(200);
+        })
         .await;
 
     // Send an HTTP request to the mock server. This simulates your code.

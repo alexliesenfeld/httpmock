@@ -8,9 +8,7 @@ use isahc::Request;
 use crate::api::adapter::{
     build_http_client, execute_request, http_ping, InternalHttpClient, MockServerAdapter,
 };
-use crate::data::{
-    ActiveMock, ClosestMatch, MockDefinition, MockIdentification, RequestRequirements,
-};
+use crate::common::data::{ActiveMock, ClosestMatch, MockDefinition, MockRef, RequestRequirements};
 
 #[derive(Debug)]
 pub struct RemoteMockServerAdapter {
@@ -50,7 +48,7 @@ impl MockServerAdapter for RemoteMockServerAdapter {
         &self.addr
     }
 
-    async fn create_mock(&self, mock: &MockDefinition) -> Result<MockIdentification, String> {
+    async fn create_mock(&self, mock: &MockDefinition) -> Result<MockRef, String> {
         // Check if the request can be sent via HTTP
         self.validate_mock(mock).expect("Cannot create mock");
 
@@ -65,7 +63,7 @@ impl MockServerAdapter for RemoteMockServerAdapter {
         let request = Request::builder()
             .method("POST")
             .uri(request_url)
-            .header("Content-Type", "application/json")
+            .header("content-type", "application/json")
             .body(json)
             .unwrap();
 
@@ -83,7 +81,7 @@ impl MockServerAdapter for RemoteMockServerAdapter {
         }
 
         // Create response object
-        let response: serde_json::Result<MockIdentification> = serde_json::from_str(&body);
+        let response: serde_json::Result<MockRef> = serde_json::from_str(&body);
         if let Err(err) = response {
             return Err(format!("Cannot deserialize mock server response: {}", err));
         }
@@ -184,7 +182,7 @@ impl MockServerAdapter for RemoteMockServerAdapter {
         let request = Request::builder()
             .method("POST")
             .uri(request_url)
-            .header("Content-Type", "application/json")
+            .header("content-type", "application/json")
             .body(json)
             .unwrap();
 

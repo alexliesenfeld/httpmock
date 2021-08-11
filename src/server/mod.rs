@@ -21,9 +21,8 @@ use regex::Regex;
 
 use matchers::generic::SingleValueMatcher;
 use matchers::targets::{JSONBodyTarget, StringBodyTarget};
-pub use matchers::{Diff, DiffResult, Mismatch, Reason, Tokenizer};
 
-use crate::data::{ActiveMock, HttpMockRequest};
+use crate::common::data::{ActiveMock, HttpMockRequest, Tokenizer};
 use crate::server::matchers::comparators::{
     AnyValueComparator, FunctionMatchesRequestComparator, JSONContainsMatchComparator,
     JSONExactMatchComparator, StringContainsMatchComparator, StringExactMatchComparator,
@@ -32,12 +31,14 @@ use crate::server::matchers::comparators::{
 use crate::server::matchers::generic::{FunctionValueMatcher, MultiValueMatcher};
 use crate::server::matchers::sources::{
     BodyRegexSource, ContainsCookieSource, ContainsHeaderSource, ContainsQueryParameterSource,
-    CookieSource, FunctionSource, HeaderSource, JSONBodySource, MethodSource,
-    PartialJSONBodySource, PathContainsSubstringSource, PathRegexSource, QueryParameterSource,
-    StringBodyContainsSource, StringBodySource, StringPathSource,
+    ContainsXWWWFormUrlencodedKeySource, CookieSource, FunctionSource, HeaderSource,
+    JSONBodySource, MethodSource, PartialJSONBodySource, PathContainsSubstringSource,
+    PathRegexSource, QueryParameterSource, StringBodyContainsSource, StringBodySource,
+    StringPathSource, XWWWFormUrlencodedSource,
 };
 use crate::server::matchers::targets::{
     CookieTarget, FullRequestTarget, HeaderTarget, MethodTarget, PathTarget, QueryParameterTarget,
+    XWWWFormUrlEncodedBodyTarget,
 };
 use crate::server::matchers::Matcher;
 use crate::server::web::routes;
@@ -54,6 +55,7 @@ pub(crate) mod web;
 /// The shared state accessible to all handlers
 pub struct MockServerState {
     id_counter: AtomicUsize,
+    history_limit: usize,
     pub mocks: RwLock<BTreeMap<usize, ActiveMock>>,
     pub history: RwLock<Vec<Arc<HttpMockRequest>>>,
     pub matchers: Vec<Box<dyn Matcher + Sync + Send>>,
@@ -64,9 +66,10 @@ impl MockServerState {
         self.id_counter.fetch_add(1, Relaxed)
     }
 
-    pub fn new() -> Self {
+    pub fn new(history_limit: usize) -> Self {
         MockServerState {
             mocks: RwLock::new(BTreeMap::new()),
+            history_limit,
             history: RwLock::new(Vec::new()),
             id_counter: AtomicUsize::new(0),
             matchers: vec![
@@ -248,6 +251,32 @@ impl MockServerState {
                     diff_with: Some(Tokenizer::Line),
                     weight: 1,
                 }),
+                // Query Param exact
+                Box::new(MultiValueMatcher {
+                    entity_name: "x-www-form-urlencoded body tuple",
+                    key_comparator: Box::new(StringExactMatchComparator::new(true)),
+                    value_comparator: Box::new(StringExactMatchComparator::new(true)),
+                    key_transformer: None,
+                    value_transformer: None,
+                    source: Box::new(XWWWFormUrlencodedSource::new()),
+                    target: Box::new(XWWWFormUrlEncodedBodyTarget::new()),
+                    with_reason: true,
+                    diff_with: None,
+                    weight: 1,
+                }),
+                // Query Param exists
+                Box::new(MultiValueMatcher {
+                    entity_name: "x-www-form-urlencoded body tuple",
+                    key_comparator: Box::new(StringExactMatchComparator::new(true)),
+                    value_comparator: Box::new(AnyValueComparator::new()),
+                    key_transformer: None,
+                    value_transformer: None,
+                    source: Box::new(ContainsXWWWFormUrlencodedKeySource::new()),
+                    target: Box::new(XWWWFormUrlEncodedBodyTarget::new()),
+                    with_reason: true,
+                    diff_with: None,
+                    weight: 1,
+                }),
                 // User provided matcher function
                 Box::new(FunctionValueMatcher {
                     entity_name: "user provided matcher function",
@@ -259,6 +288,12 @@ impl MockServerState {
                 }),
             ],
         }
+    }
+}
+
+impl Default for MockServerState {
+    fn default() -> Self {
+        MockServerState::new(usize::MAX)
     }
 }
 

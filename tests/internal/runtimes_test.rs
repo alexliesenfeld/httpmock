@@ -1,8 +1,5 @@
-extern crate httpmock;
-
+use httpmock::prelude::*;
 use isahc::get_async;
-
-use httpmock::MockServer;
 
 #[test]
 fn all_runtimes_test() {

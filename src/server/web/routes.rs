@@ -3,7 +3,10 @@ use std::collections::BTreeMap;
 use qstring::QString;
 use serde::Serialize;
 
-use crate::data::*;
+use crate::common::data::{
+    ErrorResponse, HttpMockRequest, MockDefinition, MockRef, MockServerHttpResponse,
+    RequestRequirements,
+};
 use crate::server::web::handlers;
 use crate::server::{MockServerState, ServerRequestHeader, ServerResponse};
 use std::time::Instant;
@@ -27,7 +30,7 @@ pub(crate) fn add(state: &MockServerState, body: Vec<u8>) -> Result<ServerRespon
 
     match result {
         Err(e) => create_json_response(500, None, ErrorResponse::new(&e)),
-        Ok(mock_id) => create_json_response(201, None, MockIdentification { mock_id }),
+        Ok(mock_id) => create_json_response(201, None, MockRef { mock_id }),
     }
 }
 
@@ -102,7 +105,6 @@ pub(crate) async fn serve(
         }
         Err(e) => create_json_response(500, None, ErrorResponse::new(&e)),
     };
-
     return result;
 }
 
@@ -137,7 +139,7 @@ where
     }
 
     let mut headers = headers.unwrap_or_default();
-    headers.push(("Content-Type".to_string(), "application/json".to_string()));
+    headers.push(("content-type".to_string(), "application/json".to_string()));
 
     create_response(status, Some(headers), Some(body.unwrap()))
 }
