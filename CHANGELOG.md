@@ -1,3 +1,6 @@
+## Version 0.6.1
+- This is a maintenance release that updates all dependencies to the most recent version.
+
 ## Version 0.6.0
 ### General
 - Old [Mock](https://docs.rs/httpmock/0.4.5/httpmock/struct.Mock.html) structure based API was deprecated 
