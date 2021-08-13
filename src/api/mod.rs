@@ -7,7 +7,7 @@ pub use adapter::{
 };
 pub use mock::{Mock, MockExt};
 pub use server::MockServer;
-pub use spec::{When, Then};
+pub use spec::{Then, When};
 
 mod adapter;
 mod mock;

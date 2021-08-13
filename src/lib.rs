@@ -230,7 +230,7 @@ use api::MockServerAdapter;
 use common::util::Join;
 
 use api::{LocalMockServerAdapter, RemoteMockServerAdapter};
-pub use api::{Method, Mock, MockExt, MockServer, Regex, When, Then};
+pub use api::{Method, Mock, MockExt, MockServer, Regex, Then, When};
 use server::{start_server, MockServerState};
 
 mod api;
