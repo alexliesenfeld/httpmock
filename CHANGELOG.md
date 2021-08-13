@@ -1,3 +1,8 @@
+## Version 0.6.2
+- A bug was fixed that has unexported the [When](https://docs.rs/httpmock/0.5.8/httpmock/struct.When.html) and
+  [Then](https://docs.rs/httpmock/0.5.8/httpmock/struct.When.html) structures. Both types are now exported again.
+  Please refer to https://github.com/alexliesenfeld/httpmock/issues/47 for more info.
+  
 ## Version 0.6.1
 - This is a maintenance release that updates all dependencies to the most recent version.
 

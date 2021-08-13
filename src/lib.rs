@@ -226,12 +226,11 @@ use serde_json::Value;
 use tokio::task::LocalSet;
 use tokio::time::Duration;
 
-use api::spec::{Then, When};
 use api::MockServerAdapter;
 use common::util::Join;
 
 use api::{LocalMockServerAdapter, RemoteMockServerAdapter};
-pub use api::{Method, Mock, MockExt, MockServer, Regex};
+pub use api::{Method, Mock, MockExt, MockServer, Regex, When, Then};
 use server::{start_server, MockServerState};
 
 mod api;
