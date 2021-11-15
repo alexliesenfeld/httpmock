@@ -1,15 +1,14 @@
-use clap::{AppSettings, Clap};
+use clap::Parser;
 use httpmock::standalone::start_standalone_server;
 use std::env;
 use std::path::PathBuf;
 
 /// Holds command line parameters provided by the user.
-#[derive(Clap, Debug)]
+#[derive(Parser, Debug)]
 #[clap(
     version = "0.6",
     author = "Alexander Liesenfeld <alexander.liesenfeld@outlook.com>"
 )]
-#[clap(setting = AppSettings::ColoredHelp)]
 struct ExecutionParameters {
     #[clap(short, long, env = "HTTPMOCK_PORT", default_value = "5000")]
     pub port: u16,
