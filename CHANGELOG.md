@@ -1,5 +1,6 @@
 ## Version 0.6.3
 - This is a maintenance release that updates all dependencies to the most recent version.
+- Bumped minimum Rust version to 1.54 due to transitive dependency.
 
 ## Version 0.6.2
 - A bug was fixed that has unexported the [When](https://docs.rs/httpmock/0.5.8/httpmock/struct.When.html) and
