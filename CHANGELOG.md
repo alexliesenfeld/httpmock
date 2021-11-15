@@ -1,3 +1,6 @@
+## Version 0.6.4
+- Fixed minimum Rust version in README (raised from 1.47 to 1.54, see release 0.6.3 for more information).
+
 ## Version 0.6.3
 - This is a maintenance release that updates all dependencies to the most recent version.
 - Bumped minimum Rust version to 1.54 due to transitive dependency.
