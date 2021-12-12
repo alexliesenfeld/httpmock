@@ -2,8 +2,8 @@ use std::collections::BTreeMap;
 use std::fmt::Display;
 
 use basic_cookies::Cookie;
-use difference::{Changeset, Difference};
 use serde::{Deserialize, Serialize};
+use similar::{ChangeTag, TextDiff};
 
 use crate::common::data::{
     Diff, DiffResult, HttpMockRequest, Mismatch, RequestRequirements, Tokenizer,
@@ -16,23 +16,21 @@ pub(crate) mod targets;
 pub(crate) mod transformers;
 
 pub(crate) fn diff_str(base: &str, edit: &str, tokenizer: Tokenizer) -> DiffResult {
-    let splitter = match tokenizer {
-        Tokenizer::Line => "\n",
-        Tokenizer::Word => " ",
-        Tokenizer::Character => "",
+    let changes = match tokenizer {
+        Tokenizer::Line => TextDiff::from_lines(base, edit),
+        Tokenizer::Word => TextDiff::from_words(base, edit),
+        Tokenizer::Character => TextDiff::from_chars(base, edit),
     };
 
-    let changes = Changeset::new(base, edit, splitter);
     DiffResult {
         tokenizer,
-        distance: changes.distance,
+        distance: changes.ratio(),
         differences: changes
-            .diffs
-            .iter()
-            .map(|d| match d {
-                Difference::Same(v) => Diff::Same(v.to_owned()),
-                Difference::Add(v) => Diff::Add(v.to_owned()),
-                Difference::Rem(v) => Diff::Rem(v.to_owned()),
+            .iter_all_changes()
+            .map(|change| match change.tag() {
+                ChangeTag::Equal => Diff::Same(change.to_string_lossy().to_string()),
+                ChangeTag::Insert => Diff::Add(change.to_string_lossy().to_string()),
+                ChangeTag::Delete => Diff::Rem(change.to_string_lossy().to_string()),
             })
             .collect(),
     }

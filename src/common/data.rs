@@ -384,7 +384,7 @@ pub enum Diff {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DiffResult {
     pub differences: Vec<Diff>,
-    pub distance: i32,
+    pub distance: f32,
     pub tokenizer: Tokenizer,
 }
 
