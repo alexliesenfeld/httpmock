@@ -587,7 +587,7 @@ mod test {
                         Diff::Add(String::from("oa")),
                         Diff::Same(String::from("st")),
                     ],
-                    distance: 5,
+                    distance: 5.0,
                     tokenizer: Tokenizer::Line,
                 }),
             }],
