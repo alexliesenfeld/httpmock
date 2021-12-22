@@ -32,7 +32,7 @@
 * Parallel test execution.
 * Extensible request matching.
 * Fully asynchronous core with synchronous and asynchronous APIs.
-* [Advanced verification and debugging support](https://dev.to/alexliesenfeld/rust-http-testing-with-httpmock-2mi0#verification).
+* [Advanced verification and debugging support](https://dev.to/alexliesenfeld/mocking-http-services-in-rust-58ee#creating-mocks).
 * Network delay simulation.
 * Support for [Regex](https://docs.rs/regex/) matching, JSON, [serde](https://crates.io/crates/serde), cookies, and more.
 * Standalone mode with an accompanying [Docker image](https://hub.docker.com/r/alexliesenfeld/httpmock).
@@ -82,7 +82,7 @@ See the [reference docs](https://docs.rs/httpmock/) for detailed API documentati
 ## Examples
 You can find examples in the 
 [`httpmock` test directory](https://github.com/alexliesenfeld/httpmock/blob/master/tests/). 
-The [reference docs](https://docs.rs/httpmock/) also contain _**a lot**_ of examples. There is an [online tutorial](https://dev.to/alexliesenfeld/rust-http-testing-with-httpmock-2mi0) as well. 
+The [reference docs](https://docs.rs/httpmock/) also contain _**a lot**_ of examples. There is an [online tutorial](https://dev.to/alexliesenfeld/mocking-http-services-in-rust-58ee) as well. 
 
 ## Standalone Mock Server
 You can use `httpmock` to run a standalone mock server that is executed in a separate process. There is a 
