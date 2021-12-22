@@ -1,4 +1,7 @@
 ## Version 0.6.4
+- Fixes a race condition that could happened when deleting mocks from the mock server (see https://github.com/alexliesenfeld/httpmock/issues/53).
+
+## Version 0.6.4
 - Fixed minimum Rust version in README (raised from 1.47 to 1.54, see release 0.6.3 for more information).
 
 ## Version 0.6.3
