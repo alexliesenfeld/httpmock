@@ -1,6 +1,6 @@
 ## Version 0.6.5
 - Fixes a race condition that could occur when deleting mocks from the mock server (see https://github.com/alexliesenfeld/httpmock/issues/53).
-- Replaced internal diffing library (switched from `difference` to `similar`, see https://github.com/alexliesenfeld/httpmock/pull/55). 
+- Replaced internal diff library (switched from `difference` to `similar`, see https://github.com/alexliesenfeld/httpmock/pull/55). 
 
 ## Version 0.6.4
 - Fixed minimum Rust version in README (raised from 1.47 to 1.54, see release 0.6.3 for more information).
