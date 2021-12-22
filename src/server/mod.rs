@@ -6,7 +6,7 @@ use std::net::SocketAddr;
 use std::str::FromStr;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::Relaxed;
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex};
 
 use hyper::body::Buf;
 use hyper::header::HeaderValue;
@@ -56,8 +56,8 @@ pub(crate) mod web;
 pub struct MockServerState {
     id_counter: AtomicUsize,
     history_limit: usize,
-    pub mocks: RwLock<BTreeMap<usize, ActiveMock>>,
-    pub history: RwLock<Vec<Arc<HttpMockRequest>>>,
+    pub mocks: Mutex<BTreeMap<usize, ActiveMock>>,
+    pub history: Mutex<Vec<Arc<HttpMockRequest>>>,
     pub matchers: Vec<Box<dyn Matcher + Sync + Send>>,
 }
 
@@ -68,9 +68,9 @@ impl MockServerState {
 
     pub fn new(history_limit: usize) -> Self {
         MockServerState {
-            mocks: RwLock::new(BTreeMap::new()),
+            mocks: Mutex::new(BTreeMap::new()),
             history_limit,
-            history: RwLock::new(Vec::new()),
+            history: Mutex::new(Vec::new()),
             id_counter: AtomicUsize::new(0),
             matchers: vec![
                 // path exact

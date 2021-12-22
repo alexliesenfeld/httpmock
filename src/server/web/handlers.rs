@@ -31,11 +31,10 @@ pub(crate) fn add_new_mock(
     }
 
     let mock_id = state.create_new_id();
-    {
-        log::debug!("Adding new mock with ID={}", mock_id);
-        let mut mocks = state.mocks.write().unwrap();
-        mocks.insert(mock_id, ActiveMock::new(mock_id, mock_def, is_static));
-    }
+    log::debug!("Adding new mock with ID={}", mock_id);
+
+    let mut mocks = state.mocks.lock().unwrap();
+    mocks.insert(mock_id, ActiveMock::new(mock_id, mock_def, is_static));
 
     Result::Ok(mock_id)
 }
@@ -45,28 +44,23 @@ pub(crate) fn read_one_mock(
     state: &MockServerState,
     id: usize,
 ) -> Result<Option<ActiveMock>, String> {
-    {
-        let mocks = state.mocks.read().unwrap();
-        let result = mocks.get(&id);
-        match result {
-            Some(found) => Ok(Some(found.clone())),
-            None => Ok(None),
-        }
+    let mocks = state.mocks.lock().unwrap();
+    let result = mocks.get(&id);
+    match result {
+        Some(found) => Ok(Some(found.clone())),
+        None => Ok(None),
     }
 }
 
 /// Deletes one mock by id. Returns the number of deleted elements.
 pub(crate) fn delete_one_mock(state: &MockServerState, id: usize) -> Result<bool, String> {
-    let result;
-    {
-        let mut mocks = state.mocks.write().unwrap();
-        if let Some(m) = mocks.get(&id) {
-            if m.is_static {
-                return Err(format!("Cannot delete static mock with ID {}", id));
-            }
+    let mut mocks = state.mocks.lock().unwrap();
+    if let Some(m) = mocks.get(&id) {
+        if m.is_static {
+            return Err(format!("Cannot delete static mock with ID {}", id));
         }
-        result = mocks.remove(&id);
     }
+    let result = mocks.remove(&id);
 
     log::debug!("Deleted mock with id={}", id);
     Result::Ok(result.is_some())
@@ -74,7 +68,7 @@ pub(crate) fn delete_one_mock(state: &MockServerState, id: usize) -> Result<bool
 
 /// Deletes all mocks.
 pub(crate) fn delete_all_mocks(state: &MockServerState) {
-    let mut mocks = state.mocks.write().unwrap();
+    let mut mocks = state.mocks.lock().unwrap();
     let ids: Vec<usize> = mocks
         .iter()
         .filter(|(k, v)| !v.is_static)
@@ -90,7 +84,7 @@ pub(crate) fn delete_all_mocks(state: &MockServerState) {
 
 /// Deletes the request history.
 pub(crate) fn delete_history(state: &MockServerState) {
-    let mut mocks = state.history.write().unwrap();
+    let mut mocks = state.history.lock().unwrap();
     mocks.clear();
     log::trace!("Deleted request history");
 }
@@ -103,25 +97,23 @@ pub(crate) fn find_mock(
 ) -> Result<Option<MockServerHttpResponse>, String> {
     let req = Arc::new(req);
     {
-        let mut history = state.history.write().unwrap();
+        let mut history = state.history.lock().unwrap();
         if history.len() > 100 {
             history.remove(0);
         }
         history.push(req.clone());
     }
 
-    let found_mock_id: Option<usize>;
-    {
-        let mocks = state.mocks.read().unwrap();
-        let result = mocks
-            .values()
-            .find(|&mock| request_matches(&state, req.clone(), &mock.definition.request));
+    let mut mocks = state.mocks.lock().unwrap();
 
-        found_mock_id = match result {
-            Some(mock) => Some(mock.id),
-            None => None,
-        };
-    }
+    let result = mocks
+        .values()
+        .find(|&mock| request_matches(&state, req.clone(), &mock.definition.request));
+
+    let found_mock_id = match result {
+        Some(mock) => Some(mock.id),
+        None => None,
+    };
 
     if let Some(found_id) = found_mock_id {
         log::debug!(
@@ -129,9 +121,10 @@ pub(crate) fn find_mock(
             found_id,
             req
         );
-        let mut mocks = state.mocks.write().unwrap();
+
         let mock = mocks.get_mut(&found_id).unwrap();
         mock.call_counter += 1;
+
         return Ok(Some(mock.definition.response.clone()));
     }
 
@@ -162,7 +155,7 @@ pub(crate) fn verify(
     state: &MockServerState,
     mock_rr: &RequestRequirements,
 ) -> Result<Option<ClosestMatch>, String> {
-    let mut history = state.history.read().unwrap();
+    let mut history = state.history.lock().unwrap();
 
     let non_matching_requests: Vec<&Arc<HttpMockRequest>> = history
         .iter()
@@ -706,7 +699,7 @@ mod test {
         // Arrange
         let mut mock_server_state = MockServerState::default();
         {
-            let mut mocks = mock_server_state.history.write().unwrap();
+            let mut mocks = mock_server_state.history.lock().unwrap();
             // 1: close request
             mocks.push(Arc::new(HttpMockRequest::new(
                 String::from("POST"),
