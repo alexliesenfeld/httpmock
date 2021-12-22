@@ -1,4 +1,4 @@
-## Version 0.6.4
+## Version 0.6.5
 - Fixes a race condition that could occur when deleting mocks from the mock server (see https://github.com/alexliesenfeld/httpmock/issues/53).
 - Replaced internal diffing library (switched from `difference` to `similar`, see https://github.com/alexliesenfeld/httpmock/pull/55). 
 
