@@ -35,7 +35,7 @@ levenshtein = "1.0"
 form_urlencoded = "1.0"
 
 colored = { version = "2.0", optional = true }
-clap = { version = "3.0.0-beta.5", optional = true }
+clap = { version = "3.0.0-rc.7", features = ["derive", "env"], optional = true }
 env_logger = { version = "0.9", optional = true }
 serde_yaml = { version = "0.8", optional = true }
 
