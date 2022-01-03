@@ -171,7 +171,7 @@ fn to_handler_request(req: &ServerRequestHeader, body: Vec<u8>) -> Result<HttpMo
 /// Extracts all query parameters from the URI of the given request.
 fn extract_query_params(query_string: &str) -> Result<Vec<(String, String)>, String> {
     // HACK: There doesn't seem to be a way to just parse Query string with `url` crate
-    // So, lets just prefix a dummy URL for parsing
+    // Lets just prefix a dummy URL for parsing.
     let url = format!("http://dummy?{}", query_string);
     let url = url::Url::parse(&url).map_err(|e| e.to_string())?;
 
