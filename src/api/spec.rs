@@ -178,7 +178,7 @@ impl When {
     /// // Assert
     /// m.assert();
     /// ```
-    pub fn query_param<S: Into<String>>(mut self, name: S, value: S) -> Self {
+    pub fn query_param(mut self, name: impl Into<String>, value: impl Into<String>) -> Self {
         update_cell(&self.expectations, |e| {
             if e.query_param.is_none() {
                 e.query_param = Some(Vec::new());
@@ -257,7 +257,11 @@ impl When {
     /// m.assert();
     /// assert_eq!(response.status(), 202);
     /// ```
-    pub fn x_www_form_urlencoded_tuple<S: Into<String>>(mut self, key: S, value: S) -> Self {
+    pub fn x_www_form_urlencoded_tuple(
+        mut self,
+        key: impl Into<String>,
+        value: impl Into<String>,
+    ) -> Self {
         update_cell(&self.expectations, |e| {
             if e.x_www_form_urlencoded.is_none() {
                 e.x_www_form_urlencoded = Some(Vec::new());
@@ -607,7 +611,7 @@ impl When {
     ///
     /// mock.assert();
     /// ```
-    pub fn header<S: Into<String>>(mut self, name: S, value: S) -> Self {
+    pub fn header(mut self, name: impl Into<String>, value: impl Into<String>) -> Self {
         update_cell(&self.expectations, |e| {
             if e.headers.is_none() {
                 e.headers = Some(Vec::new());
@@ -684,7 +688,7 @@ impl When {
     ///
     /// mock.assert();
     /// ```
-    pub fn cookie<S: Into<String>>(mut self, name: S, value: S) -> Self {
+    pub fn cookie(mut self, name: impl Into<String>, value: impl Into<String>) -> Self {
         update_cell(&self.expectations, |e| {
             if e.cookies.is_none() {
                 e.cookies = Some(Vec::new());
@@ -1000,7 +1004,8 @@ impl Then {
     /// let m = server.mock(|when, then|{
     ///     when.path("/");
     ///     then.status(200)
-    ///         .header("Expires", "Wed, 21 Oct 2050 07:28:00 GMT");
+    ///         .header("Expires", "Wed, 21 Oct 2050 07:28:00 GMT")
+    ///         .header("link", format!("<{}>; rel=next", server.base_url()));
     /// });
     ///
     /// // Act
@@ -1010,7 +1015,7 @@ impl Then {
     /// m.assert();
     /// assert_eq!(response.status(), 200);
     /// ```
-    pub fn header<S: Into<String>>(mut self, name: S, value: S) -> Self {
+    pub fn header(mut self, name: impl Into<String>, value: impl Into<String>) -> Self {
         update_cell(&self.response_template, |r| {
             if r.headers.is_none() {
                 r.headers = Some(Vec::new());
