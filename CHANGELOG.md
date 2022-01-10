@@ -1,3 +1,6 @@
+## Version 0.6.6
+- Changed some API to allow for more type flexibility (see https://github.com/alexliesenfeld/httpmock/issues/56).
+
 ## Version 0.6.5
 - Fixes a race condition that could occur when deleting mocks from the mock server (see https://github.com/alexliesenfeld/httpmock/issues/53).
 - Replaced internal diff library (switched from `difference` to `similar`, see https://github.com/alexliesenfeld/httpmock/pull/55). 
