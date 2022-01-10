@@ -1,5 +1,5 @@
 ## Version 0.6.6
-- Changed some API to allow for more type flexibility (see https://github.com/alexliesenfeld/httpmock/issues/58).
+- Extended some API methods to allow for more type flexibility (see https://github.com/alexliesenfeld/httpmock/issues/58).
 - Fixed parsing query parameter values that contain `+` to represent space (see https://github.com/alexliesenfeld/httpmock/issues/56).
 
 ## Version 0.6.5
