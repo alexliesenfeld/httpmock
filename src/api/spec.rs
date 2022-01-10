@@ -257,7 +257,11 @@ impl When {
     /// m.assert();
     /// assert_eq!(response.status(), 202);
     /// ```
-    pub fn x_www_form_urlencoded_tuple<SK: Into<String>, SV: Into<String>>(mut self, key: SK, value: SV) -> Self {
+    pub fn x_www_form_urlencoded_tuple<SK: Into<String>, SV: Into<String>>(
+        mut self,
+        key: SK,
+        value: SV,
+    ) -> Self {
         update_cell(&self.expectations, |e| {
             if e.x_www_form_urlencoded.is_none() {
                 e.x_www_form_urlencoded = Some(Vec::new());
