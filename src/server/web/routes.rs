@@ -1,6 +1,5 @@
 use std::collections::BTreeMap;
 
-use qstring::QString;
 use serde::Serialize;
 
 use crate::common::data::{
@@ -171,11 +170,15 @@ fn to_handler_request(req: &ServerRequestHeader, body: Vec<u8>) -> Result<HttpMo
 
 /// Extracts all query parameters from the URI of the given request.
 fn extract_query_params(query_string: &str) -> Result<Vec<(String, String)>, String> {
-    let mut query_params = Vec::new();
+    // HACK: There doesn't seem to be a way to just parse Query string with `url` crate
+    // Lets just prefix a dummy URL for parsing.
+    let url = format!("http://dummy?{}", query_string);
+    let url = url::Url::parse(&url).map_err(|e| e.to_string())?;
 
-    for (key, value) in QString::from(query_string) {
-        query_params.push((key.to_string(), value.to_string()));
-    }
+    let query_params = url
+        .query_pairs()
+        .map(|(k, v)| (k.into(), v.into()))
+        .collect();
 
     Ok(query_params)
 }

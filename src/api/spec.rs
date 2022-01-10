@@ -60,7 +60,7 @@ impl When {
     ///
     /// mock.assert();
     /// ```
-    pub fn method<M: Into<Method>>(mut self, method: M) -> Self {
+    pub fn method(mut self, method: impl Into<Method>) -> Self {
         update_cell(&self.expectations, |e| {
             e.method = Some(method.into().to_string())
         });
@@ -85,7 +85,7 @@ impl When {
     ///
     /// mock.assert();
     /// ```
-    pub fn path<S: Into<String>>(mut self, path: S) -> Self {
+    pub fn path(mut self, path: impl Into<String>) -> Self {
         update_cell(&self.expectations, |e| {
             e.path = Some(path.into());
         });
@@ -110,7 +110,7 @@ impl When {
     ///
     /// mock.assert();
     /// ```
-    pub fn path_contains<S: Into<String>>(mut self, substring: S) -> Self {
+    pub fn path_contains(mut self, substring: impl Into<String>) -> Self {
         update_cell(&self.expectations, |e| {
             if e.path_contains.is_none() {
                 e.path_contains = Some(Vec::new());
@@ -138,7 +138,7 @@ impl When {
     ///
     /// mock.assert();
     /// ```
-    pub fn path_matches<R: Into<Regex>>(mut self, regex: R) -> Self {
+    pub fn path_matches(mut self, regex: impl Into<Regex>) -> Self {
         update_cell(&self.expectations, |e| {
             if e.path_matches.is_none() {
                 e.path_matches = Some(Vec::new());
@@ -178,7 +178,7 @@ impl When {
     /// // Assert
     /// m.assert();
     /// ```
-    pub fn query_param<S: Into<String>>(mut self, name: S, value: S) -> Self {
+    pub fn query_param(mut self, name: impl Into<String>, value: impl Into<String>) -> Self {
         update_cell(&self.expectations, |e| {
             if e.query_param.is_none() {
                 e.query_param = Some(Vec::new());
@@ -217,7 +217,7 @@ impl When {
     /// // Assert
     /// m.assert();
     /// ```
-    pub fn query_param_exists<S: Into<String>>(mut self, name: S) -> Self {
+    pub fn query_param_exists(mut self, name: impl Into<String>) -> Self {
         update_cell(&self.expectations, |e| {
             if e.query_param_exists.is_none() {
                 e.query_param_exists = Some(Vec::new());
@@ -257,7 +257,11 @@ impl When {
     /// m.assert();
     /// assert_eq!(response.status(), 202);
     /// ```
-    pub fn x_www_form_urlencoded_tuple<S: Into<String>>(mut self, key: S, value: S) -> Self {
+    pub fn x_www_form_urlencoded_tuple(
+        mut self,
+        key: impl Into<String>,
+        value: impl Into<String>,
+    ) -> Self {
         update_cell(&self.expectations, |e| {
             if e.x_www_form_urlencoded.is_none() {
                 e.x_www_form_urlencoded = Some(Vec::new());
@@ -300,7 +304,7 @@ impl When {
     /// m.assert();
     /// assert_eq!(response.status(), 202);
     /// ```
-    pub fn x_www_form_urlencoded_key_exists<S: Into<String>>(mut self, key: S) -> Self {
+    pub fn x_www_form_urlencoded_key_exists(mut self, key: impl Into<String>) -> Self {
         update_cell(&self.expectations, |e| {
             if e.x_www_form_urlencoded_key_exists.is_none() {
                 e.x_www_form_urlencoded_key_exists = Some(Vec::new());
@@ -337,7 +341,7 @@ impl When {
     ///
     /// mock.assert();
     /// ```
-    pub fn body<S: Into<String>>(mut self, body: S) -> Self {
+    pub fn body(mut self, body: impl Into<String>) -> Self {
         update_cell(&self.expectations, |e| {
             e.body = Some(body.into());
         });
@@ -375,7 +379,7 @@ impl When {
     /// m.assert();
     /// assert_eq!(response.status(), 201);
     /// ```
-    pub fn body_matches<R: Into<Regex>>(mut self, regex: R) -> Self {
+    pub fn body_matches(mut self, regex: impl Into<Regex>) -> Self {
         update_cell(&self.expectations, |e| {
             if e.body_matches.is_none() {
                 e.body_matches = Some(Vec::new());
@@ -418,7 +422,7 @@ impl When {
     /// m.assert();
     /// assert_eq!(response.status(), 201);
     /// ```
-    pub fn body_contains<S: Into<String>>(mut self, substring: S) -> Self {
+    pub fn body_contains(mut self, substring: impl Into<String>) -> Self {
         update_cell(&self.expectations, |e| {
             if e.body_contains.is_none() {
                 e.body_contains = Some(Vec::new());
@@ -464,7 +468,7 @@ impl When {
     /// m.assert();
     /// assert_eq!(response.status(), 201);
     /// ```
-    pub fn json_body<V: Into<serde_json::Value>>(mut self, value: V) -> Self {
+    pub fn json_body(mut self, value: impl Into<serde_json::Value>) -> Self {
         update_cell(&self.expectations, |e| {
             e.json_body = Some(value.into());
         });
@@ -570,7 +574,7 @@ impl When {
     /// Please note that the JSON partial contains the full object hierachy, i.e. it needs to start
     /// from the root! It leaves out irrelevant attributes, however (`parent_attribute`
     /// and `child.other_attribute`).
-    pub fn json_body_partial<S: Into<String>>(mut self, partial: S) -> Self {
+    pub fn json_body_partial(mut self, partial: impl Into<String>) -> Self {
         update_cell(&self.expectations, |e| {
             if e.json_body_includes.is_none() {
                 e.json_body_includes = Some(Vec::new());
@@ -607,7 +611,7 @@ impl When {
     ///
     /// mock.assert();
     /// ```
-    pub fn header<S: Into<String>>(mut self, name: S, value: S) -> Self {
+    pub fn header(mut self, name: impl Into<String>, value: impl Into<String>) -> Self {
         update_cell(&self.expectations, |e| {
             if e.headers.is_none() {
                 e.headers = Some(Vec::new());
@@ -646,7 +650,7 @@ impl When {
     ///
     /// mock.assert();
     /// ```
-    pub fn header_exists<S: Into<String>>(mut self, name: S) -> Self {
+    pub fn header_exists(mut self, name: impl Into<String>) -> Self {
         update_cell(&self.expectations, |e| {
             if e.header_exists.is_none() {
                 e.header_exists = Some(Vec::new());
@@ -684,7 +688,7 @@ impl When {
     ///
     /// mock.assert();
     /// ```
-    pub fn cookie<S: Into<String>>(mut self, name: S, value: S) -> Self {
+    pub fn cookie(mut self, name: impl Into<String>, value: impl Into<String>) -> Self {
         update_cell(&self.expectations, |e| {
             if e.cookies.is_none() {
                 e.cookies = Some(Vec::new());
@@ -724,7 +728,7 @@ impl When {
     ///
     /// mock.assert();
     /// ```
-    pub fn cookie_exists<S: Into<String>>(mut self, name: S) -> Self {
+    pub fn cookie_exists(mut self, name: impl Into<String>) -> Self {
         update_cell(&self.expectations, |e| {
             if e.cookie_exists.is_none() {
                 e.cookie_exists = Some(Vec::new());
@@ -865,7 +869,7 @@ impl Then {
     /// assert_eq!(response.status(), 200);
     /// assert_eq!(response.text().unwrap(), "ohi!");
     /// ```
-    pub fn body_from_file<S: Into<String>>(mut self, resource_file_path: S) -> Self {
+    pub fn body_from_file(mut self, resource_file_path: impl Into<String>) -> Self {
         let resource_file_path = resource_file_path.into();
         let path = Path::new(&resource_file_path);
         let absolute_path = match path.is_absolute() {
@@ -922,7 +926,7 @@ impl Then {
     /// assert_eq!(response.status(), 200);
     /// assert_eq!(user.as_object().unwrap().get("name").unwrap(), "Hans");
     /// ```
-    pub fn json_body<V: Into<Value>>(mut self, body: V) -> Self {
+    pub fn json_body(mut self, body: impl Into<Value>) -> Self {
         update_cell(&self.response_template, |r| {
             r.body = Some(body.into().to_string().into_bytes());
         });
@@ -1000,7 +1004,8 @@ impl Then {
     /// let m = server.mock(|when, then|{
     ///     when.path("/");
     ///     then.status(200)
-    ///         .header("Expires", "Wed, 21 Oct 2050 07:28:00 GMT");
+    ///         .header("Expires", "Wed, 21 Oct 2050 07:28:00 GMT")
+    ///         .header("link", format!("<{}>; rel=next", server.base_url()));
     /// });
     ///
     /// // Act
@@ -1010,7 +1015,7 @@ impl Then {
     /// m.assert();
     /// assert_eq!(response.status(), 200);
     /// ```
-    pub fn header<S: Into<String>>(mut self, name: S, value: S) -> Self {
+    pub fn header(mut self, name: impl Into<String>, value: impl Into<String>) -> Self {
         update_cell(&self.response_template, |r| {
             if r.headers.is_none() {
                 r.headers = Some(Vec::new());
@@ -1050,7 +1055,7 @@ impl Then {
     /// mock.assert();
     /// assert_eq!(start_time.elapsed().unwrap() > three_seconds, true);
     /// ```
-    pub fn delay<D: Into<Duration>>(mut self, duration: D) -> Self {
+    pub fn delay(mut self, duration: impl Into<Duration>) -> Self {
         update_cell(&self.response_template, |r| {
             r.delay = Some(duration.into());
         });

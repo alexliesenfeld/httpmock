@@ -57,3 +57,22 @@ fn url_param_unencoded_matching_test() {
     // Assert
     m.assert();
 }
+
+#[test]
+fn url_param_encoding_issue_56() {
+    // Arrange
+    let server = MockServer::start();
+
+    let m = server.mock(|when, then| {
+        when.query_param("query", "Metallica is cool");
+        then.status(200);
+    });
+
+    // Act: Send the request
+    httpget(&server.url("/search?query=Metallica+is+cool"))
+        .send_string("")
+        .unwrap();
+
+    // Assert
+    m.assert();
+}
