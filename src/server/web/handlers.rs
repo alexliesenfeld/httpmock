@@ -3,6 +3,7 @@ use std::collections::BTreeMap;
 use std::str::FromStr;
 use std::sync::Arc;
 
+#[cfg(feature = "cookies")]
 use basic_cookies::Cookie;
 use serde_json::Value;
 

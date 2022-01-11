@@ -4,8 +4,7 @@ use std::collections::BTreeMap;
 use serde_json::Value;
 
 use crate::common::data::HttpMockRequest;
-use crate::server::matchers::parse_cookies;
-use crate::server::matchers::sources::ValueRefSource;
+use crate::server::matchers;
 
 pub(crate) trait ValueTarget<T> {
     fn parse_from_request(&self, req: &HttpMockRequest) -> Option<T>;
@@ -69,17 +68,20 @@ impl ValueTarget<Value> for JSONBodyTarget {
 // *************************************************************************************
 // CookieTarget
 // *************************************************************************************
+#[cfg(feature = "cookies")]
 pub(crate) struct CookieTarget {}
 
+#[cfg(feature = "cookies")]
 impl CookieTarget {
     pub fn new() -> Self {
         Self {}
     }
 }
 
+#[cfg(feature = "cookies")]
 impl MultiValueTarget<String, String> for CookieTarget {
     fn parse_from_request(&self, req: &HttpMockRequest) -> Option<Vec<(String, Option<String>)>> {
-        let req_cookies = match parse_cookies(req) {
+        let req_cookies = match matchers::parse_cookies(req) {
             Ok(v) => v,
             Err(err) => {
                 log::info!(
