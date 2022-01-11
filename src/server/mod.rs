@@ -36,12 +36,12 @@ use crate::server::matchers::sources::{
     PathRegexSource, QueryParameterSource, StringBodyContainsSource, StringBodySource,
     StringPathSource, XWWWFormUrlencodedSource,
 };
+#[cfg(feature = "cookies")]
+use crate::server::matchers::targets::CookieTarget;
 use crate::server::matchers::targets::{
     FullRequestTarget, HeaderTarget, MethodTarget, PathTarget, QueryParameterTarget,
     XWWWFormUrlEncodedBodyTarget,
 };
-#[cfg(feature = "cookies")]
-use crate::server::matchers::targets::CookieTarget;
 use crate::server::matchers::Matcher;
 use crate::server::web::routes;
 use futures_util::task::Spawn;
