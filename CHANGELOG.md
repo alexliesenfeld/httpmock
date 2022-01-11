@@ -1,8 +1,7 @@
 ## Version 0.6.6
-- Extended some API methods to allow for more type flexibility (see https://github.com/alexliesenfeld/httpmock/issues/58).
-- Fixed parsing query parameter values that contain `+` to represent space (see https://github.com/alexliesenfeld/httpmock/issues/56).
-
-Thanks to [@95th](https://github.com/95th) for providing both PRs!
+- Extended some API methods to allow for more type flexibility (see https://github.com/alexliesenfeld/httpmock/issues/58). Thanks to [@95th](https://github.com/95th) for providing the PR!
+- Fixed parsing query parameter values that contain `+` to represent space (see https://github.com/alexliesenfeld/httpmock/issues/56). Thanks to [@95th](https://github.com/95th) for providing the PR!
+- Added a new Cargo feature `cookie` to shorten compile time (see https://github.com/alexliesenfeld/httpmock/pull/63). Thanks to [mythmon](https://github.com/mythmon) for providing this PR!
 
 ## Version 0.6.5
 - Fixes a race condition that could occur when deleting mocks from the mock server (see https://github.com/alexliesenfeld/httpmock/issues/53).
