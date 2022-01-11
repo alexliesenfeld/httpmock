@@ -556,6 +556,7 @@ mod test {
     };
 
     #[test]
+    #[cfg(not(feature = "color"))]
     #[should_panic(expected = "1 : This is a title\n\
     ------------------------------------------------------------------------------------------\n\
     Expected:	[equals]		/toast\n\

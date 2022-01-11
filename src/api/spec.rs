@@ -667,6 +667,9 @@ impl When {
     /// * `name` - The cookie name.
     /// * `value` - The expected cookie value.
     ///
+    /// > Note: This function is only available when the `cookies` feature is enabled.
+    /// > It is enabled by default.
+    ///
     /// # Example
     /// ```
     /// use httpmock::prelude::*;
@@ -706,6 +709,9 @@ impl When {
     /// **Attention**: Cookie names are **case-sensitive**.
     ///
     /// * `name` - The cookie name
+    ///
+    /// > Note: This function is only available when the `cookies` feature is enabled.
+    /// > It is enabled by default.
     ///
     /// # Example
     /// ```

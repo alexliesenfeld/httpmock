@@ -37,9 +37,11 @@ use crate::server::matchers::sources::{
     StringPathSource, XWWWFormUrlencodedSource,
 };
 use crate::server::matchers::targets::{
-    CookieTarget, FullRequestTarget, HeaderTarget, MethodTarget, PathTarget, QueryParameterTarget,
+    FullRequestTarget, HeaderTarget, MethodTarget, PathTarget, QueryParameterTarget,
     XWWWFormUrlEncodedBodyTarget,
 };
+#[cfg(feature = "cookies")]
+use crate::server::matchers::targets::CookieTarget;
 use crate::server::matchers::Matcher;
 use crate::server::web::routes;
 use futures_util::task::Spawn;
@@ -144,6 +146,7 @@ impl MockServerState {
                     weight: 1,
                 }),
                 // Cookie exact
+                #[cfg(feature = "cookies")]
                 Box::new(MultiValueMatcher {
                     entity_name: "cookie",
                     key_comparator: Box::new(StringExactMatchComparator::new(true)),
@@ -157,6 +160,7 @@ impl MockServerState {
                     weight: 1,
                 }),
                 // Cookie exists
+                #[cfg(feature = "cookies")]
                 Box::new(MultiValueMatcher {
                     entity_name: "cookie",
                     key_comparator: Box::new(StringExactMatchComparator::new(true)),

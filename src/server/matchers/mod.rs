@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 use std::fmt::Display;
 
+#[cfg(feature = "cookies")]
 use basic_cookies::Cookie;
 use serde::{Deserialize, Serialize};
 use similar::{ChangeTag, TextDiff};
@@ -45,6 +46,7 @@ pub trait Matcher {
 // *************************************************************************************************
 // Helper functions
 // *************************************************************************************************
+#[cfg(feature = "cookies")]
 pub(crate) fn parse_cookies(req: &HttpMockRequest) -> Result<Vec<(String, String)>, String> {
     let parsing_result = req.headers.as_ref().map_or(None, |request_headers| {
         request_headers
