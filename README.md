@@ -82,7 +82,7 @@ See the [reference docs](https://docs.rs/httpmock/) for detailed API documentati
 ## Examples
 You can find examples in the 
 [`httpmock` test directory](https://github.com/alexliesenfeld/httpmock/blob/master/tests/). 
-The [reference docs](https://docs.rs/httpmock/) also contain _**a lot**_ of examples. There is an [online tutorial](https://dev.to/alexliesenfeld/mocking-http-services-in-rust-58ee) as well. 
+The [reference docs](https://docs.rs/httpmock/) also contain _**a lot**_ of examples. There is an [online tutorial](https://alexliesenfeld.com/mocking-http-services-in-rust) as well. 
 
 ## Standalone Mock Server
 You can use `httpmock` to run a standalone mock server that is executed in a separate process. There is a 
