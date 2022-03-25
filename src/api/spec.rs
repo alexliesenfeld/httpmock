@@ -77,7 +77,7 @@ impl When {
     /// let server = MockServer::start();
     ///
     /// let mock = server.mock(|when, then|{
-    ///     when.path_contains("/test");
+    ///     when.path("/test");
     ///     then.status(200);
     /// });
     ///
@@ -554,7 +554,7 @@ impl When {
     /// }
     /// ```
     /// If we only want to verify that `target_attribute` has value `Example` without the need
-    /// to provive a full JSON object, we can use this method as follows:
+    /// to provide a full JSON object, we can use this method as follows:
     /// ```
     /// use httpmock::prelude::*;
     ///
@@ -746,7 +746,7 @@ impl When {
     /// Sets a custom matcher for expected HTTP request. If this function returns true, the request
     /// is considered a match and the mock server will respond to the request
     /// (given all other criteria are also met).
-    /// * `request_matcher` - The matcher function.
+    /// * `matcher` - The matcher function.
     ///
     /// ## Example:
     /// ```
