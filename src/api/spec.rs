@@ -571,7 +571,7 @@ impl When {
     ///     then.status(200);
     /// });
     /// ```
-    /// Please note that the JSON partial contains the full object hierachy, i.e. it needs to start
+    /// Please note that the JSON partial contains the full object hierarchy, i.e. it needs to start
     /// from the root! It leaves out irrelevant attributes, however (`parent_attribute`
     /// and `child.other_attribute`).
     pub fn json_body_partial<S: Into<String>>(mut self, partial: S) -> Self {

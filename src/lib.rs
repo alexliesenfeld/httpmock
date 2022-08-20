@@ -77,7 +77,7 @@
 //! [MockServer::start](struct.MockServer.html#method.start)) while the server pool is empty
 //! (i.e. all servers are occupied by other tests).
 //!
-//! [MockServer](struct.MockServer.html)s are never recreated but recycled/resetted.
+//! [MockServer](struct.MockServer.html)s are never recreated but recycled/reset.
 //! The pool is filled on demand up to a maximum number of 25 servers.
 //! You can override this number by using the environment variable `HTTPMOCK_MAX_SERVERS`.
 //!

@@ -26,7 +26,7 @@ ENV HTTPMOCK_PORT 5000
 # Container internal directory path that contains file bases mock specs (YAML-fies).
 # ENV HTTPMOCK_MOCK_FILES_DIR /mocks
 
-# The existance of this environment variable (even if value is empty) is considered "true"/"disabled".
+# The existence of this environment variable (even if value is empty) is considered "true"/"disabled".
 # ENV HTTPMOCK_DISABLE_ACCESS_LOG true
 
 # Request history limit.
