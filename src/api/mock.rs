@@ -390,7 +390,7 @@ pub trait MockExt<'a> {
     /// mock on a [MockServer](struct.MockServer.html). This functionality is usually not required.
     /// You can use it if for you need to recreate [Mock](struct.Mock.html) instances
     ///.
-    /// * `id` - The ID of the existing mock ot the [MockServer](struct.MockServer.html).
+    /// * `id` - The ID of the existing mock to the [MockServer](struct.MockServer.html).
     /// * `mock_server` - The [MockServer](struct.MockServer.html) to which the
     /// [Mock](struct.Mock.html) instance will reference.
     ///

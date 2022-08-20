@@ -4,7 +4,7 @@
 
 <p align="center">HTTP mocking library for Rust.</p>
 <div align="center">
-    
+
 [![Build Status](https://dev.azure.com/alexliesenfeld/httpmock/_apis/build/status/alexliesenfeld.httpmock?branchName=master)](https://dev.azure.com/alexliesenfeld/httpmock/_build/latest?definitionId=2&branchName=master)
 [![codecov](https://codecov.io/gh/alexliesenfeld/httpmock/branch/master/graph/badge.svg)](https://codecov.io/gh/alexliesenfeld/httpmock)
 [![crates.io](https://img.shields.io/crates/d/httpmock.svg)](https://crates.io/crates/httpmock)
@@ -39,13 +39,16 @@
 * Support for [mock specification based on YAML files](https://github.com/alexliesenfeld/httpmock/tree/master#file-based-mock-specification).
 
 ## Getting Started
+
 Add `httpmock` to `Cargo.toml`:
 
 ```toml
 [dev-dependencies]
 httpmock = "0.6"
 ```
+
 You can then use `httpmock` as follows:
+
 ```rust
 use httpmock::prelude::*;
 
@@ -72,40 +75,45 @@ hello_mock.assert();
 assert_eq!(response.status(), 200);
 ```
 
-The above example will spin up a lightweight HTTP mock server and configure it to respond to all `GET` requests 
-to path `/translate` with query parameter `word=hello`. The corresponding HTTP response will contain the text body 
+The above example will spin up a lightweight HTTP mock server and configure it to respond to all `GET` requests
+to path `/translate` with query parameter `word=hello`. The corresponding HTTP response will contain the text body
 `Привет`.
 
 # Usage
+
 See the [reference docs](https://docs.rs/httpmock/) for detailed API documentation.
 
 ## Examples
-You can find examples in the 
-[`httpmock` test directory](https://github.com/alexliesenfeld/httpmock/blob/master/tests/). 
-The [reference docs](https://docs.rs/httpmock/) also contain _**a lot**_ of examples. There is an [online tutorial](https://alexliesenfeld.com/mocking-http-services-in-rust) as well. 
+
+You can find examples in the
+[`httpmock` test directory](https://github.com/alexliesenfeld/httpmock/blob/master/tests/).
+The [reference docs](https://docs.rs/httpmock/) also contain _**a lot**_ of examples. There is an [online tutorial](https://alexliesenfeld.com/mocking-http-services-in-rust) as well.
 
 ## Standalone Mock Server
-You can use `httpmock` to run a standalone mock server that is executed in a separate process. There is a 
+
+You can use `httpmock` to run a standalone mock server that is executed in a separate process. There is a
 [Docker image](https://hub.docker.com/r/alexliesenfeld/httpmock) available at Dockerhub to get started quickly.
 
-The standalone mode allows you to mock HTTP based APIs for many API clients, not only the ones 
-inside your Rust tests, but also completely different programs running on remote hosts. 
-This is especially useful if you want to use `httpmock` in system or end-to-end tests that require mocked services 
+The standalone mode allows you to mock HTTP based APIs for many API clients, not only the ones
+inside your Rust tests, but also completely different programs running on remote hosts.
+This is especially useful if you want to use `httpmock` in system or end-to-end tests that require mocked services
 (such as REST APIs, data stores, authentication providers, etc.).
 
 Please refer to [the docs](https://docs.rs/httpmock/0.5.8/httpmock/#standalone-mode) for more information
 
 ### File Based Mock Specification
-For convenience, the standalone mode also allows you to use YAML files for mock specification, so you do not need to
-use Rust or any other programming language at all. The mock specification file schema is very similar to the `httpmock` 
-Rust API, so it's easy to jump between the two. Please find an example mock specification file 
-[here](https://github.com/alexliesenfeld/httpmock/blob/master/tests/resources/static_yaml_mock.yaml). 
 
-Please refer to [the docs](https://github.com/alexliesenfeld/httpmock/blob/master/src/lib.rs#L185-L201) 
+For convenience, the standalone mode also allows you to use YAML files for mock specification, so you do not need to
+use Rust or any other programming language at all. The mock specification file schema is very similar to the `httpmock`
+Rust API, so it's easy to jump between the two. Please find an example mock specification file
+[here](https://github.com/alexliesenfeld/httpmock/blob/master/tests/resources/static_yaml_mock.yaml).
+
+Please refer to [the docs](https://github.com/alexliesenfeld/httpmock/blob/master/src/lib.rs#L185-L201)
 for more information.
 
 ## License
+
 `httpmock` is free software: you can redistribute it and/or modify it under the terms of the MIT Public License.
- 
-This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied 
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
 warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the MIT Public License for more details.
