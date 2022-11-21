@@ -15,7 +15,7 @@ mod internal;
 /// running somewhere else. The tests above will is.
 /// ====================================================================================
 pub fn simulate_standalone_server() {
-    let _ = STANDALONE_SERVER.lock().unwrap_or_else(|e| e.into_inner());
+    let _unused = STANDALONE_SERVER.lock().unwrap_or_else(|e| e.into_inner());
 }
 
 lazy_static! {

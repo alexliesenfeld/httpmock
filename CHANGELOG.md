@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 0.6.7
+
+- This is a maintenance release that updates all dependencies to the most recent version.
+
 ## Version 0.6.6
 
 - Extended some API methods to allow for more type flexibility (see <https://github.com/alexliesenfeld/httpmock/issues/58>). Thanks to [@95th](https://github.com/95th) for providing the PR!
