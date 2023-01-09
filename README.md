@@ -32,7 +32,7 @@
 * Parallel test execution.
 * Extensible request matching.
 * Fully asynchronous core with synchronous and asynchronous APIs.
-* [Advanced verification and debugging support](https://dev.to/alexliesenfeld/mocking-http-services-in-rust-58ee#creating-mocks).
+* [Advanced verification and debugging support](https://web.archive.org/web/20201202160613/https://dev.to/alexliesenfeld/rust-http-testing-with-httpmock-2mi0#creating-mocks).
 * Network delay simulation.
 * Support for [Regex](https://docs.rs/regex/) matching, JSON, [serde](https://crates.io/crates/serde), cookies, and more.
 * Standalone mode with an accompanying [Docker image](https://hub.docker.com/r/alexliesenfeld/httpmock).
