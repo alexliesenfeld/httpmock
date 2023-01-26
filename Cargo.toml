@@ -18,7 +18,7 @@ serde_regex = "1.1"
 lazy_static = "1.4"
 hyper = { version = "0.14", features = ["server", "http1", "tcp"] }
 tokio = { version = "1.22", features = ["sync", "macros", "rt-multi-thread", "signal"] }
-isahc = "1.7"
+isahc = { version = "1.7", default-features = false, features = ["json", "http2", "static-curl", "text-decoding"] }
 
 base64 = "0.13"
 regex = "1.7"
@@ -44,6 +44,7 @@ env_logger = "0.9"
 tokio-test = "0.4"
 async-std = { version = "1.12", features = ["attributes", "unstable"] }
 isahc = { version = "1.7", features = ["json"] }
+
 syn = { version = "1.0", features = ["full"] }
 quote = "1.0"
 actix-rt = "2.7"
@@ -51,10 +52,14 @@ colored = "2.0"
 ureq = "2.5"
 
 [features]
-default = ["cookies"]
+default = ["cookies", "native-tls"]
 standalone = ["clap", "env_logger", "serde_yaml"]
 color = ["colored"]
 cookies = ["basic-cookies"]
+
+native-tls = ["isahc/native-tls"]
+rustls = ["isahc/rustls-tls"]
+rustls-native-certs = ["isahc/rustls-tls-native-certs"]
 
 [[bin]]
 name = "httpmock"
