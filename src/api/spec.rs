@@ -11,6 +11,16 @@ use std::rc::Rc;
 use std::str::FromStr;
 use std::time::Duration;
 
+/// A function that encapsulates one or more
+/// [`When`](When) method calls as an abstraction
+/// or convenience
+pub type AndWhenFunction = fn(When) -> When;
+
+/// A function that encapsulates one or more
+/// [`Then`](Then) method calls as an abstraction
+/// or convenience
+pub type AndThenFunction = fn(Then) -> Then;
+
 /// A type that allows the specification of HTTP request values.
 pub struct When {
     pub(crate) expectations: Rc<Cell<RequestRequirements>>,
@@ -778,6 +788,45 @@ impl When {
         });
         self
     }
+    /// A semantic convenience for applying multiple operations
+    /// on a given `When` instance via an discrete encapsulating
+    /// function.
+    ///
+    /// ## Example:
+    ///
+    /// ```
+    /// # use httpmock::When;
+    /// // Assuming an encapsulating function like:
+    ///
+    /// fn is_authorized_json_post_request(when: When) -> When {
+    ///     when.method(httpmock::Method::POST)
+    ///         .header("authorization", "SOME API KEY")
+    ///         .header("content-type", "application/json")
+    /// }
+    ///
+    /// // It can be applied without breaking the usual `When`
+    /// // semantic style. Meaning instead of:
+    /// #
+    /// # fn counter_example(when: When) -> When {
+    /// is_authorized_json_post_request(when.json_body_partial(r#"{"key": "value"}"#))
+    /// # }
+    ///
+    /// // the `and` method can be used to preserve the
+    /// // legibility of the method chain:
+    /// # fn semantic_example(when: When) -> When {
+    ///  when.query_param("some-param", "some-value")
+    ///      .and(is_authorized_json_post_request)
+    ///      .json_body_partial(r#"{"key": "value"}"#)
+    /// # }
+    ///
+    /// // is still intuitively legible as "when some query
+    /// // parameter equals "some-value", the request is an
+    /// // authorized POST request, and the request body
+    /// // is the literal JSON object `{"key": "value"}`.
+    ///
+    pub fn and(mut self, func: AndWhenFunction) -> Self {
+        func(self)
+    }
 }
 
 /// A type that allows the specification of HTTP response values.
@@ -1065,5 +1114,44 @@ impl Then {
             r.delay = Some(duration.into());
         });
         self
+    }
+    /// A semantic convenience for applying multiple operations
+    /// on a given `Then` instance via an discrete encapsulating
+    /// function.
+    ///
+    /// ## Example:
+    ///
+    /// ```
+    /// # use std::time::Duration;
+    /// use hyper::http;use httpmock::Then;
+    /// // Assuming an encapsulating function like:
+    ///
+    /// fn ok_json_with_delay(then: Then) -> Then {
+    ///     then.status(http::StatusCode::OK.as_u16())
+    ///         .header("content-type", "application/json")
+    ///         .delay(Duration::from_secs_f32(0.5))
+    /// }
+    ///
+    /// // It can be applied without breaking the usual `Then`
+    /// // semantic style. Meaning instead of:
+    /// #
+    /// # fn counter_example(then: Then) -> Then {
+    /// ok_json_with_delay(then.header("general-vibe", "not great my guy"))
+    /// # }
+    ///
+    /// // the `and` method can be used to preserve the
+    /// // legibility of the method chain:
+    /// # fn semantic_example(then: Then) -> Then {
+    ///  then.header("general-vibe", "much better")
+    ///      .and(ok_json_with_delay)
+    /// # }
+    ///
+    /// // is still intuitively legible as "{when some criteria},
+    /// // then set the 'general-vibe' header to 'much better'
+    /// // *and* the status code to 200 (ok), the 'content-type'
+    /// // header to 'application/json' and return it with a delay
+    /// // of 0.50 seconds".
+    pub fn and(mut self, func: AndThenFunction) -> Self {
+        func(self)
     }
 }
