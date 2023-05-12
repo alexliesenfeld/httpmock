@@ -6,6 +6,7 @@ use crate::server::{start_server, MockServerState};
 use crate::Mock;
 use async_object_pool::Pool;
 use std::cell::Cell;
+use std::future::pending;
 use std::net::{SocketAddr, ToSocketAddrs};
 use std::rc::Rc;
 use std::sync::Arc;
@@ -277,7 +278,7 @@ const LOCAL_SERVER_ADAPTER_GENERATOR: fn() -> Arc<dyn MockServerAdapter + Send +
 
     thread::spawn(move || {
         let server_state = server_state.clone();
-        let srv = start_server(0, false, &server_state, Some(addr_sender), false);
+        let srv = start_server(0, false, &server_state, Some(addr_sender), false, pending());
 
         let mut runtime = tokio::runtime::Builder::new_current_thread()
             .enable_all()

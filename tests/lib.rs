@@ -20,7 +20,7 @@ pub fn simulate_standalone_server() {
 
 lazy_static! {
     static ref STANDALONE_SERVER: Mutex<JoinHandle<Result<(), String>>> = Mutex::new(spawn(|| {
-        let srv = start_standalone_server(5000, false, None, false, usize::MAX);
+        let srv = start_standalone_server(5000, false, None, false, usize::MAX, std::future::pending());
         let mut runtime = tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build()

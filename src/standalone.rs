@@ -1,6 +1,8 @@
 use std::fs;
 use std::fs::read_dir;
+use std::future::Future;
 use std::path::PathBuf;
+use std::process::Output;
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -56,13 +58,14 @@ struct YAMLMockDefinition {
     then: YAMLHTTPResponse,
 }
 
-pub async fn start_standalone_server(
+pub async fn start_standalone_server<F>(
     port: u16,
     expose: bool,
     static_mock_dir_path: Option<PathBuf>,
     print_access_log: bool,
     history_limit: usize,
-) -> Result<(), String> {
+    shutdown: F,
+) -> Result<(), String> where F: Future<Output = ()>{
     let state = Arc::new(MockServerState::new(history_limit));
 
     #[cfg(feature = "standalone")]
@@ -75,7 +78,7 @@ pub async fn start_standalone_server(
             })
     });
 
-    start_server(port, expose, &state, None, print_access_log).await
+    start_server(port, expose, &state, None, print_access_log, shutdown).await
 }
 
 #[cfg(feature = "standalone")]
