@@ -440,41 +440,22 @@ async fn handle_server_request(
     Ok(response.unwrap())
 }
 
-#[cfg(not(target_os = "windows"))]
-async fn shutdown_signal() {
-    let mut hangup_stream = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::hangup())
-        .expect("Cannot install SIGINT signal handler");
-    let mut sigint_stream =
-        tokio::signal::unix::signal(tokio::signal::unix::SignalKind::interrupt())
-            .expect("Cannot install SIGINT signal handler");
-    let mut sigterm_stream =
-        tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
-            .expect("Cannot install SIGINT signal handler");
-
-    tokio::select! {
-        val = hangup_stream.recv() => log::trace!("Received SIGINT"),
-        val = sigint_stream.recv() => log::trace!("Received SIGINT"),
-        val = sigterm_stream.recv() => log::trace!("Received SIGTERM"),
-    }
-}
-
-#[cfg(target_os = "windows")]
-async fn shutdown_signal() {
-    tokio::signal::ctrl_c()
-        .await
-        .expect("Cannot install CTRL+C signal handler");
-}
 
 /// Starts a new instance of an HTTP mock server. You should never need to use this function
 /// directly. Use it if you absolutely need to manage the low-level details of how the mock
 /// server operates.
-pub(crate) async fn start_server(
+pub(crate) async fn start_server<F>(
     port: u16,
     expose: bool,
     state: &Arc<MockServerState>,
     socket_addr_sender: Option<tokio::sync::oneshot::Sender<SocketAddr>>,
     print_access_log: bool,
-) -> Result<(), String> {
+    shutdown: F
+)
+    -> Result<(), String>
+    where
+        F: Future<Output = ()>,
+{
     let host = if expose { "0.0.0.0" } else { "127.0.0.1" };
 
     let state = state.clone();
@@ -492,7 +473,7 @@ pub(crate) async fn start_server(
     let addr = server.local_addr();
 
     // And now add a graceful shutdown signal...
-    let graceful = server.with_graceful_shutdown(shutdown_signal());
+    let graceful = server.with_graceful_shutdown(shutdown);
     if let Some(socket_addr_sender) = socket_addr_sender {
         if let Err(e) = socket_addr_sender.send(addr) {
             return Err(format!(
