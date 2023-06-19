@@ -7,7 +7,7 @@ concurrency:
   cancel-in-progress: true
   
 jobs:
-  ci:
+  build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -16,7 +16,6 @@ jobs:
           - beta
           - nightly
           - 1.60.0  # MSRV
-
     steps:
       - uses: actions/checkout@v2
 
@@ -39,14 +38,26 @@ jobs:
         with:
           command: fmt
           args: --all -- --check
-          
-      - name: Run cargo-tarpaulin
-        uses: actions-rs/tarpaulin@v0.1
-        with:
-          version: '0.15.0'
-          args: '-- --test-threads 1'
 
       - uses: actions-rs/cargo@v1
         with:
           command: clippy
           args: -- -D warnings
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: master
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Build and push
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: alexliesenfeld/httpmock:latest
