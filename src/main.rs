@@ -54,7 +54,7 @@ async fn main() {
         params.mock_files_dir,
         !params.disable_access_log,
         params.request_history_limit,
-        shutdown_signal()
+        shutdown_signal(),
     )
     .await
     .expect("an error occurred during mock server execution");
@@ -84,4 +84,3 @@ async fn shutdown_signal() {
         .await
         .expect("Cannot install CTRL+C signal handler");
 }
-

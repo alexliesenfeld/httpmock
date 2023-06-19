@@ -440,7 +440,6 @@ async fn handle_server_request(
     Ok(response.unwrap())
 }
 
-
 /// Starts a new instance of an HTTP mock server. You should never need to use this function
 /// directly. Use it if you absolutely need to manage the low-level details of how the mock
 /// server operates.
@@ -450,11 +449,10 @@ pub(crate) async fn start_server<F>(
     state: &Arc<MockServerState>,
     socket_addr_sender: Option<tokio::sync::oneshot::Sender<SocketAddr>>,
     print_access_log: bool,
-    shutdown: F
-)
-    -> Result<(), String>
-    where
-        F: Future<Output = ()>,
+    shutdown: F,
+) -> Result<(), String>
+where
+    F: Future<Output = ()>,
 {
     let host = if expose { "0.0.0.0" } else { "127.0.0.1" };
 

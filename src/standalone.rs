@@ -65,7 +65,10 @@ pub async fn start_standalone_server<F>(
     print_access_log: bool,
     history_limit: usize,
     shutdown: F,
-) -> Result<(), String> where F: Future<Output = ()>{
+) -> Result<(), String>
+where
+    F: Future<Output = ()>,
+{
     let state = Arc::new(MockServerState::new(history_limit));
 
     #[cfg(feature = "standalone")]
