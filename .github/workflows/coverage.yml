@@ -7,35 +7,22 @@ concurrency:
   cancel-in-progress: true
   
 jobs:
-  ci:
-    runs-on: ubuntu-latest
-
+  coverage:
+    name:                       coverage
+    runs-on:                    ubuntu-latest
+    container:
+      image:                    xd009642/tarpaulin:develop-nightly
+      options:                  --security-opt seccomp=unconfined
     steps:
-      - uses: actions/checkout@v2
+      - name:                   Checkout repository
+        uses:                   actions/checkout@v2
 
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
+      - name:                   Generate code coverage
+        run: |
+          cargo +nightly tarpaulin --verbose --all-features --workspace --timeout 120 --out Xml
 
-      - uses: actions-rs/cargo@v1
+      - name:                   Upload to codecov.io
+        uses:                   codecov/codecov-action@v2
         with:
-          command: test
-
-      - name: Run cargo-tarpaulin
-        uses: actions-rs/tarpaulin@v0.1
-        with:
-          version: '0.15.0'
-          args: '-- --test-threads 1'
-
-      - name: Upload to codecov.io
-        uses: codecov/codecov-action@v1.0.2
-        with:
-          token: ${{secrets.CODECOV_TOKEN}}
-
-      - name: Archive code coverage results
-        uses: actions/upload-artifact@v1
-        with:
-          name: code-coverage-report
-          path: cobertura.xml
+          # token:                ${{secrets.CODECOV_TOKEN}} # not required for public repos
+          fail_ci_if_error:     true
