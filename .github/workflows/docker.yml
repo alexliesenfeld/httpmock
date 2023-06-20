@@ -23,9 +23,10 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Write release version
         run: |
-          DOCKER_IMAGE_VERSION=${GITHUB_REF_NAME#v}
-          echo Version: DOCKER_IMAGE_VERSION
-          echo "DOCKER_IMAGE_VERSION=$VERSION" >> $GITHUB_ENV
+          TAG_NAME=${{ github.event.release.tag_name }}
+          DOCKER_IMAGE_VERSION="${TAG_NAME#v}"
+          echo "Version: ${DOCKER_IMAGE_VERSION}"
+          echo "DOCKER_IMAGE_VERSION=${DOCKER_IMAGE_VERSION}" >> $GITHUB_ENV
       - name: Build and push
         uses: docker/build-push-action@v4
         with:
