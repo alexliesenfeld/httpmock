@@ -3,6 +3,13 @@ on:
     # Pattern matched against refs/tags
     tags:
       - '**'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Image Tag'
+        required: true
+        type: string
+        default: 'latest'
 
 name: Docker
 
