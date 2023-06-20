@@ -23,12 +23,12 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Write release version
         run: |
-          VERSION=${GITHUB_REF_NAME#v}
-          echo Version: $VERSION
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          DOCKER_IMAGE_VERSION=${GITHUB_REF_NAME#v}
+          echo Version: DOCKER_IMAGE_VERSION
+          echo "DOCKER_IMAGE_VERSION=$VERSION" >> $GITHUB_ENV
       - name: Build and push
         uses: docker/build-push-action@v4
         with:
           context: .
           push: false
-          tags: alexliesenfeld/httpmock:${{ env.RELEASE_VERSION }}
+          tags: alexliesenfeld/httpmock:${{ env.DOCKER_IMAGE_VERSION }}
