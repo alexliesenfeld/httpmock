@@ -16,7 +16,6 @@ use hyper::{
     Body, HeaderMap, Request as HyperRequest, Response as HyperResponse, Result as HyperResult,
     Server, StatusCode,
 };
-
 use regex::Regex;
 
 use matchers::generic::SingleValueMatcher;
