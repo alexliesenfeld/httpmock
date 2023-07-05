@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 0.6.8
+
+- This is a maintenance release that updates all dependencies to the most recent version.
+- Fixes some dependency issues with the Docker image.
+
 ## Version 0.6.7
 
 - This is a maintenance release that updates all dependencies to the most recent version.
