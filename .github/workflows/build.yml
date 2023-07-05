@@ -55,7 +55,15 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Build development version
+        if: github.ref != 'refs/heads/master'
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: false
+          tags: alexliesenfeld/httpmock:latest
       - name: Build and push
+        if: github.ref == 'refs/heads/master'
         uses: docker/build-push-action@v4
         with:
           context: .
