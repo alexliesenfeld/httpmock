@@ -1,7 +1,7 @@
 # ================================================================================
 # Builder
 # ================================================================================
-FROM rust:1.54 as builder
+FROM rust:1.64 as builder
 WORKDIR /usr/src/httpmock
 
 COPY Cargo.toml .
@@ -13,7 +13,7 @@ RUN cargo install --features="standalone" --path .
 # ================================================================================
 # Runner
 # ================================================================================
-FROM debian:buster-slim
+FROM debian:bullseye-slim
 RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /usr/local/cargo/bin/httpmock /usr/local/bin/httpmock
 
@@ -32,6 +32,6 @@ ENV HTTPMOCK_PORT 5000
 # Request history limit.
 ENV HTTPMOCK_REQUEST_HISTORY_LIMIT 100
 
-ENTRYPOINT ["httpmock", "--expose", "true"]
+ENTRYPOINT ["httpmock", "--expose"]
 
 EXPOSE ${HTTPMOCK_PORT}
