@@ -54,7 +54,33 @@ async fn main() {
         params.mock_files_dir,
         !params.disable_access_log,
         params.request_history_limit,
+        shutdown_signal(),
     )
     .await
     .expect("an error occurred during mock server execution");
+}
+
+#[cfg(not(target_os = "windows"))]
+async fn shutdown_signal() {
+    let mut hangup_stream = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::hangup())
+        .expect("Cannot install SIGINT signal handler");
+    let mut sigint_stream =
+        tokio::signal::unix::signal(tokio::signal::unix::SignalKind::interrupt())
+            .expect("Cannot install SIGINT signal handler");
+    let mut sigterm_stream =
+        tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+            .expect("Cannot install SIGINT signal handler");
+
+    tokio::select! {
+        _val = hangup_stream.recv() => log::trace!("Received SIGINT"),
+        _val = sigint_stream.recv() => log::trace!("Received SIGINT"),
+        _val = sigterm_stream.recv() => log::trace!("Received SIGTERM"),
+    }
+}
+
+#[cfg(target_os = "windows")]
+async fn shutdown_signal() {
+    tokio::signal::ctrl_c()
+        .await
+        .expect("Cannot install CTRL+C signal handler");
 }
