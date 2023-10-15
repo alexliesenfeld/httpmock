@@ -61,3 +61,6 @@ remote = ["isahc"]
 [[bin]]
 name = "httpmock"
 required-features = ["standalone"]
+
+[package.metadata.docs.rs]
+all-features = true
