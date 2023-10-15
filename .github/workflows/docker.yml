@@ -1,7 +1,14 @@
 on:
-  push:
-    tags:
-      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Docker image version (e.g., 1.2.3)'
+        required: true
+        default: ''
+      latest:
+        description: 'latest'
+        required: false
+        default: 'true'
 
 name: Docker
 
@@ -19,16 +26,19 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Write release version
-        run: |
-          TAG_NAME=${{  github.ref_name }}
-          DOCKER_IMAGE_VERSION="${TAG_NAME#v}"
-          echo "GitHub Version: ${TAG_NAME}"
-          echo "Docker Version: ${DOCKER_IMAGE_VERSION}"
-          echo "DOCKER_IMAGE_VERSION=${DOCKER_IMAGE_VERSION}" >> $GITHUB_ENV
-      - name: Build and push
+      - name: Build and push (provided version only)
         uses: docker/build-push-action@v4
+        if: github.event.inputs.latest != 'true'
         with:
           context: .
-          push: true
-          tags: alexliesenfeld/httpmock:${{ env.DOCKER_IMAGE_VERSION }}
+          push: false
+          tags: alexliesenfeld/httpmock:${{ github.event.inputs.version }}
+      - name: Build and push (provided version + latest)
+        uses: docker/build-push-action@v4
+        if: github.event.inputs.latest == 'true'
+        with:
+          context: .
+          push: false
+          tags: |
+            alexliesenfeld/httpmock:${{ github.event.inputs.version }},
+            alexliesenfeld/httpmock:latest
