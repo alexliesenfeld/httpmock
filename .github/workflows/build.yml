@@ -10,6 +10,7 @@ jobs:
   build:
     runs-on: ${{ matrix.os }}
     name: build-${{ matrix.os }}-${{ matrix.rust }}
+    if: github.ref == 'refs/heads/master' || (matrix.os == 'ubuntu-latest' && matrix.rust == 'stable')
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
@@ -49,6 +50,7 @@ jobs:
   build-remote:
     runs-on: ${{ matrix.os }}
     name: build-remote-${{ matrix.os }}-${{ matrix.rust }}
+    if: github.ref == 'refs/heads/master' || (matrix.os == 'ubuntu-latest' && matrix.rust == 'stable')
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
