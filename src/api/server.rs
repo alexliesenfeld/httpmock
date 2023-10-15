@@ -1,7 +1,7 @@
 use crate::api::spec::{Then, When};
-use crate::api::{LocalMockServerAdapter, MockServerAdapter};
 #[cfg(feature = "remote")]
-use crate::api::{RemoteMockServerAdapter};
+use crate::api::RemoteMockServerAdapter;
+use crate::api::{LocalMockServerAdapter, MockServerAdapter};
 use crate::common::data::{MockDefinition, MockServerHttpResponse, RequestRequirements};
 use crate::common::util::{read_env, with_retry, Join};
 use crate::server::{start_server, MockServerState};

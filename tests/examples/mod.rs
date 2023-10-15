@@ -14,6 +14,6 @@ mod string_body_tests;
 mod url_matching_tests;
 
 #[cfg(feature = "remote")]
-mod x_www_form_urlencoded_tests;
-#[cfg(feature = "remote")]
 mod standalone_tests;
+#[cfg(feature = "remote")]
+mod x_www_form_urlencoded_tests;

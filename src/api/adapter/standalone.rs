@@ -3,14 +3,12 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 
-
+use crate::api::MockServerAdapter;
 use async_trait::async_trait;
 use isahc::config::Configurable;
 use isahc::{AsyncReadResponseExt, Request, ResponseExt};
-use crate::api::MockServerAdapter;
 
 pub type InternalHttpClient = isahc::HttpClient;
-
 
 use crate::common::data::{ActiveMock, ClosestMatch, MockDefinition, MockRef, RequestRequirements};
 
@@ -245,7 +243,6 @@ impl MockServerAdapter for RemoteMockServerAdapter {
         http_ping(&self.addr, self.http_client.borrow()).await
     }
 }
-
 
 async fn http_ping(
     server_addr: &SocketAddr,

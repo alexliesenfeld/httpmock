@@ -14,7 +14,6 @@ fn binary_body_test() {
         then.status(200).body(binary_content);
     });
 
-
     // Act
     let mut response = isahc::get(server.url("/hello")).unwrap();
 

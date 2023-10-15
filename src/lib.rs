@@ -213,7 +213,7 @@
 extern crate lazy_static;
 
 use std::borrow::BorrowMut;
-use std::net::{ToSocketAddrs};
+use std::net::ToSocketAddrs;
 
 use std::str::FromStr;
 
@@ -223,7 +223,6 @@ use api::MockServerAdapter;
 use common::util::Join;
 
 pub use api::{Method, Mock, MockExt, MockServer, Regex, Then, When};
-
 
 mod api;
 mod common;

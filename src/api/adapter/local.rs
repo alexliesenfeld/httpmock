@@ -1,16 +1,16 @@
+use async_std::io::WriteExt;
 use std::borrow::Borrow;
 use std::fmt::Debug;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
-use async_std::io::WriteExt;
 
 use async_trait::async_trait;
 
 use async_std::net::TcpStream;
 use async_std::prelude::*;
 
-use crate::api::adapter::{MockServerAdapter};
+use crate::api::adapter::MockServerAdapter;
 
 use crate::common::data::{ActiveMock, ClosestMatch, MockDefinition, MockRef, RequestRequirements};
 use crate::server::web::handlers::{
@@ -25,10 +25,7 @@ pub struct LocalMockServerAdapter {
 
 impl LocalMockServerAdapter {
     pub fn new(addr: SocketAddr, local_state: Arc<MockServerState>) -> Self {
-        LocalMockServerAdapter {
-            addr,
-            local_state,
-        }
+        LocalMockServerAdapter { addr, local_state }
     }
 }
 
@@ -84,7 +81,8 @@ impl MockServerAdapter for LocalMockServerAdapter {
     async fn ping(&self) -> Result<(), String> {
         let addr = self.addr.to_string();
 
-        let mut stream = TcpStream::connect(&addr).await
+        let mut stream = TcpStream::connect(&addr)
+            .await
             .map_err(|err| format!("Cannot connect to mock server: {}", err))?;
 
         let request = format!(
@@ -92,16 +90,23 @@ impl MockServerAdapter for LocalMockServerAdapter {
             addr
         );
 
-        stream.write_all(request.as_bytes()).await
+        stream
+            .write_all(request.as_bytes())
+            .await
             .map_err(|err| format!("Cannot send request to mock server: {}", err))?;
 
         let mut buf = vec![0u8; 1024];
-        stream.read(&mut buf).await
+        stream
+            .read(&mut buf)
+            .await
             .map_err(|err| format!("Cannot read response from mock server: {}", err))?;
 
         let response = String::from_utf8_lossy(&buf);
         if !response.contains("200 OK") {
-            return Err(format!("Unexpected mock server response. Expected '{}' to contain '200 OK'", response))
+            return Err(format!(
+                "Unexpected mock server response. Expected '{}' to contain '200 OK'",
+                response
+            ));
         }
 
         Ok(())
