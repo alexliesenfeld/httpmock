@@ -65,11 +65,13 @@ jobs:
 
       - uses: actions-rs/cargo@v1
         with:
-          command: build --features remote
+          command: build
+          args: --features remote
 
       - uses: actions-rs/cargo@v1
         with:
-          command: test --features remote
+          command: test
+          args: --features remote
 
       - uses: actions-rs/cargo@v1
         with:
