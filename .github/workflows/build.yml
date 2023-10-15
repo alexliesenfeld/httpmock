@@ -5,34 +5,57 @@ name: Build
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
-  
+
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
         rust:
-          - stable
-          - beta
-          - nightly
-          - 1.64.0  # MSRV
+          # Default features enabled
+          - version: stable
+          - version: beta
+          - version: nightly
+          - version: 1.65.0
+          # Also remote feature enabled
+          - version: stable
+            features: remote
+          - version: beta
+            features: remote
+          - version: nightly
+            features: remote
+          - version: 1.70.0
+            features: remote
+
     steps:
       - uses: actions/checkout@v2
 
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: ${{ matrix.rust }}
+          toolchain: ${{ matrix.rust.version }}
           override: true
           components: rustfmt, clippy
+
+      - name: Set feature arguments
+        id: set_features
+        run: |
+          if [ "${{ matrix.rust.features }}" == "remote" ]; then
+            echo "::set-output name=FEATURES_ARGS::--features remote"
+          else
+            echo "::set-output name=FEATURES_ARGS::"
+          fi
 
       - uses: actions-rs/cargo@v1
         with:
           command: build
+          args: ${{ steps.set_features.outputs.FEATURES_ARGS }}
 
       - uses: actions-rs/cargo@v1
         with:
           command: test
+          args: ${{ steps.set_features.outputs.FEATURES_ARGS }}
 
       - uses: actions-rs/cargo@v1
         with:

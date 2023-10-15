@@ -10,9 +10,10 @@ fn binary_body_test() {
     let server = MockServer::start();
 
     let m = server.mock(|when, then| {
-        when.path("/hello");
+        when.method("GET").path("/hello");
         then.status(200).body(binary_content);
     });
+
 
     // Act
     let mut response = isahc::get(server.url("/hello")).unwrap();

@@ -18,7 +18,7 @@
 //!
 //! ```toml
 //! [dev-dependencies]
-//! httpmock = "0.6"
+//! httpmock = "0.7"
 //! ```
 //!
 //! You can then use `httpmock` as follows:
@@ -145,7 +145,8 @@
 //! Instead of using [MockServer::start](struct.MockServer.html#method.start),
 //! you need to connect to a remote server by using one of the `connect` methods (such as
 //! [MockServer::connect](struct.MockServer.html#method.connect) or
-//! [MockServer::connect_from_env](struct.MockServer.html#method.connect_from_env)).
+//! [MockServer::connect_from_env](struct.MockServer.html#method.connect_from_env)). **Note**:
+//! These are only available with the `remote` feature **enabled**.
 //!
 //! ```
 //! use httpmock::prelude::*;
@@ -212,26 +213,17 @@
 extern crate lazy_static;
 
 use std::borrow::BorrowMut;
-use std::cell::Cell;
-use std::net::{SocketAddr, ToSocketAddrs};
-use std::path::Path;
-use std::rc::Rc;
-use std::str::FromStr;
-use std::sync::Arc;
-use std::thread;
+use std::net::{ToSocketAddrs};
 
-use async_object_pool::Pool;
+use std::str::FromStr;
+
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
-use tokio::task::LocalSet;
-use tokio::time::Duration;
 
 use api::MockServerAdapter;
 use common::util::Join;
 
-use api::{LocalMockServerAdapter, RemoteMockServerAdapter};
 pub use api::{Method, Mock, MockExt, MockServer, Regex, Then, When};
-use server::{start_server, MockServerState};
+
 
 mod api;
 mod common;

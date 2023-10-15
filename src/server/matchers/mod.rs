@@ -76,3 +76,27 @@ where
     let actual = actual.map_or(String::new(), |x| x.to_string());
     levenshtein::levenshtein(&expected, &actual)
 }
+
+pub(crate) fn distance_for_binary<A: AsRef<[u8]>, B: AsRef<[u8]>>(a: &Option<A>, b: &Option<B>) -> usize {
+    match (a, b) {
+        (Some(a_val), Some(b_val)) => {
+            let a_slice = a_val.as_ref();
+            let b_slice = b_val.as_ref();
+
+            let min_len = std::cmp::min(a_slice.len(), b_slice.len());
+            let max_len = std::cmp::max(a_slice.len(), b_slice.len());
+
+            let mut differing_bytes = max_len - min_len;
+            for i in 0..min_len {
+                if a_slice[i] != b_slice[i] {
+                    differing_bytes += 1;
+                }
+            }
+
+            differing_bytes
+        },
+        (Some(a_val), None) => a_val.as_ref().len(),
+        (None, Some(b_val)) => b_val.as_ref().len(),
+        (None, None) => 0,
+    }
+}

@@ -1,13 +1,17 @@
 use std::borrow::Borrow;
 use std::net::SocketAddr;
 use std::sync::Arc;
+use std::time::Duration;
+
 
 use async_trait::async_trait;
-use isahc::Request;
+use isahc::config::Configurable;
+use isahc::{AsyncReadResponseExt, Request, ResponseExt};
+use crate::api::MockServerAdapter;
 
-use crate::api::adapter::{
-    build_http_client, execute_request, http_ping, InternalHttpClient, MockServerAdapter,
-};
+pub type InternalHttpClient = isahc::HttpClient;
+
+
 use crate::common::data::{ActiveMock, ClosestMatch, MockDefinition, MockRef, RequestRequirements};
 
 #[derive(Debug)]
@@ -240,4 +244,58 @@ impl MockServerAdapter for RemoteMockServerAdapter {
     async fn ping(&self) -> Result<(), String> {
         http_ping(&self.addr, self.http_client.borrow()).await
     }
+}
+
+
+async fn http_ping(
+    server_addr: &SocketAddr,
+    http_client: &InternalHttpClient,
+) -> Result<(), String> {
+    let request_url = format!("http://{}/__httpmock__/ping", server_addr);
+    let request = Request::builder()
+        .method("GET")
+        .uri(request_url)
+        .body("".to_string())
+        .unwrap();
+
+    let (status, _body) = match execute_request(request, http_client).await {
+        Err(err) => return Err(format!("cannot send request to mock server: {}", err)),
+        Ok(sb) => sb,
+    };
+
+    if status != 200 {
+        return Err(format!(
+            "Could not create mock. Mock server response: status = {}",
+            status
+        ));
+    }
+
+    Ok(())
+}
+
+async fn execute_request(
+    req: Request<String>,
+    http_client: &InternalHttpClient,
+) -> Result<(u16, String), String> {
+    let mut response = match http_client.send_async(req).await {
+        Err(err) => return Err(format!("cannot send request to mock server: {}", err)),
+        Ok(r) => r,
+    };
+
+    // Evaluate the response status
+    let body = match response.text().await {
+        Err(err) => return Err(format!("cannot send request to mock server: {}", err)),
+        Ok(b) => b,
+    };
+
+    Ok((response.status().as_u16(), body))
+}
+
+fn build_http_client() -> Arc<InternalHttpClient> {
+    Arc::new(
+        InternalHttpClient::builder()
+            .tcp_keepalive(Duration::from_secs(60 * 60 * 24))
+            .build()
+            .expect("Cannot build HTTP client"),
+    )
 }

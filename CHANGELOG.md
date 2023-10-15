@@ -1,5 +1,24 @@
 # Changelog
 
+## Version 0.7.0
+
+- **BREAKING CHANGES**:
+  - For connecting to **remote** httpmock servers during tests using any of the `connect` methods like
+    [MockServer::connect](struct.MockServer.html#method.connect),
+    [MockServer::connect_async](struct.MockServer.html#method.connect_async),
+    [MockServer::connect_async](struct.MockServer.html#method.connect_from_env), or
+    [MockServer::connect_from_env](struct.MockServer.html#method.connect_from_env_async), you must now activate the
+    `remote` feature. This feature is not enabled by default.
+
+- Improvements:
+  - The dependency tree has been significantly slimmed down when the `remote` feature is not enabled.
+  - If the new `remote` feature is not enabled, `httpmock` no longer has a dependency on a real HTTP client. 
+    As a result, certain [TLS issues previously reported by users](https://github.com/alexliesenfeld/httpmock/issues/82) 
+    should no longer arise.
+
+- This release also updates all dependencies to the most recent version.
+- The minimum Rust version has been bumped to 1.65 (and 1.70 for the standalone mode).
+
 ## Version 0.6.8
 
 - This is a maintenance release that updates all dependencies to the most recent version.

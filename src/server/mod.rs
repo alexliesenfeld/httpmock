@@ -469,8 +469,6 @@ where
     let server = Server::bind(&format!("{}:{}", host, port).parse().unwrap()).serve(new_service);
     let addr = server.local_addr();
 
-    // And now add a graceful shutdown signal...
-    let graceful = server.with_graceful_shutdown(shutdown);
     if let Some(socket_addr_sender) = socket_addr_sender {
         if let Err(e) = socket_addr_sender.send(addr) {
             return Err(format!(
@@ -479,6 +477,9 @@ where
             ));
         }
     }
+
+    // And now add a graceful shutdown signal...
+    let graceful = server.with_graceful_shutdown(shutdown);
 
     log::info!("Listening on {}", addr);
     if let Err(e) = graceful.await {

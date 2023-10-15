@@ -1,9 +1,12 @@
 extern crate httpmock;
 
-use crate::simulate_standalone_server;
 use httpmock::prelude::*;
 use isahc::get;
 
+#[cfg(feature = "remote")]
+use crate::simulate_standalone_server;
+
+#[cfg(feature = "remote")]
 #[test]
 fn loop_with_standalone_test() {
     // Arrange
