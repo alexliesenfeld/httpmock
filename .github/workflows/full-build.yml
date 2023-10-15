@@ -1,13 +1,4 @@
-on:
-  push:
-    branches:
-      - master
-  workflow_dispatch:
-    inputs:
-      branch:
-        description: 'The target branch'
-        required: true
-        default: 'master'
+on: workflow_dispatch
 
 name: Full Build
 
