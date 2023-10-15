@@ -19,7 +19,7 @@ jobs:
 
       - name:                   Generate code coverage
         run: |
-          cargo +nightly tarpaulin --verbose --workspace --timeout 120 --out Xml
+          cargo +nightly tarpaulin --verbose --workspace --all-features --timeout 120 --out Xml
 
       - name:                   Upload to codecov.io
         uses:                   codecov/codecov-action@v2
