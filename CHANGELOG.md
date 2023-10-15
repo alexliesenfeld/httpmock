@@ -4,11 +4,11 @@
 
 - **BREAKING CHANGES**:
   - For connecting to **remote** httpmock servers during tests using any of the `connect` methods like
-    [MockServer::connect](struct.MockServer.html#method.connect),
-    [MockServer::connect_async](struct.MockServer.html#method.connect_async),
-    [MockServer::connect_async](struct.MockServer.html#method.connect_from_env), or
-    [MockServer::connect_from_env](struct.MockServer.html#method.connect_from_env_async), you must now activate the
-    `remote` feature. This feature is not enabled by default.
+    [MockServer::connect](https://docs.rs/httpmock/latest/httpmock/struct.MockServer.html#method.connect),
+    [MockServer::connect_async](https://docs.rs/httpmock/latest/httpmock/struct.MockServer.html#method.connect_async),
+    [MockServer::connect_from_env](https://docs.rs/httpmock/latest/httpmock/struct.MockServer.html#method.connect_from_env), or
+    [MockServer::connect_from_env_async](https://docs.rs/httpmock/latest/httpmock/struct.MockServer.html#method.connect_from_env_async), 
+    you must now activate the `remote` feature. This feature is not enabled by default.
 
 - Improvements:
   - The dependency tree has been significantly slimmed down when the `remote` feature is not enabled.
@@ -17,7 +17,7 @@
     should no longer arise.
 
 - This release also updates all dependencies to the most recent version.
-- The minimum Rust version has been bumped to 1.65 (and 1.70 for the standalone mode).
+- The minimum Rust version has been bumped to 1.65 (and 1.70 for the remote and standalone features).
 
 ## Version 0.6.8
 

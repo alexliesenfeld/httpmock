@@ -2,6 +2,12 @@ on:
   push:
     branches:
       - master
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'The target branch'
+        required: true
+        default: 'master'
 
 name: Build Master
 
@@ -23,7 +29,8 @@ jobs:
           - 1.65.0  # MSRV
     steps:
       - uses: actions/checkout@v2
-
+        with:
+          ref: ${{ github.event.inputs.branch }}
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -62,6 +69,8 @@ jobs:
           - 1.70.0  # MSRV
     steps:
       - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.inputs.branch }}
 
       - uses: actions-rs/toolchain@v1
         with:
@@ -92,6 +101,8 @@ jobs:
           - 1.70.0  # MSRV
     steps:
       - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.inputs.branch }}
 
       - uses: actions-rs/toolchain@v1
         with:
