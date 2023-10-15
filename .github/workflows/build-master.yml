@@ -79,6 +79,36 @@ jobs:
           command: test
           args: --features remote
 
+  build-standalone:
+    runs-on: ${{ matrix.os }}
+    name: build-standalone-${{ matrix.os }}-${{ matrix.rust }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        rust:
+          - stable
+          - beta
+          - nightly
+          - 1.70.0  # MSRV
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust }}
+          override: true
+
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --features standalone
+
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --features standalone
+
   docker:
     runs-on: ubuntu-latest
     steps:
