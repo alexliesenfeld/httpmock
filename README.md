@@ -44,7 +44,7 @@ Add `httpmock` to `Cargo.toml`:
 
 ```toml
 [dev-dependencies]
-httpmock = "0.7"
+httpmock = "0.7.0-rc.1"
 ```
 
 You can then use `httpmock` as follows:
