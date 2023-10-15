@@ -109,6 +109,11 @@ jobs:
           command: test
           args: --features standalone
 
+      - uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: --features standalone --path .
+
   docker:
     runs-on: ubuntu-latest
     steps:
