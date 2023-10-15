@@ -8,9 +8,11 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    name: build-${{ matrix.os }}-${{ matrix.rust }}
     strategy:
       matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
         rust:
           - stable
           - beta
@@ -45,9 +47,11 @@ jobs:
           args: -- -D warnings
 
   build-remote:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    name: build-remote-${{ matrix.os }}-${{ matrix.rust }}
     strategy:
       matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
         rust:
           - stable
           - beta
