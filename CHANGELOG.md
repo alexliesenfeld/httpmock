@@ -3,7 +3,7 @@
 ## Version 0.7.0
 
 - **BREAKING CHANGES**:
-  - For connecting to **remote** httpmock servers during tests using any of the `connect` methods like
+  - For connecting to **remote** `httpmock` servers during tests using any of the `connect` methods like
     [MockServer::connect](https://docs.rs/httpmock/latest/httpmock/struct.MockServer.html#method.connect),
     [MockServer::connect_async](https://docs.rs/httpmock/latest/httpmock/struct.MockServer.html#method.connect_async),
     [MockServer::connect_from_env](https://docs.rs/httpmock/latest/httpmock/struct.MockServer.html#method.connect_from_env), or
