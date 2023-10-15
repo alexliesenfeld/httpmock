@@ -10,7 +10,6 @@ jobs:
   build:
     runs-on: ${{ matrix.os }}
     name: build-${{ matrix.os }}-${{ matrix.rust }}
-    if: github.ref == 'refs/heads/master' || (matrix.os == 'ubuntu-latest' && matrix.rust == 'stable')
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
@@ -50,7 +49,6 @@ jobs:
   build-remote:
     runs-on: ${{ matrix.os }}
     name: build-remote-${{ matrix.os }}-${{ matrix.rust }}
-    if: github.ref == 'refs/heads/master' || (matrix.os == 'ubuntu-latest' && matrix.rust == 'stable')
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
@@ -93,11 +91,4 @@ jobs:
         with:
           context: .
           push: false
-          tags: alexliesenfeld/httpmock:latest
-      - name: Build and push
-        if: github.ref == 'refs/heads/master'
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          push: true
-          tags: alexliesenfeld/httpmock:latest
+          tags: alexliesenfeld/httpmock:build
