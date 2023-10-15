@@ -9,7 +9,7 @@ on:
         required: true
         default: 'master'
 
-name: Build Master
+name: Full Build
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
