@@ -4,9 +4,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use async_trait::async_trait;
-use isahc::http::Request;
-use isahc::prelude::Configurable;
-use isahc::{AsyncReadResponseExt, ResponseExt};
+
 use serde::{Deserialize, Serialize};
 
 use crate::common::data::{ActiveMock, ClosestMatch, MockDefinition, MockRef, RequestRequirements};
@@ -15,12 +13,12 @@ use crate::server::web::handlers::{
 };
 
 pub mod local;
+
+#[cfg(feature = "remote")]
 pub mod standalone;
 
 /// Type alias for [regex::Regex](../regex/struct.Regex.html).
 pub type Regex = regex::Regex;
-
-pub type InternalHttpClient = isahc::HttpClient;
 
 /// Represents an HTTP method.
 #[derive(Serialize, Deserialize, Debug)]
@@ -79,57 +77,4 @@ pub trait MockServerAdapter {
     async fn verify(&self, rr: &RequestRequirements) -> Result<Option<ClosestMatch>, String>;
     async fn delete_history(&self) -> Result<(), String>;
     async fn ping(&self) -> Result<(), String>;
-}
-
-async fn http_ping(
-    server_addr: &SocketAddr,
-    http_client: &InternalHttpClient,
-) -> Result<(), String> {
-    let request_url = format!("http://{}/__httpmock__/ping", server_addr);
-    let request = Request::builder()
-        .method("GET")
-        .uri(request_url)
-        .body("".to_string())
-        .unwrap();
-
-    let (status, _body) = match execute_request(request, http_client).await {
-        Err(err) => return Err(format!("cannot send request to mock server: {}", err)),
-        Ok(sb) => sb,
-    };
-
-    if status != 200 {
-        return Err(format!(
-            "Could not create mock. Mock server response: status = {}",
-            status
-        ));
-    }
-
-    Ok(())
-}
-
-async fn execute_request(
-    req: Request<String>,
-    http_client: &InternalHttpClient,
-) -> Result<(u16, String), String> {
-    let mut response = match http_client.send_async(req).await {
-        Err(err) => return Err(format!("cannot send request to mock server: {}", err)),
-        Ok(r) => r,
-    };
-
-    // Evaluate the response status
-    let body = match response.text().await {
-        Err(err) => return Err(format!("cannot send request to mock server: {}", err)),
-        Ok(b) => b,
-    };
-
-    Ok((response.status().as_u16(), body))
-}
-
-fn build_http_client() -> Arc<InternalHttpClient> {
-    Arc::new(
-        InternalHttpClient::builder()
-            .tcp_keepalive(Duration::from_secs(60 * 60 * 24))
-            .build()
-            .expect("Cannot build HTTP client"),
-    )
 }

@@ -1,6 +1,9 @@
-on: push
+on:
+  push:
+    branches:
+      - master
 
-name: Coverage
+name: Coverage Master
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -19,7 +22,7 @@ jobs:
 
       - name:                   Generate code coverage
         run: |
-          cargo +nightly tarpaulin --verbose --workspace --timeout 120 --out Xml
+          cargo +nightly tarpaulin --verbose --workspace --all-features --timeout 120 --out Xml
 
       - name:                   Upload to codecov.io
         uses:                   codecov/codecov-action@v2

@@ -1,5 +1,7 @@
 use crate::api::spec::{Then, When};
-use crate::api::{LocalMockServerAdapter, MockServerAdapter, RemoteMockServerAdapter};
+#[cfg(feature = "remote")]
+use crate::api::RemoteMockServerAdapter;
+use crate::api::{LocalMockServerAdapter, MockServerAdapter};
 use crate::common::data::{MockDefinition, MockServerHttpResponse, RequestRequirements};
 use crate::common::util::{read_env, with_retry, Join};
 use crate::server::{start_server, MockServerState};
@@ -42,6 +44,8 @@ impl MockServer {
     /// Asynchronously connects to a remote mock server that is running in standalone mode using
     /// the provided address of the form <host>:<port> (e.g. "127.0.0.1:8080") to establish
     /// the connection.
+    /// **Note**: This method requires the feature `remote` to be enabled.
+    #[cfg(feature = "remote")]
     pub async fn connect_async(address: &str) -> Self {
         let addr = address
             .to_socket_addrs()
@@ -58,12 +62,16 @@ impl MockServer {
     /// Synchronously connects to a remote mock server that is running in standalone mode using
     /// the provided address of the form <host>:<port> (e.g. "127.0.0.1:8080") to establish
     /// the connection.
+    /// **Note**: This method requires the feature `remote` to be enabled.
+    #[cfg(feature = "remote")]
     pub fn connect(address: &str) -> Self {
         Self::connect_async(address).join()
     }
 
     /// Asynchronously connects to a remote mock server that is running in standalone mode using
     /// connection parameters stored in `HTTPMOCK_HOST` and `HTTPMOCK_PORT` environment variables.
+    /// **Note**: This method requires the feature `remote` to be enabled.
+    #[cfg(feature = "remote")]
     pub async fn connect_from_env_async() -> Self {
         let host = read_env("HTTPMOCK_HOST", "127.0.0.1");
         let port = read_env("HTTPMOCK_PORT", "5000")
@@ -74,6 +82,8 @@ impl MockServer {
 
     /// Synchronously connects to a remote mock server that is running in standalone mode using
     /// connection parameters stored in `HTTPMOCK_HOST` and `HTTPMOCK_PORT` environment variables.
+    /// **Note**: This method requires the feature `remote` to be enabled.
+    #[cfg(feature = "remote")]
     pub fn connect_from_env() -> Self {
         Self::connect_from_env_async().join()
     }
