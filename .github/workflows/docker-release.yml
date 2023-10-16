@@ -10,7 +10,7 @@ on:
         required: false
         default: 'true'
 
-name: Docker
+name: Docker Release
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
