@@ -23,7 +23,10 @@
     <a href="https://github.com/alexliesenfeld/httpmock/issues">Request Feature</a>
     ·
     <a href="https://github.com/alexliesenfeld/httpmock/blob/master/CHANGELOG.md">Changelog</a>
+    ·
+    <a href="https://github.com/sponsors/alexliesenfeld">Support this Project</a>
 </p>
+
 
 ## Features
 
