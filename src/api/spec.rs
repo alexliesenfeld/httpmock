@@ -178,12 +178,12 @@ impl When {
     /// let server = MockServer::start();
     ///
     /// let m = server.mock(|when, then|{
-    ///     when.query_param("query", "Metallica");
+    ///     when.query_param("query", "Metallica is cool");
     ///     then.status(200);
     /// });
     ///
     /// // Act
-    /// get(server.url("/search?query=Metallica")).unwrap();
+    /// get(server.url("/search?query=Metallica+is+cool")).unwrap();
     ///
     /// // Assert
     /// m.assert();
