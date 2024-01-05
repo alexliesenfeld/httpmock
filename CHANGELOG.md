@@ -17,7 +17,7 @@
     should no longer arise.
 
 - This release also updates all dependencies to the most recent version.
-- The minimum Rust version has been bumped to 1.65 (and 1.70 for the remote and standalone features).
+- The minimum Rust version has been bumped to 1.70.
 
 ## Version 0.6.8
 
