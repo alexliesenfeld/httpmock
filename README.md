@@ -71,7 +71,8 @@ let hello_mock = server.mock(|when, then| {
 // Send an HTTP request to the mock server. This simulates your code.
 let response = isahc::get(server.url("/translate?word=hello")).unwrap();
 
-// Ensure the specified mock was called exactly one time (or fail with a detailed error description).
+// Ensure the specified mock was called exactly one time (or fail with a 
+// detailed error description).
 hello_mock.assert();
 
 // Ensure the mock server did respond as specified.
