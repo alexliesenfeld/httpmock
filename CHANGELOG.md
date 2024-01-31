@@ -1,7 +1,9 @@
 # Changelog
 
-## Version 0.7.1 
+## Version 0.7.1
 
+- Internal mock server implementation is now based on hyper 1.1.
+- This release also updates all other dependencies to the most recent version.
 - A new [MockServer::reset](https://docs.rs/httpmock/latest/httpmock/struct.MockServer.html#method.reset) method was added that resets a mock server. Thanks for providing the [pull request](https://github.com/alexliesenfeld/httpmock/pull/100) for this feature, [@dax](https://github.com/dax).  
 
 ## Version 0.7.0

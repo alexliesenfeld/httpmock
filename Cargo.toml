@@ -1,6 +1,6 @@
 [package]
 name = "httpmock"
-version = "0.7.0"
+version = "0.7.1"
 authors = ["Alexander Liesenfeld <alexander.liesenfeld@outlook.com>"]
 edition = "2018"
 description = "HTTP mocking library for Rust"
@@ -29,18 +29,20 @@ levenshtein = "1.0"
 form_urlencoded = "1.2"
 
 hyper = { version = "1.1", features = ["server", "http1"] }
+hyper-util = { version = "0.1", features = ["tokio"] }
+http-body-util = "0.1"
 tokio = { version = "1.35", features = ["sync", "macros", "rt-multi-thread", "signal"] }
 
 isahc = { version = "1.7",  optional = true }
 basic-cookies = { version = "0.1", optional = true }
 colored = { version = "2.1", optional = true }
 clap = { version = "4.4", features = ["derive", "env"], optional = true }
-env_logger = { version = "0.11", optional = true }
+env_logger = { version = "0.10", optional = true }
 serde_yaml = { version = "0.9", optional = true }
 async-std = { version = "1.12", features = ["attributes", "unstable"] }
 
 [dev-dependencies]
-env_logger = "0.11"
+env_logger = "0.10"
 tokio-test = "0.4"
 quote = "1.0"
 actix-rt = "2.9"
