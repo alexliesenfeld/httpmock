@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 0.7.1 
+
+- A new reset method was added that resets a mock server. Thanks for providing the [pull request](https://github.com/alexliesenfeld/httpmock/pull/100) for this feature, [@dax](https://github.com/dax).  
+
 ## Version 0.7.0
 
 - **BREAKING CHANGES**:
