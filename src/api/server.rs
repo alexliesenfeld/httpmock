@@ -272,6 +272,48 @@ impl MockServer {
             server: self,
         }
     }
+
+    /// Delete all [Mock](struct.Mock.html) object on the mock server and their call history.
+    ///
+    /// **Example**:
+    /// ```
+    /// use isahc::get;
+    ///
+    /// let server = httpmock::MockServer::start();
+    ///
+    /// let mock = server.mock(|when, then| {
+    ///     when.path("/hello");
+    ///     then.status(200);
+    /// });
+    ///
+    /// get(server.url("/hello")).unwrap();
+    ///
+    /// mock.assert();
+    ///
+    /// ...
+    ///
+    /// server.reset().await;
+    ///
+    /// let mock = server.mock(|when, then| {
+    ///     when.path("/hello");
+    ///     then.status(404);
+    /// });
+    ///
+    /// // This will now return a 404
+    /// get(server.url("/hello")).unwrap();
+    ///
+    /// mock.assert();
+    /// ```
+    pub async fn reset(&self) {
+        if let Some(server_adapter) = &self.server_adapter {
+            with_retry(5, || server_adapter.delete_all_mocks())
+                .await
+                .expect("Cannot reset mock server (task: delete mocks).");
+            with_retry(5, || server_adapter.delete_history())
+                .await
+                .expect("Cannot reset mock server (task: delete request history).");
+        }
+    }
 }
 
 impl Drop for MockServer {
