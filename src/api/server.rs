@@ -26,19 +26,14 @@ impl MockServer {
         server_adapter: Arc<dyn MockServerAdapter + Send + Sync>,
         pool: Arc<Pool<Arc<dyn MockServerAdapter + Send + Sync>>>,
     ) -> Self {
-        with_retry(5, || server_adapter.ping())
-            .await
-            .expect("Cannot ping mock server.");
-        with_retry(5, || server_adapter.delete_all_mocks())
-            .await
-            .expect("Cannot reset mock server (task: delete mocks).");
-        with_retry(5, || server_adapter.delete_history())
-            .await
-            .expect("Cannot reset mock server (task: delete request history).");
-        Self {
+        let server = Self {
             server_adapter: Some(server_adapter),
             pool,
-        }
+        };
+
+        server.reset_async().await;
+
+        return server
     }
 
     /// Asynchronously connects to a remote mock server that is running in standalone mode using
@@ -214,8 +209,8 @@ impl MockServer {
     /// mock.assert();
     /// ```
     pub fn mock<F>(&self, config_fn: F) -> Mock
-    where
-        F: FnOnce(When, Then),
+        where
+            F: FnOnce(When, Then),
     {
         self.mock_async(config_fn).join()
     }
@@ -241,8 +236,8 @@ impl MockServer {
     /// });
     /// ```
     pub async fn mock_async<'a, F>(&'a self, spec_fn: F) -> Mock<'a>
-    where
-        F: FnOnce(When, Then),
+        where
+            F: FnOnce(When, Then),
     {
         let mut req = Rc::new(Cell::new(RequestRequirements::new()));
         let mut res = Rc::new(Cell::new(MockServerHttpResponse::new()));
@@ -273,38 +268,55 @@ impl MockServer {
         }
     }
 
-    /// Delete all [Mock](struct.Mock.html) object on the mock server and their call history.
+    /// Resets the mock server. More specifically, it deletes all [Mock](struct.Mock.html) objects
+    /// from the mock server and clears its request history.
     ///
     /// **Example**:
     /// ```
     /// use isahc::get;
-    ///
     /// let server = httpmock::MockServer::start();
     ///
-    /// let mock = server.mock(|when, then| {
+    ///  let mock = server.mock(|when, then| {
     ///     when.path("/hello");
     ///     then.status(200);
-    /// });
+    ///  });
     ///
-    /// get(server.url("/hello")).unwrap();
+    ///  let mut response = get(server.url("/hello")).unwrap();
+    ///  assert_eq!(response.status(), 200);
     ///
-    /// mock.assert();
+    ///  server.reset();
     ///
-    /// ...
-    ///
-    /// server.reset().await;
-    ///
-    /// let mock = server.mock(|when, then| {
-    ///     when.path("/hello");
-    ///     then.status(404);
-    /// });
-    ///
-    /// // This will now return a 404
-    /// get(server.url("/hello")).unwrap();
-    ///
-    /// mock.assert();
+    ///  let mut response = get(server.url("/hello")).unwrap();
+    ///  assert_eq!(response.status(), 404);
     /// ```
-    pub async fn reset(&self) {
+    pub fn reset(&self) {
+        self.reset_async().join()
+    }
+
+    /// Resets the mock server. More specifically, it deletes all [Mock](struct.Mock.html) objects
+    /// from the mock server and clears its request history.
+    ///
+    /// **Example**:
+    /// ```
+    /// use isahc::get;
+    /// async_std::task::block_on(async {
+    ///     let server = httpmock::MockServer::start_async().await;
+    ///
+    ///     let mock = server.mock_async(|when, then| {
+    ///        when.path("/hello");
+    ///        then.status(200);
+    ///     }).await;
+    ///
+    ///     let mut response = get(server.url("/hello")).unwrap();
+    ///     assert_eq!(response.status(), 200);
+    ///
+    ///     server.reset_async().await;
+    ///
+    ///     let mut response = get(server.url("/hello")).unwrap();
+    ///     assert_eq!(response.status(), 404);
+    /// });
+    /// ```
+    pub async fn reset_async(&self) {
         if let Some(server_adapter) = &self.server_adapter {
             with_retry(5, || server_adapter.delete_all_mocks())
                 .await
