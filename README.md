@@ -83,11 +83,6 @@ The above example will spin up a lightweight HTTP mock server and configure it t
 to path `/translate` with query parameter `word=hello`. The corresponding HTTP response will contain the text body
 `Привет`.
 
-In case the request fails, `httpmock` would show you a detailed error description including a diff between the 
-expected and the actual HTTP request:
-
-![colored-diff.png](https://raw.githubusercontent.com/alexliesenfeld/httpmock/master/docs/diff.png)
-
 # Usage
 
 See the [reference docs](https://docs.rs/httpmock/) for detailed API documentation.
