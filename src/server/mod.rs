@@ -11,12 +11,12 @@ use std::sync::{Arc, Mutex};
 use hyper::body::{Body, Buf, Bytes};
 use hyper::header::HeaderValue;
 use hyper::http::header::HeaderName;
-use hyper::service::{service_fn};
+use hyper::service::service_fn;
 use hyper::{
-    HeaderMap, Request as HyperRequest, Response as HyperResponse, Result as HyperResult, StatusCode,
-    body::Incoming as IncomingBody
+    body::Incoming as IncomingBody, HeaderMap, Request as HyperRequest, Response as HyperResponse,
+    Result as HyperResult, StatusCode,
 };
-use hyper_util::rt::tokio::{TokioIo};
+use hyper_util::rt::tokio::TokioIo;
 
 use regex::Regex;
 
@@ -48,17 +48,15 @@ use crate::server::web::routes;
 use futures_util::task::Spawn;
 use std::future::Future;
 
+use futures_util::FutureExt;
+use http_body_util::{BodyExt, Full};
 use std::time::Instant;
-use futures_util::{FutureExt};
-use http_body_util::{BodyExt,  Full};
-use tokio::net::{TcpListener};
+use tokio::net::TcpListener;
 
 mod matchers;
 
 mod util;
 pub(crate) mod web;
-
-
 
 /// The shared state accessible to all handlers
 pub struct MockServerState {
@@ -153,7 +151,7 @@ impl MockServerState {
                 }),
                 // Cookie exact
                 #[cfg(feature = "cookies")]
-                    Box::new(MultiValueMatcher {
+                Box::new(MultiValueMatcher {
                     entity_name: "cookie",
                     key_comparator: Box::new(StringExactMatchComparator::new(true)),
                     value_comparator: Box::new(StringExactMatchComparator::new(true)),
@@ -167,7 +165,7 @@ impl MockServerState {
                 }),
                 // Cookie exists
                 #[cfg(feature = "cookies")]
-                    Box::new(MultiValueMatcher {
+                Box::new(MultiValueMatcher {
                     entity_name: "cookie",
                     key_comparator: Box::new(StringExactMatchComparator::new(true)),
                     value_comparator: Box::new(AnyValueComparator::new()),
@@ -386,8 +384,8 @@ async fn access_log_middleware<T>(
     print_access_log: bool,
     next: fn(req: HyperRequest<IncomingBody>, state: Arc<MockServerState>) -> T,
 ) -> HyperResult<HyperResponse<Full<Bytes>>>
-    where
-        T: Future<Output=HyperResult<HyperResponse<Full<Bytes>>>>,
+where
+    T: Future<Output = HyperResult<HyperResponse<Full<Bytes>>>>,
 {
     let time_request_received = Instant::now();
 
@@ -425,7 +423,10 @@ async fn handle_server_request(
 
     let body_parts = BodyExt::collect(req).await;
     if let Err(e) = body_parts {
-        return Ok(error_response(format!("Cannot read request body chunks: {}", e)));
+        return Ok(error_response(format!(
+            "Cannot read request body chunks: {}",
+            e
+        )));
     }
 
     let full_body_bytes = body_parts.unwrap().to_bytes();
@@ -435,7 +436,7 @@ async fn handle_server_request(
         &request_header.unwrap(),
         full_body_bytes.to_vec(),
     )
-        .await;
+    .await;
     if let Err(e) = routing_result {
         return Ok(error_response(format!("Request handler error: {}", e)));
     }
@@ -459,16 +460,20 @@ pub(crate) async fn start_server<F>(
     print_access_log: bool,
     shutdown: F,
 ) -> Result<(), String>
-    where
-        F: Future<Output=()>,
+where
+    F: Future<Output = ()>,
 {
     let host = if expose { "0.0.0.0" } else { "127.0.0.1" };
 
-    let addr: SocketAddr = format!("{}:{}", host, port).parse().expect("cannot parse hostname and port");
+    let addr: SocketAddr = format!("{}:{}", host, port)
+        .parse()
+        .expect("cannot parse hostname and port");
     let listener: TcpListener = TcpListener::bind(addr).await.expect("cannot bind to port");
 
     if let Some(socket_addr_sender) = socket_addr_sender {
-        let addr = listener.local_addr().expect("cannot read local TCP address");
+        let addr = listener
+            .local_addr()
+            .expect("cannot read local TCP address");
         if let Err(e) = socket_addr_sender.send(addr) {
             return Err(format!(
                 "Cannot send socket information to the test thread: {:?}",
@@ -517,7 +522,7 @@ pub(crate) async fn start_server<F>(
 }
 
 /// Maps a server response to a hyper response.
-fn map_response(route_response: ServerResponse) -> Result<HyperResponse<Full<Bytes>>, String>{
+fn map_response(route_response: ServerResponse) -> Result<HyperResponse<Full<Bytes>>, String> {
     let mut builder = HyperResponse::builder();
     builder = builder.status(route_response.status);
 
@@ -632,7 +637,7 @@ fn get_path_param(regex: &Regex, idx: usize, path: &str) -> Result<usize, String
 }
 
 /// Creates a default error response.
-fn error_response(body: String) -> HyperResponse<Full<Bytes>>{
+fn error_response(body: String) -> HyperResponse<Full<Bytes>> {
     HyperResponse::builder()
         .status(StatusCode::INTERNAL_SERVER_ERROR)
         .body(Full::new(Bytes::from(body)))
@@ -715,13 +720,16 @@ mod test {
         let (parts, body) = res.into_parts();
 
         let body = async_std::task::block_on(async {
-            return  match BodyExt::collect(body).await {
+            return match BodyExt::collect(body).await {
                 Ok(collected_bytes) => collected_bytes.to_bytes(),
                 Err(e) => panic!(e),
             };
         });
 
-        assert_eq!(String::from_utf8(body.to_vec()).unwrap(), "test".to_string())
+        assert_eq!(
+            String::from_utf8(body.to_vec()).unwrap(),
+            "test".to_string()
+        )
     }
 
     /// Makes sure an error is return if there is a header parsing error

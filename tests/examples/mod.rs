@@ -18,4 +18,3 @@ mod url_matching_tests;
 mod standalone_tests;
 #[cfg(feature = "remote")]
 mod x_www_form_urlencoded_tests;
-

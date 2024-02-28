@@ -38,4 +38,3 @@ async fn reset_server_test() {
     // Ensure the mock server did respond as specified.
     assert_eq!(response.status(), 200);
 }
-
