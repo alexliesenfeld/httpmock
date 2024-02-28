@@ -1,5 +1,5 @@
 use httpmock::prelude::*;
-use isahc::{get, get_async};
+use isahc::get;
 
 #[async_std::test]
 async fn reset_server_test() {
@@ -17,7 +17,7 @@ async fn reset_server_test() {
     });
 
     // Delete all previously created mocks
-    server.reset().await;
+    server.reset_async().await;
 
     // Create a new mock that will replace the previous one
     let hello_mock = server.mock(|when, then| {

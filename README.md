@@ -31,15 +31,15 @@
 ## Features
 
 * Simple, expressive, fluent API.
-* Many built-in helpers for easy request matching.
+* Many built-in helpers for easy request matching ([Regex](https://docs.rs/regex/), JSON, [serde](https://crates.io/crates/serde), cookies, and more).
 * Parallel test execution.
 * Extensible request matching.
 * Fully asynchronous core with synchronous and asynchronous APIs.
-* [Advanced verification and debugging support](https://alexliesenfeld.github.io/posts/mocking-http--services-in-rust/#creating-mocks).
-* Network delay simulation.
+* [Advanced verification and debugging support](https://alexliesenfeld.github.io/posts/mocking-http--services-in-rust/#creating-mocks) (including diff generation between actual and expected HTTP request values)
+* Fault and network delay simulation.
 * Support for [Regex](https://docs.rs/regex/) matching, JSON, [serde](https://crates.io/crates/serde), cookies, and more.
 * Standalone mode with an accompanying [Docker image](https://hub.docker.com/r/alexliesenfeld/httpmock).
-* Support for [mock specification based on YAML files](https://github.com/alexliesenfeld/httpmock/tree/master#file-based-mock-specification).
+* Support for [mock configuration using YAML files](https://github.com/alexliesenfeld/httpmock/tree/master#file-based-mock-specification).
 
 ## Getting Started
 
@@ -59,7 +59,7 @@ use httpmock::prelude::*;
 let server = MockServer::start();
 
 // Create a mock on the server.
-let hello_mock = server.mock(|when, then| {
+let mock = server.mock(|when, then| {
     when.method(GET)
         .path("/translate")
         .query_param("word", "hello");
@@ -73,7 +73,7 @@ let response = isahc::get(server.url("/translate?word=hello")).unwrap();
 
 // Ensure the specified mock was called exactly one time (or fail with a
 // detailed error description).
-hello_mock.assert();
+mock.assert();
 
 // Ensure the mock server did respond as specified.
 assert_eq!(response.status(), 200);
@@ -82,6 +82,11 @@ assert_eq!(response.status(), 200);
 The above example will spin up a lightweight HTTP mock server and configure it to respond to all `GET` requests
 to path `/translate` with query parameter `word=hello`. The corresponding HTTP response will contain the text body
 `Привет`.
+
+In case the request fails, `httpmock` would show you a detailed error description including a diff between the 
+expected and the actual HTTP request:
+
+![colored-diff.png](docs/diff.png)
 
 # Usage
 
@@ -104,16 +109,6 @@ This is especially useful if you want to use `httpmock` in system or end-to-end 
 (such as REST APIs, data stores, authentication providers, etc.).
 
 Please refer to [the docs](https://docs.rs/httpmock/0.5.8/httpmock/#standalone-mode) for more information
-
-### File Based Mock Specification
-
-For convenience, the standalone mode also allows you to use YAML files for mock specification, so you do not need to
-use Rust or any other programming language at all. The mock specification file schema is very similar to the `httpmock`
-Rust API, so it's easy to jump between the two. Please find an example mock specification file
-[here](https://github.com/alexliesenfeld/httpmock/blob/master/tests/resources/static_yaml_mock.yaml).
-
-Please refer to [the docs](https://github.com/alexliesenfeld/httpmock/blob/master/src/lib.rs#L185-L201)
-for more information.
 
 ## License
 

@@ -42,7 +42,7 @@ async fn async_getting_started_test() {
         .await;
 
     // Send an HTTP request to the mock server. This simulates your code.
-    let url = format!("http://{}/hello", server.address());
+    let url = format!("http://{}/hello-rustaceans", server.address());
     let response = get_async(&url).await.unwrap();
 
     // Ensure the specified mock responded exactly one time.
