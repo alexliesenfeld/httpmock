@@ -46,6 +46,12 @@
 //! // Ensure the mock server did respond as specified.
 //! assert_eq!(response.status(), 200);
 //! ```
+//!
+//! In case the request fails, `httpmock` would show you a detailed error description including a diff between the
+//! expected and the actual HTTP request:
+//!
+//! ![colored-diff.png](https://raw.githubusercontent.com/alexliesenfeld/httpmock/master/docs/diff.png)
+//!
 //! # Usage
 //! To be able to configure mocks, you first need to start a mock server by calling
 //! [MockServer::start](struct.MockServer.html#method.start).

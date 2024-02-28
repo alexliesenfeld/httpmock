@@ -86,7 +86,7 @@ to path `/translate` with query parameter `word=hello`. The corresponding HTTP r
 In case the request fails, `httpmock` would show you a detailed error description including a diff between the 
 expected and the actual HTTP request:
 
-![colored-diff.png](docs/diff.png)
+![colored-diff.png](https://raw.githubusercontent.com/alexliesenfeld/httpmock/master/docs/diff.png)
 
 # Usage
 
