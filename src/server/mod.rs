@@ -494,21 +494,19 @@ where
                         let io = TokioIo::new(tcp_stream);
                         let state = state.clone();
 
-                        tokio::task::spawn_local(async move {
+                        tokio::task::spawn(async move {
                             if let Err(err) = hyper::server::conn::http1::Builder::new()
                                 .serve_connection(io, service_fn(move |req: HyperRequest<IncomingBody>| {
                                     let state = state.clone();
                                     access_log_middleware(req, state, print_access_log, handle_server_request)
                                 })).await
                                     {
-                                        // TODO: Do something useful with the error
-                                        println!("Error serving connection: {:?}", err);
+                                        log::error!("error serving connection: {:?}", err)
                                     }
                         });
                     },
-                    Err(e) =>  {
-                        // TODO: Do something useful with the error
-                        println!("error serving connection: {:?}", e)
+                    Err(err) =>  {
+                        log::error!("error accepting incoming connection: {:?}", err)
                     },
                  };
             }
