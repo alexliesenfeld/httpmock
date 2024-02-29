@@ -23,7 +23,7 @@ use regex::Regex;
 use matchers::generic::SingleValueMatcher;
 use matchers::targets::{JSONBodyTarget, StringBodyTarget};
 
-use crate::common::data::{ActiveMock, ActiveProxyMatcher, HttpMockRequest, RequestRequirements, Tokenizer};
+use crate::common::data::{ActiveMock, HttpMockRequest, Tokenizer};
 use crate::server::matchers::comparators::{
     AnyValueComparator, FunctionMatchesRequestComparator, JSONContainsMatchComparator,
     JSONExactMatchComparator, StringContainsMatchComparator, StringExactMatchComparator,
@@ -51,52 +51,33 @@ use std::future::Future;
 use futures_util::FutureExt;
 use http_body_util::{BodyExt, Full};
 use std::time::Instant;
-use serde_json::ser::State::Empty;
 use tokio::net::TcpListener;
-use crate::server::proxy::try_proxy_request;
 
 mod matchers;
 
 mod util;
 pub(crate) mod web;
-mod proxy;
 
 /// The shared state accessible to all handlers
 pub struct MockServerState {
+    id_counter: AtomicUsize,
     history_limit: usize,
-    mock_id_counter: AtomicUsize,
-    proxy_matcher_id_counter: AtomicUsize,
-    recording_matcher_id_counter: AtomicUsize,
     pub mocks: Mutex<BTreeMap<usize, ActiveMock>>,
-    pub proxy_matchers: Mutex<Vec<ActiveProxyMatcher>>,
-    pub recording_matchers: Mutex<Vec<RequestRequirements>>,
     pub history: Mutex<Vec<Arc<HttpMockRequest>>>,
     pub matchers: Vec<Box<dyn Matcher + Sync + Send>>,
 }
 
 impl MockServerState {
-    pub fn new_mock_id(&self) -> usize {
-        self.mock_id_counter.fetch_add(1, Relaxed)
-    }
-
-    pub fn new_proxy_matcher_id(&self) -> usize {
-        self.proxy_matcher_id_counter.fetch_add(1, Relaxed)
-    }
-
-    pub fn new_recording_matcher_id(&self) -> usize {
-        self.recording_matcher_id_counter.fetch_add(1, Relaxed)
+    pub fn create_new_id(&self) -> usize {
+        self.id_counter.fetch_add(1, Relaxed)
     }
 
     pub fn new(history_limit: usize) -> Self {
         MockServerState {
             mocks: Mutex::new(BTreeMap::new()),
-            proxy_matchers: Mutex::new(Vec::new()),
-            recording_matchers: Mutex::new(Vec::new()),
             history_limit,
             history: Mutex::new(Vec::new()),
-            mock_id_counter: AtomicUsize::new(0),
-            proxy_matcher_id_counter: AtomicUsize::new(0),
-            recording_matcher_id_counter: AtomicUsize::new(0),
+            id_counter: AtomicUsize::new(0),
             matchers: vec![
                 // path exact
                 Box::new(SingleValueMatcher {
@@ -170,7 +151,7 @@ impl MockServerState {
                 }),
                 // Cookie exact
                 #[cfg(feature = "cookies")]
-                    Box::new(MultiValueMatcher {
+                Box::new(MultiValueMatcher {
                     entity_name: "cookie",
                     key_comparator: Box::new(StringExactMatchComparator::new(true)),
                     value_comparator: Box::new(StringExactMatchComparator::new(true)),
@@ -184,7 +165,7 @@ impl MockServerState {
                 }),
                 // Cookie exists
                 #[cfg(feature = "cookies")]
-                    Box::new(MultiValueMatcher {
+                Box::new(MultiValueMatcher {
                     entity_name: "cookie",
                     key_comparator: Box::new(StringExactMatchComparator::new(true)),
                     value_comparator: Box::new(AnyValueComparator::new()),
@@ -403,8 +384,8 @@ async fn access_log_middleware<T>(
     print_access_log: bool,
     next: fn(req: HyperRequest<IncomingBody>, state: Arc<MockServerState>) -> T,
 ) -> HyperResult<HyperResponse<Full<Bytes>>>
-    where
-        T: Future<Output=HyperResult<HyperResponse<Full<Bytes>>>>,
+where
+    T: Future<Output = HyperResult<HyperResponse<Full<Bytes>>>>,
 {
     let time_request_received = Instant::now();
 
@@ -430,129 +411,83 @@ async fn access_log_middleware<T>(
     return result;
 }
 
-async fn handle_server_request(req: HyperRequest<hyper::body::Incoming>, state: Arc<MockServerState>) -> HyperResult<HyperResponse<Full<Bytes>>> {
-    let _ = try_proxy_request(req).await;
+async fn handle_server_request(
+    req: HyperRequest<IncomingBody>,
+    state: Arc<MockServerState>,
+) -> HyperResult<HyperResponse<Full<Bytes>>> {
+    let request_header = ServerRequestHeader::from(&req);
 
-    HyperResult::Ok(HyperResponse::new(Full::new(Bytes::new())))
+    if let Err(e) = request_header {
+        return Ok(error_response(format!("Cannot parse request: {}", e)));
+    }
 
-        /*
-  if let Ok(Some(proxy_result)) = try_proxy_request(req).await {
-      return HyperResult::Ok(proxy_result)
-  }
+    let body_parts = BodyExt::collect(req).await;
+    if let Err(e) = body_parts {
+        return Ok(error_response(format!(
+            "Cannot read request body chunks: {}",
+            e
+        )));
+    }
 
-    let res = handle_mock_request(req, state).await;
+    let full_body_bytes = body_parts.unwrap().to_bytes();
 
-    /*
-    if is_recording_request(&req) {
-        if let Err(err) = record_request(&req, &res) {
-            log::error!("Cannot record request: {:?}", err)
-        }
-    }*/
+    let routing_result = route_request(
+        state.borrow(),
+        &request_header.unwrap(),
+        full_body_bytes.to_vec(),
+    )
+    .await;
+    if let Err(e) = routing_result {
+        return Ok(error_response(format!("Request handler error: {}", e)));
+    }
 
-    res
-    */
+    let response = map_response(routing_result.unwrap());
+    if let Err(e) = response {
+        return Ok(error_response(format!("Cannot build response: {}", e)));
+    }
+
+    Ok(response.unwrap())
 }
 
+/// Starts a new instance of an HTTP mock server. You should never need to use this function
+/// directly. Use it if you absolutely need to manage the low-level details of how the mock
+/// server operates.
+pub(crate) async fn start_server<F>(
+    port: u16,
+    expose: bool,
+    state: &Arc<MockServerState>,
+    socket_addr_sender: Option<tokio::sync::oneshot::Sender<SocketAddr>>,
+    print_access_log: bool,
+    shutdown: F,
+) -> Result<(), String>
+where
+    F: Future<Output = ()>,
+{
+    let host = if expose { "0.0.0.0" } else { "127.0.0.1" };
 
-    fn is_recording_request(req: &HyperRequest<IncomingBody>) -> bool {
-        false
-    }
+    let addr: SocketAddr = format!("{}:{}", host, port)
+        .parse()
+        .expect("cannot parse hostname and port");
+    let listener: TcpListener = TcpListener::bind(addr).await.expect("cannot bind to port");
 
-    fn record_request(req: &HyperRequest<IncomingBody>, res: &HyperResult<HyperResponse<Full<Bytes>>>) -> Result<(), String> {
-        Ok(())
-    }
-
-    fn handle_proxy_request(
-        req: HyperRequest<IncomingBody>,
-        state: Arc<MockServerState>,
-    ) -> HyperResult<HyperResponse<Full<Bytes>>> {
-        return Ok(HyperResponse::new(Full::<Bytes>::new(Bytes::new())))
-    }
-
-    async fn handle_mock_request(
-        req: HyperRequest<IncomingBody>,
-        state: Arc<MockServerState>,
-    ) -> HyperResult<HyperResponse<Full<Bytes>>> {
-        let request_header = ServerRequestHeader::from(&req);
-        if let Err(e) = request_header {
-            return Ok(error_response(format!("Cannot parse request: {}", e)));
-        }
-
-        let body_parts = BodyExt::collect(req).await;
-        if let Err(e) = body_parts {
-            return Ok(error_response(format!(
-                "Cannot read request body chunks: {}",
+    if let Some(socket_addr_sender) = socket_addr_sender {
+        let addr = listener
+            .local_addr()
+            .expect("cannot read local TCP address");
+        if let Err(e) = socket_addr_sender.send(addr) {
+            return Err(format!(
+                "Cannot send socket information to the test thread: {:?}",
                 e
-            )));
+            ));
         }
-
-        let full_body_bytes = body_parts.unwrap().to_bytes();
-
-        let routing_result = route_request(
-            state.borrow(),
-            &request_header.unwrap(),
-            full_body_bytes.to_vec(),
-        )
-            .await;
-        if let Err(e) = routing_result {
-            return Ok(error_response(format!("Request handler error: {}", e)));
-        }
-
-        let response = map_response(routing_result.unwrap());
-        if let Err(e) = response {
-            return Ok(error_response(format!("Cannot build response: {}", e)));
-        }
-
-        Ok(response.unwrap())
     }
 
+    log::info!("Listening on {}", addr);
 
-    async fn proxy_request(
-        req: HyperRequest<IncomingBody>,
-        state: Arc<MockServerState>,
-    ) -> HyperResult<HyperResponse<Full<Bytes>>> {
-        return Ok(HyperResponse::new(Full::<Bytes>::new(Bytes::new())))
-    }
+    let shutdown = shutdown.shared();
 
-    /// Starts a new instance of an HTTP mock server. You should never need to use this function
-    /// directly. Use it if you absolutely need to manage the low-level details of how the mock
-    /// server operates.
-    pub(crate) async fn start_server<F>(
-        port: u16,
-        expose: bool,
-        state: &Arc<MockServerState>,
-        socket_addr_sender: Option<tokio::sync::oneshot::Sender<SocketAddr>>,
-        print_access_log: bool,
-        shutdown: F,
-    ) -> Result<(), String>
-        where
-            F: Future<Output=()>,
-    {
-        let host = if expose { "0.0.0.0" } else { "127.0.0.1" };
-
-        let addr: SocketAddr = format!("{}:{}", host, port)
-            .parse()
-            .expect("cannot parse hostname and port");
-        let listener: TcpListener = TcpListener::bind(addr).await.expect("cannot bind to port");
-
-        if let Some(socket_addr_sender) = socket_addr_sender {
-            let addr = listener
-                .local_addr()
-                .expect("cannot read local TCP address");
-            if let Err(e) = socket_addr_sender.send(addr) {
-                return Err(format!(
-                    "Cannot send socket information to the test thread: {:?}",
-                    e
-                ));
-            }
-        }
-
-        log::info!("Listening on {}", addr);
-
-        let shutdown = shutdown.shared();
-
-        loop {
-            tokio::select! {
+    loop {
+        tokio::select! {
             accepted = listener.accept() => {
                  match accepted {
                     Ok((tcp_stream, remote_address)) => {
@@ -561,14 +496,10 @@ async fn handle_server_request(req: HyperRequest<hyper::body::Incoming>, state: 
 
                         tokio::task::spawn(async move {
                             if let Err(err) = hyper::server::conn::http1::Builder::new()
-                                .preserve_header_case(true)
-                                .title_case_headers(true)
                                 .serve_connection(io, service_fn(move |req: HyperRequest<IncomingBody>| {
                                     let state = state.clone();
                                     access_log_middleware(req, state, print_access_log, handle_server_request)
-                                }))
-                                .with_upgrades()
-                                .await
+                                })).await
                                     {
                                         log::error!("error serving connection: {:?}", err)
                                     }
@@ -583,315 +514,297 @@ async fn handle_server_request(req: HyperRequest<hyper::body::Incoming>, state: 
                 break;
             }
         }
-        }
-
-        Ok(())
     }
 
-    /// Maps a server response to a hyper response.
-    fn map_response(route_response: ServerResponse) -> Result<HyperResponse<Full<Bytes>>, String> {
-        let mut builder = HyperResponse::builder();
-        builder = builder.status(route_response.status);
+    Ok(())
+}
 
-        for (key, value) in route_response.headers {
-            let name = HeaderName::from_str(&key);
-            if let Err(e) = name {
-                return Err(format!("Cannot create header from name: {}", e));
-            }
+/// Maps a server response to a hyper response.
+fn map_response(route_response: ServerResponse) -> Result<HyperResponse<Full<Bytes>>, String> {
+    let mut builder = HyperResponse::builder();
+    builder = builder.status(route_response.status);
 
-            let value = HeaderValue::from_str(&value);
-            if let Err(e) = value {
-                return Err(format!("Cannot create header from value: {}", e));
-            }
-
-            let value = value.unwrap();
-            let value = value.to_str();
-            if let Err(e) = value {
-                return Err(format!("Cannot create header from value string: {}", e));
-            }
-
-            builder = builder.header(name.unwrap(), value.unwrap());
+    for (key, value) in route_response.headers {
+        let name = HeaderName::from_str(&key);
+        if let Err(e) = name {
+            return Err(format!("Cannot create header from name: {}", e));
         }
 
-        let result = builder.body(Full::new(Bytes::from(route_response.body)));
-        if let Err(e) = result {
-            return Err(format!("Cannot create HTTP response: {}", e));
+        let value = HeaderValue::from_str(&value);
+        if let Err(e) = value {
+            return Err(format!("Cannot create header from value: {}", e));
         }
 
-        Ok(result.unwrap())
+        let value = value.unwrap();
+        let value = value.to_str();
+        if let Err(e) = value {
+            return Err(format!("Cannot create header from value string: {}", e));
+        }
+
+        builder = builder.header(name.unwrap(), value.unwrap());
     }
 
-    /// Routes a request to the appropriate route handler.
-    async fn route_request(
-        state: &MockServerState,
-        request_header: &ServerRequestHeader,
-        body: Vec<u8>,
-    ) -> Result<ServerResponse, String> {
-        log::trace!("Routing incoming request: {:?}", request_header);
-
-        if PING_PATH.is_match(&request_header.path) {
-            if let "GET" = request_header.method.as_str() {
-                return routes::ping();
-            }
-        }
-
-        if MOCKS_PATH.is_match(&request_header.path) {
-            match request_header.method.as_str() {
-                "POST" => return routes::add(state, body),
-                "DELETE" => return routes::delete_all_mocks(state),
-                _ => {}
-            }
-        }
-
-        if MOCK_PATH.is_match(&request_header.path) {
-            let id = get_path_param(&MOCK_PATH, 1, &request_header.path);
-            if let Err(e) = id {
-                return Err(format!("Cannot parse id from path: {}", e));
-            }
-            let id = id.unwrap();
-
-            match request_header.method.as_str() {
-                "GET" => return routes::read_one(state, id),
-                "DELETE" => return routes::delete_one(state, id),
-                _ => {}
-            }
-        }
-
-        if PROXY_MATCHERS_PATH.is_match(&request_header.path) {
-            match request_header.method.as_str() {
-                "POST" => return routes::add_proxy_matcher(state, body),
-                "DELETE" => return routes::delete_all_proxy_matchers(state),
-                _ => {}
-            }
-        }
-
-        if RECORDING_MATCHERS_PATH.is_match(&request_header.path) {
-            match request_header.method.as_str() {
-                "POST" => return routes::add_record_matcher(state, body),
-                "DELETE" => return routes::delete_all_recording_matchers(state),
-                _ => {}
-            }
-        }
-
-        if VERIFY_PATH.is_match(&request_header.path) {
-            match request_header.method.as_str() {
-                "POST" => return routes::verify(state, body),
-                _ => {}
-            }
-        }
-
-        if HISTORY_PATH.is_match(&request_header.path) {
-            match request_header.method.as_str() {
-                "DELETE" => return routes::delete_history(state),
-                _ => {}
-            }
-        }
-
-        routes::serve(state, request_header, body).await
+    let result = builder.body(Full::new(Bytes::from(route_response.body)));
+    if let Err(e) = result {
+        return Err(format!("Cannot create HTTP response: {}", e));
     }
 
-    /// Get request path parameters.
-    fn get_path_param(regex: &Regex, idx: usize, path: &str) -> Result<usize, String> {
-        let cap = regex.captures(path);
-        if cap.is_none() {
-            return Err(format!(
-                "Error capturing parameter from request path: {}",
-                path
-            ));
-        }
-        let cap = cap.unwrap();
+    Ok(result.unwrap())
+}
 
-        let id = cap.get(idx);
-        if id.is_none() {
-            return Err(format!(
-                "Error capturing resource id in request path: {}",
-                path
-            ));
-        }
-        let id = id.unwrap().as_str();
+/// Routes a request to the appropriate route handler.
+async fn route_request(
+    state: &MockServerState,
+    request_header: &ServerRequestHeader,
+    body: Vec<u8>,
+) -> Result<ServerResponse, String> {
+    log::trace!("Routing incoming request: {:?}", request_header);
 
-        let id = id.parse::<usize>();
+    if PING_PATH.is_match(&request_header.path) {
+        if let "GET" = request_header.method.as_str() {
+            return routes::ping();
+        }
+    }
+
+    if MOCKS_PATH.is_match(&request_header.path) {
+        match request_header.method.as_str() {
+            "POST" => return routes::add(state, body),
+            "DELETE" => return routes::delete_all_mocks(state),
+            _ => {}
+        }
+    }
+
+    if MOCK_PATH.is_match(&request_header.path) {
+        let id = get_path_param(&MOCK_PATH, 1, &request_header.path);
         if let Err(e) = id {
-            return Err(format!("Error parsing id as a number: {}", e));
+            return Err(format!("Cannot parse id from path: {}", e));
         }
         let id = id.unwrap();
 
-        Ok(id)
+        match request_header.method.as_str() {
+            "GET" => return routes::read_one(state, id),
+            "DELETE" => return routes::delete_one(state, id),
+            _ => {}
+        }
     }
 
-    /// Creates a default error response.
-    fn error_response(body: String) -> HyperResponse<Full<Bytes>> {
-        HyperResponse::builder()
-            .status(StatusCode::INTERNAL_SERVER_ERROR)
-            .body(Full::new(Bytes::from(body)))
-            .expect("Cannot build route error response")
+    if VERIFY_PATH.is_match(&request_header.path) {
+        match request_header.method.as_str() {
+            "POST" => return routes::verify(state, body),
+            _ => {}
+        }
     }
 
-    static BASE_PATH: &'static str = "/__httpmock__";
+    if HISTORY_PATH.is_match(&request_header.path) {
+        match request_header.method.as_str() {
+            "DELETE" => return routes::delete_history(state),
+            _ => {}
+        }
+    }
 
-    lazy_static! {
+    routes::serve(state, request_header, body).await
+}
+
+/// Get request path parameters.
+fn get_path_param(regex: &Regex, idx: usize, path: &str) -> Result<usize, String> {
+    let cap = regex.captures(path);
+    if cap.is_none() {
+        return Err(format!(
+            "Error capturing parameter from request path: {}",
+            path
+        ));
+    }
+    let cap = cap.unwrap();
+
+    let id = cap.get(idx);
+    if id.is_none() {
+        return Err(format!(
+            "Error capturing resource id in request path: {}",
+            path
+        ));
+    }
+    let id = id.unwrap().as_str();
+
+    let id = id.parse::<usize>();
+    if let Err(e) = id {
+        return Err(format!("Error parsing id as a number: {}", e));
+    }
+    let id = id.unwrap();
+
+    Ok(id)
+}
+
+/// Creates a default error response.
+fn error_response(body: String) -> HyperResponse<Full<Bytes>> {
+    HyperResponse::builder()
+        .status(StatusCode::INTERNAL_SERVER_ERROR)
+        .body(Full::new(Bytes::from(body)))
+        .expect("Cannot build route error response")
+}
+
+static BASE_PATH: &'static str = "/__httpmock__";
+
+lazy_static! {
     static ref PING_PATH: Regex = Regex::new(&format!(r"^{}/ping$", BASE_PATH)).unwrap();
     static ref MOCKS_PATH: Regex = Regex::new(&format!(r"^{}/mocks$", BASE_PATH)).unwrap();
     static ref MOCK_PATH: Regex = Regex::new(&format!(r"^{}/mocks/([0-9]+)$", BASE_PATH)).unwrap();
     static ref HISTORY_PATH: Regex = Regex::new(&format!(r"^{}/history$", BASE_PATH)).unwrap();
     static ref VERIFY_PATH: Regex = Regex::new(&format!(r"^{}/verify$", BASE_PATH)).unwrap();
-    static ref PROXY_MATCHERS_PATH: Regex = Regex::new(&format!(r"^{}/proxy_matchers$", BASE_PATH)).unwrap();
-    static ref RECORDING_MATCHERS_PATH: Regex = Regex::new(&format!(r"^{}/recording_matchers$", BASE_PATH)).unwrap();
 }
 
-    #[cfg(test)]
-    mod test {
-        use std::collections::BTreeMap;
+#[cfg(test)]
+mod test {
+    use std::collections::BTreeMap;
 
-        use futures_util::TryStreamExt;
-        use http_body_util::BodyExt;
+    use futures_util::TryStreamExt;
+    use http_body_util::BodyExt;
 
-        use crate::server::{
-            error_response, get_path_param, map_response, ServerResponse, HISTORY_PATH, MOCKS_PATH,
-            MOCK_PATH, PING_PATH, VERIFY_PATH,
-        };
-        use crate::Regex;
-        use hyper::body::Bytes;
-        use hyper::Error;
+    use crate::server::{
+        error_response, get_path_param, map_response, ServerResponse, HISTORY_PATH, MOCKS_PATH,
+        MOCK_PATH, PING_PATH, VERIFY_PATH,
+    };
+    use crate::Regex;
+    use hyper::body::Bytes;
+    use hyper::Error;
 
-        #[test]
-        fn route_regex_test() {
-            assert_eq!(MOCK_PATH.is_match("/__httpmock__/mocks/1"), true);
-            assert_eq!(
-                MOCK_PATH.is_match("/__httpmock__/mocks/1295473892374"),
-                true
-            );
-            assert_eq!(MOCK_PATH.is_match("/__httpmock__/mocks/abc"), false);
-            assert_eq!(MOCK_PATH.is_match("/__httpmock__/mocks"), false);
-            assert_eq!(MOCK_PATH.is_match("/__httpmock__/mocks/345345/test"), false);
-            assert_eq!(
-                MOCK_PATH.is_match("test/__httpmock__/mocks/345345/test"),
-                false
-            );
+    #[test]
+    fn route_regex_test() {
+        assert_eq!(MOCK_PATH.is_match("/__httpmock__/mocks/1"), true);
+        assert_eq!(
+            MOCK_PATH.is_match("/__httpmock__/mocks/1295473892374"),
+            true
+        );
+        assert_eq!(MOCK_PATH.is_match("/__httpmock__/mocks/abc"), false);
+        assert_eq!(MOCK_PATH.is_match("/__httpmock__/mocks"), false);
+        assert_eq!(MOCK_PATH.is_match("/__httpmock__/mocks/345345/test"), false);
+        assert_eq!(
+            MOCK_PATH.is_match("test/__httpmock__/mocks/345345/test"),
+            false
+        );
 
-            assert_eq!(PING_PATH.is_match("/__httpmock__/ping"), true);
-            assert_eq!(
-                PING_PATH.is_match("/__httpmock__/ping/1295473892374"),
-                false
-            );
-            assert_eq!(PING_PATH.is_match("test/ping/1295473892374"), false);
+        assert_eq!(PING_PATH.is_match("/__httpmock__/ping"), true);
+        assert_eq!(
+            PING_PATH.is_match("/__httpmock__/ping/1295473892374"),
+            false
+        );
+        assert_eq!(PING_PATH.is_match("test/ping/1295473892374"), false);
 
-            assert_eq!(VERIFY_PATH.is_match("/__httpmock__/verify"), true);
-            assert_eq!(
-                VERIFY_PATH.is_match("/__httpmock__/verify/1295473892374"),
-                false
-            );
-            assert_eq!(VERIFY_PATH.is_match("test/verify/1295473892374"), false);
+        assert_eq!(VERIFY_PATH.is_match("/__httpmock__/verify"), true);
+        assert_eq!(
+            VERIFY_PATH.is_match("/__httpmock__/verify/1295473892374"),
+            false
+        );
+        assert_eq!(VERIFY_PATH.is_match("test/verify/1295473892374"), false);
 
-            assert_eq!(HISTORY_PATH.is_match("/__httpmock__/history"), true);
-            println!("{:?}", HISTORY_PATH.as_str());
+        assert_eq!(HISTORY_PATH.is_match("/__httpmock__/history"), true);
+        println!("{:?}", HISTORY_PATH.as_str());
 
-            assert_eq!(
-                HISTORY_PATH.is_match("/__httpmock__/history/1295473892374"),
-                false
-            );
-            assert_eq!(HISTORY_PATH.is_match("test/history/1295473892374"), false);
+        assert_eq!(
+            HISTORY_PATH.is_match("/__httpmock__/history/1295473892374"),
+            false
+        );
+        assert_eq!(HISTORY_PATH.is_match("test/history/1295473892374"), false);
 
-            assert_eq!(MOCKS_PATH.is_match("/__httpmock__/mocks"), true);
-            assert_eq!(MOCKS_PATH.is_match("/__httpmock__/mocks/5"), false);
-            assert_eq!(MOCKS_PATH.is_match("test/__httpmock__/mocks/5"), false);
-            assert_eq!(MOCKS_PATH.is_match("test/__httpmock__/mocks/567"), false);
-        }
-
-        /// Make sure passing an empty string to the error response does not result in an error.
-        #[test]
-        fn error_response_test() {
-            let res = error_response("test".into());
-            let (parts, body) = res.into_parts();
-
-            let body = async_std::task::block_on(async {
-                return match BodyExt::collect(body).await {
-                    Ok(collected_bytes) => collected_bytes.to_bytes(),
-                    Err(e) => panic!(e),
-                };
-            });
-
-            assert_eq!(
-                String::from_utf8(body.to_vec()).unwrap(),
-                "test".to_string()
-            )
-        }
-
-        /// Makes sure an error is return if there is a header parsing error
-        #[test]
-        fn response_header_key_parsing_error_test() {
-            // Arrange
-            let mut headers = Vec::new();
-            headers.push((";;;".to_string(), ";;;".to_string()));
-
-            let res = ServerResponse {
-                body: Vec::new(),
-                status: 500,
-                headers,
-            };
-
-            // Act
-            let result = map_response(res);
-
-            // Assert
-            assert_eq!(result.is_err(), true);
-            assert_eq!(
-                result
-                    .err()
-                    .unwrap()
-                    .contains("Cannot create header from name"),
-                true
-            );
-        }
-
-        #[test]
-        fn get_path_param_regex_error_test() {
-            // Arrange
-            let re = Regex::new(r"^/__httpmock__/mocks/([0-9]+)$").unwrap();
-
-            // Act
-            let result = get_path_param(&re, 0, "");
-
-            // Assert
-            assert_eq!(result.is_err(), true);
-            assert_eq!(
-                result
-                    .err()
-                    .unwrap()
-                    .contains("Error capturing parameter from request path"),
-                true
-            );
-        }
-
-        #[test]
-        fn get_path_param_index_error_test() {
-            // Arrange
-            let re = Regex::new(r"^/__httpmock__/mocks/([0-9]+)$").unwrap();
-
-            // Act
-            let result = get_path_param(&re, 5, "/__httpmock__/mocks/5");
-
-            // Assert
-            assert_eq!(result.is_err(), true);
-            assert_eq!(
-                "Error capturing resource id in request path: /__httpmock__/mocks/5",
-                result.err().unwrap()
-            );
-        }
-
-        #[test]
-        fn get_path_param_number_error_test() {
-            // Arrange
-            let re = Regex::new(r"^/__httpmock__/mocks/([0-9]+)$").unwrap();
-
-            // Act
-            let result = get_path_param(&re, 0, "/__httpmock__/mocks/9999999999999999999999999");
-
-            // Assert
-            assert_eq!(result.is_err(), true);
-            assert_eq!(
-                "Error parsing id as a number: invalid digit found in string",
-                result.err().unwrap()
-            );
-        }
+        assert_eq!(MOCKS_PATH.is_match("/__httpmock__/mocks"), true);
+        assert_eq!(MOCKS_PATH.is_match("/__httpmock__/mocks/5"), false);
+        assert_eq!(MOCKS_PATH.is_match("test/__httpmock__/mocks/5"), false);
+        assert_eq!(MOCKS_PATH.is_match("test/__httpmock__/mocks/567"), false);
     }
+
+    /// Make sure passing an empty string to the error response does not result in an error.
+    #[test]
+    fn error_response_test() {
+        let res = error_response("test".into());
+        let (parts, body) = res.into_parts();
+
+        let body = async_std::task::block_on(async {
+            return match BodyExt::collect(body).await {
+                Ok(collected_bytes) => collected_bytes.to_bytes(),
+                Err(e) => panic!(e),
+            };
+        });
+
+        assert_eq!(
+            String::from_utf8(body.to_vec()).unwrap(),
+            "test".to_string()
+        )
+    }
+
+    /// Makes sure an error is return if there is a header parsing error
+    #[test]
+    fn response_header_key_parsing_error_test() {
+        // Arrange
+        let mut headers = Vec::new();
+        headers.push((";;;".to_string(), ";;;".to_string()));
+
+        let res = ServerResponse {
+            body: Vec::new(),
+            status: 500,
+            headers,
+        };
+
+        // Act
+        let result = map_response(res);
+
+        // Assert
+        assert_eq!(result.is_err(), true);
+        assert_eq!(
+            result
+                .err()
+                .unwrap()
+                .contains("Cannot create header from name"),
+            true
+        );
+    }
+
+    #[test]
+    fn get_path_param_regex_error_test() {
+        // Arrange
+        let re = Regex::new(r"^/__httpmock__/mocks/([0-9]+)$").unwrap();
+
+        // Act
+        let result = get_path_param(&re, 0, "");
+
+        // Assert
+        assert_eq!(result.is_err(), true);
+        assert_eq!(
+            result
+                .err()
+                .unwrap()
+                .contains("Error capturing parameter from request path"),
+            true
+        );
+    }
+
+    #[test]
+    fn get_path_param_index_error_test() {
+        // Arrange
+        let re = Regex::new(r"^/__httpmock__/mocks/([0-9]+)$").unwrap();
+
+        // Act
+        let result = get_path_param(&re, 5, "/__httpmock__/mocks/5");
+
+        // Assert
+        assert_eq!(result.is_err(), true);
+        assert_eq!(
+            "Error capturing resource id in request path: /__httpmock__/mocks/5",
+            result.err().unwrap()
+        );
+    }
+
+    #[test]
+    fn get_path_param_number_error_test() {
+        // Arrange
+        let re = Regex::new(r"^/__httpmock__/mocks/([0-9]+)$").unwrap();
+
+        // Act
+        let result = get_path_param(&re, 0, "/__httpmock__/mocks/9999999999999999999999999");
+
+        // Assert
+        assert_eq!(result.is_err(), true);
+        assert_eq!(
+            "Error parsing id as a number: invalid digit found in string",
+            result.err().unwrap()
+        );
+    }
+}

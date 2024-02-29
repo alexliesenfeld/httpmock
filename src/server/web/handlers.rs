@@ -1,8 +1,16 @@
+use std::cmp::Ordering;
 use std::collections::BTreeMap;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use crate::common::data::{ActiveMock, ActiveProxyMatcher, ClosestMatch, HttpMockRequest, Mismatch, MockDefinition, MockServerHttpResponse, ProxyMatcherRef, RecordingMatcherRef, RequestRequirements};
+#[cfg(feature = "cookies")]
+use basic_cookies::Cookie;
+use serde_json::Value;
+
+use crate::common::data::{
+    ActiveMock, ClosestMatch, HttpMockRequest, Mismatch, MockDefinition, MockServerHttpResponse,
+    RequestRequirements,
+};
 use crate::server::matchers::Matcher;
 use crate::server::util::{StringTreeMapExtension, TreeMapExtension};
 use crate::server::MockServerState;
@@ -23,13 +31,13 @@ pub(crate) fn add_new_mock(
         return Err(error_msg);
     }
 
-    let mock_id = state.new_mock_id();
+    let mock_id = state.create_new_id();
     log::debug!("Adding new mock with ID={}", mock_id);
 
     let mut mocks = state.mocks.lock().unwrap();
     mocks.insert(mock_id, ActiveMock::new(mock_id, mock_def, is_static));
 
-    Ok(mock_id)
+    Result::Ok(mock_id)
 }
 
 /// Reads exactly one mock object.
@@ -56,7 +64,7 @@ pub(crate) fn delete_one_mock(state: &MockServerState, id: usize) -> Result<bool
     let result = mocks.remove(&id);
 
     log::debug!("Deleted mock with id={}", id);
-    Ok(result.is_some())
+    Result::Ok(result.is_some())
 }
 
 /// Deletes all mocks.
@@ -80,71 +88,6 @@ pub(crate) fn delete_history(state: &MockServerState) {
     let mut mocks = state.history.lock().unwrap();
     mocks.clear();
     log::trace!("Deleted request history");
-}
-
-pub(crate) fn add_proxy_matcher(
-    state: &MockServerState,
-    req: RequestRequirements,
-) -> Result<ProxyMatcherRef, String> {
-    let result = validate_request_requirements(&req);
-    if let Err(error_msg) = result {
-        let error_msg = format!("Validation error: {}", error_msg);
-        return Err(error_msg);
-    }
-
-    let id = state.new_proxy_matcher_id();
-    log::debug!("Adding new proxy matcher with ID={}", id);
-
-    let mut proxy_matchers = state.proxy_matchers.lock().unwrap();
-    proxy_matchers.insert(id, ActiveProxyMatcher::new(id, req.clone()));
-
-    Ok(ProxyMatcherRef{id})
-}
-
-/// Deletes all proxy matchers.
-pub(crate) fn delete_all_proxy_matchers(state: &MockServerState) {
-    let mut proxy_matchers = state.proxy_matchers.lock().unwrap();
-    proxy_matchers.clear();
-
-    log::trace!("Deleted all proxy matchers");
-}
-
-pub(crate) fn add_recording_matcher(
-    state: &MockServerState,
-    req: RequestRequirements,
-) -> Result<RecordingMatcherRef, String> {
-    let result = validate_request_requirements(&req);
-    if let Err(error_msg) = result {
-        let error_msg = format!("Validation error: {}", error_msg);
-        return Err(error_msg);
-    }
-
-    let mut recording_matchers = state.recording_matchers.lock().unwrap();
-    recording_matchers.push(req.clone());
-
-    let id = state.new_recording_matcher_id();
-    log::debug!("Adding new recording matcher with ID={}", id);
-
-    Ok(RecordingMatcherRef{id})
-}
-
-
-/// Deletes all recording matchers.
-pub(crate) fn delete_all_recording_matchers(state: &MockServerState) {
-    let mut recording_matchers = state.recording_matchers.lock().unwrap();
-    recording_matchers.clear();
-
-    log::trace!("Deleted all recording matchers");
-}
-
-/// Deletes all recording matchers.
-pub(crate) fn reset(state: &MockServerState) {
-    delete_all_mocks(state);
-    delete_history(state);
-    delete_all_proxy_matchers(state);
-    delete_all_recording_matchers(state);
-
-    log::trace!("Reset server");
 }
 
 /// Finds a mock that matches the current request and serve a response according to the mock
@@ -191,11 +134,11 @@ pub(crate) fn find_mock(
         req
     );
 
-    Ok(None)
+    Result::Ok(None)
 }
 
 /// Checks if a request matches a mock.
-pub(crate) fn request_matches(
+fn request_matches(
     state: &MockServerState,
     req: Arc<HttpMockRequest>,
     mock: &RequestRequirements,
@@ -240,12 +183,8 @@ pub(crate) fn verify(
 
 /// Validates a mock request.
 fn validate_mock_definition(req: &MockDefinition) -> Result<(), String> {
-    validate_request_requirements(&req.request)
-}
-
-fn validate_request_requirements(req: &RequestRequirements) -> Result<(), String> {
-    if let Some(_body) = &req.body {
-        if let Some(method) = &req.method {
+    if let Some(_body) = &req.request.body {
+        if let Some(method) = &req.request.method {
             if NON_BODY_METHODS.contains(&method.as_str()) {
                 return Err(String::from(
                     "A body cannot be sent along with the specified method",

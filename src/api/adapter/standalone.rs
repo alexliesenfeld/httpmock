@@ -239,18 +239,9 @@ impl MockServerAdapter for RemoteMockServerAdapter {
         Ok(())
     }
 
-    async fn proxy(&self, req: RequestRequirements) -> Result<(), String> {
-        todo!()
-    }
-
-    async fn record(&self, req: RequestRequirements) -> Result<(), String> {
-        todo!()
-    }
-
     async fn ping(&self) -> Result<(), String> {
         http_ping(&self.addr, self.http_client.borrow()).await
     }
-
 }
 
 async fn http_ping(

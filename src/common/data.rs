@@ -173,7 +173,6 @@ pub type MockMatcherFunction = fn(&HttpMockRequest) -> bool;
 /// A general abstraction of an HTTP request for all handlers.
 #[derive(Serialize, Deserialize, Clone)]
 pub struct RequestRequirements {
-    pub host: Option<String>,
     pub path: Option<String>,
     pub path_contains: Option<Vec<String>>,
     pub path_matches: Option<Vec<Pattern>>,
@@ -205,7 +204,6 @@ impl Default for RequestRequirements {
 impl RequestRequirements {
     pub fn new() -> Self {
         Self {
-            host: None,
             path: None,
             path_contains: None,
             path_matches: None,
@@ -345,63 +343,6 @@ impl ActiveMock {
             definition: mock_definition,
             call_counter: 0,
             is_static,
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct ProxyMatcherRef {
-    pub id: usize,
-}
-
-impl ProxyMatcherRef {
-    pub fn new(id: usize) -> Self {
-        Self { id }
-    }
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct RecordingMatcherRef {
-    pub id: usize,
-}
-
-impl RecordingMatcherRef {
-    pub fn new(id: usize) -> Self {
-        Self { id }
-    }
-}
-
-
-#[derive(Serialize, Deserialize, Clone)]
-pub struct ActiveProxyMatcher {
-    pub id: usize,
-    pub call_counter: usize,
-    pub requirements: RequestRequirements,
-}
-
-impl ActiveProxyMatcher {
-    pub fn new(id: usize, requirements: RequestRequirements) -> Self {
-        ActiveProxyMatcher {
-            id,
-            requirements,
-            call_counter: 0,
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Clone)]
-pub struct ActiveRecordingMatcher {
-    pub id: usize,
-    pub call_counter: usize,
-    pub requirements: RequestRequirements,
-}
-
-impl ActiveRecordingMatcher {
-    pub fn new(id: usize, requirements: RequestRequirements) -> Self {
-        ActiveRecordingMatcher {
-            id,
-            requirements,
-            call_counter: 0,
         }
     }
 }

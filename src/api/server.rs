@@ -14,7 +14,6 @@ use std::rc::Rc;
 use std::sync::Arc;
 use std::thread;
 use tokio::task::LocalSet;
-use crate::api::mock::{ProxyMatcher, RecordingMatcher};
 
 /// A mock server that is able to receive and respond to HTTP requests.
 pub struct MockServer {
@@ -327,55 +326,6 @@ impl MockServer {
                 .expect("Cannot reset mock server (task: delete request history).");
         }
     }
-
-
-    pub fn proxy<F>(&self, host: F) -> ProxyMatcher where F: FnOnce(When)  {
-        self.proxy_async(host).join()
-    }
-
-    pub async fn proxy_async<F>(&self, spec_fn: F) -> ProxyMatcher where F: FnOnce(When)  {
-        let mut req = Rc::new(Cell::new(RequestRequirements::new()));
-
-        spec_fn(When { expectations: req.clone() });
-
-        let response = self
-            .server_adapter
-            .as_ref()
-            .unwrap()
-            .create_proxy_matcher(req.take())
-            .await
-            .expect("Cannot deserialize mock server response");
-
-        ProxyMatcher {
-            id: response.id,
-            server: self,
-        }
-    }
-
-
-    pub fn record<F>(&self, host: F) -> RecordingMatcher where F: FnOnce(When)  {
-        self.record_async(host).join()
-    }
-
-    pub async fn record_async<F>(&self, spec_fn: F) -> RecordingMatcher  where F: FnOnce(When){
-        let mut req = Rc::new(Cell::new(RequestRequirements::new()));
-
-        spec_fn(When { expectations: req.clone() });
-
-        let response = self
-            .server_adapter
-            .as_ref()
-            .unwrap()
-            .create_record_matcher(req.take())
-            .await
-            .expect("Cannot deserialize mock server response");
-
-        RecordingMatcher {
-            id: response.id,
-            server: self,
-        }
-    }
-
 }
 
 impl Drop for MockServer {
