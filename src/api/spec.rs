@@ -51,6 +51,20 @@ impl When {
         self
     }
 
+    /// Sets the host to match requests for.
+    /// * `host` - The host.
+    ///
+    /// # Example
+    /// ```
+    /// // TODO
+    /// ```
+    pub fn host<S: Into<String>>(mut self, host: S) -> Self {
+        update_cell(&self.expectations, |e| {
+            e.host = Some(host.into());
+        });
+        self
+    }
+
     /// Sets the expected HTTP method.
     ///
     /// * `method` - The HTTP method (a [Method](enum.Method.html) or a `String`).

@@ -2,14 +2,9 @@ use std::collections::BTreeMap;
 
 use serde::Serialize;
 
-use crate::common::data::{
-    ErrorResponse, HttpMockRequest, MockDefinition, MockRef, MockServerHttpResponse,
-    RequestRequirements,
-};
+use crate::common::data::{ErrorResponse, HttpMockRequest, MockDefinition, MockRef, MockServerHttpResponse, ProxyMatcherRef, RecordingMatcherRef, RequestRequirements};
 use crate::server::web::handlers;
 use crate::server::{MockServerState, ServerRequestHeader, ServerResponse};
-use std::time::Instant;
-use tokio::time::Duration;
 
 /// This route is responsible for adding a new mock
 pub(crate) fn ping() -> Result<ServerResponse, String> {
@@ -88,6 +83,41 @@ pub(crate) fn verify(state: &MockServerState, body: Vec<u8>) -> Result<ServerRes
     }
 }
 
+
+
+pub(crate) fn add_proxy_matcher(state: &MockServerState, body: Vec<u8>) -> Result<ServerResponse, String> {
+    let def: serde_json::Result<RequestRequirements> = serde_json::from_slice(&body);
+    if let Err(e) = def {
+        return create_json_response(500, None, ErrorResponse::new(&e));
+    }
+
+    match handlers::add_proxy_matcher(&state, def.unwrap()) {
+        Err(e) => create_json_response(500, None, ErrorResponse::new(&e)),
+        Ok(matcher_ref) => create_json_response(201, None, matcher_ref),
+    }
+}
+
+pub(crate) fn delete_all_proxy_matchers(state: &MockServerState) -> Result<ServerResponse, String> {
+    handlers::delete_all_proxy_matchers(state);
+    create_response(202, None, None)
+}
+
+pub(crate) fn add_record_matcher(state: &MockServerState, body: Vec<u8>) -> Result<ServerResponse, String> {
+    let def: serde_json::Result<RequestRequirements> = serde_json::from_slice(&body);
+    if let Err(e) = def {
+        return create_json_response(500, None, ErrorResponse::new(&e));
+    }
+
+    match handlers::add_recording_matcher(&state, def.unwrap()) {
+        Err(e) => create_json_response(500, None, ErrorResponse::new(&e)),
+        Ok(matcher_ref) => create_json_response(201, None, matcher_ref),
+    }
+}
+
+pub(crate) fn delete_all_recording_matchers(state: &MockServerState) -> Result<ServerResponse, String> {
+    handlers::delete_all_proxy_matchers(state);
+    create_response(202, None, None)
+}
 /// This route is responsible for finding a mock that matches the current request and serve a
 /// response according to the mock specification
 pub(crate) async fn serve(
@@ -105,6 +135,10 @@ pub(crate) async fn serve(
         Err(e) => create_json_response(500, None, ErrorResponse::new(&e)),
     };
     return result;
+}
+
+pub(crate) fn is_proxy_request(state: &MockServerState, req: &ServerRequestHeader) -> bool {
+    false
 }
 
 /// Maps the result of the serve handler to an HTTP response which the web framework understands

@@ -28,7 +28,7 @@ similar = "2.4"
 levenshtein = "1.0"
 form_urlencoded = "1.2"
 
-hyper = { version = "1.1", features = ["server", "http1"] }
+hyper = { version = "1.1", features = ["server", "http1", "client"] }
 hyper-util = { version = "0.1", features = ["tokio"] }
 http-body-util = "0.1"
 tokio = { version = "1.35", features = ["sync", "macros", "rt-multi-thread", "signal"] }
@@ -55,11 +55,12 @@ syn = { version = "2.0", features = ["full"] }
 reqwest = "0.11"
 
 [features]
-default = ["cookies"]
+default = ["cookies", "proxy"]
 standalone = ["clap", "env_logger", "serde_yaml", "remote"]
 color = ["colored"]
 cookies = ["basic-cookies"]
 remote = ["isahc"]
+proxy = ["hyper-util/client"]
 
 [[bin]]
 name = "httpmock"

@@ -12,10 +12,8 @@ use async_std::prelude::*;
 
 use crate::api::adapter::MockServerAdapter;
 
-use crate::common::data::{ActiveMock, ClosestMatch, MockDefinition, MockRef, RequestRequirements};
-use crate::server::web::handlers::{
-    add_new_mock, delete_all_mocks, delete_history, delete_one_mock, read_one_mock, verify,
-};
+use crate::common::data::{ActiveMock, ClosestMatch, MockDefinition, MockRef, ProxyMatcherRef, RecordingMatcherRef, RequestRequirements};
+use crate::server::web::handlers::{add_new_mock, add_proxy_matcher, add_recording_matcher, delete_all_mocks, delete_all_proxy_matchers, delete_all_recording_matchers, delete_history, delete_one_mock, read_one_mock, reset, verify};
 use crate::server::MockServerState;
 
 pub struct LocalMockServerAdapter {
@@ -109,6 +107,29 @@ impl MockServerAdapter for LocalMockServerAdapter {
             ));
         }
 
+        Ok(())
+    }
+
+    async fn reset(&self) -> Result<(), String> {
+        reset(&self.local_state);
+        Ok(())
+    }
+
+    async fn create_proxy_matcher(&self, req: RequestRequirements) -> Result<ProxyMatcherRef, String> {
+        add_proxy_matcher(&self.local_state, req)
+    }
+
+    async fn delete_all_proxy_matchers(&self) -> Result<(), String> {
+       delete_all_proxy_matchers(&self.local_state);
+        Ok(())
+    }
+
+    async fn create_record_matcher(&self, req: RequestRequirements) -> Result<RecordingMatcherRef, String> {
+        add_recording_matcher(&self.local_state, req)
+    }
+
+    async fn delete_all_record_matchers(&self) -> Result<(), String> {
+        delete_all_recording_matchers(&self.local_state);
         Ok(())
     }
 }

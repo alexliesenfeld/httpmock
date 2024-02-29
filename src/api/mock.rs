@@ -442,6 +442,16 @@ impl<'a> MockExt<'a> for Mock<'a> {
     }
 }
 
+pub struct ProxyMatcher<'a> {
+    pub id: usize,
+    pub(crate) server: &'a MockServer,
+}
+
+pub struct RecordingMatcher<'a> {
+    pub id: usize,
+    pub(crate) server: &'a MockServer,
+}
+
 fn create_reason_output(reason: &Reason) -> String {
     let mut output = String::new();
     let offsets = match reason.best_match {
