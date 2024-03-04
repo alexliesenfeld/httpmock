@@ -12,7 +12,7 @@
 [![Rust](https://img.shields.io/badge/rust-1.70%2B-blue.svg?maxAge=3600)](https://github.com/rust-lang/rust/blob/master/RELEASES.md#version-1700-2023-06-01)
 
 </div>
- 
+
 <p align="center">
     <a href="https://docs.rs/httpmock/">Documentation</a>
     ·
