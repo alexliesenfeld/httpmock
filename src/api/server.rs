@@ -33,7 +33,7 @@ impl MockServer {
 
         server.reset_async().await;
 
-        return server
+        return server;
     }
 
     /// Asynchronously connects to a remote mock server that is running in standalone mode using
@@ -209,8 +209,8 @@ impl MockServer {
     /// mock.assert();
     /// ```
     pub fn mock<F>(&self, config_fn: F) -> Mock
-        where
-            F: FnOnce(When, Then),
+    where
+        F: FnOnce(When, Then),
     {
         self.mock_async(config_fn).join()
     }
@@ -236,8 +236,8 @@ impl MockServer {
     /// });
     /// ```
     pub async fn mock_async<'a, F>(&'a self, spec_fn: F) -> Mock<'a>
-        where
-            F: FnOnce(When, Then),
+    where
+        F: FnOnce(When, Then),
     {
         let mut req = Rc::new(Cell::new(RequestRequirements::new()));
         let mut res = Rc::new(Cell::new(MockServerHttpResponse::new()));

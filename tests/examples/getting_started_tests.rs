@@ -50,4 +50,3 @@ async fn async_getting_started_test() {
     // Ensure the mock server did respond as specified above.
     assert_eq!(response.status(), 200);
 }
-
