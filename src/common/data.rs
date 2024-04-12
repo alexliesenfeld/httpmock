@@ -168,7 +168,11 @@ impl PartialEq for Pattern {
 
 impl Eq for Pattern {}
 
-pub type MockMatcherFunction = fn(&HttpMockRequest) -> bool;
+// pub trait StringGenerator: Fn() -> String + Send + Sync {}
+
+pub trait MockMatcherFunction: Fn(&HttpMockRequest) -> bool + Send + Sync + 'static {}
+// implement for all closures
+impl<F> MockMatcherFunction for F where F: Fn(&HttpMockRequest) -> bool + Send + Sync + 'static {}
 
 /// A general abstraction of an HTTP request for all handlers.
 #[derive(Serialize, Deserialize, Clone)]
@@ -192,7 +196,7 @@ pub struct RequestRequirements {
     pub x_www_form_urlencoded: Option<Vec<(String, String)>>,
 
     #[serde(skip_serializing, skip_deserializing)]
-    pub matchers: Option<Vec<MockMatcherFunction>>,
+    pub matchers: Option<Vec<Arc<dyn MockMatcherFunction>>>,
 }
 
 impl Default for RequestRequirements {

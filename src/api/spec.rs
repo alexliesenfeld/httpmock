@@ -9,6 +9,7 @@ use std::cell::Cell;
 use std::path::Path;
 use std::rc::Rc;
 use std::str::FromStr;
+use std::sync::Arc;
 use std::time::Duration;
 
 /// A function that encapsulates one or more
@@ -779,12 +780,12 @@ impl When {
     /// m.assert();
     /// assert_eq!(response.status(), 200);
     /// ```
-    pub fn matches(mut self, matcher: MockMatcherFunction) -> Self {
+    pub fn matches(mut self, matcher: impl MockMatcherFunction) -> Self {
         update_cell(&self.expectations, |e| {
             if e.matchers.is_none() {
                 e.matchers = Some(Vec::new());
             }
-            e.matchers.as_mut().unwrap().push(matcher);
+            e.matchers.as_mut().unwrap().push(Arc::new(matcher));
         });
         self
     }

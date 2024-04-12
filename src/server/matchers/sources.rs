@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::sync::Arc;
 
 use serde_json::Value;
 
@@ -366,11 +367,11 @@ impl FunctionSource {
     }
 }
 
-impl ValueRefSource<MockMatcherFunction> for FunctionSource {
+impl ValueRefSource<Arc<dyn MockMatcherFunction>> for FunctionSource {
     fn parse_from_mock<'a>(
         &self,
         mock: &'a RequestRequirements,
-    ) -> Option<Vec<&'a MockMatcherFunction>> {
+    ) -> Option<Vec<&'a Arc<dyn MockMatcherFunction>>> {
         mock.matchers
             .as_ref()
             .map(|b| b.iter().map(|f| f).collect())
