@@ -11,7 +11,7 @@ use std::cell::Cell;
 use std::future::pending;
 use std::net::{SocketAddr, ToSocketAddrs};
 use std::rc::Rc;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::thread;
 use tokio::task::LocalSet;
 
@@ -242,12 +242,14 @@ impl MockServer {
         let mut req = Rc::new(Cell::new(RequestRequirements::new()));
         let mut res = Rc::new(Cell::new(MockServerHttpResponse::new()));
 
+        let mut body_generator = Arc::new(Mutex::new(None));
         spec_fn(
             When {
                 expectations: req.clone(),
             },
             Then {
                 response_template: res.clone(),
+                body_generator: body_generator.clone(),
             },
         );
 
@@ -258,6 +260,7 @@ impl MockServer {
             .create_mock(&MockDefinition {
                 request: req.take(),
                 response: res.take(),
+                body_generator: body_generator.lock().unwrap().take(),
             })
             .await
             .expect("Cannot deserialize mock server response");
