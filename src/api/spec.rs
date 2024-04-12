@@ -990,10 +990,7 @@ impl Then {
         self
     }
 
-    pub fn json_body_given_request<V: Into<Value>>(
-        mut self,
-        value_generator: impl MockValueFunction,
-    ) -> Self {
+    pub fn json_body_given_request(mut self, value_generator: impl MockValueFunction) -> Self {
         let body_gen = &self.body_generator;
         {
             let mut data = body_gen.lock().unwrap();
