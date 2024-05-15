@@ -126,7 +126,7 @@ pub(crate) fn find_mock(
         let mock = mocks.get_mut(&found_id).unwrap();
         mock.call_counter += 1;
 
-        return Ok(Some(mock.definition.response.clone()));
+        return Ok(Some(mock.generate_response(req)));
     }
 
     log::debug!(

@@ -1,5 +1,5 @@
 use crate::common::data::{
-    MockMatcherFunction, MockServerHttpResponse, Pattern, RequestRequirements,
+    MockMatcherFunction, MockServerHttpResponse, MockValueFunction, Pattern, RequestRequirements,
 };
 use crate::common::util::{get_test_resource_file_path, read_file, update_cell};
 use crate::{Method, Regex};
@@ -9,6 +9,7 @@ use std::cell::Cell;
 use std::path::Path;
 use std::rc::Rc;
 use std::str::FromStr;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 /// A function that encapsulates one or more
@@ -779,12 +780,12 @@ impl When {
     /// m.assert();
     /// assert_eq!(response.status(), 200);
     /// ```
-    pub fn matches(mut self, matcher: MockMatcherFunction) -> Self {
+    pub fn matches(mut self, matcher: impl MockMatcherFunction) -> Self {
         update_cell(&self.expectations, |e| {
             if e.matchers.is_none() {
                 e.matchers = Some(Vec::new());
             }
-            e.matchers.as_mut().unwrap().push(matcher);
+            e.matchers.as_mut().unwrap().push(Arc::new(matcher));
         });
         self
     }
@@ -832,6 +833,7 @@ impl When {
 /// A type that allows the specification of HTTP response values.
 pub struct Then {
     pub(crate) response_template: Rc<Cell<MockServerHttpResponse>>,
+    pub(crate) body_generator: Arc<Mutex<Option<Arc<MockValueFunction>>>>,
 }
 
 impl Then {
@@ -985,6 +987,15 @@ impl Then {
         update_cell(&self.response_template, |r| {
             r.body = Some(body.into().to_string().into_bytes());
         });
+        self
+    }
+
+    pub fn json_body_given_request(mut self, value_generator: impl MockValueFunction) -> Self {
+        let body_gen = &self.body_generator;
+        {
+            let mut data = body_gen.lock().unwrap();
+            *data = Some(Arc::new(value_generator));
+        }
         self
     }
 

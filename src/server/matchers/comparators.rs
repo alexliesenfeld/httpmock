@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use assert_json_diff::{assert_json_matches_no_panic, CompareMode, Config};
 use serde_json::Value;
 
@@ -180,8 +182,14 @@ impl FunctionMatchesRequestComparator {
     }
 }
 
-impl ValueComparator<MockMatcherFunction, HttpMockRequest> for FunctionMatchesRequestComparator {
-    fn matches(&self, mock_value: &MockMatcherFunction, req_value: &HttpMockRequest) -> bool {
+impl ValueComparator<Arc<dyn MockMatcherFunction>, HttpMockRequest>
+    for FunctionMatchesRequestComparator
+{
+    fn matches(
+        &self,
+        mock_value: &Arc<dyn MockMatcherFunction>,
+        req_value: &HttpMockRequest,
+    ) -> bool {
         (*mock_value)(req_value)
     }
 
@@ -191,7 +199,7 @@ impl ValueComparator<MockMatcherFunction, HttpMockRequest> for FunctionMatchesRe
 
     fn distance(
         &self,
-        mock_value: &Option<&MockMatcherFunction>,
+        mock_value: &Option<&Arc<dyn MockMatcherFunction>>,
         req_value: &Option<&HttpMockRequest>,
     ) -> usize {
         let mock_value = match mock_value {

@@ -168,7 +168,11 @@ impl PartialEq for Pattern {
 
 impl Eq for Pattern {}
 
-pub type MockMatcherFunction = fn(&HttpMockRequest) -> bool;
+pub trait MockMatcherFunction: Fn(&HttpMockRequest) -> bool + Send + Sync + 'static {}
+impl<F> MockMatcherFunction for F where F: Fn(&HttpMockRequest) -> bool + Send + Sync + 'static {}
+
+pub trait MockValueFunction: Fn(&HttpMockRequest) -> Value + Send + Sync + 'static {}
+impl<F> MockValueFunction for F where F: Fn(&HttpMockRequest) -> Value + Send + Sync + 'static {}
 
 /// A general abstraction of an HTTP request for all handlers.
 #[derive(Serialize, Deserialize, Clone)]
@@ -192,7 +196,7 @@ pub struct RequestRequirements {
     pub x_www_form_urlencoded: Option<Vec<(String, String)>>,
 
     #[serde(skip_serializing, skip_deserializing)]
-    pub matchers: Option<Vec<MockMatcherFunction>>,
+    pub matchers: Option<Vec<Arc<dyn MockMatcherFunction>>>,
 }
 
 impl Default for RequestRequirements {
@@ -306,6 +310,8 @@ impl RequestRequirements {
 pub struct MockDefinition {
     pub request: RequestRequirements,
     pub response: MockServerHttpResponse,
+    #[serde(skip)]
+    pub body_generator: Option<Arc<dyn MockValueFunction>>,
 }
 
 impl MockDefinition {
@@ -313,6 +319,7 @@ impl MockDefinition {
         Self {
             request: req,
             response: mock,
+            body_generator: None,
         }
     }
 }
@@ -344,6 +351,14 @@ impl ActiveMock {
             call_counter: 0,
             is_static,
         }
+    }
+
+    pub fn generate_response(&self, req: Arc<HttpMockRequest>) -> MockServerHttpResponse {
+        let mut response = self.definition.response.clone();
+        if let Some(body_generator) = &self.definition.body_generator {
+            response.body = Some(body_generator(req.as_ref()).to_string().into_bytes());
+        }
+        response
     }
 }
 
