@@ -1,9 +1,5 @@
+use crate::common::data::{ForwardingRuleConfig, ProxyRuleConfig, RecordingRuleConfig};
 use std::{borrow::Borrow, net::SocketAddr, sync::Arc};
-use crate::{
-    common::{
-        data::{ForwardingRuleConfig, ProxyRuleConfig, RecordingRuleConfig}
-    },
-};
 
 use crate::api::{
     adapter::{
@@ -19,14 +15,12 @@ use async_trait::async_trait;
 use bytes::Bytes;
 use http::{Request, StatusCode};
 
-use crate::{
-    common::{
-        data::{
-            ActiveForwardingRule, ActiveMock, ActiveProxyRule, ActiveRecording, ClosestMatch,
-            MockDefinition, RequestRequirements,
-        },
-        http::HttpClient,
+use crate::common::{
+    data::{
+        ActiveForwardingRule, ActiveMock, ActiveProxyRule, ActiveRecording, ClosestMatch,
+        MockDefinition, RequestRequirements,
     },
+    http::HttpClient,
 };
 
 pub struct RemoteMockServerAdapter {

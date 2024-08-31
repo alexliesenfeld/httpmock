@@ -15,11 +15,7 @@ use crate::{
 };
 
 #[cfg(feature = "record")]
-use crate::{
-    server::{
-        persistence::{deserialize_mock_defs_from_yaml, serialize_mock_defs_to_yaml},
-    },
-};
+use crate::server::persistence::{deserialize_mock_defs_from_yaml, serialize_mock_defs_to_yaml};
 
 use crate::common::data::{ForwardingRuleConfig, ProxyRuleConfig, RecordingRuleConfig};
 use bytes::Bytes;

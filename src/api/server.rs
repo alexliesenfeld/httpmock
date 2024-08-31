@@ -1,8 +1,6 @@
+use crate::api::spec::{Then, When};
 #[cfg(feature = "remote")]
 use crate::api::RemoteMockServerAdapter;
-use crate::api::{
-    spec::{Then, When},
-};
 #[cfg(feature = "remote")]
 use crate::common::http::HttpMockHttpClient;
 
@@ -17,29 +15,24 @@ use crate::{
 
 #[cfg(feature = "proxy")]
 use crate::{
-    api::proxy::{ForwardingRuleBuilder, ForwardingRule, ProxyRuleBuilder, ProxyRule},
+    api::proxy::{ForwardingRule, ForwardingRuleBuilder, ProxyRule, ProxyRuleBuilder},
     common::{
-        util::read_file_async,
         data::{ForwardingRuleConfig, ProxyRuleConfig},
+        util::read_file_async,
     },
 };
 
 #[cfg(feature = "record")]
-use crate::{
-    api::{
-        common::data::RecordingRuleConfig,
-        mock::MockSet,
-        proxy::{Recording, RecordingRuleBuilder}
-    },
+use crate::api::{
+    common::data::RecordingRuleConfig,
+    mock::MockSet,
+    proxy::{Recording, RecordingRuleBuilder},
 };
 
 #[cfg(feature = "record")]
-use std::{path::PathBuf};
+use std::path::PathBuf;
 
-use crate::{
-    server::{state::HttpMockStateManager, HttpMockServerBuilder},
-};
-
+use crate::server::{state::HttpMockStateManager, HttpMockServerBuilder};
 
 use crate::Mock;
 use async_object_pool::Pool;

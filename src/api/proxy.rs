@@ -1,8 +1,8 @@
 use crate::{
     api::server::MockServer,
     common::{
-        data::RequestRequirements,
         data::RecordingRuleConfig,
+        data::RequestRequirements,
         util::{write_file, Join},
     },
     When,

@@ -1,13 +1,11 @@
 #[cfg(any(feature = "proxy"))]
 use crate::common::http::{HttpClient, HttpMockHttpClient};
+#[cfg(any(feature = "record", feature = "record"))]
+use crate::server::persistence::read_static_mock_definitions;
 #[cfg(feature = "https")]
 use crate::server::server::MockServerHttpsConfig;
 #[cfg(feature = "https")]
 use crate::server::tls::{CertificateResolverFactory, GeneratingCertificateResolverFactory};
-#[cfg(any(feature = "record", feature = "record"))]
-use crate::server::{
-    persistence::read_static_mock_definitions,
-};
 
 use crate::server::{
     handler::HttpMockHandler,
