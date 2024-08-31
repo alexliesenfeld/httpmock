@@ -1,0 +1,81 @@
+---
+title: Debugging
+description: Describes what features are available to make debugging easier.
+---
+
+## Test Failure Output
+
+When your tests don't send the expected data, `httpmock` tries to provide as much information as possible about what
+exactly is missing or different. However, to see details about unmet expectations, you need to use one of the
+following assertion methods:
+
+- [Mock::assert](https://docs.rs/httpmock/latest/httpmock/struct.Mock.html#method.assert) / [Mock::assert_async](https://docs.rs/httpmock/latest/httpmock/struct.Mock.html#method.assert_async)
+- [Mock::assert_calls](https://docs.rs/httpmock/latest/httpmock/struct.Mock.html#method.assert_calls) / [Mock::assert_calls_async](https://docs.rs/httpmock/latest/httpmock/struct.Mock.html#method.assert_calls_async)
+
+Let's have a look at an example:
+```rust
+#[test]
+fn getting_started_testxx() {
+    use httpmock::prelude::*;
+
+    // Start a lightweight mock server.
+    let server = MockServer::start();
+
+    // Create a mock on the server.
+    let hello_mock = server.mock(|when, then| {
+        when.method("GET")
+            .path("/translate")
+            .query_param("word", "hello-rustaceans");
+        then.status(200)
+            .header("content-type", "text/html; charset=UTF-8")
+            .body("Привет");
+    });
+
+    // Send an HTTP request to the mock server. This simulates your code.
+    let response = reqwest::blocking::get(server.url("/translate?word=hello"))
+        .unwrap();
+
+    // Ensure the specified mock was called. This will fail and print output
+    // with an explanation of what was expected and provided.
+    hello_mock.assert();
+}
+```
+
+Notice how `mock.assert()` is used to verify that the mock you defined earlier has been called **exactly once**.
+If you expect a different number of calls, use [Mock::assert_calls](https://docs.rs/httpmock/latest/httpmock/struct.Mock.html#method.assert_calls).
+
+Since the path of the request that was actually sent to the mock server differs from the expected one,
+`hello_mock.assert()` will panic and cause the test to fail with the following message:
+
+```bash
+0 of 1 expected requests matched the mock specification.
+Here is a comparison with the most similar unmatched request (request number 1):
+
+------------------------------------------------------------
+1 : Query Parameter Mismatch
+------------------------------------------------------------
+Expected:
+    key    [equals]  word
+    value  [equals]  hello-rustaceans
+
+Received (most similar query parameter):
+    word=hello
+
+All received query parameter values:
+    1. word=hello
+
+Matcher:  query_param
+Docs:     https://docs.rs/httpmock/0.8.0/httpmock/struct.When.html#method.query_param
+```
+
+## Logs
+
+`httpmock` logs through the log crate, so you can see detailed log output about its behavior.
+This output is useful for investigating issues, like figuring out why a request doesn't match a mock definition.
+
+The debug log level is usually the most helpful, but you can use trace to get even more details.
+
+> **Note**: To see the log output during test execution, add the `--nocapture` argument when running your tests.
+
+> **Hint**: If you're using the `env_logger` backend, set the `RUST_LOG` environment variable to `httpmock=debug`
+to see `httpmock` logs.

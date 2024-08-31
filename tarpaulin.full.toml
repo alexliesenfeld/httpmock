@@ -1,0 +1,514 @@
+[none]
+release = true
+
+[standalone]
+features = "standalone"
+release = true
+
+[cookies]
+features = "cookies"
+release = true
+
+[standalone.cookies]
+features = "standalone,cookies"
+release = true
+
+[remote]
+features = "remote"
+release = true
+
+[standalone.remote]
+features = "standalone,remote"
+release = true
+
+[cookies.remote]
+features = "cookies,remote"
+release = true
+
+[standalone.cookies.remote]
+features = "standalone,cookies,remote"
+release = true
+
+[proxy]
+features = "proxy"
+release = true
+
+[standalone.proxy]
+features = "standalone,proxy"
+release = true
+
+[cookies.proxy]
+features = "cookies,proxy"
+release = true
+
+[standalone.cookies.proxy]
+features = "standalone,cookies,proxy"
+release = true
+
+[remote.proxy]
+features = "remote,proxy"
+release = true
+
+[standalone.remote.proxy]
+features = "standalone,remote,proxy"
+release = true
+
+[cookies.remote.proxy]
+features = "cookies,remote,proxy"
+release = true
+
+[standalone.cookies.remote.proxy]
+features = "standalone,cookies,remote,proxy"
+release = true
+
+[static-mock]
+features = "static-mock"
+release = true
+
+[standalone.static-mock]
+features = "standalone,static-mock"
+release = true
+
+[cookies.static-mock]
+features = "cookies,static-mock"
+release = true
+
+[standalone.cookies.static-mock]
+features = "standalone,cookies,static-mock"
+release = true
+
+[remote.static-mock]
+features = "remote,static-mock"
+release = true
+
+[standalone.remote.static-mock]
+features = "standalone,remote,static-mock"
+release = true
+
+[cookies.remote.static-mock]
+features = "cookies,remote,static-mock"
+release = true
+
+[standalone.cookies.remote.static-mock]
+features = "standalone,cookies,remote,static-mock"
+release = true
+
+[proxy.static-mock]
+features = "proxy,static-mock"
+release = true
+
+[standalone.proxy.static-mock]
+features = "standalone,proxy,static-mock"
+release = true
+
+[cookies.proxy.static-mock]
+features = "cookies,proxy,static-mock"
+release = true
+
+[standalone.cookies.proxy.static-mock]
+features = "standalone,cookies,proxy,static-mock"
+release = true
+
+[remote.proxy.static-mock]
+features = "remote,proxy,static-mock"
+release = true
+
+[standalone.remote.proxy.static-mock]
+features = "standalone,remote,proxy,static-mock"
+release = true
+
+[cookies.remote.proxy.static-mock]
+features = "cookies,remote,proxy,static-mock"
+release = true
+
+[standalone.cookies.remote.proxy.static-mock]
+features = "standalone,cookies,remote,proxy,static-mock"
+release = true
+
+[https]
+features = "https"
+release = true
+
+[standalone.https]
+features = "standalone,https"
+release = true
+
+[cookies.https]
+features = "cookies,https"
+release = true
+
+[standalone.cookies.https]
+features = "standalone,cookies,https"
+release = true
+
+[remote.https]
+features = "remote,https"
+release = true
+
+[standalone.remote.https]
+features = "standalone,remote,https"
+release = true
+
+[cookies.remote.https]
+features = "cookies,remote,https"
+release = true
+
+[standalone.cookies.remote.https]
+features = "standalone,cookies,remote,https"
+release = true
+
+[proxy.https]
+features = "proxy,https"
+release = true
+
+[standalone.proxy.https]
+features = "standalone,proxy,https"
+release = true
+
+[cookies.proxy.https]
+features = "cookies,proxy,https"
+release = true
+
+[standalone.cookies.proxy.https]
+features = "standalone,cookies,proxy,https"
+release = true
+
+[remote.proxy.https]
+features = "remote,proxy,https"
+release = true
+
+[standalone.remote.proxy.https]
+features = "standalone,remote,proxy,https"
+release = true
+
+[cookies.remote.proxy.https]
+features = "cookies,remote,proxy,https"
+release = true
+
+[standalone.cookies.remote.proxy.https]
+features = "standalone,cookies,remote,proxy,https"
+release = true
+
+[static-mock.https]
+features = "static-mock,https"
+release = true
+
+[standalone.static-mock.https]
+features = "standalone,static-mock,https"
+release = true
+
+[cookies.static-mock.https]
+features = "cookies,static-mock,https"
+release = true
+
+[standalone.cookies.static-mock.https]
+features = "standalone,cookies,static-mock,https"
+release = true
+
+[remote.static-mock.https]
+features = "remote,static-mock,https"
+release = true
+
+[standalone.remote.static-mock.https]
+features = "standalone,remote,static-mock,https"
+release = true
+
+[cookies.remote.static-mock.https]
+features = "cookies,remote,static-mock,https"
+release = true
+
+[standalone.cookies.remote.static-mock.https]
+features = "standalone,cookies,remote,static-mock,https"
+release = true
+
+[proxy.static-mock.https]
+features = "proxy,static-mock,https"
+release = true
+
+[standalone.proxy.static-mock.https]
+features = "standalone,proxy,static-mock,https"
+release = true
+
+[cookies.proxy.static-mock.https]
+features = "cookies,proxy,static-mock,https"
+release = true
+
+[standalone.cookies.proxy.static-mock.https]
+features = "standalone,cookies,proxy,static-mock,https"
+release = true
+
+[remote.proxy.static-mock.https]
+features = "remote,proxy,static-mock,https"
+release = true
+
+[standalone.remote.proxy.static-mock.https]
+features = "standalone,remote,proxy,static-mock,https"
+release = true
+
+[cookies.remote.proxy.static-mock.https]
+features = "cookies,remote,proxy,static-mock,https"
+release = true
+
+[standalone.cookies.remote.proxy.static-mock.https]
+features = "standalone,cookies,remote,proxy,static-mock,https"
+release = true
+
+[http2]
+features = "http2"
+release = true
+
+[standalone.http2]
+features = "standalone,http2"
+release = true
+
+[cookies.http2]
+features = "cookies,http2"
+release = true
+
+[standalone.cookies.http2]
+features = "standalone,cookies,http2"
+release = true
+
+[remote.http2]
+features = "remote,http2"
+release = true
+
+[standalone.remote.http2]
+features = "standalone,remote,http2"
+release = true
+
+[cookies.remote.http2]
+features = "cookies,remote,http2"
+release = true
+
+[standalone.cookies.remote.http2]
+features = "standalone,cookies,remote,http2"
+release = true
+
+[proxy.http2]
+features = "proxy,http2"
+release = true
+
+[standalone.proxy.http2]
+features = "standalone,proxy,http2"
+release = true
+
+[cookies.proxy.http2]
+features = "cookies,proxy,http2"
+release = true
+
+[standalone.cookies.proxy.http2]
+features = "standalone,cookies,proxy,http2"
+release = true
+
+[remote.proxy.http2]
+features = "remote,proxy,http2"
+release = true
+
+[standalone.remote.proxy.http2]
+features = "standalone,remote,proxy,http2"
+release = true
+
+[cookies.remote.proxy.http2]
+features = "cookies,remote,proxy,http2"
+release = true
+
+[standalone.cookies.remote.proxy.http2]
+features = "standalone,cookies,remote,proxy,http2"
+release = true
+
+[static-mock.http2]
+features = "static-mock,http2"
+release = true
+
+[standalone.static-mock.http2]
+features = "standalone,static-mock,http2"
+release = true
+
+[cookies.static-mock.http2]
+features = "cookies,static-mock,http2"
+release = true
+
+[standalone.cookies.static-mock.http2]
+features = "standalone,cookies,static-mock,http2"
+release = true
+
+[remote.static-mock.http2]
+features = "remote,static-mock,http2"
+release = true
+
+[standalone.remote.static-mock.http2]
+features = "standalone,remote,static-mock,http2"
+release = true
+
+[cookies.remote.static-mock.http2]
+features = "cookies,remote,static-mock,http2"
+release = true
+
+[standalone.cookies.remote.static-mock.http2]
+features = "standalone,cookies,remote,static-mock,http2"
+release = true
+
+[proxy.static-mock.http2]
+features = "proxy,static-mock,http2"
+release = true
+
+[standalone.proxy.static-mock.http2]
+features = "standalone,proxy,static-mock,http2"
+release = true
+
+[cookies.proxy.static-mock.http2]
+features = "cookies,proxy,static-mock,http2"
+release = true
+
+[standalone.cookies.proxy.static-mock.http2]
+features = "standalone,cookies,proxy,static-mock,http2"
+release = true
+
+[remote.proxy.static-mock.http2]
+features = "remote,proxy,static-mock,http2"
+release = true
+
+[standalone.remote.proxy.static-mock.http2]
+features = "standalone,remote,proxy,static-mock,http2"
+release = true
+
+[cookies.remote.proxy.static-mock.http2]
+features = "cookies,remote,proxy,static-mock,http2"
+release = true
+
+[standalone.cookies.remote.proxy.static-mock.http2]
+features = "standalone,cookies,remote,proxy,static-mock,http2"
+release = true
+
+[https.http2]
+features = "https,http2"
+release = true
+
+[standalone.https.http2]
+features = "standalone,https,http2"
+release = true
+
+[cookies.https.http2]
+features = "cookies,https,http2"
+release = true
+
+[standalone.cookies.https.http2]
+features = "standalone,cookies,https,http2"
+release = true
+
+[remote.https.http2]
+features = "remote,https,http2"
+release = true
+
+[standalone.remote.https.http2]
+features = "standalone,remote,https,http2"
+release = true
+
+[cookies.remote.https.http2]
+features = "cookies,remote,https,http2"
+release = true
+
+[standalone.cookies.remote.https.http2]
+features = "standalone,cookies,remote,https,http2"
+release = true
+
+[proxy.https.http2]
+features = "proxy,https,http2"
+release = true
+
+[standalone.proxy.https.http2]
+features = "standalone,proxy,https,http2"
+release = true
+
+[cookies.proxy.https.http2]
+features = "cookies,proxy,https,http2"
+release = true
+
+[standalone.cookies.proxy.https.http2]
+features = "standalone,cookies,proxy,https,http2"
+release = true
+
+[remote.proxy.https.http2]
+features = "remote,proxy,https,http2"
+release = true
+
+[standalone.remote.proxy.https.http2]
+features = "standalone,remote,proxy,https,http2"
+release = true
+
+[cookies.remote.proxy.https.http2]
+features = "cookies,remote,proxy,https,http2"
+release = true
+
+[standalone.cookies.remote.proxy.https.http2]
+features = "standalone,cookies,remote,proxy,https,http2"
+release = true
+
+[static-mock.https.http2]
+features = "static-mock,https,http2"
+release = true
+
+[standalone.static-mock.https.http2]
+features = "standalone,static-mock,https,http2"
+release = true
+
+[cookies.static-mock.https.http2]
+features = "cookies,static-mock,https,http2"
+release = true
+
+[standalone.cookies.static-mock.https.http2]
+features = "standalone,cookies,static-mock,https,http2"
+release = true
+
+[remote.static-mock.https.http2]
+features = "remote,static-mock,https,http2"
+release = true
+
+[standalone.remote.static-mock.https.http2]
+features = "standalone,remote,static-mock,https,http2"
+release = true
+
+[cookies.remote.static-mock.https.http2]
+features = "cookies,remote,static-mock,https,http2"
+release = true
+
+[standalone.cookies.remote.static-mock.https.http2]
+features = "standalone,cookies,remote,static-mock,https,http2"
+release = true
+
+[proxy.static-mock.https.http2]
+features = "proxy,static-mock,https,http2"
+release = true
+
+[standalone.proxy.static-mock.https.http2]
+features = "standalone,proxy,static-mock,https,http2"
+release = true
+
+[cookies.proxy.static-mock.https.http2]
+features = "cookies,proxy,static-mock,https,http2"
+release = true
+
+[standalone.cookies.proxy.static-mock.https.http2]
+features = "standalone,cookies,proxy,static-mock,https,http2"
+release = true
+
+[remote.proxy.static-mock.https.http2]
+features = "remote,proxy,static-mock,https,http2"
+release = true
+
+[standalone.remote.proxy.static-mock.https.http2]
+features = "standalone,remote,proxy,static-mock,https,http2"
+release = true
+
+[cookies.remote.proxy.static-mock.https.http2]
+features = "cookies,remote,proxy,static-mock,https,http2"
+release = true
+
+[standalone.cookies.remote.proxy.static-mock.https.http2]
+features = "standalone,cookies,remote,proxy,static-mock,https,http2"
+release = true
+
+[report]
+coveralls = "coveralls_key"
+out = ["Html", "Xml"]

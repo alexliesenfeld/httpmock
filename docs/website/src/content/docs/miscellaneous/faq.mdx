@@ -1,0 +1,13 @@
+---
+title: FAQ
+description: Lists frequently asked questions.
+---
+
+### Can I start multiple mock servers in one Rust test function?
+Yes, you can start multiple mock servers. However, `httpmock` uses a server pool with a default limit of 25
+servers. You can adjust this limit by setting the `HTTPMOCK_MAX_SERVERS` environment variable.
+
+### In which order are mocks evaluated?
+When the `httpmock` server receives a request that matches multiple mocks, they are evaluated in
+reverse order of their definition. This means the most recently defined mock takes precedence and will be used.
+

@@ -10,11 +10,16 @@
 [![crates.io](https://img.shields.io/crates/d/httpmock.svg)](https://crates.io/crates/httpmock)
 [![Mentioned in Awesome](https://awesome.re/badge.svg)](https://github.com/rust-unofficial/awesome-rust#testing)
 [![Rust](https://img.shields.io/badge/rust-1.70%2B-blue.svg?maxAge=3600)](https://github.com/rust-lang/rust/blob/master/RELEASES.md#version-1700-2023-06-01)
+[![Discord](https://img.shields.io/badge/Chat-Discord-%235865F2.svg)](https://discord.gg/QrjhRh7A)
 
 </div>
 
 <p align="center">
-    <a href="https://docs.rs/httpmock/">Documentation</a>
+    <a href="https://alexliesenfeld.github.io/httpmock/">Online Documentation</a>
+    ·
+    <a href="https://docs.rs/httpmock/">API Reference</a>
+    ·
+    <a href="https://discord.gg/QrjhRh7A">Chat</a>
     ·
     <a href="https://crates.io/crates/httpmock">Crate</a>
     ·
@@ -33,12 +38,16 @@
 * Simple, expressive, fluent API.
 * Many built-in helpers for easy request matching ([Regex](https://docs.rs/regex/), JSON, [serde](https://crates.io/crates/serde), cookies, and more).
 * Parallel test execution.
-* Extensible request matching.
-* Fully asynchronous core with synchronous and asynchronous APIs.
-* [Advanced verification and debugging support](https://alexliesenfeld.github.io/posts/mocking-http--services-in-rust/#creating-mocks) (including diff generation between actual and expected HTTP request values)
+* Custom request matchers.
+* Record and Playback
+* Forward and Proxy Mode
+* HTTPS support
 * Fault and network delay simulation.
-* Support for [Regex](https://docs.rs/regex/) matching, JSON, [serde](https://crates.io/crates/serde), cookies, and more.
 * Standalone mode with an accompanying [Docker image](https://hub.docker.com/r/alexliesenfeld/httpmock).
+* Helpful error messages
+* [Advanced verification and debugging support](https://alexliesenfeld.github.io/posts/mocking-http--services-in-rust/#creating-mocks) (including diff generation between actual and expected HTTP request values)
+* Fully asynchronous core with synchronous and asynchronous APIs.
+* Support for [Regex](https://docs.rs/regex/) matching, JSON, [serde](https://crates.io/crates/serde), cookies, and more.
 * Support for [mock configuration using YAML files](https://github.com/alexliesenfeld/httpmock/tree/master#file-based-mock-specification).
 
 ## Getting Started
@@ -47,7 +56,7 @@ Add `httpmock` to `Cargo.toml`:
 
 ```toml
 [dev-dependencies]
-httpmock = "0.7.0"
+httpmock = "0.8.0-alpha.1"
 ```
 
 You can then use `httpmock` as follows:

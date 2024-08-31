@@ -1,5 +1,5 @@
 use httpmock::prelude::*;
-use isahc::get;
+use regex::Regex;
 
 #[test]
 fn url_matching_test() {
@@ -8,13 +8,13 @@ fn url_matching_test() {
 
     let m = server.mock(|when, then| {
         when.path("/appointments/20200922")
-            .path_contains("appointments")
-            .path_matches(Regex::new(r"\d{4}\d{2}\d{2}$").unwrap());
+            .path_includes("appointments")
+            .path_matches(Regex::new(r"\d{8}$").unwrap());
         then.status(201);
     });
 
-    // Act: Send the request and deserialize the response to JSON
-    get(server.url("/appointments/20200922")).unwrap();
+    // Act: Send the request
+    reqwest::blocking::get(&server.url("/appointments/20200922")).unwrap();
 
     // Assert
     m.assert();

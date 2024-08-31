@@ -1,0 +1,77 @@
+---
+title: HTTPS
+description: Describes how the mock server can be configured to support HTTPS
+---
+
+> **Note**: This feature is currently **unstable** and there is no guarantee it will be included in a future stable release.
+There is progress on stabilizing it, but at the moment, HTTPS **does not work with the proxy feature**.
+
+By default, `httpmock` does not enable HTTPS support for testing. However, you can enable it on demand by using the
+Cargo feature `https`. When this feature is enabled, `httpmock` automatically uses HTTPS for all internal communication
+between the Rust API and the mock server, whether it’s a remote standalone server or a local
+[`MockServer`](https://docs.rs/httpmock/latest/httpmock/struct.MockServer.html) instance.
+It also allows your client to send HTTPS requests to the mock server.
+
+## Unified Port
+`httpmock` uses a unified port approach for both HTTP and HTTPS communication. This means you don’t need to change
+the port or modify anything in your Rust tests to switch to HTTPS. Your client can send requests using HTTPS as needed,
+and `httpmock` will automatically detect HTTPS traffic on the port and transition from HTTP to HTTPS without
+any additional configuration.
+
+## CA Certificate
+Since HTTPS requires the use of certificates, you'll need to accept the `httpmock` CA certificate
+in your client settings or, more conveniently, in your system preferences when using HTTPS.
+You can find the `httpmock` CA certificate in the `httpmock`
+[GitHub repository](https://github.com/alexliesenfeld/httpmock/blob/master/certs) (ca.pem file).
+
+
+`httpmock` uses its CA certificate to generate domain-specific certificates for your tests. For instance, if you want
+to mock requests from https://wikipedia.org (such as when using the `httpmock` proxy feature), the mock server
+will generate and cache a certificate for that domain based on the `httpmock` CA certificate. Since your system
+trusts the CA certificate, the self-signed, domain-specific certificate for Wikipedia will also be trusted
+automatically.
+
+### Trusting the CA Certificate
+
+Here is how you can add the `httpmock` CA crtificate to your system.
+
+#### MacOS
+
+```bash
+# Download the CA certificate
+curl -o httpmock-ca.crt https://github.com/alexliesenfeld/httpmock/raw/master/certs/ca.pem
+
+# Open Keychain Access manually or use the open command
+open /Applications/Utilities/Keychain\ Access.app
+
+# Import the certificate:
+# - Drag the downloaded 'httpmock-ca.crt' file into the "System" keychain.
+# - Set the certificate to "Always Trust" under "Get Info".
+```
+
+#### Windows
+```
+# Download the CA certificate
+Invoke-WebRequest -Uri "https://github.com/alexliesenfeld/httpmock/raw/master/certs/ca.pem" -OutFile "C:\Path\To\httpmock-ca.crt"
+
+# Open the Certificate Manager
+# Press 'Win + R', type 'mmc', and press Enter.
+
+# Import the certificate:
+# - In MMC, go to File > Add/Remove Snap-in, select "Certificates", and click "Add".
+# - Choose "Computer account" and then "Local computer".
+# - Under "Trusted Root Certification Authorities", right-click on "Certificates" and choose "All Tasks > Import".
+# - Browse to the downloaded 'httpmock-ca.crt' file and complete the import wizard.
+```
+
+#### Ubuntu
+```bash
+# Clone the repository to get the CA certificate
+git clone git@github.com:alexliesenfeld/httpmock.git
+
+# Copy the certificate to the system's trusted certificates directory
+sudo cp httpmock/certs/ca.pem /usr/local/share/ca-certificates/httpmock.crt
+
+# Update the system's trusted certificates
+sudo update-ca-certificates
+```

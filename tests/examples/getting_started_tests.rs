@@ -1,8 +1,7 @@
-use httpmock::prelude::*;
-use isahc::{get, get_async};
-
 #[test]
 fn getting_started_test() {
+    use httpmock::prelude::*;
+
     // Start a lightweight mock server.
     let server = MockServer::start();
 
@@ -17,7 +16,7 @@ fn getting_started_test() {
     });
 
     // Send an HTTP request to the mock server. This simulates your code.
-    let response = get(server.url("/translate?word=hello")).unwrap();
+    let response = reqwest::blocking::get(server.url("/translate?word=hello")).unwrap();
 
     // Ensure the specified mock was called.
     hello_mock.assert();
@@ -26,27 +25,37 @@ fn getting_started_test() {
     assert_eq!(response.status(), 200);
 }
 
-#[async_std::test]
+#[tokio::test]
 async fn async_getting_started_test() {
-    // Start a local mock server for exclusive use by this test function.
+    use httpmock::prelude::*;
+
+    // Start a lightweight mock server.
     let server = MockServer::start_async().await;
 
-    // Create a mock on the mock server. The mock will return HTTP status code 200 whenever
-    // the mock server receives a GET-request with path "/hello".
     // Create a mock on the server.
-    let hello_mock = server
+    let mock = server
         .mock_async(|when, then| {
-            when.method("GET").path("/hello");
-            then.status(200);
+            when.method(GET)
+                .path("/translate")
+                .query_param("word", "hello");
+            then.status(200)
+                .header("content-type", "text/html; charset=UTF-8")
+                .body("Привет");
         })
         .await;
 
     // Send an HTTP request to the mock server. This simulates your code.
-    let url = format!("http://{}/hello", server.address());
-    let response = get_async(&url).await.unwrap();
+    let client = reqwest::Client::new();
+    let response = client
+        .get(server.url("/translate?word=hello"))
+        .send()
+        .await
+        .unwrap();
 
-    // Ensure the specified mock responded exactly one time.
-    hello_mock.assert_async().await;
-    // Ensure the mock server did respond as specified above.
+    // Ensure the specified mock was called exactly one time (or fail with a
+    // detailed error description).
+    mock.assert();
+
+    // Ensure the mock server did respond as specified.
     assert_eq!(response.status(), 200);
 }

@@ -1,5 +1,5 @@
 use httpmock::prelude::*;
-use isahc::{prelude::*, Request};
+use reqwest::blocking::Client;
 
 #[test]
 fn cookie_matching_test() {
@@ -7,21 +7,21 @@ fn cookie_matching_test() {
     let server = MockServer::start();
 
     let mock = server.mock(|when, then| {
-        when.method(GET)
+        when.method("GET")
             .path("/")
             .cookie_exists("SESSIONID")
             .cookie("SESSIONID", "298zf09hf012fh2");
         then.status(200);
     });
 
-    // Act: Send the request and deserialize the response to JSON
-    let response = Request::get(&format!("http://{}", server.address()))
+    // Act: Send the request with cookies
+    let client = Client::new();
+    let response = client
+        .get(&format!("http://{}", server.address()))
         .header(
             "Cookie",
             "OTHERCOOKIE1=01234; SESSIONID=298zf09hf012fh2; OTHERCOOKIE2=56789; HttpOnly",
         )
-        .body(())
-        .unwrap()
         .send()
         .unwrap();
 

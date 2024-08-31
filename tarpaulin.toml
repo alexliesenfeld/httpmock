@@ -1,0 +1,12 @@
+
+[remote]
+features = "remote,proxy,http2,static-mock,cookies"
+release = false
+
+[standalone]
+features = "standalone,color,cookies,proxy,static-mock,http2"
+release = true
+
+[report]
+coveralls = "coveralls_key"
+out = ["Html", "Xml"]

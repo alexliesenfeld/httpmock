@@ -1,0 +1,39 @@
+---
+title: Playback
+description: Explains how requests can be replayed.
+---
+import codeExamples from "../../../../generated/example_tests.json"
+import { Code } from '@astrojs/starlight/components';
+
+After creating a recording, you can replay it by loading it into a mock server instance using the
+`httpmock` Rust API as follows:
+
+```rust
+// ...
+
+// Save the recording to
+// "target/httpmock/recordings/github-torvalds-scenario_<timestamp>.yaml".
+let target_path = recording
+    .save("github-torvalds-scenario")
+    .expect("cannot store scenario on disk");
+
+let playback_server = MockServer::start();
+
+// Play back the recorded interactions from the file.
+playback_server.playback(target_path);
+```
+
+After calling [`MockServer::playback`](https://docs.rs/httpmock/latest/httpmock/struct.MockServer.html#method.playback),
+the recording will be loaded into the mock server. This allows all previously recorded requests to act as matching
+criteria, similar to how you configure normal mocks using
+[`MockServer::mock`](https://docs.rs/httpmock/latest/httpmock/struct.MockServer.html#method.mock) with the
+[`When`](https://docs.rs/httpmock/latest/httpmock/struct.When.html) structure.
+
+Hereafter, whenever the mock server receives a request that matches any of the recorded requests, it will
+respond with the corresponding recorded response.
+
+## Full Example
+The following example demonstrates how you can use the forwarding feature to record and playback
+requests sent to the GitHub API and the responses it returns.
+
+<Code code={codeExamples['playback-forwarding-github']} lang="rust" />

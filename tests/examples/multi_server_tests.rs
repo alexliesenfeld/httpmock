@@ -1,11 +1,8 @@
 use httpmock::prelude::*;
-use isahc::config::RedirectPolicy;
-use isahc::prelude::*;
-use isahc::HttpClientBuilder;
+use reqwest::{blocking::Client, redirect::Policy};
 
 #[test]
 fn multi_server_test() {
-    // Arrange
     let server1 = MockServer::start();
     let server2 = MockServer::start();
 
@@ -21,15 +18,13 @@ fn multi_server_test() {
         then.status(200);
     });
 
-    // Act: Send the HTTP request with an HTTP client that automatically follows redirects!
-    let http_client = HttpClientBuilder::new()
-        .redirect_policy(RedirectPolicy::Follow)
+    let client = Client::builder()
+        .redirect(Policy::limited(10))
         .build()
         .unwrap();
 
-    let response = http_client.get(server1.url("/redirectTest")).unwrap();
+    let response = client.get(&server1.url("/redirectTest")).send().unwrap();
 
-    // Assert
     redirect_mock.assert();
     target_mock.assert();
     assert_eq!(response.status(), 200);

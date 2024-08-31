@@ -1,0 +1,82 @@
+---
+title: Recording
+description: Explains how requests can be recorded.
+---
+
+import codeExamples from "../../../../generated/example_tests.json"
+import { Code } from '@astrojs/starlight/components';
+
+`httpmock` provides functionality to record both requests to third-party services and their responses.
+There are two strategies how you can achieve that: Forwarding and Proxy.
+
+## Forwarding Strategy
+
+The forwarding feature is the easier method for intercepting and recording responses from third-party services. 
+However, it requires you to change the client’s base URL to direct requests to the mock server’s address.
+
+When using the forwarding strategy, your client sends requests to an `httpmock` mock server. 
+The mock server forwards requests that match the criteria defined in the 
+[When](https://docs.rs/httpmock/latest/httpmock/struct.When.html) structure to a predefined target base URL.
+
+Let's have a look at a basic forwarding example:
+```rust
+// Initialize the mock server for testing
+let server = MockServer::start();
+
+// Configure the server to forward all requests to the GitHub API,
+// instead of using mocked responses. The 'when' configuration allows
+// setting conditions for when forwarding should occur, using the same
+// structure familiar from creating mocks.
+server.forward_to("https://github.com", |rule| {
+    rule.filter(|when| {
+        when.any_request(); // Ensure all requests are forwarded.
+    });
+});
+```
+
+> Hint: If no forwarding rule matches a request, the mock server reverts to its standard mocking strategy and attempts
+to serve a configured mock response.
+
+You can use the forwarding functionality to record requests sent to the remote service.
+
+### Full Example
+
+The following example demonstrates how you can use the forwarding feature to record requests sent to the GitHub API and
+the responses it returns.
+
+<Code code={codeExamples['record-forwarding-github']} lang="rust" />
+
+## Proxy Strategy
+
+> Note: This feature is currently **unstable** and is available only under the `experimental` feature
+flag. There is **no guarantee** that it will be included in a future stable release.
+
+The proxy feature in `httpmock`, while functional on its own, is particularly useful for recording
+in scenarios where modifying or injecting the base URL used by the client is not possible.
+
+Many SDKs, APIs, and HTTP clients support proxy server configuration. For example,
+the reqwest crate allows you to set up a proxy server with the following configuration:
+
+```rust
+// Create a client using the reqwest crate with a configured proxy
+let client = Client::builder()
+    .proxy(reqwest::Proxy::all("my-proxy-server:8080").unwrap())
+    .build()
+    .unwrap();
+
+// Send a GET request and unwrap the result
+let response = client.get("https://github.com").send().unwrap();
+```
+
+In this example, each request is routed through the proxy server rather than directly to the requested domain host.
+The proxy server then tunnels or forwards the request to the target host, which is `github.com` in this case.
+
+When configured as a proxy, `httpmock` can intercept, record, and forward both requests and responses.
+
+> Hint: If no proxy rule matches a request, the mock server reverts to its standard mocking strategy and attempts
+to serve a configured mock response.
+
+### Full Example
+<Code code={codeExamples['record-proxy-github']} lang="rust" />
+
+

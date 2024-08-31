@@ -1,0 +1,56 @@
+---
+title: httpmock
+description: Get started building your docs site with Starlight.
+template: splash
+hero:
+  tagline: Simple yet powerful HTTP mocking library for Rust
+  image:
+    alt: The httpmock logo
+    dark: ../../assets/logo-dark.svg
+    light: ../../assets/logo-light.svg
+  actions:
+    - text: Get started
+      link: /getting_started/quick_introduction/
+      icon: right-arrow
+      variant: primary
+    - text: View on GitHub
+      link: https://github.com/alexliesenfeld/httpmock
+      icon: github
+    - text: Support this project
+      link: https://buymeacoffee.com/alexliesenfeld
+      icon: external
+
+head:
+  - tag: style
+    content: |
+        a{}
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+
+<CardGrid stagger>
+	<Card title="Mock HTTP Services" icon="pencil">
+		If you call HTTP services or APIs in your application, `httpmock` makes it **easy** to mock their responses in your tests.
+	</Card>
+    <Card title="Advanced Features" icon="open-book">
+        `httpmock` offers a range of advanced features, including **record and playback**, **proxy mode**, **standalone mode**, **HTTPS support**, **sharing mocks**, and many more.
+    </Card>
+    <Card title="Record and Playback" icon="add-document">
+        **Record requests** and responses when interacting with a real service and **play them back** in your tests.
+    </Card>
+    <Card title="Library and Standalone Server" icon="setting">
+        `httpmock` is a **Rust testing library**, but it also includes a **standalone server** that runs in a separate process, such as a Docker container.
+    </Card>
+    <Card title="Useful Debugging Tools" icon="open-book">
+        One of the primary goals of `httpmock` is to be **actually helpful** by explaining the reasons when tests fail. It comes with useful logging, error messages, and an advanced request comparison algorithm.
+    </Card>
+	<Card title="Create and Share Mocks" icon="add-document">
+		`httpmock` allows you to **create and share mocked responses** using YAML-files.
+	</Card>
+    <Card title="Flexible Request Matching" icon="open-book">
+        Includes an **extensive set of built-in matchers** that let you define rules for matching requests based on method, path, headers, query parameters, body, and more, or use **custom matchers** for complex matching logic.
+    </Card>
+
+</CardGrid>
+
