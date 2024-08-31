@@ -1,4 +1,4 @@
-#[cfg(any(feature = "proxy"))]
+#[cfg(feature = "proxy")]
 use crate::common::http::{HttpClient, HttpMockHttpClient};
 #[cfg(any(feature = "record", feature = "record"))]
 use crate::server::persistence::read_static_mock_definitions;
