@@ -17,7 +17,7 @@ mod server;
 pub mod state;
 mod util;
 
-#[cfg(feature = "static-mock")]
+#[cfg(feature = "record")]
 mod persistence;
 
 #[cfg(feature = "https")]

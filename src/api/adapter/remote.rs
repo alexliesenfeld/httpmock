@@ -1,4 +1,9 @@
 use std::{borrow::Borrow, net::SocketAddr, sync::Arc};
+use crate::{
+    common::{
+        data::{ForwardingRuleConfig, ProxyRuleConfig, RecordingRuleConfig}
+    },
+};
 
 use crate::api::{
     adapter::{
@@ -22,7 +27,6 @@ use crate::{
         },
         http::HttpClient,
     },
-    ForwardingRuleConfig, ProxyRuleConfig, RecordingRuleConfig,
 };
 
 pub struct RemoteMockServerAdapter {

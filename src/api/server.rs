@@ -1,42 +1,53 @@
 #[cfg(feature = "remote")]
 use crate::api::RemoteMockServerAdapter;
 use crate::api::{
-    proxy::{
-        ForwardingRule, ForwardingRuleBuilder, ProxyRule, ProxyRuleBuilder, Recording,
-        RecordingRuleBuilder,
-    },
     spec::{Then, When},
 };
 #[cfg(feature = "remote")]
 use crate::common::http::HttpMockHttpClient;
-
-use crate::common::data::ForwardingRuleConfig;
 
 use crate::{
     api::{LocalMockServerAdapter, MockServerAdapter},
     common::{
         data::{MockDefinition, MockServerHttpResponse, RequestRequirements},
         runtime,
-        util::{read_env, read_file_async, with_retry, Join},
+        util::{read_env, with_retry, Join},
     },
 };
 
+#[cfg(feature = "proxy")]
 use crate::{
-    api::mock::MockSet,
+    api::proxy::{ForwardingRuleBuilder, ForwardingRule, ProxyRuleBuilder, ProxyRule},
+    common::{
+        util::read_file_async,
+        data::{ForwardingRuleConfig, ProxyRuleConfig},
+    },
+};
+
+#[cfg(feature = "record")]
+use crate::{
+    api::{
+        common::data::RecordingRuleConfig,
+        mock::MockSet,
+        proxy::{Recording, RecordingRuleBuilder}
+    },
+};
+
+#[cfg(feature = "record")]
+use std::{path::PathBuf};
+
+use crate::{
     server::{state::HttpMockStateManager, HttpMockServerBuilder},
 };
 
-#[cfg(feature = "proxy")]
-use crate::ProxyRuleConfig;
 
-use crate::{Mock, RecordingRuleConfig};
+use crate::Mock;
 use async_object_pool::Pool;
 use lazy_static::lazy_static;
 use std::{
     cell::Cell,
     future::pending,
     net::{SocketAddr, ToSocketAddrs},
-    path::PathBuf,
     rc::Rc,
     sync::Arc,
     thread,

@@ -918,7 +918,6 @@ pub struct Mismatch {
 // Configs and Builders
 // *************************************************************************************************
 
-#[cfg(feature = "record")]
 #[derive(Serialize, Deserialize, Clone, Default)]
 pub struct RecordingRuleConfig {
     pub request_requirements: RequestRequirements,

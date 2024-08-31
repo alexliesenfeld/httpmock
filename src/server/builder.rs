@@ -4,10 +4,13 @@ use crate::common::http::{HttpClient, HttpMockHttpClient};
 use crate::server::server::MockServerHttpsConfig;
 #[cfg(feature = "https")]
 use crate::server::tls::{CertificateResolverFactory, GeneratingCertificateResolverFactory};
+#[cfg(any(feature = "record", feature = "record"))]
+use crate::server::{
+    persistence::read_static_mock_definitions,
+};
 
 use crate::server::{
     handler::HttpMockHandler,
-    persistence::read_static_mock_definitions,
     server::{MockServer, MockServerConfig},
     state::{HttpMockStateManager, StateManager},
     HttpMockServer,
@@ -190,7 +193,7 @@ pub struct HttpMockServerBuilder {
     expose: Option<bool>,
     print_access_log: Option<bool>,
     history_limit: Option<usize>,
-    #[cfg(feature = "static-mock")]
+    #[cfg(feature = "record")]
     static_mock_dir: Option<PathBuf>,
     #[cfg(feature = "https")]
     https_config_builder: HttpsConfigBuilder,
@@ -209,7 +212,7 @@ impl HttpMockServerBuilder {
             port: None,
             expose: None,
             history_limit: None,
-            #[cfg(feature = "static-mock")]
+            #[cfg(feature = "record")]
             static_mock_dir: None,
             #[cfg(feature = "proxy")]
             http_client: None,
@@ -321,7 +324,7 @@ impl HttpMockServerBuilder {
     ///
     /// # Returns
     /// A modified `HttpMockServerBuilder` instance for method chaining.
-    #[cfg(feature = "static-mock")]
+    #[cfg(feature = "record")]
     pub fn static_mock_dir(mut self, path: PathBuf) -> Self {
         self.static_mock_dir = Some(path);
         self
@@ -334,7 +337,7 @@ impl HttpMockServerBuilder {
     ///
     /// # Returns
     /// A modified `HttpMockServerBuilder` instance for method chaining.
-    #[cfg(feature = "static-mock")]
+    #[cfg(feature = "record")]
     pub fn static_mock_dir_option(mut self, path: Option<PathBuf>) -> Self {
         self.static_mock_dir = path;
         self
@@ -482,7 +485,7 @@ impl HttpMockServerBuilder {
             .http_client
             .unwrap_or_else(|| Arc::new(HttpMockHttpClient::new(None)));
 
-        #[cfg(feature = "static-mock")]
+        #[cfg(feature = "record")]
         if let Some(dir) = self.static_mock_dir {
             read_static_mock_definitions(dir, state.as_ref())?;
         }

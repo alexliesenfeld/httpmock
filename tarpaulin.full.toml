@@ -61,68 +61,68 @@ release = true
 features = "standalone,cookies,remote,proxy"
 release = true
 
-[static-mock]
-features = "static-mock"
+[record]
+features = "record"
 release = true
 
-[standalone.static-mock]
-features = "standalone,static-mock"
+[standalone.record]
+features = "standalone,record"
 release = true
 
-[cookies.static-mock]
-features = "cookies,static-mock"
+[cookies.record]
+features = "cookies,record"
 release = true
 
-[standalone.cookies.static-mock]
-features = "standalone,cookies,static-mock"
+[standalone.cookies.record]
+features = "standalone,cookies,record"
 release = true
 
-[remote.static-mock]
-features = "remote,static-mock"
+[remote.record]
+features = "remote,record"
 release = true
 
-[standalone.remote.static-mock]
-features = "standalone,remote,static-mock"
+[standalone.remote.record]
+features = "standalone,remote,record"
 release = true
 
-[cookies.remote.static-mock]
-features = "cookies,remote,static-mock"
+[cookies.remote.record]
+features = "cookies,remote,record"
 release = true
 
-[standalone.cookies.remote.static-mock]
-features = "standalone,cookies,remote,static-mock"
+[standalone.cookies.remote.record]
+features = "standalone,cookies,remote,record"
 release = true
 
-[proxy.static-mock]
-features = "proxy,static-mock"
+[proxy.record]
+features = "proxy,record"
 release = true
 
-[standalone.proxy.static-mock]
-features = "standalone,proxy,static-mock"
+[standalone.proxy.record]
+features = "standalone,proxy,record"
 release = true
 
-[cookies.proxy.static-mock]
-features = "cookies,proxy,static-mock"
+[cookies.proxy.record]
+features = "cookies,proxy,record"
 release = true
 
-[standalone.cookies.proxy.static-mock]
-features = "standalone,cookies,proxy,static-mock"
+[standalone.cookies.proxy.record]
+features = "standalone,cookies,proxy,record"
 release = true
 
-[remote.proxy.static-mock]
-features = "remote,proxy,static-mock"
+[remote.proxy.record]
+features = "remote,proxy,record"
 release = true
 
-[standalone.remote.proxy.static-mock]
-features = "standalone,remote,proxy,static-mock"
+[standalone.remote.proxy.record]
+features = "standalone,remote,proxy,record"
 release = true
 
-[cookies.remote.proxy.static-mock]
-features = "cookies,remote,proxy,static-mock"
+[cookies.remote.proxy.record]
+features = "cookies,remote,proxy,record"
 release = true
 
-[standalone.cookies.remote.proxy.static-mock]
-features = "standalone,cookies,remote,proxy,static-mock"
+[standalone.cookies.remote.proxy.record]
+features = "standalone,cookies,remote,proxy,record"
 release = true
 
 [https]
@@ -189,68 +189,68 @@ release = true
 features = "standalone,cookies,remote,proxy,https"
 release = true
 
-[static-mock.https]
-features = "static-mock,https"
+[record.https]
+features = "record,https"
 release = true
 
-[standalone.static-mock.https]
-features = "standalone,static-mock,https"
+[standalone.record.https]
+features = "standalone,record,https"
 release = true
 
-[cookies.static-mock.https]
-features = "cookies,static-mock,https"
+[cookies.record.https]
+features = "cookies,record,https"
 release = true
 
-[standalone.cookies.static-mock.https]
-features = "standalone,cookies,static-mock,https"
+[standalone.cookies.record.https]
+features = "standalone,cookies,record,https"
 release = true
 
-[remote.static-mock.https]
-features = "remote,static-mock,https"
+[remote.record.https]
+features = "remote,record,https"
 release = true
 
-[standalone.remote.static-mock.https]
-features = "standalone,remote,static-mock,https"
+[standalone.remote.record.https]
+features = "standalone,remote,record,https"
 release = true
 
-[cookies.remote.static-mock.https]
-features = "cookies,remote,static-mock,https"
+[cookies.remote.record.https]
+features = "cookies,remote,record,https"
 release = true
 
-[standalone.cookies.remote.static-mock.https]
-features = "standalone,cookies,remote,static-mock,https"
+[standalone.cookies.remote.record.https]
+features = "standalone,cookies,remote,record,https"
 release = true
 
-[proxy.static-mock.https]
-features = "proxy,static-mock,https"
+[proxy.record.https]
+features = "proxy,record,https"
 release = true
 
-[standalone.proxy.static-mock.https]
-features = "standalone,proxy,static-mock,https"
+[standalone.proxy.record.https]
+features = "standalone,proxy,record,https"
 release = true
 
-[cookies.proxy.static-mock.https]
-features = "cookies,proxy,static-mock,https"
+[cookies.proxy.record.https]
+features = "cookies,proxy,record,https"
 release = true
 
-[standalone.cookies.proxy.static-mock.https]
-features = "standalone,cookies,proxy,static-mock,https"
+[standalone.cookies.proxy.record.https]
+features = "standalone,cookies,proxy,record,https"
 release = true
 
-[remote.proxy.static-mock.https]
-features = "remote,proxy,static-mock,https"
+[remote.proxy.record.https]
+features = "remote,proxy,record,https"
 release = true
 
-[standalone.remote.proxy.static-mock.https]
-features = "standalone,remote,proxy,static-mock,https"
+[standalone.remote.proxy.record.https]
+features = "standalone,remote,proxy,record,https"
 release = true
 
-[cookies.remote.proxy.static-mock.https]
-features = "cookies,remote,proxy,static-mock,https"
+[cookies.remote.proxy.record.https]
+features = "cookies,remote,proxy,record,https"
 release = true
 
-[standalone.cookies.remote.proxy.static-mock.https]
-features = "standalone,cookies,remote,proxy,static-mock,https"
+[standalone.cookies.remote.proxy.record.https]
+features = "standalone,cookies,remote,proxy,record,https"
 release = true
 
 [http2]
@@ -317,68 +317,68 @@ release = true
 features = "standalone,cookies,remote,proxy,http2"
 release = true
 
-[static-mock.http2]
-features = "static-mock,http2"
+[record.http2]
+features = "record,http2"
 release = true
 
-[standalone.static-mock.http2]
-features = "standalone,static-mock,http2"
+[standalone.record.http2]
+features = "standalone,record,http2"
 release = true
 
-[cookies.static-mock.http2]
-features = "cookies,static-mock,http2"
+[cookies.record.http2]
+features = "cookies,record,http2"
 release = true
 
-[standalone.cookies.static-mock.http2]
-features = "standalone,cookies,static-mock,http2"
+[standalone.cookies.record.http2]
+features = "standalone,cookies,record,http2"
 release = true
 
-[remote.static-mock.http2]
-features = "remote,static-mock,http2"
+[remote.record.http2]
+features = "remote,record,http2"
 release = true
 
-[standalone.remote.static-mock.http2]
-features = "standalone,remote,static-mock,http2"
+[standalone.remote.record.http2]
+features = "standalone,remote,record,http2"
 release = true
 
-[cookies.remote.static-mock.http2]
-features = "cookies,remote,static-mock,http2"
+[cookies.remote.record.http2]
+features = "cookies,remote,record,http2"
 release = true
 
-[standalone.cookies.remote.static-mock.http2]
-features = "standalone,cookies,remote,static-mock,http2"
+[standalone.cookies.remote.record.http2]
+features = "standalone,cookies,remote,record,http2"
 release = true
 
-[proxy.static-mock.http2]
-features = "proxy,static-mock,http2"
+[proxy.record.http2]
+features = "proxy,record,http2"
 release = true
 
-[standalone.proxy.static-mock.http2]
-features = "standalone,proxy,static-mock,http2"
+[standalone.proxy.record.http2]
+features = "standalone,proxy,record,http2"
 release = true
 
-[cookies.proxy.static-mock.http2]
-features = "cookies,proxy,static-mock,http2"
+[cookies.proxy.record.http2]
+features = "cookies,proxy,record,http2"
 release = true
 
-[standalone.cookies.proxy.static-mock.http2]
-features = "standalone,cookies,proxy,static-mock,http2"
+[standalone.cookies.proxy.record.http2]
+features = "standalone,cookies,proxy,record,http2"
 release = true
 
-[remote.proxy.static-mock.http2]
-features = "remote,proxy,static-mock,http2"
+[remote.proxy.record.http2]
+features = "remote,proxy,record,http2"
 release = true
 
-[standalone.remote.proxy.static-mock.http2]
-features = "standalone,remote,proxy,static-mock,http2"
+[standalone.remote.proxy.record.http2]
+features = "standalone,remote,proxy,record,http2"
 release = true
 
-[cookies.remote.proxy.static-mock.http2]
-features = "cookies,remote,proxy,static-mock,http2"
+[cookies.remote.proxy.record.http2]
+features = "cookies,remote,proxy,record,http2"
 release = true
 
-[standalone.cookies.remote.proxy.static-mock.http2]
-features = "standalone,cookies,remote,proxy,static-mock,http2"
+[standalone.cookies.remote.proxy.record.http2]
+features = "standalone,cookies,remote,proxy,record,http2"
 release = true
 
 [https.http2]
@@ -445,68 +445,68 @@ release = true
 features = "standalone,cookies,remote,proxy,https,http2"
 release = true
 
-[static-mock.https.http2]
-features = "static-mock,https,http2"
+[record.https.http2]
+features = "record,https,http2"
 release = true
 
-[standalone.static-mock.https.http2]
-features = "standalone,static-mock,https,http2"
+[standalone.record.https.http2]
+features = "standalone,record,https,http2"
 release = true
 
-[cookies.static-mock.https.http2]
-features = "cookies,static-mock,https,http2"
+[cookies.record.https.http2]
+features = "cookies,record,https,http2"
 release = true
 
-[standalone.cookies.static-mock.https.http2]
-features = "standalone,cookies,static-mock,https,http2"
+[standalone.cookies.record.https.http2]
+features = "standalone,cookies,record,https,http2"
 release = true
 
-[remote.static-mock.https.http2]
-features = "remote,static-mock,https,http2"
+[remote.record.https.http2]
+features = "remote,record,https,http2"
 release = true
 
-[standalone.remote.static-mock.https.http2]
-features = "standalone,remote,static-mock,https,http2"
+[standalone.remote.record.https.http2]
+features = "standalone,remote,record,https,http2"
 release = true
 
-[cookies.remote.static-mock.https.http2]
-features = "cookies,remote,static-mock,https,http2"
+[cookies.remote.record.https.http2]
+features = "cookies,remote,record,https,http2"
 release = true
 
-[standalone.cookies.remote.static-mock.https.http2]
-features = "standalone,cookies,remote,static-mock,https,http2"
+[standalone.cookies.remote.record.https.http2]
+features = "standalone,cookies,remote,record,https,http2"
 release = true
 
-[proxy.static-mock.https.http2]
-features = "proxy,static-mock,https,http2"
+[proxy.record.https.http2]
+features = "proxy,record,https,http2"
 release = true
 
-[standalone.proxy.static-mock.https.http2]
-features = "standalone,proxy,static-mock,https,http2"
+[standalone.proxy.record.https.http2]
+features = "standalone,proxy,record,https,http2"
 release = true
 
-[cookies.proxy.static-mock.https.http2]
-features = "cookies,proxy,static-mock,https,http2"
+[cookies.proxy.record.https.http2]
+features = "cookies,proxy,record,https,http2"
 release = true
 
-[standalone.cookies.proxy.static-mock.https.http2]
-features = "standalone,cookies,proxy,static-mock,https,http2"
+[standalone.cookies.proxy.record.https.http2]
+features = "standalone,cookies,proxy,record,https,http2"
 release = true
 
-[remote.proxy.static-mock.https.http2]
-features = "remote,proxy,static-mock,https,http2"
+[remote.proxy.record.https.http2]
+features = "remote,proxy,record,https,http2"
 release = true
 
-[standalone.remote.proxy.static-mock.https.http2]
-features = "standalone,remote,proxy,static-mock,https,http2"
+[standalone.remote.proxy.record.https.http2]
+features = "standalone,remote,proxy,record,https,http2"
 release = true
 
-[cookies.remote.proxy.static-mock.https.http2]
-features = "cookies,remote,proxy,static-mock,https,http2"
+[cookies.remote.proxy.record.https.http2]
+features = "cookies,remote,proxy,record,https,http2"
 release = true
 
-[standalone.cookies.remote.proxy.static-mock.https.http2]
-features = "standalone,cookies,remote,proxy,static-mock,https,http2"
+[standalone.cookies.remote.proxy.record.https.http2]
+features = "standalone,cookies,remote,proxy,record,https,http2"
 release = true
 
 [report]

@@ -81,7 +81,9 @@ enum RoutePath {
     ForwardingRuleCollection,
     ProxyRuleCollection,
     SingleProxyRule,
+    #[cfg(feature = "record")]
     RecordingCollection,
+    #[cfg(feature = "record")]
     SingleRecording,
 }
 
@@ -157,11 +159,13 @@ where
                     Method::DELETE => return self.handle_delete_proxy_rule(params),
                     _ => {}
                 },
+                #[cfg(feature = "record")]
                 RoutePath::RecordingCollection => match method {
                     Method::POST => return self.handle_add_recording_matcher(req),
                     Method::DELETE => return self.handle_delete_all_recording_matchers(),
                     _ => {}
                 },
+                #[cfg(feature = "record")]
                 RoutePath::SingleRecording => match method {
                     Method::GET => return self.handle_read_recording(params),
                     Method::DELETE => return self.handle_delete_recording(params),
@@ -196,7 +200,10 @@ where
                 "/__httpmock__/forwarding_rules",
                 RoutePath::ForwardingRuleCollection,
             );
+
+            #[cfg(feature = "record")]
             path_tree.insert("/__httpmock__/proxy_rules", RoutePath::ProxyRuleCollection);
+            #[cfg(feature = "record")]
             path_tree.insert("/__httpmock__/recordings", RoutePath::RecordingCollection);
         }
 
@@ -306,12 +313,14 @@ where
         return response::<()>(StatusCode::NO_CONTENT, None);
     }
 
+    #[cfg(feature = "record")]
     fn handle_add_recording_matcher(&self, req: Request<Bytes>) -> Result<Response<Bytes>, Error> {
         let req_req: RecordingRuleConfig = parse_json_body(req)?;
         let active_recording = self.state.create_recording(req_req);
         return response(StatusCode::CREATED, Some(active_recording));
     }
 
+    #[cfg(feature = "record")]
     fn handle_delete_recording(&self, params: Path) -> Result<Response<Bytes>, Error> {
         let deleted = self.state.delete_proxy_rule(param("id", params)?);
         let status_code = if deleted.is_some() {
@@ -322,11 +331,13 @@ where
         return response::<()>(status_code, None);
     }
 
+    #[cfg(feature = "record")]
     fn handle_delete_all_recording_matchers(&self) -> Result<Response<Bytes>, Error> {
         self.state.delete_all_recordings();
         return response::<()>(StatusCode::NO_CONTENT, None);
     }
 
+    #[cfg(feature = "record")]
     fn handle_read_recording(&self, params: Path) -> Result<Response<Bytes>, Error> {
         let rec = self.state.export_recording(param("id", params)?)?;
         let status_code = rec
@@ -335,6 +346,7 @@ where
         return response(status_code, rec);
     }
 
+    #[cfg(feature = "record")]
     fn handle_load_recording(&self, req: Request<Bytes>) -> Result<Response<Bytes>, Error> {
         let recording_file_content = std::str::from_utf8(&req.body())
             .map_err(|err| RequestConversionError(err.to_string()))?;

@@ -1,10 +1,10 @@
 
 [remote]
-features = "remote,proxy,http2,static-mock,cookies"
+features = "remote,proxy,http2,record,cookies"
 release = false
 
 [standalone]
-features = "standalone,color,cookies,proxy,static-mock,http2"
+features = "standalone,color,cookies,proxy,record,http2"
 release = true
 
 [report]

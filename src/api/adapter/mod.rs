@@ -76,7 +76,11 @@ pub trait MockServerAdapter {
     ) -> Result<ActiveRecording, ServerAdapterError>;
     async fn delete_recording(&self, id: usize) -> Result<(), ServerAdapterError>;
     async fn delete_all_recordings(&self) -> Result<(), ServerAdapterError>;
+
+    #[cfg(feature = "record")]
     async fn export_recording(&self, id: usize) -> Result<Option<Bytes>, ServerAdapterError>;
+
+    #[cfg(feature = "record")]
     async fn create_mocks_from_recording<'a>(
         &self,
         recording_file_content: &'a str,

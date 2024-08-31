@@ -2,9 +2,10 @@ use crate::{
     api::server::MockServer,
     common::{
         data::RequestRequirements,
+        data::RecordingRuleConfig,
         util::{write_file, Join},
     },
-    RecordingRuleConfig, When,
+    When,
 };
 use std::{
     cell::Cell,
@@ -163,6 +164,7 @@ impl<'a> Recording<'a> {
     ///
     /// # Errors
     /// Errors if the file cannot be written due to issues like directory permissions, unavailable disk space, or other I/O errors.
+    #[cfg(feature = "record")]
     pub fn save_to<PathRef: AsRef<Path>, IntoString: Into<String>>(
         &self,
         dir: PathRef,
@@ -179,6 +181,7 @@ impl<'a> Recording<'a> {
     ///
     /// # Returns
     /// Returns an `async` `Result` with the `PathBuf` of the saved file or an error if unable to save.
+    #[cfg(feature = "record")]
     pub async fn save_to_async<PathRef: AsRef<Path>, IntoString: Into<String>>(
         &self,
         dir: PathRef,
@@ -214,6 +217,7 @@ impl<'a> Recording<'a> {
     ///
     /// # Returns
     /// Returns a `Result` with the `PathBuf` to the saved file or an error.
+    #[cfg(feature = "record")]
     pub fn save<IntoString: Into<String>>(
         &self,
         scenario_name: IntoString,
@@ -228,6 +232,7 @@ impl<'a> Recording<'a> {
     ///
     /// # Returns
     /// Returns an `async` `Result` with the `PathBuf` of the saved file or an error.
+    #[cfg(feature = "record")]
     pub async fn save_async<IntoString: Into<String>>(
         &self,
         scenario: IntoString,

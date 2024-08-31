@@ -164,6 +164,7 @@ impl MockServerAdapter for LocalMockServerAdapter {
         Ok(())
     }
 
+    #[cfg(feature = "record")]
     async fn export_recording(&self, id: usize) -> Result<Option<Bytes>, ServerAdapterError> {
         Ok(self
             .state
@@ -171,6 +172,7 @@ impl MockServerAdapter for LocalMockServerAdapter {
             .map_err(|err| UpstreamError(err.to_string()))?)
     }
 
+    #[cfg(feature = "record")]
     async fn create_mocks_from_recording<'a>(
         &self,
         recording_file_content: &'a str,

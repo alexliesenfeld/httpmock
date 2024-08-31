@@ -64,16 +64,15 @@ urlencoding = "2.1.2"
 
 [features]
 default = ["cookies"]
-standalone =  ["clap", "env_logger", "static-mock", "http2", "cookies", "remote", "remote-https"] # enables standalone mode
+standalone =  ["clap", "env_logger", "record", "http2", "cookies", "remote", "remote-https"] # enables standalone mode
 color = ["colored"] # enables colorful output in standalone mode
 cookies = ["headers"] # enables support for matching cookies
 remote = ["hyper-util/client-legacy", "hyper-util/http2"] # allows to connect to remote mock servers
 remote-https = ["remote", "rustls", "hyper-rustls", "hyper-rustls/http2"] # allows to connect to remote mock servers via HTTPS
 proxy = ["remote-https", "hyper-util/client-legacy", "hyper-util/http2", "hyper-rustls", "hyper-rustls/http2"] # enables proxy functionality
-static-mock = ["serde_yaml"] # allows to read mock definitions from the file system
 https = ["rustls", "rcgen", "tokio-rustls", "rustls-pemfile", "rustls/ring", "tls-detect"] # enables httpmock server support for TLS/HTTPS
 http2 = ["hyper/http2", "hyper-util/http2"] # enables httpmocks server support for HTTP2
-record = ["static-mock", "proxy"]
+record = ["proxy", "serde_yaml"]
 experimental = [] # marker feature for experimental features
 
 [[bin]]

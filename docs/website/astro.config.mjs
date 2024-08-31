@@ -3,7 +3,8 @@ import starlight from '@astrojs/starlight';
 
 // https://astro.build/config
 export default defineConfig({
-    site: 'https://alexliesenfeld.github.io/httpmock',
+    site: 'https://alexliesenfeld.github.io',
+    base: 'httpmock', // so that 'https://alexliesenfeld.github.io/httpmock' will be set as the base path
     integrations: [
         starlight({
             title: 'httpmock Tutorial',

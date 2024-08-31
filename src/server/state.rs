@@ -10,8 +10,14 @@ use crate::{
     server::{
         matchers,
         matchers::{all, Matcher},
-        persistence::{deserialize_mock_defs_from_yaml, serialize_mock_defs_to_yaml},
         state::Error::{BodyMethodInvalid, DataConversionError, StaticMockError, ValidationError},
+    },
+};
+
+#[cfg(feature = "record")]
+use crate::{
+    server::{
+        persistence::{deserialize_mock_defs_from_yaml, serialize_mock_defs_to_yaml},
     },
 };
 
@@ -95,7 +101,11 @@ pub(crate) trait StateManager {
     fn create_recording(&self, config: RecordingRuleConfig) -> ActiveRecording;
     fn delete_recording(&self, recording_id: usize) -> Option<ActiveRecording>;
     fn delete_all_recordings(&self);
+
+    #[cfg(feature = "record")]
     fn export_recording(&self, id: usize) -> Result<Option<Bytes>, Error>;
+
+    #[cfg(feature = "record")]
     fn load_mocks_from_recording(&self, recording_file_content: &str) -> Result<Vec<usize>, Error>;
 
     fn find_forward_rule<'a>(
@@ -396,6 +406,7 @@ impl StateManager for HttpMockStateManager {
         log::debug!("Deleted all recorders");
     }
 
+    #[cfg(feature = "record")]
     fn export_recording(&self, id: usize) -> Result<Option<Bytes>, Error> {
         let mut state = self.state.lock().unwrap();
 
@@ -409,6 +420,7 @@ impl StateManager for HttpMockStateManager {
         Ok(None)
     }
 
+    #[cfg(feature = "record")]
     fn load_mocks_from_recording(&self, recording_file_content: &str) -> Result<Vec<usize>, Error> {
         let all_static_mock_defs = deserialize_mock_defs_from_yaml(recording_file_content)
             .map_err(|err| DataConversionError(err.to_string()))?;
