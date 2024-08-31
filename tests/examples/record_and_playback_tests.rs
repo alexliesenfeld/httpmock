@@ -48,7 +48,7 @@ fn record_with_forwarding_test() {
 }
 
 // @example-start: record-proxy-github
-#[cfg(all(feature = "proxy", feature = "record", feature = "experimental"))]
+#[cfg(all(feature = "proxy", feature = "experimental"))]
 #[test]
 fn record_with_proxy_test() {
     // Start a mock server to act as a proxy for the HTTP client
@@ -91,7 +91,7 @@ fn record_with_proxy_test() {
 // @example-end
 
 // @example-start: record-forwarding-github
-#[cfg(all(feature = "proxy", feature = "record"))]
+#[cfg(feature = "record")]
 #[test]
 fn record_github_api_with_forwarding_test() {
     // Let's create our mock server for the test
@@ -146,7 +146,7 @@ fn record_github_api_with_forwarding_test() {
 // @example-end
 
 // @example-start: playback-forwarding-github
-#[cfg(all(feature = "proxy", feature = "record"))]
+#[cfg(feature = "record")]
 #[test]
 fn playback_github_api() {
     // Start a mock server for the test

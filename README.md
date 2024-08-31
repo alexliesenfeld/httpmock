@@ -15,7 +15,7 @@
 </div>
 
 <p align="center">
-    <a href="https://alexliesenfeld.github.io/httpmock/">Online Documentation</a>
+    <a href="https://alexliesenfeld.github.io/httpmock/">Documentation</a>
     ·
     <a href="https://docs.rs/httpmock/">API Reference</a>
     ·
