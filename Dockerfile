@@ -23,7 +23,7 @@ ENV HTTPMOCK_REQUEST_HISTORY_LIMIT 100
 WORKDIR /httpmock
 
 COPY Cargo.toml .
-COPY Cargo.lock .
+# COPY Cargo.lock .
 
 COPY src/ ./src/
 COPY certs/ ./certs/
