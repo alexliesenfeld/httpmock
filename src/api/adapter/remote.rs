@@ -506,6 +506,7 @@ impl MockServerAdapter for RemoteMockServerAdapter {
         Ok(())
     }
 
+    #[cfg(feature = "record")]
     async fn export_recording(&self, id: usize) -> Result<Option<Bytes>, ServerAdapterError> {
         let request = Request::builder()
             .method("GET")
@@ -531,6 +532,7 @@ impl MockServerAdapter for RemoteMockServerAdapter {
         Ok(Some(body))
     }
 
+    #[cfg(feature = "record")]
     async fn create_mocks_from_recording<'a>(
         &self,
         recording_file_content: &'a str,

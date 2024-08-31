@@ -2,6 +2,7 @@
 title: Debugging
 description: Describes what features are available to make debugging easier.
 ---
+import { Aside } from '@astrojs/starlight/components';
 
 ## Test Failure Output
 
@@ -75,7 +76,11 @@ This output is useful for investigating issues, like figuring out why a request 
 
 The debug log level is usually the most helpful, but you can use trace to get even more details.
 
-> **Note**: To see the log output during test execution, add the `--nocapture` argument when running your tests.
+<Aside type="note" title="Note">
+    To see the log output during test execution, add the `--nocapture` argument when running your tests.
+</Aside>
 
-> **Hint**: If you're using the `env_logger` backend, set the `RUST_LOG` environment variable to `httpmock=debug`
-to see `httpmock` logs.
+<Aside type="note" title="Note">
+    If you're using the `env_logger` backend, set the `RUST_LOG` environment variable to `httpmock=debug`
+    to see `httpmock` logs.
+</Aside>

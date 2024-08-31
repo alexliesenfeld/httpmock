@@ -5,6 +5,7 @@ description: Explains how requests can be recorded.
 
 import codeExamples from "../../../../generated/example_tests.json"
 import { Code } from '@astrojs/starlight/components';
+import { Aside } from '@astrojs/starlight/components';
 
 `httpmock` provides functionality to record both requests to third-party services and their responses.
 There are two strategies how you can achieve that: Forwarding and Proxy.
@@ -34,8 +35,10 @@ server.forward_to("https://github.com", |rule| {
 });
 ```
 
-> Hint: If no forwarding rule matches a request, the mock server reverts to its standard mocking strategy and attempts
-to serve a configured mock response.
+<Aside type="note" title="Hint">
+    If no forwarding rule matches a request, the mock server reverts to its standard mocking strategy and attempts
+    to serve a configured mock response..
+</Aside>
 
 You can use the forwarding functionality to record requests sent to the remote service.
 
@@ -48,8 +51,10 @@ the responses it returns.
 
 ## Proxy Strategy
 
-> Note: This feature is currently **unstable** and is available only under the `experimental` feature
-flag. There is **no guarantee** that it will be included in a future stable release.
+<Aside type="caution" title="Note">
+    This feature is currently **unstable** and is available only under the `experimental` feature
+    flag. There is **no guarantee** that it will be included in a future stable release.
+</Aside>
 
 The proxy feature in `httpmock`, while functional on its own, is particularly useful for recording
 in scenarios where modifying or injecting the base URL used by the client is not possible.
@@ -73,8 +78,10 @@ The proxy server then tunnels or forwards the request to the target host, which 
 
 When configured as a proxy, `httpmock` can intercept, record, and forward both requests and responses.
 
-> Hint: If no proxy rule matches a request, the mock server reverts to its standard mocking strategy and attempts
-to serve a configured mock response.
+<Aside type="note" title="Hint">
+    If no proxy rule matches a request, the mock server reverts to its standard mocking strategy and attempts
+    to serve a configured mock response.
+</Aside>
 
 ### Full Example
 <Code code={codeExamples['record-proxy-github']} lang="rust" />

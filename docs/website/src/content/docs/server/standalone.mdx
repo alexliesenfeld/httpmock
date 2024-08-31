@@ -2,6 +2,7 @@
 title: Standalone Server
 description: Describes how to set up and use a standalone mock server.
 ---
+import { Aside } from '@astrojs/starlight/components';
 
 You can use `httpmock` to run a standalone mock server in a separate process, such as a Docker container.
 This setup allows the mock server to be accessible to multiple applications, not just within your Rust tests.
@@ -82,9 +83,10 @@ This means that test functions may be blocked when connecting to the remote serv
 This is in contrast to tests that use a local mock server where parallel test execution is possible, because
 each test uses its own mock server.
 
-> **Note**: Sequential execution is only enforced on a per-process basis. This means that if multiple test runs or
-applications use the remote server simultaneously, interference may still occur.
-
+<Aside type="caution" title="Note">
+    Sequential execution is only enforced on a per-process basis. This means that if multiple test runs or
+    applications use the remote server simultaneously, interference may still occur.
+</Aside>
 
 ## Usage Without Rust
 
@@ -108,9 +110,11 @@ then:
   json_body: '{ "status" : "created" }'
 ```
 
-> **Note**: Defining mocks with YAML files is straightforward because the field names directly match the corresponding
-methods in the Rust API, found in the [`When`](https://docs.rs/httpmock/latest/httpmock/struct.When.html) or
-[`Then`](https://docs.rs/httpmock/latest/httpmock/struct.Then.html) data structures.
+<Aside type="note" title="Note">
+    Defining mocks with YAML files is straightforward because the field names directly match the corresponding
+    methods in the Rust API, found in the [`When`](https://docs.rs/httpmock/latest/httpmock/struct.When.html) or
+    [`Then`](https://docs.rs/httpmock/latest/httpmock/struct.Then.html) data structures.
+</Aside>
 
 Please refer to [this example file](https://github.com/alexliesenfeld/httpmock/blob/master/tests/resources/static_yaml_mock.yaml),
 which includes many of the usable fields.

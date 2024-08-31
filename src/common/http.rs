@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use bytes::Bytes;
 use http::{Request, Response};
 use http_body_util::{BodyExt, Full};
+#[cfg(any(feature = "remote-https", feature = "https"))]
 use hyper_rustls::HttpsConnector;
 use hyper_util::{
     client::legacy::{connect::HttpConnector, Client},

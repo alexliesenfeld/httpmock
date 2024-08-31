@@ -2,9 +2,12 @@
 title: HTTPS
 description: Describes how the mock server can be configured to support HTTPS
 ---
+import { Aside } from '@astrojs/starlight/components';
 
-> **Note**: This feature is currently **unstable** and there is no guarantee it will be included in a future stable release.
-There is progress on stabilizing it, but at the moment, HTTPS **does not work with the proxy feature**.
+<Aside type="caution" title="Note">
+    This feature is currently **unstable** and there is no guarantee it will be included in a future stable release.
+    There is progress on stabilizing it, but at the moment, HTTPS **does not work with the proxy feature**.
+</Aside>
 
 By default, `httpmock` does not enable HTTPS support for testing. However, you can enable it on demand by using the
 Cargo feature `https`. When this feature is enabled, `httpmock` automatically uses HTTPS for all internal communication

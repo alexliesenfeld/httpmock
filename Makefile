@@ -59,7 +59,7 @@ docs:
 	cd tools && cargo run --bin extract_groups
 	cd tools && cargo run --bin extract_example_tests
 	rm -rf docs/website/generated && cp -r tools/target/generated docs/website/generated
-	cd docs/website && npm run generate-docs
+	cd docs/website && npm install && npm run generate-docs
 
 
 .PHONY: fmt
