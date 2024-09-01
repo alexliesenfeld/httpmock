@@ -1,6 +1,6 @@
 # Changelog
 
-## Version 0.8.0 
+## Version 0.8.0-aloha.1
 
 ### BREAKING CHANGES
 - A new [MockServer::reset](https://docs.rs/httpmock/latest/httpmock/struct.MockServer.html#method.reset) method was added that resets a mock server. Thanks for providing the [pull request](https://github.com/alexliesenfeld/httpmock/pull/100) for this feature, [@dax](https://github.com/dax).
@@ -9,6 +9,15 @@
 - [When::json_body_partial](https://docs.rs/httpmock/0.7.0/httpmock/struct.When.html#method.json_body_partial) was renamed to `json_body_includes`.
 - [When::x_www_form_urlencoded_tuple](https://docs.rs/httpmock/0.7.0/httpmock/struct.When.html#method.x_www_form_urlencoded) was renamed to `form_urlencoded_tuple`.
 - [When::x_www_form_urlencoded_key_exists](https://docs.rs/httpmock/0.7.0/httpmock/struct.When.html#method.x_www_form_urlencoded) was renamed to `form_urlencoded_key_exists`.
+- Error message output has been changed for better readability (e.g., when calling `Mock::assert`).
+
+#### Improvements
+- Record and Playback mode was added
+- Many new matchers functions have been added
+- Proxy Mode was added
+- Website docs have been created (see https://alexliesenfeld.github.io/httpmock/)
+- HTTPS support added
+- Internal implementation was entirely rewritten
 
 ### Improvements
 - The algorithm to find the most similar request in case of mock assertion failures has been improved.
