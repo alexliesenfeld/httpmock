@@ -4,17 +4,16 @@
 //! # Features
 //! * Simple, expressive, fluent API.
 //! * Many built-in helpers for easy request matching ([Regex](https://docs.rs/regex/), JSON, [serde](https://crates.io/crates/serde), cookies, and more).
-//! * Parallel test execution.
-//! * Custom request matchers.
 //! * Record and Playback
 //! * Forward and Proxy Mode
 //! * HTTPS support
 //! * Fault and network delay simulation.
+//! * Custom request matchers.
 //! * Standalone mode with an accompanying [Docker image](https://hub.docker.com/r/alexliesenfeld/httpmock).
 //! * Helpful error messages
 //! * [Advanced verification and debugging support](https://alexliesenfeld.github.io/posts/mocking-http--services-in-rust/#creating-mocks) (including diff generation between actual and expected HTTP request values)
+//! * Parallel test execution.
 //! * Fully asynchronous core with synchronous and asynchronous APIs.
-//! * Support for [Regex](https://docs.rs/regex/) matching, JSON, [serde](https://crates.io/crates/serde), cookies, and more.
 //! * Support for [mock configuration using YAML files](https://github.com/alexliesenfeld/httpmock/tree/master#file-based-mock-specification).
 //!
 //! # Getting Started
@@ -52,22 +51,48 @@
 //! assert_eq!(response.status(), 200);
 //! ```
 //!
-//! In case the request fails, `httpmock` would show you a detailed error description including a diff between the
-//! expected and the actual HTTP request:
+//! When the specified expectations do not match the received request, `httpmock` provides a detailed error description,
+//! including a diff that shows the differences between the expected and actual HTTP requests. Example:
 //!
-//! ![colored-diff.png](https://raw.githubusercontent.com/alexliesenfeld/httpmock/master/docs/diff.png)
+//! ```bash
+//! 0 of 1 expected requests matched the mock specification.
+//! Here is a comparison with the most similar unmatched request (request number 1):
 //!
-//! # Online Documentation
-//! Please find the official `httpmock` documentation and website at: http://alexliesenfeld.github.io/httpmock
+//! ------------------------------------------------------------
+//! 1 : Query Parameter Mismatch
+//! ------------------------------------------------------------
+//! Expected:
+//!     key    [equals]  word
+//!     value  [equals]  hello-rustaceans
 //!
-//! # License
-//! `httpmock` is free software: you can redistribute it and/or modify it under the terms
-//! of the MIT Public License.
+//! Received (most similar query parameter):
+//!     word=hello
 //!
-//! This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
-//! without even the implied
-//! warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the MIT Public
-//! License for more details.
+//! All received query parameter values:
+//!     1. word=hello
+//!
+//! Matcher:  query_param
+//! Docs:     https://docs.rs/httpmock/0.8.0/httpmock/struct.When.html#method.query_param
+//! ```
+//!
+//! # Usage
+//!
+//! See the [official documentation](http://alexliesenfeld.github.io/httpmock) a for detailed
+//! API documentation.
+//!
+//! ## Examples
+//!
+//! You can find examples in the
+//! [`httpmock` test directory](https://github.com/alexliesenfeld/httpmock/blob/master/tests/).
+//! The [official documentation](http://alexliesenfeld.github.io/httpmock) and [reference docs](https://docs.rs/httpmock/)
+//! also contain _**a lot**_ of examples.
+//!
+//! ## License
+//!
+//! `httpmock` is free software: you can redistribute it and/or modify it under the terms of the MIT Public License.
+//!
+//! This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
+//! warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the MIT Public License for more details.
 extern crate lazy_static;
 
 use std::{borrow::BorrowMut, net::ToSocketAddrs};
