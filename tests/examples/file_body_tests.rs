@@ -1,5 +1,4 @@
 use httpmock::prelude::*;
-use isahc::prelude::*;
 
 #[test]
 fn file_body_test() {
@@ -12,7 +11,7 @@ fn file_body_test() {
     });
 
     // Act
-    let mut response = isahc::get(server.url("/hello")).unwrap();
+    let response = reqwest::blocking::get(&server.url("/hello")).unwrap();
 
     // Assert
     m.assert();

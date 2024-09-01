@@ -1,7 +1,8 @@
+use std::{env, path::PathBuf};
+
 use clap::Parser;
-use httpmock::standalone::start_standalone_server;
-use std::env;
-use std::path::PathBuf;
+
+use httpmock::server::HttpMockServerBuilder;
 
 /// Holds command line parameters provided by the user.
 #[derive(Parser, Debug)]
@@ -10,7 +11,7 @@ use std::path::PathBuf;
     author = "Alexander Liesenfeld <alexander.liesenfeld@outlook.com>"
 )]
 struct ExecutionParameters {
-    #[clap(short, long, env = "HTTPMOCK_PORT", default_value = "5000")]
+    #[clap(short, long, env = "HTTPMOCK_PORT", default_value = "5050")]
     pub port: u16,
     #[clap(short, long, env = "HTTPMOCK_EXPOSE")]
     pub expose: bool,
@@ -48,16 +49,19 @@ async fn main() {
 
     log::info!("{:?}", params);
 
-    start_standalone_server(
-        params.port,
-        params.expose,
-        params.mock_files_dir,
-        !params.disable_access_log,
-        params.request_history_limit,
-        shutdown_signal(),
-    )
-    .await
-    .expect("an error occurred during mock server execution");
+    let server = HttpMockServerBuilder::new()
+        .port(params.port)
+        .expose(params.expose)
+        .print_access_log(!params.disable_access_log)
+        .history_limit(params.request_history_limit)
+        .static_mock_dir_option(params.mock_files_dir)
+        .build()
+        .unwrap();
+
+    server
+        .start_with_signals(None, shutdown_signal())
+        .await
+        .expect("an error occurred during mock server execution");
 }
 
 #[cfg(not(target_os = "windows"))]

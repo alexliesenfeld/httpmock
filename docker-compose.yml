@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5050:5050"
+    volumes:
+      - ./tests/resources/simple_static_mock.yaml:/static-mocks/simple_static_mock.yaml
+    environment:
+      - HTTPMOCK_MOCK_FILES_DIR=/static-mocks

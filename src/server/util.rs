@@ -1,11 +1,10 @@
-use std::cmp::Ordering;
-use std::collections::BTreeMap;
+use std::{cmp::Ordering, collections::BTreeMap};
 
 /// Extends a tree map to provide additional operations.
 pub(crate) trait TreeMapExtension<K, V>
 where
-    K: std::cmp::Ord,
-    V: std::cmp::Ord,
+    K: Ord,
+    V: Ord,
 {
     /// Checks if a tree map contains another tree map.
     fn contains(&self, other: &BTreeMap<K, V>) -> bool;
@@ -17,8 +16,8 @@ where
 /// Implements [`TreeMapExtension`].
 impl<K, V> TreeMapExtension<K, V> for BTreeMap<K, V>
 where
-    K: std::cmp::Ord,
-    V: std::cmp::Ord,
+    K: Ord,
+    V: Ord,
 {
     fn contains(&self, other: &BTreeMap<K, V>) -> bool {
         other.iter().all(|(k, v)| self.contains_entry(k, v))
@@ -75,9 +74,8 @@ impl StringTreeMapExtension for BTreeMap<String, String> {
 
 #[cfg(test)]
 mod test {
-    use std::collections::BTreeMap;
-
     use crate::server::util::{StringTreeMapExtension, TreeMapExtension};
+    use std::collections::BTreeMap;
 
     #[test]
     fn tree_map_fully_contains_other() {

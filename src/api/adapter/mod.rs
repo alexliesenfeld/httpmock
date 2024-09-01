@@ -1,80 +1,88 @@
-use std::net::SocketAddr;
-use std::str::FromStr;
-use std::sync::Arc;
-use std::time::Duration;
+use std::{net::SocketAddr, str::FromStr};
 
 use async_trait::async_trait;
+use bytes::Bytes;
 
 use serde::{Deserialize, Serialize};
 
-use crate::common::data::{ActiveMock, ClosestMatch, MockDefinition, MockRef, RequestRequirements};
-use crate::server::web::handlers::{
-    add_new_mock, delete_all_mocks, delete_history, delete_one_mock, read_one_mock, verify,
-};
+use crate::common::data::{ActiveForwardingRule, ActiveMock, ActiveProxyRule};
+
+use crate::common::data::{ActiveRecording, ClosestMatch, MockDefinition, RequestRequirements};
 
 pub mod local;
 
+use crate::common::data::{ForwardingRuleConfig, ProxyRuleConfig, RecordingRuleConfig};
+
+use thiserror::Error;
+
+#[derive(Error, Debug)]
+pub enum ServerAdapterError {
+    #[error("mock with ID {0} not found")]
+    MockNotFound(usize),
+    #[error("invalid mock definition: {0}")]
+    InvalidMockDefinitionError(String),
+    #[error("cannot serialize JSON: {0}")]
+    JsonSerializationError(serde_json::error::Error),
+    #[error("cannot deserialize JSON: {0}")]
+    JsonDeserializationError(serde_json::error::Error),
+    #[error("adapter error: {0}")]
+    UpstreamError(String),
+    #[error("cannot ping mock server: {0}")]
+    PingError(String),
+    #[error("unknown error")]
+    Unknown,
+}
+
 #[cfg(feature = "remote")]
-pub mod standalone;
-
-/// Type alias for [regex::Regex](../regex/struct.Regex.html).
-pub type Regex = regex::Regex;
-
-/// Represents an HTTP method.
-#[derive(Serialize, Deserialize, Debug)]
-pub enum Method {
-    GET,
-    HEAD,
-    POST,
-    PUT,
-    DELETE,
-    CONNECT,
-    OPTIONS,
-    TRACE,
-    PATCH,
-}
-
-impl FromStr for Method {
-    type Err = String;
-
-    fn from_str(input: &str) -> Result<Self, Self::Err> {
-        match input {
-            "GET" => Ok(Method::GET),
-            "HEAD" => Ok(Method::HEAD),
-            "POST" => Ok(Method::POST),
-            "PUT" => Ok(Method::PUT),
-            "DELETE" => Ok(Method::DELETE),
-            "CONNECT" => Ok(Method::CONNECT),
-            "OPTIONS" => Ok(Method::OPTIONS),
-            "TRACE" => Ok(Method::TRACE),
-            "PATCH" => Ok(Method::PATCH),
-            _ => Err(format!("Invalid HTTP method {}", input)),
-        }
-    }
-}
-
-impl From<&str> for Method {
-    fn from(value: &str) -> Self {
-        value.parse().expect("Cannot parse HTTP method")
-    }
-}
-
-impl std::fmt::Display for Method {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        std::fmt::Debug::fmt(self, f)
-    }
-}
+pub mod remote;
 
 #[async_trait]
 pub trait MockServerAdapter {
+    async fn ping(&self) -> Result<(), ServerAdapterError>;
     fn host(&self) -> String;
     fn port(&self) -> u16;
     fn address(&self) -> &SocketAddr;
-    async fn create_mock(&self, mock: &MockDefinition) -> Result<MockRef, String>;
-    async fn fetch_mock(&self, mock_id: usize) -> Result<ActiveMock, String>;
-    async fn delete_mock(&self, mock_id: usize) -> Result<(), String>;
-    async fn delete_all_mocks(&self) -> Result<(), String>;
-    async fn verify(&self, rr: &RequestRequirements) -> Result<Option<ClosestMatch>, String>;
-    async fn delete_history(&self) -> Result<(), String>;
-    async fn ping(&self) -> Result<(), String>;
+
+    async fn reset(&self) -> Result<(), ServerAdapterError>;
+
+    async fn create_mock(&self, mock: &MockDefinition) -> Result<ActiveMock, ServerAdapterError>;
+    async fn fetch_mock(&self, mock_id: usize) -> Result<ActiveMock, ServerAdapterError>;
+    async fn delete_mock(&self, mock_id: usize) -> Result<(), ServerAdapterError>;
+    async fn delete_all_mocks(&self) -> Result<(), ServerAdapterError>;
+
+    async fn verify(
+        &self,
+        rr: &RequestRequirements,
+    ) -> Result<Option<ClosestMatch>, ServerAdapterError>;
+    async fn delete_history(&self) -> Result<(), ServerAdapterError>;
+
+    async fn create_forwarding_rule(
+        &self,
+        config: ForwardingRuleConfig,
+    ) -> Result<ActiveForwardingRule, ServerAdapterError>;
+    async fn delete_forwarding_rule(&self, mock_id: usize) -> Result<(), ServerAdapterError>;
+    async fn delete_all_forwarding_rules(&self) -> Result<(), ServerAdapterError>;
+
+    async fn create_proxy_rule(
+        &self,
+        config: ProxyRuleConfig,
+    ) -> Result<ActiveProxyRule, ServerAdapterError>;
+    async fn delete_proxy_rule(&self, mock_id: usize) -> Result<(), ServerAdapterError>;
+    async fn delete_all_proxy_rules(&self) -> Result<(), ServerAdapterError>;
+
+    async fn create_recording(
+        &self,
+        mock: RecordingRuleConfig,
+    ) -> Result<ActiveRecording, ServerAdapterError>;
+    async fn delete_recording(&self, id: usize) -> Result<(), ServerAdapterError>;
+    async fn delete_all_recordings(&self) -> Result<(), ServerAdapterError>;
+
+    #[cfg(feature = "record")]
+    async fn export_recording(&self, id: usize) -> Result<Option<Bytes>, ServerAdapterError>;
+
+    #[cfg(feature = "record")]
+    async fn create_mocks_from_recording<'a>(
+        &self,
+        recording_file_content: &'a str,
+    ) -> Result<Vec<usize>, ServerAdapterError>;
 }

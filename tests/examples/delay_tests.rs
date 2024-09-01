@@ -1,5 +1,4 @@
 use httpmock::prelude::*;
-use isahc::get;
 use std::time::{Duration, SystemTime};
 
 #[test]
@@ -15,8 +14,8 @@ fn delay_test() {
         then.status(200).delay(delay);
     });
 
-    // Act: Send the HTTP request
-    let response = get(server.url("/delay")).unwrap();
+    // Act: Send the HTTP request using reqwest
+    let response = reqwest::blocking::get(&server.url("/delay")).unwrap();
 
     // Assert
     mock.assert();

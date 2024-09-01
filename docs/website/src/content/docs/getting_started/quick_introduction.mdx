@@ -1,0 +1,89 @@
+---
+title: Quick Introduction
+description: A quick tutorial explaining how to get started using httpmock.
+tableOfContents: false
+---
+
+`httpmock` allows you to mock HTTP services in your Rust tests, such as third-party APIs, authentication providers, or data sources.
+
+The following is a basic example of how you can use `httpmock` to mock HTTP endpoints in your tests.
+
+Let's start off by adding the `httpmock` crate to `Cargo.toml`:
+
+```toml
+[dev-dependencies]
+httpmock = "0.8"
+```
+
+You can then use it as follows:
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+<Tabs>
+    <TabItem label="Synchronous API" >
+        ```rust
+        use httpmock::prelude::*;
+
+        // Start a lightweight mock server.
+        let server = MockServer::start();
+
+        // Create a mock on the server.
+        let hello_mock = server.mock(|when, then| {
+            when.method("GET")
+                .path("/translate")
+                .query_param("word", "hello");
+            then.status(200)
+                .header("content-type", "text/html; charset=UTF-8")
+                .body("Привет");
+        });
+
+        // Send an HTTP request to the mock server. This simulates your code.
+        let response = reqwest::blocking::get(server.url("/translate?word=hello")).unwrap();
+
+        // Ensure the specified mock was called.
+        hello_mock.assert();
+
+        // Ensure the mock server did respond as specified.
+        assert_eq!(response.status(), 200);
+        ```
+    </TabItem>
+    <TabItem label="Asynchronous API" >
+        ```rust
+        use httpmock::prelude::*;
+
+        // Start a lightweight mock server.
+        let server = MockServer::start_async().await;
+
+        // Create a mock on the server.
+        let hello_mock = server.mock_async(|when, then| {
+            when.method("GET")
+                .path("/translate")
+                .query_param("word", "hello");
+            then.status(200)
+                .header("content-type", "text/html; charset=UTF-8")
+                .body("Привет");
+        }).await;
+
+        // Send an HTTP request to the mock server. This simulates your code.
+        let client = reqwest::Client::new();
+        let response = client.get(server.url("/translate?word=hello")).send().await.unwrap();
+
+        // Ensure the specified mock was called exactly one time (or fail with a
+        // detailed error description).
+        hello_mock.assert();
+
+        // Ensure the mock server did respond as specified.
+        assert_eq!(response.status(), 200);
+        ```
+    </TabItem>
+</Tabs>
+
+
+
+The above example will spin up a lightweight HTTP mock server and configure it to respond to all `GET` requests
+to path `/translate` with query parameter `word=hello`. The corresponding HTTP response will contain the text body
+`Привет`.
+
+If the mock server receives a request that does not match the specified criteria
+(i.e., the request does not have path `/translate` with query parameter `word=hello`),
+then the mock server will respond with status code `404 (Not Found)`.

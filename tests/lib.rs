@@ -1,31 +1,39 @@
-#[macro_use]
 extern crate lazy_static;
 
-use std::sync::Mutex;
-use std::thread::{spawn, JoinHandle};
-
-use httpmock::standalone::start_standalone_server;
+use httpmock::server::{HttpMockServer, HttpMockServerBuilder};
+use std::{sync::Mutex, thread};
 use tokio::task::LocalSet;
-
 mod examples;
-mod internal;
+mod matchers;
+mod misc;
 
-/// ====================================================================================
 /// The rest of this file is only required to simulate that a standalone mock server is
-/// running somewhere else. The tests above will is.
-/// ====================================================================================
-pub fn simulate_standalone_server() {
-    let _unused = STANDALONE_SERVER.lock().unwrap_or_else(|e| e.into_inner());
+/// running somewhere else.
+pub fn with_standalone_server() {
+    let disable_server = std::env::var("HTTPMOCK_TESTS_DISABLE_SIMULATED_STANDALONE_SERVER")
+        .unwrap_or_else(|_| "0".to_string());
+
+    if disable_server == "1" {
+        log::info!("Skipping creating a simulated mock server.");
+        return;
+    }
+
+    let mut started = SERVER_STARTED.lock().unwrap();
+    if !*started {
+        thread::spawn(move || {
+            let srv: HttpMockServer = HttpMockServerBuilder::new()
+                .port(5050)
+                .build()
+                .expect("cannot create mock server");
+
+            let mut runtime = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .unwrap();
+            LocalSet::new().block_on(&mut runtime, srv.start())
+        });
+    }
+    *started = true
 }
 
-lazy_static! {
-    static ref STANDALONE_SERVER: Mutex<JoinHandle<Result<(), String>>> = Mutex::new(spawn(|| {
-        let srv =
-            start_standalone_server(5000, false, None, false, usize::MAX, std::future::pending());
-        let mut runtime = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .unwrap();
-        LocalSet::new().block_on(&mut runtime, srv)
-    }));
-}
+static SERVER_STARTED: Mutex<bool> = Mutex::new(false);

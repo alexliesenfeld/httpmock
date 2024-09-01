@@ -1,5 +1,6 @@
 use httpmock::prelude::*;
-use isahc::{prelude::*, Request};
+use regex::Regex;
+use reqwest::blocking::Client;
 
 #[test]
 fn body_test() {
@@ -10,15 +11,16 @@ fn body_test() {
         when.method(POST)
             .path("/books")
             .body("The Fellowship of the Ring")
-            .body_contains("Ring")
+            .body_includes("Ring")
             .body_matches(Regex::new("Fellowship").unwrap());
         then.status(201).body("The Lord of the Rings");
     });
 
-    // Act: Send the request and deserialize the response to JSON
-    let response = Request::post(&format!("http://{}/books", server.address()))
+    // Act: Send the request
+    let client = Client::new();
+    let response = client
+        .post(&format!("http://{}/books", server.address()))
         .body("The Fellowship of the Ring")
-        .unwrap()
         .send()
         .unwrap();
 

@@ -2,7 +2,7 @@
 <h1>httpmock</h1>
 </div>
 
-<p align="center">HTTP mocking library for Rust.</p>
+<p align="center">Simple yet powerful HTTP mocking library for Rust</p>
 <div align="center">
 
 [![Build](https://github.com/alexliesenfeld/httpmock/actions/workflows/build.yml/badge.svg)](https://github.com/alexliesenfeld/httpmock/actions/workflows/build.yml)
@@ -10,11 +10,16 @@
 [![crates.io](https://img.shields.io/crates/d/httpmock.svg)](https://crates.io/crates/httpmock)
 [![Mentioned in Awesome](https://awesome.re/badge.svg)](https://github.com/rust-unofficial/awesome-rust#testing)
 [![Rust](https://img.shields.io/badge/rust-1.70%2B-blue.svg?maxAge=3600)](https://github.com/rust-lang/rust/blob/master/RELEASES.md#version-1700-2023-06-01)
+[![Discord](https://img.shields.io/badge/Chat-Discord-%235865F2.svg)](https://discord.gg/QrjhRh7A)
 
 </div>
 
 <p align="center">
-    <a href="https://docs.rs/httpmock/">Documentation</a>
+    <a href="https://alexliesenfeld.github.io/httpmock/">Documentation</a>
+    ·
+    <a href="https://docs.rs/httpmock/">API Reference</a>
+    ·
+    <a href="https://discord.gg/QrjhRh7A">Chat</a>
     ·
     <a href="https://crates.io/crates/httpmock">Crate</a>
     ·
@@ -32,13 +37,16 @@
 
 * Simple, expressive, fluent API.
 * Many built-in helpers for easy request matching ([Regex](https://docs.rs/regex/), JSON, [serde](https://crates.io/crates/serde), cookies, and more).
-* Parallel test execution.
-* Extensible request matching.
-* Fully asynchronous core with synchronous and asynchronous APIs.
-* [Advanced verification and debugging support](https://alexliesenfeld.github.io/posts/mocking-http--services-in-rust/#creating-mocks) (including diff generation between actual and expected HTTP request values)
+* Record and Playback
+* Forward and Proxy Mode
+* HTTPS support
 * Fault and network delay simulation.
-* Support for [Regex](https://docs.rs/regex/) matching, JSON, [serde](https://crates.io/crates/serde), cookies, and more.
+* Custom request matchers.
 * Standalone mode with an accompanying [Docker image](https://hub.docker.com/r/alexliesenfeld/httpmock).
+* Helpful error messages
+* [Advanced verification and debugging support](https://alexliesenfeld.github.io/posts/mocking-http--services-in-rust/#creating-mocks) (including diff generation between actual and expected HTTP request values)
+* Parallel test execution.
+* Fully asynchronous core with synchronous and asynchronous APIs.
 * Support for [mock configuration using YAML files](https://github.com/alexliesenfeld/httpmock/tree/master#file-based-mock-specification).
 
 ## Getting Started
@@ -47,7 +55,7 @@ Add `httpmock` to `Cargo.toml`:
 
 ```toml
 [dev-dependencies]
-httpmock = "0.7.0"
+httpmock = "0.8.0-alpha.1"
 ```
 
 You can then use `httpmock` as follows:
@@ -83,32 +91,39 @@ The above example will spin up a lightweight HTTP mock server and configure it t
 to path `/translate` with query parameter `word=hello`. The corresponding HTTP response will contain the text body
 `Привет`.
 
-In case the request fails, `httpmock` would show you a detailed error description including a diff between the 
-expected and the actual HTTP request:
+When the specified expectations do not match the received request, `httpmock` provides a detailed error description, 
+including a diff that shows the differences between the expected and actual HTTP requests. Example:
 
-![colored-diff.png](https://raw.githubusercontent.com/alexliesenfeld/httpmock/master/docs/diff.png)
+```bash
+0 of 1 expected requests matched the mock specification.
+Here is a comparison with the most similar unmatched request (request number 1):
+
+------------------------------------------------------------
+1 : Query Parameter Mismatch
+------------------------------------------------------------
+Expected:
+    key    [equals]  word
+    value  [equals]  hello-rustaceans
+
+Received (most similar query parameter):
+    word=hello
+
+All received query parameter values:
+    1. word=hello
+
+Matcher:  query_param
+Docs:     https://docs.rs/httpmock/0.8.0/httpmock/struct.When.html#method.query_param
+```
 
 # Usage
 
-See the [reference docs](https://docs.rs/httpmock/) for detailed API documentation.
+See the [official documentation](http://alexliesenfeld.github.io/httpmock) for detailed API documentation.
 
 ## Examples
 
 You can find examples in the
 [`httpmock` test directory](https://github.com/alexliesenfeld/httpmock/blob/master/tests/).
-The [reference docs](https://docs.rs/httpmock/) also contain _**a lot**_ of examples. There is an [online tutorial](https://alexliesenfeld.com/mocking-http-services-in-rust) as well.
-
-## Standalone Mock Server
-
-You can use `httpmock` to run a standalone mock server that is executed in a separate process. There is a
-[Docker image](https://hub.docker.com/r/alexliesenfeld/httpmock) available at Dockerhub to get started quickly.
-
-The standalone mode allows you to mock HTTP based APIs for many API clients, not only the ones
-inside your Rust tests, but also completely different programs running on remote hosts.
-This is especially useful if you want to use `httpmock` in system or end-to-end tests that require mocked services
-(such as REST APIs, data stores, authentication providers, etc.).
-
-Please refer to [the docs](https://docs.rs/httpmock/0.5.8/httpmock/#standalone-mode) for more information
+The [official documentation](http://alexliesenfeld.github.io/httpmock) and [reference docs](https://docs.rs/httpmock/) also contain _**a lot**_ of examples. 
 
 ## License
 

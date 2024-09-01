@@ -1,0 +1,120 @@
+---
+title: Standalone Server
+description: Describes how to set up and use a standalone mock server.
+---
+import { Aside } from '@astrojs/starlight/components';
+
+You can use `httpmock` to run a standalone mock server in a separate process, such as a Docker container.
+This setup allows the mock server to be accessible to multiple applications, not just within your Rust tests.
+It’s particularly useful for system or end-to-end tests that require mocked services.
+
+By deploying `httpmock` as an independent service, it becomes available outside of Rust tests, providing
+fake responses for services that are unavailable for testing.
+
+Even when a mock server is running outside your Rust tests in a separate process, such as a Docker container,
+you can still use it within your Rust tests just like a local MockServer instance
+(see [Connecting to Standalone Mock Servers](#connecting-to-standalone-mock-servers)). This enables your Rust tests
+to set up remote, standalone servers for larger, federated end-to-end test scenarios, with your Rust tests
+acting as the test runner.
+
+With this feature, `httpmock` can be used as universal HTTP mocking tool that is useful in all stages
+of the development lifecycle.
+
+## Running Standalone Mock Servers
+
+### Docker Image
+Although you can build the mock server in standalone mode yourself, it is easiest to use the accompanying
+[Docker image](https://hub.docker.com/r/alexliesenfeld/httpmock) hosted on Docker Hub.
+
+You can run it as follows:
+```bash
+docker run alexliesenfeld/httpmock
+````
+
+#### Build Docker Image
+
+If you want to build the Docker image yourself, you can clone the `httpmock` GitHub repository and
+build it yourself using the Dockerfile that is contained in the project root directory:
+
+```bash
+# Clone the repository
+git clone git@github.com:alexliesenfeld/httpmock.git
+
+# Build the Docker image
+docker build -t my-httpmock-image .
+
+# Start a Docker container
+docker run my-httpmock-image
+````
+
+### Build Binary
+Alternatively, you can clone the GitHub repository and build a binary from the projects root directory
+and execute it as follows:
+
+```bash
+# Clone the repository
+git clone git@github.com:alexliesenfeld/httpmock.git
+
+# Build a standalone mock server binary
+cargo build --release --all-features
+
+# Execute the binary
+./target/release/httpmock
+```
+
+### Environment Variables
+
+Please refer to the [Environment Variables](/getting_started/fundamentals/#environment-variables) section for information what environment variables are available when
+using a standalone mock server.
+
+## Connecting to Standalone Mock Servers
+
+To be able to use the standalone server from within your tests, you need to change how an instance of the MockServer
+instance is created. Instead of using [`MockServer::start`](https://docs.rs/httpmock/latest/httpmock/struct.MockServer.html#method.start),
+you need to connect to a remote server by using one of the `connect` methods (such as
+[`MockServer::connect`](https://docs.rs/httpmock/latest/httpmock/struct.MockServer.html#method.connect) or
+[`MockServer::connect_from_env`](https://docs.rs/httpmock/latest/httpmock/struct.MockServer.html#method.connect_from_env)).
+Note: These are only available with the remote feature enabled.
+
+## Sequential Test Execution
+
+To prevent interference with other tests, only one test function can use the remote server at the same time.
+This means that test functions may be blocked when connecting to the remote server until it becomes free again.
+This is in contrast to tests that use a local mock server where parallel test execution is possible, because
+each test uses its own mock server.
+
+<Aside type="caution" title="Note">
+    Sequential execution is only enforced on a per-process basis. This means that if multiple test runs or
+    applications use the remote server simultaneously, interference may still occur.
+</Aside>
+
+## Usage Without Rust
+
+You can use a standalone mock server independently, without needing Rust to configure mock behavior. `httpmock` allows
+you to define mocks using YAML files, which follow a similar when/then pattern as the Rust API. Here's an example
+that defines two mocks (mock definitions are separated using the triple dash separator):
+
+```yaml
+when:
+  method: GET
+  path: /static-mock/examples/simple
+then:
+  status: 200
+  json_body: '{ "response" : "hello" }'
+---
+when:
+  method: POST
+  path: /static-mock/examples/submit
+then:
+  status: 201
+  json_body: '{ "status" : "created" }'
+```
+
+<Aside type="note" title="Note">
+    Defining mocks with YAML files is straightforward because the field names directly match the corresponding
+    methods in the Rust API, found in the [`When`](https://docs.rs/httpmock/latest/httpmock/struct.When.html) or
+    [`Then`](https://docs.rs/httpmock/latest/httpmock/struct.Then.html) data structures.
+</Aside>
+
+Please refer to [this example file](https://github.com/alexliesenfeld/httpmock/blob/master/tests/resources/static_yaml_mock.yaml),
+which includes many of the usable fields.

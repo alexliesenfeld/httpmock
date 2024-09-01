@@ -1,0 +1,25 @@
+{
+  "name": "tutorial",
+  "type": "module",
+  "version": "0.0.1",
+  "scripts": {
+    "dev": "astro dev",
+    "start": "astro dev",
+    "build": "npm run generate-docs && astro check && astro build",
+    "preview": "astro preview",
+    "astro": "astro",
+    "generate-when-method-docs" : "rm -rf src/content/docs/matching_requests && mkdir -p src/content/docs/matching_requests && node tools/generate-docs.cjs generated/docs.json ./templates/matching_requests src/content/docs/matching_requests",
+    "generate-then-method-docs" : "rm -rf src/content/docs/mocking_responses && mkdir -p src/content/docs/mocking_responses && node tools/generate-docs.cjs generated/docs.json ./templates/mocking_responses src/content/docs/mocking_responses",
+    "generate-docs": "npm run generate-when-method-docs && npm run generate-then-method-docs"
+  },
+  "dependencies": {
+    "@astrojs/check": "^0.5.10",
+    "@astrojs/starlight": "^0.21.5",
+    "astro": "^4.3.5",
+    "sharp": "^0.32.5",
+    "typescript": "^5.4.4"
+  },
+  "devDependencies": {
+    "handlebars": "^4.7.8"
+  }
+}

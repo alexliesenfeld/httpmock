@@ -1,27 +1,15 @@
-# ================================================================================
-# Builder
-# ================================================================================
+# First stage: build the application
 FROM rust:1.74 as builder
-WORKDIR /usr/src/httpmock
 
-COPY Cargo.toml .
-
-COPY src/ ./src/
-
-RUN cargo install --features="standalone" --path .
-
-# ================================================================================
-# Runner
-# ================================================================================
-FROM debian:bullseye-slim
-RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
-COPY --from=builder /usr/local/cargo/bin/httpmock /usr/local/bin/httpmock
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 # Log level (refer to env_logger crate for more information)
 ENV RUST_LOG httpmock=info
 
 # The TCP port on which the mock server will listen to.
-ENV HTTPMOCK_PORT 5000
+ENV HTTPMOCK_PORT 5050
 
 # Container internal directory path that contains file bases mock specs (YAML-fies).
 # ENV HTTPMOCK_MOCK_FILES_DIR /mocks
@@ -31,6 +19,16 @@ ENV HTTPMOCK_PORT 5000
 
 # Request history limit.
 ENV HTTPMOCK_REQUEST_HISTORY_LIMIT 100
+
+WORKDIR /httpmock
+
+COPY Cargo.toml .
+# COPY Cargo.lock .
+
+COPY src/ ./src/
+COPY certs/ ./certs/
+
+RUN cargo install --all-features --path .
 
 ENTRYPOINT ["httpmock", "--expose"]
 

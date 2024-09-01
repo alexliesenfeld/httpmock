@@ -1,6 +1,4 @@
 use httpmock::prelude::*;
-use isahc::get as http_get;
-use ureq::get as httpget;
 
 #[test]
 fn url_param_matching_test() {
@@ -13,8 +11,8 @@ fn url_param_matching_test() {
         then.status(200);
     });
 
-    // Act: Send the request and deserialize the response to JSON
-    http_get(server.url("/search?query=Metallica")).unwrap();
+    // Act: Send the request using the fully qualified path
+    reqwest::blocking::get(&server.url("/search?query=Metallica")).unwrap();
 
     // Assert
     m.assert();
@@ -31,8 +29,8 @@ fn url_param_urlencoded_matching_test() {
         then.status(200);
     });
 
-    // Act: Send the request
-    http_get(server.url("/search?query=Mot%C3%B6rhead")).unwrap();
+    // Act: Send the request using the fully qualified path
+    reqwest::blocking::get(&server.url("/search?query=Mot%C3%B6rhead")).unwrap();
 
     // Assert
     m.assert();
@@ -49,10 +47,8 @@ fn url_param_unencoded_matching_test() {
         then.status(200);
     });
 
-    // Act: Send the request
-    httpget(&server.url("/search?query=Motörhead"))
-        .send_string("")
-        .unwrap();
+    // Act: Send the request using the fully qualified path
+    reqwest::blocking::get(&server.url("/search?query=Motörhead")).unwrap();
 
     // Assert
     m.assert();
@@ -68,10 +64,8 @@ fn url_param_encoding_issue_56() {
         then.status(200);
     });
 
-    // Act: Send the request
-    httpget(&server.url("/search?query=Metallica+is+cool"))
-        .send_string("")
-        .unwrap();
+    // Act: Send the request using the fully qualified path
+    reqwest::blocking::get(&server.url("/search?query=Metallica+is+cool")).unwrap();
 
     // Assert
     m.assert();
