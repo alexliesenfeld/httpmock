@@ -77,14 +77,14 @@
 //!
 //! # Usage
 //!
-//! See the [official documentation](http://alexliesenfeld.github.io/httpmock) a for detailed
+//! See the [official website](http://alexliesenfeld.github.io/httpmock) a for detailed
 //! API documentation.
 //!
 //! ## Examples
 //!
 //! You can find examples in the
 //! [`httpmock` test directory](https://github.com/alexliesenfeld/httpmock/blob/master/tests/).
-//! The [official documentation](http://alexliesenfeld.github.io/httpmock) and [reference docs](https://docs.rs/httpmock/)
+//! The [official website](http://alexliesenfeld.github.io/httpmock) and [reference docs](https://docs.rs/httpmock/)
 //! also contain _**a lot**_ of examples.
 //!
 //! ## License

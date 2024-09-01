@@ -15,7 +15,7 @@
 </div>
 
 <p align="center">
-    <a href="https://alexliesenfeld.github.io/httpmock/">Documentation</a>
+    <a href="https://alexliesenfeld.github.io/httpmock/">Website</a>
     ·
     <a href="https://docs.rs/httpmock/">API Reference</a>
     ·
@@ -117,13 +117,13 @@ Docs:     https://docs.rs/httpmock/0.8.0-alpha.1/httpmock/struct.When.html#metho
 
 # Usage
 
-See the [official documentation](http://alexliesenfeld.github.io/httpmock) for detailed API documentation.
+See the [official website](http://alexliesenfeld.github.io/httpmock) for detailed API documentation.
 
 ## Examples
 
 You can find examples in the
 [`httpmock` test directory](https://github.com/alexliesenfeld/httpmock/blob/master/tests/).
-The [official documentation](http://alexliesenfeld.github.io/httpmock) and [reference docs](https://docs.rs/httpmock/) also contain _**a lot**_ of examples. 
+The [official website](http://alexliesenfeld.github.io/httpmock) and [reference docs](https://docs.rs/httpmock/) also contain _**a lot**_ of examples. 
 
 ## License
 
