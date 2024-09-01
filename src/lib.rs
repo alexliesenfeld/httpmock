@@ -2,7 +2,7 @@
 //! HTTP mocking library that allows you to simulate responses from HTTP based services.
 //!
 //! # Features
-//! * Simulates responses from HTTP services
+//! * Mocks responses from HTTP services
 //! * Simple, expressive, fluent API.
 //! * Many built-in helpers for easy request matching ([Regex](https://docs.rs/regex/), JSON, [serde](https://crates.io/crates/serde), cookies, and more).
 //! * Record and Playback
