@@ -72,7 +72,7 @@
 //!     1. word=hello
 //!
 //! Matcher:  query_param
-//! Docs:     https://docs.rs/httpmock/0.8.0/httpmock/struct.When.html#method.query_param
+//! Docs:     https://docs.rs/httpmock/0.8.0-alpha.1/httpmock/struct.When.html#method.query_param
 //! ```
 //!
 //! # Usage
