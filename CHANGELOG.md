@@ -10,6 +10,7 @@
 - [When::x_www_form_urlencoded_tuple](https://docs.rs/httpmock/0.7.0/httpmock/struct.When.html#method.x_www_form_urlencoded) was renamed to `form_urlencoded_tuple`.
 - [When::x_www_form_urlencoded_key_exists](https://docs.rs/httpmock/0.7.0/httpmock/struct.When.html#method.x_www_form_urlencoded) was renamed to `form_urlencoded_key_exists`.
 - Error message output has been changed for better readability (e.g., when calling `Mock::assert`).
+- Custom matcher function `When::matches` has been renamed to `When::is_true`.
 
 #### Improvements
 - Record and Playback mode was added
