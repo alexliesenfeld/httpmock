@@ -662,6 +662,7 @@ pub mod request_value {
         )
     }
 
+    #[cfg(feature = "cookies")]
     #[inline]
     pub fn cookies(req: &HttpMockRequest) -> Option<Vec<(String, Option<String>)>> {
         Some(
