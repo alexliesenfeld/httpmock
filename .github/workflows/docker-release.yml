@@ -9,6 +9,10 @@ on:
         description: 'latest'
         required: false
         default: 'true'
+      push:
+        description: 'push'
+        required: false
+        default: 'true'
 
 name: Docker Release
 
@@ -31,14 +35,14 @@ jobs:
         if: github.event.inputs.latest != 'true'
         with:
           context: .
-          push: false
+          push: ${{ github.event.inputs.push }}
           tags: alexliesenfeld/httpmock:${{ github.event.inputs.version }}
       - name: Build and push (provided version + latest)
         uses: docker/build-push-action@v4
         if: github.event.inputs.latest == 'true'
         with:
           context: .
-          push: false
+          push: ${{ github.event.inputs.push }}
           tags: |
             alexliesenfeld/httpmock:${{ github.event.inputs.version }},
             alexliesenfeld/httpmock:latest

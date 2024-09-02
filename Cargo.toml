@@ -73,7 +73,7 @@ proxy = ["remote-https", "hyper-util/client-legacy", "hyper-util/http2", "hyper-
 https = ["rustls", "rcgen", "tokio-rustls", "rustls-pemfile", "rustls/ring", "tls-detect"] # enables httpmock server support for TLS/HTTPS
 http2 = ["hyper/http2", "hyper-util/http2"] # enables httpmocks server support for HTTP2
 record = ["proxy", "serde_yaml"]
-experimental = [] # marker feature for experimental features
+experimental = [] # marker for experimental features
 
 [[bin]]
 name = "httpmock"

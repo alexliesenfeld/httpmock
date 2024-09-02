@@ -14,7 +14,7 @@ export default defineConfig({
                 replacesTitle: true,
             },
             social: {
-                github: 'https://github.com/withastro/starlight',
+                github: 'https://github.com/alexliesenfeld/httpmock',
                 discord: 'https://discord.gg/QrjhRh7A'
             },
             sidebar: [
