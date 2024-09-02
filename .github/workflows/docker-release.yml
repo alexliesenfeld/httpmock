@@ -12,7 +12,7 @@ on:
       push:
         description: 'push'
         required: false
-        default: 'true'
+        default: 'false'
 
 name: Docker Release
 
