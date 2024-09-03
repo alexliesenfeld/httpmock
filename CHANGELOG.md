@@ -1,6 +1,10 @@
 # Changelog
 
-## Version 0.8.0-aloha.1
+## Version 0.8.0-alpha.2
+
+- Building without default features does not result in compilation error. Fixed in [#111](https://github.com/alexliesenfeld/httpmock/pull/112) by [@jayvdb](https://github.com/jayvdb). 
+
+## Version 0.8.0-alpha.1
 
 ### BREAKING CHANGES
 - A new [MockServer::reset](https://docs.rs/httpmock/latest/httpmock/struct.MockServer.html#method.reset) method was added that resets a mock server. Thanks for providing the [pull request](https://github.com/alexliesenfeld/httpmock/pull/100) for this feature, [@dax](https://github.com/dax).
