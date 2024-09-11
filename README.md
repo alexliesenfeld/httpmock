@@ -10,7 +10,6 @@
 [![crates.io](https://img.shields.io/crates/d/httpmock.svg)](https://crates.io/crates/httpmock)
 [![Mentioned in Awesome](https://awesome.re/badge.svg)](https://github.com/rust-unofficial/awesome-rust#testing)
 [![Rust](https://img.shields.io/badge/rust-1.70%2B-blue.svg?maxAge=3600)](https://github.com/rust-lang/rust/blob/master/RELEASES.md#version-1700-2023-06-01)
-[![Discord](https://img.shields.io/badge/Chat-Discord-%235865F2.svg)](https://discord.gg/QrjhRh7A)
 
 </div>
 

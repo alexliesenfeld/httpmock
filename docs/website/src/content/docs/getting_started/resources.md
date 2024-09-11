@@ -10,7 +10,6 @@ To learn more about this project, please refer to the following resources:
 - GitHub Repository: https://github.com/alexliesenfeld/httpmock
 - Official Website: https://httpmock.rs
 - Changelog: https://github.com/alexliesenfeld/httpmock/blob/master/CHANGELOG.md
-- Discord Server: https://discord.gg/QrjhRh7A
 
 ## Getting Help
 
