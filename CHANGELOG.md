@@ -20,7 +20,7 @@
 - Record and Playback mode was added
 - Many new matchers functions have been added
 - Proxy Mode was added
-- Website docs have been created (see https://alexliesenfeld.github.io/httpmock/)
+- Website docs have been created (see https://httpmock.rs)
 - HTTPS support added
 - Internal implementation was entirely rewritten
 

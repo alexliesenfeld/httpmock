@@ -11,3 +11,23 @@ servers. You can adjust this limit by setting the `HTTPMOCK_MAX_SERVERS` environ
 When the `httpmock` server receives a request that matches multiple mocks, they are evaluated in
 reverse order of their definition. This means the most recently defined mock takes precedence and will be used.
 
+### How does Proxy Mode work?
+
+A mock server acts as a "man-in-the-middle" (MITM) proxy. Here's how it works:
+
+* **Intercepting HTTPS Traffic**: When you configure your System Under Test to use mock server as a proxy,
+the mock server intercepts the HTTPS traffic. Normally, in a CONNECT tunnel, the traffic would be encrypted end-to-end. 
+However, a mock server performs a MITM attack (with your consent, of course) to decrypt this traffic.
+* **SSL/TLS Termination**: A mock server creates its own SSL/TLS connection with the client and another with
+the target server. When the client sends an HTTPS request, it is intercepted by the mock server.
+The mock server terminates the original SSL/TLS connection and establishes a new connection with the
+actual destination server.
+* **Certificate Authority (CA)**: To intercept and decrypt HTTPS traffic, mock server uses a self-signed
+or a custom Certificate Authority (CA). This CA certificate is used to generate SSL certificates on the
+fly for the destination servers. You need to configure the client (or system under test) to trust this CA,
+which allows the mock server to decrypt the traffic. The client sees the proxy server as the legitimate
+endpoint because it trusts the certificate issued by mock server.
+* **Request/Response Handling**:
+Once the traffic is decrypted, the mock server can read, modify, or log the HTTPS requests and responses.
+After processing the request, the mock server forwards it to the actual destination server, receives
+the response, and then re-encrypts it before sending it back to the client.

@@ -8,7 +8,7 @@ To learn more about this project, please refer to the following resources:
 - Community Forum: https://github.com/alexliesenfeld/httpmock/discussions
 - API Reference: https://docs.rs/httpmock/latest/httpmock/
 - GitHub Repository: https://github.com/alexliesenfeld/httpmock
-- Official Website: https://alexliesenfeld.github.io/httpmock
+- Official Website: https://httpmock.rs
 - Changelog: https://github.com/alexliesenfeld/httpmock/blob/master/CHANGELOG.md
 - Discord Server: https://discord.gg/QrjhRh7A
 
