@@ -9,6 +9,12 @@ use std::str::FromStr;
 #[cfg(feature = "remote")]
 pub use adapter::remote::RemoteMockServerAdapter;
 
+#[cfg(feature = "record")]
+pub use proxy::{Recording, RecordingRuleBuilder};
+
+#[cfg(feature = "proxy")]
+pub use proxy::{ForwardingRule, ForwardingRuleBuilder, ProxyRule, ProxyRuleBuilder};
+
 use crate::common;
 pub use mock::{Mock, MockExt};
 pub use server::MockServer;

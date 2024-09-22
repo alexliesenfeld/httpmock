@@ -1,4 +1,5 @@
 use httpmock::prelude::*;
+use httpmock::RecordingRuleBuilder;
 use reqwest::blocking::Client;
 
 #[cfg(feature = "record")]
@@ -63,7 +64,7 @@ fn record_with_proxy_test() {
 
     // Set up recording on the mock server to capture all proxied
     // requests and responses
-    let recording = server.record(|rule| {
+    let recording = server.record(|rule: RecordingRuleBuilder| {
         rule.filter(|when| {
             when.any_request(); // Record all requests
         });

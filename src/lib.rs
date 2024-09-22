@@ -112,10 +112,10 @@ pub mod common;
 pub mod server;
 
 #[cfg(feature = "record")]
-pub use common::data::RecordingRuleConfig;
+pub use api::{Recording, RecordingRuleBuilder};
 
 #[cfg(feature = "proxy")]
-pub use common::data::{ForwardingRuleConfig, ProxyRuleConfig};
+pub use api::{ForwardingRule, ForwardingRuleBuilder, ProxyRule, ProxyRuleBuilder};
 
 pub mod prelude {
     #[doc(no_inline)]
