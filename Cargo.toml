@@ -40,7 +40,7 @@ colored = { version = "2.1", optional = true }
 clap = { version = "4.5", features = ["derive", "env"], optional = true }
 env_logger = { version = "0.11", optional = true }
 serde_yaml = { version = "0.9", optional = true }
-async-std = { version = "1.12", features = ["attributes", "unstable"] }
+async-std = { version = "1.13", features = ["attributes", "unstable"] }
 headers = { version = "0.4", optional = true }
 
 ### TLS / HTTPS / PROXY
