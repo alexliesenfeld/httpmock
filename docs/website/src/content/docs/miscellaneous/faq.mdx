@@ -8,8 +8,8 @@ Yes, you can start multiple mock servers. However, `httpmock` uses a server pool
 servers. You can adjust this limit by setting the `HTTPMOCK_MAX_SERVERS` environment variable.
 
 ### In which order are mocks evaluated?
-When the `httpmock` server receives a request that matches multiple mocks, they are evaluated in
-reverse order of their definition. This means the most recently defined mock takes precedence and will be used.
+When the `httpmock` server receives a request that matches multiple mocks, they are evaluated in the order
+of their definition. This means the first defined mock takes precedence and will be used.
 
 ### How does Proxy Mode work?
 
