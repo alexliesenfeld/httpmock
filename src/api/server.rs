@@ -342,7 +342,12 @@ impl MockServer {
     /// // Start a local mock server for exclusive use by this test function.
     /// let server = httpmock::MockServer::start();
     ///
-    /// let expected_url = format!("http://127.0.0.1:{}", server.port());
+    /// // If the "https" feature is enabled, `server.base_url` below will generate a URL
+    /// // using the "https" scheme (e.g., https://127.0.0.1:34567). Otherwise, it will
+    /// // use "http" (e.g., http://127.0.0.1:34567).
+    /// let expected_scheme = if cfg!(feature = "https") { "https" } else { "http" };
+    ///
+    /// let expected_url = format!("{}://127.0.0.1:{}", expected_scheme, server.port());
     ///
     /// // Get the base URL of the MockServer.
     /// let base_url = server.base_url();

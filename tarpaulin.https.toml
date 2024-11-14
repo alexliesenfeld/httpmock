@@ -1,0 +1,242 @@
+[none]
+release = true
+
+[https]
+name = "https"
+features = "https"
+release = true
+
+[standalone.https]
+name = "standalone,https"
+features = "standalone,https"
+release = true
+
+[remote.https]
+name = "remote,https"
+features = "remote,https"
+release = true
+
+[standalone.remote.https]
+name = "standalone,remote,https"
+features = "standalone,remote,https"
+release = true
+
+[proxy.https]
+name = "proxy,https"
+features = "proxy,https"
+release = true
+
+[standalone.proxy.https]
+name = "standalone,proxy,https"
+features = "standalone,proxy,https"
+release = true
+
+[remote.proxy.https]
+name = "remote,proxy,https"
+features = "remote,proxy,https"
+release = true
+
+[standalone.remote.proxy.https]
+name = "standalone,remote,proxy,https"
+features = "standalone,remote,proxy,https"
+release = true
+
+[record.https]
+name = "record,https"
+features = "record,https"
+release = true
+
+[standalone.record.https]
+name = "standalone,record,https"
+features = "standalone,record,https"
+release = true
+
+[remote.record.https]
+name = "remote,record,https"
+features = "remote,record,https"
+release = true
+
+[standalone.remote.record.https]
+name = "standalone,remote,record,https"
+features = "standalone,remote,record,https"
+release = true
+
+[proxy.record.https]
+name = "proxy,record,https"
+features = "proxy,record,https"
+release = true
+
+[standalone.proxy.record.https]
+name = "standalone,proxy,record,https"
+features = "standalone,proxy,record,https"
+release = true
+
+[remote.proxy.record.https]
+name = "remote,proxy,record,https"
+features = "remote,proxy,record,https"
+release = true
+
+[standalone.remote.proxy.record.https]
+name = "standalone,remote,proxy,record,https"
+features = "standalone,remote,proxy,record,https,standalone,remote,proxy,https"
+release = true
+
+[http2]
+name = "http2"
+features = "http2"
+release = true
+
+[standalone.http2]
+name = "standalone,http2"
+features = "standalone,http2"
+release = true
+
+[remote.http2]
+name = "remote,http2"
+features = "remote,http2"
+release = true
+
+[standalone.remote.http2]
+name = "standalone,remote,http2"
+features = "standalone,remote,http2"
+release = true
+
+[proxy.http2]
+name = "proxy,http2"
+features = "proxy,http2"
+release = true
+
+[standalone.proxy.http2]
+name = "standalone,proxy,http2"
+features = "standalone,proxy,http2"
+release = true
+
+[remote.proxy.http2]
+name = "remote,proxy,http2"
+features = "remote,proxy,http2"
+release = true
+
+[standalone.remote.proxy.http2]
+name = "standalone,remote,proxy,http2"
+features = "standalone,remote,proxy,http2"
+release = true
+
+[record.http2]
+name = "record,http2"
+features = "record,http2"
+release = true
+
+[standalone.record.http2]
+name = "standalone,record,http2"
+features = "standalone,record,http2"
+release = true
+
+[remote.record.http2]
+name = "remote,record,http2"
+features = "remote,record,http2"
+release = true
+
+[standalone.remote.record.http2]
+name = "standalone,remote,record,http2"
+features = "standalone,remote,record,http2"
+release = true
+
+[proxy.record.http2]
+name = "proxy,record,http2"
+features = "proxy,record,http2"
+release = true
+
+[standalone.proxy.record.http2]
+name = "standalone,proxy,record,http2"
+features = "standalone,proxy,record,http2"
+release = true
+
+[remote.proxy.record.http2]
+name = "remote,proxy,record,http2"
+features = "remote,proxy,record,http2"
+release = true
+
+[standalone.remote.proxy.record.http2]
+name = "standalone,remote,proxy,record,http2"
+features = "standalone,remote,proxy,record,http2"
+release = true
+
+[https.http2]
+name = "https,http2"
+features = "https,http2"
+release = true
+
+[standalone.https.http2]
+name = "standalone,https,http2"
+features = "standalone,https,http2"
+release = true
+
+[remote.https.http2]
+name = "remote,https,http2"
+features = "remote,https,http2"
+release = true
+
+[standalone.remote.https.http2]
+name = "standalone,remote,https,http2"
+features = "standalone,remote,https,http2"
+release = true
+
+[proxy.https.http2]
+name = "proxy,https,http2"
+features = "proxy,https,http2"
+release = true
+
+[standalone.proxy.https.http2]
+name = "standalone,proxy,https,http2"
+features = "standalone,proxy,https,http2"
+release = true
+
+[remote.proxy.https.http2]
+name = "remote,proxy,https,http2"
+features = "remote,proxy,https,http2"
+release = true
+
+[standalone.remote.proxy.https.http2]
+name = "standalone,remote,proxy,https,http2"
+features = "standalone,remote,proxy,https,http2"
+release = true
+
+[record.https.http2]
+name = "record,https,http2"
+features = "record,https,http2"
+release = true
+
+[standalone.record.https.http2]
+name = "standalone,record,https,http2"
+features = "standalone,record,https,http2"
+release = true
+
+[remote.record.https.http2]
+name = "remote,record,https,http2"
+features = "remote,record,https,http2"
+release = true
+
+[standalone.remote.record.https.http2]
+name = "standalone,remote,record,https,http2"
+features = "standalone,remote,record,https,http2"
+release = true
+
+[proxy.record.https.http2]
+name = "proxy,record,https,http2"
+features = "proxy,record,https,http2"
+release = true
+
+[standalone.proxy.record.https.http2]
+name = "standalone,proxy,record,https,http2"
+features = "standalone,proxy,record,https,http2"
+release = true
+
+[remote.proxy.record.https.http2]
+name = "remote,proxy,record,https,http2"
+features = "remote,proxy,record,https,http2"
+release = true
+
+[standalone.remote.proxy.record.https.http2]
+name = "standalone,remote,proxy,record,https,http2"
+features = "standalone,remote,proxy,record,https,http2"
+release = true

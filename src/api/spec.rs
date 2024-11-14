@@ -97,10 +97,15 @@ impl When {
     /// // Start a new mock server
     /// let server = MockServer::start();
     ///
+    /// // If the "https" feature is enabled, `server.url` below will generate a URL using
+    /// // the "https" scheme (e.g., https://localhost:34567/test). Otherwise, it will
+    /// // use "http" (e.g., http://localhost:34567/test).
+    /// let expected_scheme = if cfg!(feature = "https") { "https" } else { "http" };
+    ///
     /// // Create a mock that only matches requests with the "http" scheme
     /// let mock = server.mock(|when, then| {
-    ///     when.scheme("http");  // Restrict to the "http" scheme
-    ///     then.status(200);     // Respond with status code 200 for all matched requests
+    ///     when.scheme(expected_scheme);  // Restrict to the "http" scheme
+    ///     then.status(200);              // Respond with status code 200 for all matched requests
     /// });
     ///
     /// // Make an "http" request to the server's URL to trigger the mock
@@ -152,8 +157,8 @@ impl When {
     ///
     /// // Create a mock that will only match requests that do not use the "https" scheme
     /// let mock = server.mock(|when, then| {
-    ///     when.scheme_not("https");  // Exclude the "https" scheme from matching
-    ///     then.status(200);          // Respond with status code 200 for all matched requests
+    ///     when.scheme_not("ftp");  // Exclude the "ftp" scheme from matching
+    ///     then.status(200);        // Respond with status code 200 for all matched requests
     /// });
     ///
     /// // Make a request to the server's URL with the "http" scheme to trigger the mock

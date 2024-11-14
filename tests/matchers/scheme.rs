@@ -3,12 +3,17 @@ use httpmock::MockServer;
 use reqwest::blocking::get;
 
 #[test]
-fn scheme_tests() {
+fn scheme_test() {
     // Arrange
     let server = MockServer::start();
 
+    #[cfg(feature = "https")]
+    let scheme = "https";
+    #[cfg(not(feature = "https"))]
+    let scheme = "http";
+
     let m = server.mock(|when, then| {
-        when.scheme("http");
+        when.scheme(scheme);
         then.status(200);
     });
 
@@ -22,13 +27,21 @@ fn scheme_tests() {
 
 #[test]
 fn scheme_failure() {
+    #[cfg(feature = "https")]
+    let expected_scheme = "http";
+    #[cfg(feature = "https")]
+    let actual_scheme = "https";
+    #[cfg(not(feature = "https"))]
+    let expected_scheme = "https";
+    #[cfg(not(feature = "https"))]
+    let actual_scheme = "http";
+
     expect_fails_with(
         || {
             // Arrange
             let server = MockServer::start();
-
             let m = server.mock(|when, then| {
-                when.scheme("https");
+                when.scheme(expected_scheme);
                 then.status(200);
             });
 
@@ -41,20 +54,25 @@ fn scheme_failure() {
             "Scheme Mismatch",
             "Expected",
             "scheme equals",
-            "https",
+            expected_scheme,
             "Received",
-            "http",
+            actual_scheme,
         ],
     )
 }
 
 #[test]
-fn scheme_not_tests() {
+fn scheme_not_test() {
     // Arrange
     let server = MockServer::start();
 
+    #[cfg(feature = "https")]
+    let scheme = "http";
+    #[cfg(not(feature = "https"))]
+    let scheme = "https";
+
     let m = server.mock(|when, then| {
-        when.scheme_not("https");
+        when.scheme_not(scheme);
         then.status(200);
     });
 
@@ -68,13 +86,22 @@ fn scheme_not_tests() {
 
 #[test]
 fn scheme_not_failure() {
+    #[cfg(feature = "https")]
+    let expected_scheme = "https";
+    #[cfg(feature = "https")]
+    let actual_scheme = "http";
+    #[cfg(not(feature = "https"))]
+    let expected_scheme = "http";
+    #[cfg(not(feature = "https"))]
+    let actual_scheme = "https";
+
     expect_fails_with(
         || {
             // Arrange
             let server = MockServer::start();
 
             let m = server.mock(|when, then| {
-                when.scheme_not("http");
+                when.scheme_not(expected_scheme);
                 then.status(200);
             });
 
@@ -87,9 +114,9 @@ fn scheme_not_failure() {
             "Scheme Mismatch",
             "Expected",
             "scheme not equal to",
-            "http",
+            expected_scheme,
             "Received",
-            "http",
+            actual_scheme,
         ],
     )
 }
