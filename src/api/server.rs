@@ -36,7 +36,7 @@ use crate::server::{state::HttpMockStateManager, HttpMockServerBuilder};
 
 use crate::Mock;
 use async_object_pool::Pool;
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use std::{
     cell::Cell,
     future::pending,
@@ -1364,31 +1364,33 @@ const LOCAL_SERVER_ADAPTER_GENERATOR: fn() -> Arc<dyn MockServerAdapter + Send +
     Arc::new(LocalMockServerAdapter::new(addr, state_manager))
 };
 
-lazy_static! {
-    static ref LOCAL_SERVER_POOL_REF: Arc<Pool<Arc<dyn MockServerAdapter + Send + Sync>>> = {
+static LOCAL_SERVER_POOL_REF: Lazy<Arc<Pool<Arc<dyn MockServerAdapter + Send + Sync>>>> =
+    Lazy::new(|| {
         let max_servers = read_env("HTTPMOCK_MAX_SERVERS", "25")
             .parse::<usize>()
             .expect("Cannot parse environment variable HTTPMOCK_MAX_SERVERS as an integer");
         Arc::new(Pool::new(max_servers))
-    };
-    static ref REMOTE_SERVER_POOL_REF: Arc<Pool<Arc<dyn MockServerAdapter + Send + Sync>>> =
-        Arc::new(Pool::new(1));
-}
+    });
+
+static REMOTE_SERVER_POOL_REF: Lazy<Arc<Pool<Arc<dyn MockServerAdapter + Send + Sync>>>> =
+    Lazy::new(|| Arc::new(Pool::new(1)));
 
 #[cfg(feature = "remote")]
-lazy_static! {
-    // TODO: REFACTOR to use a runtime agnostic HTTP client for remote access.
-    //  This solution does not require OpenSSL and less dependencies compared to
-    //  other HTTP clients (tested: isahc, surf). Curl seems to use OpenSSL by default,
-    //  so this is not an option. Optimally, the HTTP client uses rustls to avoid the
-    //  dependency on OpenSSL installed on the OS.
-    static ref REMOTE_SERVER_CLIENT: Arc<HttpMockHttpClient> = {
-         let max_workers = read_env("HTTPMOCK_HTTP_CLIENT_WORKER_THREADS", "1")
-            .parse::<usize>()
-            .expect("Cannot parse environment variable HTTPMOCK_HTTP_CLIENT_WORKER_THREADS as an integer");
-         let max_blocking_threads = read_env("HTTPMOCK_HTTP_CLIENT_MAX_BLOCKING_THREADS", "10")
-            .parse::<usize>()
-            .expect("Cannot parse environment variable HTTPMOCK_HTTP_CLIENT_MAX_BLOCKING_THREADS to an integer");
-        Arc::new(HttpMockHttpClient::new(Some(Arc::new(runtime::new(max_workers,max_blocking_threads).unwrap()))))
-    };
-}
+// TODO: REFACTOR to use a runtime agnostic HTTP client for remote access.
+//  This solution does not require OpenSSL and less dependencies compared to
+//  other HTTP clients (tested: isahc, surf). Curl seems to use OpenSSL by default,
+//  so this is not an option. Optimally, the HTTP client uses rustls to avoid the
+//  dependency on OpenSSL installed on the OS.
+static REMOTE_SERVER_CLIENT: Lazy<Arc<HttpMockHttpClient>> = Lazy::new(|| {
+    let max_workers = read_env("HTTPMOCK_HTTP_CLIENT_WORKER_THREADS", "1")
+        .parse::<usize>()
+        .expect(
+            "Cannot parse environment variable HTTPMOCK_HTTP_CLIENT_WORKER_THREADS as an integer",
+        );
+    let max_blocking_threads = read_env("HTTPMOCK_HTTP_CLIENT_MAX_BLOCKING_THREADS", "10")
+        .parse::<usize>()
+        .expect("Cannot parse environment variable HTTPMOCK_HTTP_CLIENT_MAX_BLOCKING_THREADS to an integer");
+    Arc::new(HttpMockHttpClient::new(Some(Arc::new(
+        runtime::new(max_workers, max_blocking_threads).unwrap(),
+    ))))
+});
