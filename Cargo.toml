@@ -9,6 +9,7 @@ keywords = ["http", "mock", "test"]
 categories = ["development-tools::testing"]
 license = "MIT"
 repository = "https://github.com/alexliesenfeld/httpmock"
+rust-version = "1.74.1"
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
@@ -54,8 +55,6 @@ futures-timer = "3"
 
 [dev-dependencies]
 env_logger = "0.11"
-tokio-test = "0.4"
-quote = "1.0"
 actix-rt = "2.9"
 colored = "2.1"
 reqwest = { version = "0.12", features = ["blocking", "cookies", "rustls-tls", "rustls-tls-native-roots"] }
