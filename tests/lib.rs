@@ -1,5 +1,3 @@
-extern crate lazy_static;
-
 use httpmock::server::{HttpMockServer, HttpMockServerBuilder};
 use std::{sync::Mutex, thread};
 use tokio::task::LocalSet;
