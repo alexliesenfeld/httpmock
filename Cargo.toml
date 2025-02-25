@@ -34,9 +34,9 @@ bytes = { version = "1", features = ["serde"] }
 hyper = { version = "1", features = ["server", "http1", "client"] }
 hyper-util = { version = "0.1", features = ["tokio", "server", "http1", "server-auto"] }
 http-body-util = "0.1"
-tokio = { version = "1.40", features = ["sync", "macros", "rt-multi-thread", "signal"] }
+tokio = { version = "1.43", features = ["sync", "macros", "rt-multi-thread", "signal"] }
 tabwriter = "1"
-colored = { version = "2", optional = true }
+colored = { version = "3", optional = true }
 clap = { version = "4", features = ["derive", "env"], optional = true }
 env_logger = { version = "0.11", optional = true }
 serde_yaml = { version = "0.9", optional = true }
