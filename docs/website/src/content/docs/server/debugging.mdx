@@ -29,7 +29,7 @@ fn getting_started_testxx() {
             .query_param("word", "hello-rustaceans");
         then.status(200)
             .header("content-type", "text/html; charset=UTF-8")
-            .body("Привет");
+            .body("hola");
     });
 
     // Send an HTTP request to the mock server. This simulates your code.

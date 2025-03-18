@@ -71,7 +71,7 @@ let mock = server.mock(|when, then| {
         .query_param("word", "hello");
     then.status(200)
         .header("content-type", "text/html; charset=UTF-8")
-        .body("Привет");
+        .body("hola");
 });
 
 // Send an HTTP request to the mock server. This simulates your code.
@@ -87,7 +87,7 @@ assert_eq!(response.status(), 200);
 
 The above example will spin up a lightweight HTTP mock server and configure it to respond to all `GET` requests
 to path `/translate` with query parameter `word=hello`. The corresponding HTTP response will contain the text body
-`Привет`.
+`hola`.
 
 When the specified expectations do not match the received request, `httpmock` provides a detailed error description, 
 including a diff that shows the differences between the expected and actual HTTP requests. Example:

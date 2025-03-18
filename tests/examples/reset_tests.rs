@@ -10,7 +10,7 @@ async fn reset_server_test() {
             .query_param("word", "hello");
         then.status(500)
             .header("content-type", "text/html; charset=UTF-8")
-            .body("Привет");
+            .body("hola");
     });
 
     server.reset_async().await;
@@ -21,7 +21,7 @@ async fn reset_server_test() {
             .query_param("word", "hello");
         then.status(200)
             .header("content-type", "text/html; charset=UTF-8")
-            .body("Привет");
+            .body("hola");
     });
 
     let response = reqwest::get(&server.url("/translate?word=hello"))

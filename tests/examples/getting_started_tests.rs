@@ -12,7 +12,7 @@ fn getting_started_test() {
             .query_param("word", "hello");
         then.status(200)
             .header("content-type", "text/html; charset=UTF-8")
-            .body("Привет");
+            .body("hola");
     });
 
     // Send an HTTP request to the mock server. This simulates your code.
@@ -40,7 +40,7 @@ async fn async_getting_started_test() {
                 .query_param("word", "hello");
             then.status(200)
                 .header("content-type", "text/html; charset=UTF-8")
-                .body("Привет");
+                .body("hola");
         })
         .await;
 
