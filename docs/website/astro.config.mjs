@@ -57,7 +57,6 @@ export default defineConfig({
                 },
                 {
                     label: 'Record and Playback',
-                    badge: 'New',
                     items: [
                         {label: 'Recording', link: '/record-and-playback/recording/'},
                         {label: 'Playback', link: '/record-and-playback/playback/'},
@@ -67,7 +66,7 @@ export default defineConfig({
                     label: 'Server',
                     items: [
                         {label: 'Standalone Server', link: '/server/standalone/'},
-                        {label: 'HTTPS', link: '/server/https/', badge: 'New'},
+                        {label: 'HTTPS', link: '/server/https/'},
                         {label: 'Debugging', link: '/server/debugging/'},
                     ],
                 },
