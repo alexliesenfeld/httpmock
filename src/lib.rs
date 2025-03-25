@@ -52,7 +52,7 @@
 //! assert_eq!(response.status(), 200);
 //! ```
 //!
-//! When the specified expectations do not match the received request, `httpmock` provides a detailed error description,
+//! When the specified expectations do not match the received request, `mock.assert()` fails the test with a detailed error description,
 //! including a diff that shows the differences between the expected and actual HTTP requests. Example:
 //!
 //! ```bash

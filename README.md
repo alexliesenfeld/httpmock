@@ -89,7 +89,7 @@ The above example will spin up a lightweight HTTP mock server and configure it t
 to path `/translate` with query parameter `word=hello`. The corresponding HTTP response will contain the text body
 `hola`.
 
-When the specified expectations do not match the received request, `httpmock` provides a detailed error description, 
+When the specified expectations do not match the received request, `mock.assert()` fails the test with a detailed error description, 
 including a diff that shows the differences between the expected and actual HTTP requests. Example:
 
 ```bash
