@@ -1,8 +1,14 @@
 # Changelog
 
-## Version 0.8.0-alpha.2
+## Version 0.8.0-beta.1
+This release mainly contains internal improvements and bugfixes.
+The minimum required Rust version has been increased to 1.81.
+Apart from the updated MSRV, there are no breaking changes.
 
-- Building without default features does not result in compilation error. Fixed in [#111](https://github.com/alexliesenfeld/httpmock/pull/112) by [@jayvdb](https://github.com/jayvdb). 
+The following pull requests have been merged:
+- [#112](https://github.com/alexliesenfeld/httpmock/pull/112): "Fix building without cookies feature" by @jayvdb.
+- [#117](https://github.com/alexliesenfeld/httpmock/pull/117): "fix rustls crypto provider features" by @Taowyoo.
+- [#120](https://github.com/alexliesenfeld/httpmock/pull/120): "Refactoring and cleanup". THanks by @FalkWoldmann.
 
 ## Version 0.8.0-alpha.1
 
