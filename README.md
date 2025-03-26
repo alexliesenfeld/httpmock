@@ -53,7 +53,7 @@ Add `httpmock` to `Cargo.toml`:
 
 ```toml
 [dev-dependencies]
-httpmock = "0.8.0-alpha.1"
+httpmock = "0.8.0-beta.1"
 ```
 
 You can then use `httpmock` as follows:
@@ -110,7 +110,7 @@ All received query parameter values:
     1. word=hello
 
 Matcher:  query_param
-Docs:     https://docs.rs/httpmock/0.8.0-alpha.1/httpmock/struct.When.html#method.query_param
+Docs:     https://docs.rs/httpmock/0.8.0-beta.1/httpmock/struct.When.html#method.query_param
 ```
 
 # Usage
