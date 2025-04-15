@@ -142,12 +142,14 @@ impl<'a> GeneratingCertificateResolver {
             GenerateCertificateError(format!("Cannot create new host certificate parameters from CA certificate (host: {}: error: {:?})", hostname, err))
         })?;
 
-        let new_host_cert = params.signed_by(&key_pair, &ca_cert, &ca_key).map_err(|err| {
-            GenerateCertificateError(format!(
-                "Cannot generate new host certificate (host: {}: error: {:?})",
-                hostname, err
-            ))
-        })?;
+        let new_host_cert = params
+            .signed_by(&key_pair, &ca_cert, &ca_key)
+            .map_err(|err| {
+                GenerateCertificateError(format!(
+                    "Cannot generate new host certificate (host: {}: error: {:?})",
+                    hostname, err
+                ))
+            })?;
 
         let cert_pem = new_host_cert.pem();
 
