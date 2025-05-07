@@ -111,7 +111,7 @@ pub mod common;
 pub mod server;
 
 #[cfg(feature = "record")]
-pub use api::{Recording, RecordingRuleBuilder};
+pub use api::{RecordingID, RecordingRuleBuilder};
 
 #[cfg(feature = "proxy")]
 pub use api::{ForwardingRule, ForwardingRuleBuilder, ProxyRule, ProxyRuleBuilder};

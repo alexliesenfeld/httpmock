@@ -1,3 +1,5 @@
+#[cfg(feature = "record")]
+use httpmock::RecordingID;
 use httpmock::prelude::*;
 use reqwest::blocking::Client;
 
@@ -18,7 +20,7 @@ fn record_with_forwarding_test() {
         });
     });
 
-    let recording = recording_server.record(|rule| {
+    let recording_id = recording_server.record(|rule| {
         rule.record_response_delays(true)
             .record_request_headers(vec!["Accept", "Content-Type"])
             .filter(|when| {
@@ -34,7 +36,9 @@ fn record_with_forwarding_test() {
         .unwrap();
     assert_eq!(response.text().unwrap(), "Hi from fake GitHub!");
 
-    let target_path = recording.save("my_test_scenario").unwrap();
+    let target_path = recording_server
+        .record_save(&recording_id, "my_test_scenario")
+        .unwrap();
 
     let playback_server = MockServer::start();
 
@@ -63,7 +67,7 @@ fn record_with_proxy_test() {
 
     // Set up recording on the mock server to capture all proxied
     // requests and responses
-    let recording = server.record(|rule: RecordingRuleBuilder| {
+    let recording_id = server.record(|rule: RecordingRuleBuilder| {
         rule.filter(|when| {
             when.any_request(); // Record all requests
         });
@@ -84,8 +88,8 @@ fn record_with_proxy_test() {
     assert_eq!(response.text().unwrap(), "This is a mock response");
 
     // Save the recorded HTTP interactions to a file for future reference or testing
-    recording
-        .save("my_scenario_name")
+    server
+        .record_save(&recording_id, "my_scenario_name")
         .expect("could not save the recording");
 }
 // @example-end
@@ -107,7 +111,7 @@ fn record_github_api_with_forwarding_test() {
         });
     });
 
-    let recording = server.record(|rule| {
+    let recording_id = server.record(|rule| {
         rule
             // Specify which headers to record.
             // Only the headers listed here will be captured and stored
@@ -139,8 +143,8 @@ fn record_github_api_with_forwarding_test() {
 
     // Save the recording to
     // "target/httpmock/recordings/github-torvalds-scenario_<timestamp>.yaml".
-    recording
-        .save("github-torvalds-scenario")
+    server
+        .record_save(&recording_id, "github-torvalds-scenario")
         .expect("cannot store scenario on disk");
 }
 // @example-end
@@ -163,7 +167,7 @@ fn playback_github_api() {
     });
 
     // Set up recording to capture all forwarded requests and responses
-    let recording = server.record(|rule| {
+    let recording_id = server.record(|rule| {
         rule.filter(|when| {
             when.any_request(); // Record all requests and responses.
         });
@@ -184,8 +188,8 @@ fn playback_github_api() {
     assert!(response.text().unwrap().contains("\"private\":false"));
 
     // Save the recorded interactions to a file
-    let target_path = recording
-        .save("github-torvalds-scenario")
+    let target_path = server
+        .record_save(&recording_id, "github-torvalds-scenario")
         .expect("Failed to save the recording to disk");
 
     // Start a new mock server instance for playback
@@ -204,3 +208,59 @@ fn playback_github_api() {
     assert!(response.text().unwrap().contains("\"private\":false"));
 }
 // @example-end
+
+#[cfg(feature = "record")]
+#[test]
+fn record_from_struct() {
+    // Demonstrates storing the server and recording in a struct that can be
+    // constructed once and carried around, potentially with a client, until
+    // both go out-of-scope.
+    struct RecordingServer {
+        server: MockServer,
+        recording: RecordingID,
+    }
+    impl RecordingServer {
+        fn new(target_url: String) -> Self {
+            let server = MockServer::start();
+
+            server.forward_to(target_url, |rule| {
+                rule.filter(|when| {
+                    when.path("/hello");
+                });
+            });
+
+            let recording = server.record(|rule| {
+                rule.record_response_delays(true)
+                    .record_request_headers(vec!["Accept", "Content-Type"])
+                    .filter(|when| {
+                        when.path("/hello");
+                    });
+            });
+
+            Self { server, recording }
+        }
+    }
+    // Write the recording when the server goes out-of-scope.
+    impl Drop for RecordingServer {
+        fn drop(&mut self) {
+            self.server
+                .record_save(&self.recording, "record_from_struct")
+                .expect("Failed to save the recording");
+        }
+    }
+
+    let target_server = MockServer::start();
+    target_server.mock(|when, then| {
+        when.any_request();
+        then.status(200).body("Hi from fake GitHub!");
+    });
+
+    let recording_server = RecordingServer::new(target_server.base_url());
+
+    let github_client = Client::builder().build().unwrap();
+    let response = github_client
+        .get(format!("{}/hello", recording_server.server.base_url()))
+        .send()
+        .unwrap();
+    assert_eq!(response.text().unwrap(), "Hi from fake GitHub!");
+}
