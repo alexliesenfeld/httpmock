@@ -10,7 +10,7 @@ use std::str::FromStr;
 pub use adapter::remote::RemoteMockServerAdapter;
 
 #[cfg(feature = "record")]
-pub use proxy::{Recording, RecordingRuleBuilder};
+pub use proxy::{RecordingID, RecordingRuleBuilder};
 
 #[cfg(feature = "proxy")]
 pub use proxy::{ForwardingRule, ForwardingRuleBuilder, ProxyRule, ProxyRuleBuilder};

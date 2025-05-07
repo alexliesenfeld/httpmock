@@ -26,11 +26,14 @@ use crate::{
 use crate::api::{
     common::data::RecordingRuleConfig,
     mock::MockSet,
-    proxy::{Recording, RecordingRuleBuilder},
+    proxy::{RecordingID, RecordingRuleBuilder},
 };
 
 #[cfg(feature = "record")]
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+
+#[cfg(feature = "record")]
+use crate::common::util::write_file;
 
 use crate::server::{state::HttpMockStateManager, HttpMockServerBuilder};
 
@@ -867,7 +870,7 @@ impl MockServer {
     /// });
     ///
     /// // Record the target server's response.
-    /// let recording = recording_server.record(|rule| {
+    /// let recording_id = recording_server.record(|rule| {
     ///     rule.record_response_delays(true)
     ///         .record_request_headers(vec!["Accept", "Content-Type"]) // Record specific headers.
     ///         .filter(|when| {
@@ -885,7 +888,7 @@ impl MockServer {
     /// assert_eq!(response.text().unwrap(), "Hi from fake GitHub!");
     ///
     /// // Store the recording to a file and create a new mock server to playback the recording.
-    /// let target_path = recording.save("my_test_scenario").unwrap();
+    /// let target_path = recording_server.record_save(recording_id, "my_test_scenario").unwrap();
     ///
     /// let playback_server = MockServer::start();
     ///
@@ -902,7 +905,7 @@ impl MockServer {
     ///
     /// This method is only available when the `record` feature is enabled.
     #[cfg(feature = "record")]
-    pub fn record<RecordingRuleBuilderFn>(&self, rule: RecordingRuleBuilderFn) -> Recording
+    pub fn record<RecordingRuleBuilderFn>(&self, rule: RecordingRuleBuilderFn) -> RecordingID
     where
         RecordingRuleBuilderFn: FnOnce(RecordingRuleBuilder),
     {
@@ -953,7 +956,7 @@ impl MockServer {
     ///     }).await;
     ///
     ///     // Record the target server's response.
-    ///     let recording = recording_server.record_async(|rule| {
+    ///     let recording_id = recording_server.record_async(|rule| {
     ///         rule.record_response_delays(true)
     ///             .record_request_headers(vec!["Accept", "Content-Type"]) // Record specific headers.
     ///             .filter(|when| {
@@ -972,7 +975,7 @@ impl MockServer {
     ///     assert_eq!(response.text().await.unwrap(), "Hi from fake GitHub!");
     ///
     ///     // Store the recording to a file and create a new mock server to playback the recording.
-    ///     let target_path = recording.save_async("my_test_scenario").await.unwrap();
+    ///     let target_path = recording_server.record_save_async(recording_id, "my_test_scenario").await.unwrap();
     ///
     ///     let playback_server = MockServer::start_async().await;
     ///
@@ -992,9 +995,9 @@ impl MockServer {
     /// This method is only available when the `record` feature is enabled.
     #[cfg(feature = "record")]
     pub async fn record_async<'a, RecordingRuleBuilderFn>(
-        &'a self,
+        &self,
         rule: RecordingRuleBuilderFn,
-    ) -> Recording<'a>
+    ) -> RecordingID
     where
         RecordingRuleBuilderFn: FnOnce(RecordingRuleBuilder),
     {
@@ -1016,10 +1019,138 @@ impl MockServer {
             .await
             .expect("Cannot deserialize mock server response");
 
-        Recording {
-            id: response.id,
-            server: self,
+        response.id
+    }
+
+    /// Synchronously deletes the recording from the mock server.
+    /// This method blocks the current thread until the deletion is completed,
+    /// ensuring that the recording is fully removed before proceeding.
+    ///
+    /// # Panics
+    /// Panics if the deletion fails, which can occur if the recording does not exist,
+    /// or there are server connectivity issues.
+    #[cfg(feature = "record")]
+    pub fn record_delete(&mut self, id: RecordingID) {
+        self.record_delete_async(id).join();
+    }
+
+    /// Asynchronously deletes the recording from the mock server.
+    /// This method allows for non-blocking operations, suitable for asynchronous environments
+    /// where tasks are performed concurrently without waiting for the deletion to complete.
+    ///
+    /// # Panics
+    /// Panics if the deletion fails, typically due to the recording not existing on the server
+    /// or connectivity issues with the server. This method provides immediate feedback by
+    /// raising a panic on such failures.
+    #[cfg(feature = "record")]
+    pub async fn record_delete_async(&self, id: RecordingID) {
+        self.server_adapter
+            .as_ref()
+            .unwrap()
+            .delete_recording(id)
+            .await
+            .expect("could not delete mock from server");
+    }
+
+    /// Synchronously saves the recording to a specified directory with a timestamped filename.
+    /// The file is named using a combination of the provided scenario name and a UNIX timestamp, formatted as YAML.
+    ///
+    /// # Parameters
+    /// - `id`: Recording ID.
+    /// - `dir`: The directory path where the file will be saved.
+    /// - `scenario_name`: A descriptive name for the scenario, used as part of the filename.
+    ///
+    /// # Returns
+    /// Returns a `Result` containing the `PathBuf` of the created file, or an error if the save operation fails.
+    ///
+    /// # Errors
+    /// Errors if the file cannot be written due to issues like directory permissions, unavailable disk space, or other I/O errors.
+    #[cfg(feature = "record")]
+    pub fn record_save_to<PathRef: AsRef<Path>, IntoString: Into<String>>(
+        &self,
+        id: &RecordingID,
+        dir: PathRef,
+        scenario_name: IntoString,
+    ) -> Result<PathBuf, Box<dyn std::error::Error>> {
+        use std::path::Path;
+
+        self.record_save_to_async(id, dir, scenario_name).join()
+    }
+
+    /// Asynchronously saves the recording to the specified directory with a scenario-specific and timestamped filename.
+    ///
+    /// # Parameters
+    /// - `id`: Recording ID.
+    /// - `dir`: The directory path where the file will be saved.
+    /// - `scenario`: A string representing the scenario name, used as part of the filename.
+    ///
+    /// # Returns
+    /// Returns an `async` `Result` with the `PathBuf` of the saved file or an error if unable to save.
+    #[cfg(feature = "record")]
+    pub async fn record_save_to_async<PathRef: AsRef<Path>, IntoString: Into<String>>(
+        &self,
+        id: &RecordingID,
+        dir: PathRef,
+        scenario: IntoString,
+    ) -> Result<PathBuf, Box<dyn std::error::Error>> {
+        let rec = self
+            .server_adapter
+            .as_ref()
+            .unwrap()
+            .export_recording(*id)
+            .await?;
+
+        let scenario = scenario.into();
+        let dir = dir.as_ref();
+        let timestamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)?
+            .as_secs();
+        let filename = format!("{}_{}.yaml", scenario, timestamp);
+        let filepath = dir.join(filename);
+
+        if let Some(bytes) = rec {
+            return Ok(write_file(&filepath, &bytes, true).await?);
         }
+
+        Err("No recording data available".into())
+    }
+
+    /// Synchronously saves the recording to the default directory (`target/httpmock/recordings`) with the scenario name.
+    ///
+    /// # Parameters
+    /// - `id`: Recording ID.
+    /// - `scenario_name`: A descriptive name for the scenario, which helps identify the recording file.
+    ///
+    /// # Returns
+    /// Returns a `Result` with the `PathBuf` to the saved file or an error.
+    #[cfg(feature = "record")]
+    pub fn record_save<IntoString: Into<String>>(
+        &self,
+        id: &RecordingID,
+        scenario_name: IntoString,
+    ) -> Result<PathBuf, Box<dyn std::error::Error>> {
+        self.record_save_async(id, scenario_name).join()
+    }
+
+    /// Asynchronously saves the recording to the default directory structured under `target/httpmock/recordings`.
+    ///
+    /// # Parameters
+    /// - `id`: Recording ID.
+    /// - `scenario`: A descriptive name for the test scenario, used in naming the saved file.
+    ///
+    /// # Returns
+    /// Returns an `async` `Result` with the `PathBuf` of the saved file or an error.
+    #[cfg(feature = "record")]
+    pub async fn record_save_async<IntoString: Into<String>>(
+        &self,
+        id: &RecordingID,
+        scenario: IntoString,
+    ) -> Result<PathBuf, Box<dyn std::error::Error>> {
+        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("target")
+            .join("httpmock")
+            .join("recordings");
+        self.record_save_to_async(id, path, scenario).await
     }
 
     /// Reads a recording file and configures the mock server to respond with the
@@ -1060,7 +1191,7 @@ impl MockServer {
     /// });
     ///
     /// // Record the target server's response.
-    /// let recording = recording_server.record(|rule| {
+    /// let recording_id = recording_server.record(|rule| {
     ///     rule.record_response_delays(true)
     ///         .record_request_headers(vec!["Accept", "Content-Type"]) // Record specific headers.
     ///         .filter(|when| {
@@ -1078,7 +1209,7 @@ impl MockServer {
     /// assert_eq!(response.text().unwrap(), "Hi from fake GitHub!");
     ///
     /// // Store the recording to a file and create a new mock server to play back the recording.
-    /// let target_path = recording.save("my_test_scenario").unwrap();
+    /// let target_path = recording_server.record_save(recording_id, "my_test_scenario").unwrap();
     ///
     /// let playback_server = MockServer::start();
     ///
@@ -1140,7 +1271,7 @@ impl MockServer {
     ///     }).await;
     ///
     ///     // Record the target server's response.
-    ///     let recording = recording_server.record_async(|rule| {
+    ///     let recording_id = recording_server.record_async(|rule| {
     ///         rule.record_response_delays(true)
     ///             .record_request_headers(vec!["Accept", "Content-Type"]) // Record specific headers.
     ///             .filter(|when| {
@@ -1159,7 +1290,7 @@ impl MockServer {
     ///     assert_eq!(response.text().await.unwrap(), "Hi from fake GitHub!");
     ///
     ///     // Store the recording to a file and create a new mock server to play back the recording.
-    ///     let target_path = recording.save("my_test_scenario").unwrap();
+    ///     let target_path = recording_server.record_save(recording_id, "my_test_scenario").unwrap();
     ///
     ///     let playback_server = MockServer::start_async().await;
     ///
