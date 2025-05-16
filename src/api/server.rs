@@ -36,13 +36,12 @@ use crate::server::{state::HttpMockStateManager, HttpMockServerBuilder};
 
 use crate::Mock;
 use async_object_pool::Pool;
-use once_cell::sync::Lazy;
 use std::{
     cell::Cell,
     future::pending,
     net::{SocketAddr, ToSocketAddrs},
     rc::Rc,
-    sync::Arc,
+    sync::{Arc, LazyLock},
     thread,
 };
 use tokio::sync::oneshot::channel;
@@ -1364,16 +1363,16 @@ const LOCAL_SERVER_ADAPTER_GENERATOR: fn() -> Arc<dyn MockServerAdapter + Send +
     Arc::new(LocalMockServerAdapter::new(addr, state_manager))
 };
 
-static LOCAL_SERVER_POOL_REF: Lazy<Arc<Pool<Arc<dyn MockServerAdapter + Send + Sync>>>> =
-    Lazy::new(|| {
+static LOCAL_SERVER_POOL_REF: LazyLock<Arc<Pool<Arc<dyn MockServerAdapter + Send + Sync>>>> =
+    LazyLock::new(|| {
         let max_servers = read_env("HTTPMOCK_MAX_SERVERS", "25")
             .parse::<usize>()
             .expect("Cannot parse environment variable HTTPMOCK_MAX_SERVERS as an integer");
         Arc::new(Pool::new(max_servers))
     });
 
-static REMOTE_SERVER_POOL_REF: Lazy<Arc<Pool<Arc<dyn MockServerAdapter + Send + Sync>>>> =
-    Lazy::new(|| Arc::new(Pool::new(1)));
+static REMOTE_SERVER_POOL_REF: LazyLock<Arc<Pool<Arc<dyn MockServerAdapter + Send + Sync>>>> =
+    LazyLock::new(|| Arc::new(Pool::new(1)));
 
 #[cfg(feature = "remote")]
 // TODO: REFACTOR to use a runtime agnostic HTTP client for remote access.
@@ -1381,7 +1380,7 @@ static REMOTE_SERVER_POOL_REF: Lazy<Arc<Pool<Arc<dyn MockServerAdapter + Send + 
 //  other HTTP clients (tested: isahc, surf). Curl seems to use OpenSSL by default,
 //  so this is not an option. Optimally, the HTTP client uses rustls to avoid the
 //  dependency on OpenSSL installed on the OS.
-static REMOTE_SERVER_CLIENT: Lazy<Arc<HttpMockHttpClient>> = Lazy::new(|| {
+static REMOTE_SERVER_CLIENT: LazyLock<Arc<HttpMockHttpClient>> = LazyLock::new(|| {
     let max_workers = read_env("HTTPMOCK_HTTP_CLIENT_WORKER_THREADS", "1")
         .parse::<usize>()
         .expect(
