@@ -47,7 +47,7 @@ async fn main() {
         env!("CARGO_PKG_VERSION")
     );
 
-    log::info!("{:?}", params);
+    log::info!("{params:?}");
 
     let server = HttpMockServerBuilder::new()
         .port(params.port)

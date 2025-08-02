@@ -20,7 +20,7 @@ fn json_value_body_test() {
     // Act: Send the request and deserialize the response to JSON
     let client = Client::new();
     let response = client
-        .post(&format!("http://{}/users", server.address()))
+        .post(format!("http://{}/users", server.address()))
         .header("content-type", "application/json")
         .body(json!({ "name": "Fred" }).to_string())
         .send()
@@ -64,7 +64,7 @@ fn json_body_object_serde_test() {
     // Act: Send the request and deserialize the response to JSON
     let client = Client::new();
     let response = client
-        .post(&format!("http://{}/users", server.address()))
+        .post(format!("http://{}/users", server.address()))
         .header("content-type", "application/json")
         .body(
             json!(&TestUser {

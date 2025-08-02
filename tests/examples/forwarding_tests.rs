@@ -65,6 +65,6 @@ fn forward_to_github_test() {
 
     // Since the request was forwarded, we should see a GitHub API response.
     assert_eq!(response.status().as_u16(), 200);
-    assert_eq!(true, response.text().unwrap().contains("\"private\":false"));
+    assert!(response.text().unwrap().contains("\"private\":false"));
 }
 // @example-end

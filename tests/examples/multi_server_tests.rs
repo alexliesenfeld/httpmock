@@ -10,7 +10,7 @@ fn multi_server_test() {
         when.path("/redirectTest");
         then.status(302)
             .body("Found")
-            .header("Location", &server2.url("/finalTarget"));
+            .header("Location", server2.url("/finalTarget"));
     });
 
     let target_mock = server2.mock(|when, then| {
@@ -23,7 +23,7 @@ fn multi_server_test() {
         .build()
         .unwrap();
 
-    let response = client.get(&server1.url("/redirectTest")).send().unwrap();
+    let response = client.get(server1.url("/redirectTest")).send().unwrap();
 
     redirect_mock.assert();
     target_mock.assert();

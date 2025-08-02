@@ -5,10 +5,7 @@ use httpmock::{MockServer, When};
 fn query_param() {
     for (idx, data) in generate_data().attribute.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.query_param(data.expect.0, data.expect.1),
             data.actual.clone(),
             data.failure_msg.clone(),
@@ -20,10 +17,7 @@ fn query_param() {
 fn query_param_not() {
     for (idx, data) in generate_data().attribute_not.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.query_param_not(data.expect.0, data.expect.1),
             data.actual.clone(),
             data.failure_msg.clone(),
@@ -35,10 +29,7 @@ fn query_param_not() {
 fn query_param_exists() {
     for (idx, data) in generate_data().attribute_exists.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.query_param_exists(data.expect),
             data.actual.clone(),
             data.failure_msg.clone(),
@@ -50,10 +41,7 @@ fn query_param_exists() {
 fn query_param_missing() {
     for (idx, data) in generate_data().attribute_missing.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.query_param_missing(data.expect),
             data.actual.clone(),
             data.failure_msg.clone(),
@@ -65,10 +53,7 @@ fn query_param_missing() {
 fn query_param_includes() {
     for (idx, data) in generate_data().attribute_includes.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.query_param_includes(data.expect.0, data.expect.1),
             data.actual.clone(),
             data.failure_msg.clone(),
@@ -80,10 +65,7 @@ fn query_param_includes() {
 fn query_param_excludes() {
     for (idx, data) in generate_data().attribute_excludes.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.query_param_excludes(data.expect.0, data.expect.1),
             data.actual.clone(),
             data.failure_msg.clone(),
@@ -95,10 +77,7 @@ fn query_param_excludes() {
 fn query_param_prefix() {
     for (idx, data) in generate_data().attribute_prefix.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.query_param_prefix(data.expect.0, data.expect.1),
             data.actual.clone(),
             data.failure_msg.clone(),
@@ -110,10 +89,7 @@ fn query_param_prefix() {
 fn query_param_suffix() {
     for (idx, data) in generate_data().attribute_suffix.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.query_param_suffix(data.expect.0, data.expect.1),
             data.actual.clone(),
             data.failure_msg.clone(),
@@ -125,10 +101,7 @@ fn query_param_suffix() {
 fn query_param_prefix_not() {
     for (idx, data) in generate_data().attribute_prefix_not.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.query_param_prefix_not(data.expect.0, data.expect.1),
             data.actual.clone(),
             data.failure_msg.clone(),
@@ -140,10 +113,7 @@ fn query_param_prefix_not() {
 fn query_param_suffix_not() {
     for (idx, data) in generate_data().attribute_suffix_not.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.query_param_suffix_not(data.expect.0, data.expect.1),
             data.actual.clone(),
             data.failure_msg.clone(),
@@ -155,10 +125,7 @@ fn query_param_suffix_not() {
 fn query_param_matches() {
     for (idx, data) in generate_data().attribute_matches.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.query_param_matches(data.expect.0, data.expect.1),
             data.actual.clone(),
             data.failure_msg.clone(),
@@ -170,10 +137,7 @@ fn query_param_matches() {
 fn query_param_count() {
     for (idx, data) in generate_data().attribute_count.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.query_param_count(data.expect.0, data.expect.1, data.expect.2),
             data.actual.clone(),
             data.failure_msg.clone(),
@@ -206,7 +170,7 @@ fn run_test<F, S>(
         });
 
         // Act
-        let url = server.url(&format!("/test?{}", to_urlencoded_query_string(actual)));
+        let url = server.url(format!("/test?{}", to_urlencoded_query_string(actual)));
         let response = reqwest::blocking::get(&url).unwrap();
 
         // Assert

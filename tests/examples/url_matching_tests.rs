@@ -14,7 +14,7 @@ fn url_matching_test() {
     });
 
     // Act: Send the request
-    reqwest::blocking::get(&server.url("/appointments/20200922")).unwrap();
+    reqwest::blocking::get(server.url("/appointments/20200922")).unwrap();
 
     // Assert
     m.assert();

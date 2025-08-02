@@ -21,7 +21,7 @@ fn standalone_test() {
     // Act: Send the HTTP request
     let client = Client::new();
     let response = client
-        .post(&server.url("/search"))
+        .post(server.url("/search"))
         .body("wow so large".repeat(1000000))
         .send()
         .unwrap();
@@ -59,7 +59,7 @@ async fn async_standalone_test() {
     // Act: Send the HTTP request
     let client = Client::new();
     let response = client
-        .get(&format!(
+        .get(format!(
             "http://{}/search?query=metallica",
             server.address()
         ))
@@ -74,7 +74,7 @@ async fn async_standalone_test() {
     // Act 2: Delete the mock and send a request to show that it is not present on the server anymore
     search_mock.delete_async().await;
     let response = client
-        .get(&format!(
+        .get(format!(
             "http://{}:{}/search?query=metallica",
             server.host(),
             server.port()
@@ -131,7 +131,7 @@ fn binary_body_standalone_test() {
     });
 
     // Act
-    let mut response = get(&server.url("/hello")).unwrap();
+    let mut response = get(server.url("/hello")).unwrap();
 
     // Assert
     m.assert();

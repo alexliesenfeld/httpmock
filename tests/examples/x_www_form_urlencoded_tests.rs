@@ -19,7 +19,7 @@ fn body_test_xxx_form_url_encoded() {
 
     let client = Client::new();
     let response = client
-        .post(&server.url("/example"))
+        .post(server.url("/example"))
         .header("content-type", "application/x-www-form-urlencoded")
         .body("name=Peter%20Griffin&town=Quahog")
         .send()

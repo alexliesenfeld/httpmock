@@ -15,10 +15,10 @@ fn delay_test() {
     });
 
     // Act: Send the HTTP request using reqwest
-    let response = reqwest::blocking::get(&server.url("/delay")).unwrap();
+    let response = reqwest::blocking::get(server.url("/delay")).unwrap();
 
     // Assert
     mock.assert();
     assert_eq!(response.status(), 200);
-    assert_eq!(start_time.elapsed().unwrap() > delay, true);
+    assert!(start_time.elapsed().unwrap() > delay);
 }

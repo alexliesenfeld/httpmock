@@ -5,10 +5,7 @@ use httpmock::{MockServer, When};
 fn form_urlencoded_tuple() {
     for (idx, data) in generate_data().attribute.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.form_urlencoded_tuple(data.expect.0, data.expect.1),
             data.actual.clone(),
             data.failure_msg.clone(),
@@ -20,10 +17,7 @@ fn form_urlencoded_tuple() {
 fn form_urlencoded_tuple_not() {
     for (idx, data) in generate_data().attribute_not.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.form_urlencoded_tuple_not(data.expect.0, data.expect.1),
             data.actual.clone(),
             data.failure_msg.clone(),
@@ -36,10 +30,7 @@ fn form_urlencoded_tuple_not() {
 fn form_urlencoded_tuple_exists() {
     for (idx, data) in generate_data().attribute_exists.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.form_urlencoded_tuple_exists(data.expect),
             data.actual.clone(),
             data.failure_msg.clone(),
@@ -52,10 +43,7 @@ fn form_urlencoded_tuple_exists() {
 fn form_urlencoded_tuple_missing() {
     for (idx, data) in generate_data().attribute_missing.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.form_urlencoded_tuple_missing(data.expect),
             data.actual.clone(),
             data.failure_msg.clone(),
@@ -68,10 +56,7 @@ fn form_urlencoded_tuple_missing() {
 fn form_urlencoded_tuple_includes() {
     for (idx, data) in generate_data().attribute_includes.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.form_urlencoded_tuple_includes(data.expect.0, data.expect.1),
             data.actual.clone(),
             data.failure_msg.clone(),
@@ -84,10 +69,7 @@ fn form_urlencoded_tuple_includes() {
 fn form_urlencoded_tuple_excludes() {
     for (idx, data) in generate_data().attribute_excludes.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.form_urlencoded_tuple_excludes(data.expect.0, data.expect.1),
             data.actual.clone(),
             data.failure_msg.clone(),
@@ -100,10 +82,7 @@ fn form_urlencoded_tuple_excludes() {
 fn form_urlencoded_tuple_prefix() {
     for (idx, data) in generate_data().attribute_prefix.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.form_urlencoded_tuple_prefix(data.expect.0, data.expect.1),
             data.actual.clone(),
             data.failure_msg.clone(),
@@ -116,10 +95,7 @@ fn form_urlencoded_tuple_prefix() {
 fn form_urlencoded_tuple_suffix() {
     for (idx, data) in generate_data().attribute_suffix.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.form_urlencoded_tuple_suffix(data.expect.0, data.expect.1),
             data.actual.clone(),
             data.failure_msg.clone(),
@@ -132,10 +108,7 @@ fn form_urlencoded_tuple_suffix() {
 fn form_urlencoded_tuple_prefix_not() {
     for (idx, data) in generate_data().attribute_prefix_not.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.form_urlencoded_tuple_prefix_not(data.expect.0, data.expect.1),
             data.actual.clone(),
             data.failure_msg.clone(),
@@ -148,10 +121,7 @@ fn form_urlencoded_tuple_prefix_not() {
 fn form_urlencoded_tuple_suffix_not() {
     for (idx, data) in generate_data().attribute_suffix_not.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.form_urlencoded_tuple_suffix_not(data.expect.0, data.expect.1),
             data.actual.clone(),
             data.failure_msg.clone(),
@@ -164,10 +134,7 @@ fn form_urlencoded_tuple_suffix_not() {
 fn form_urlencoded_tuple_matches() {
     for (idx, data) in generate_data().attribute_matches.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.form_urlencoded_tuple_matches(data.expect.0, data.expect.1),
             data.actual.clone(),
             data.failure_msg.clone(),
@@ -180,10 +147,7 @@ fn form_urlencoded_tuple_matches() {
 fn form_urlencoded_tuple_count() {
     for (idx, data) in generate_data().attribute_count.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.form_urlencoded_tuple_count(data.expect.0, data.expect.1, data.expect.2),
             data.actual.clone(),
             data.failure_msg.clone(),
