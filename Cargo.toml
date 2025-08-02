@@ -34,13 +34,12 @@ bytes = { version = "1", features = ["serde"] }
 hyper = { version = "1", features = ["server", "http1", "client"] }
 hyper-util = { version = "0.1", features = ["tokio", "server", "http1", "server-auto"] }
 http-body-util = "0.1"
-tokio = { version = "1.43", features = ["sync", "macros", "rt-multi-thread", "signal"] }
+tokio = { version = "1.43", features = ["sync", "macros", "rt-multi-thread", "signal", "fs", "net"] }
 tabwriter = "1"
 colored = { version = "3", optional = true }
 clap = { version = "4", features = ["derive", "env"], optional = true }
 env_logger = { version = "0.11", optional = true }
 serde_yaml = { version = "0.9", optional = true }
-async-std = { version = "1", features = ["attributes", "unstable"] }
 headers = { version = "0.4", optional = true }
 
 ### TLS / HTTPS / PROXY
@@ -59,6 +58,8 @@ colored = "3"
 reqwest = { version = "0.12", features = ["blocking", "cookies", "rustls-tls", "rustls-tls-native-roots"] }
 syn = { version = "2", features = ["full"] }
 urlencoding = "2"
+async-std = { version = "1", features = ["attributes", "unstable"] }
+
 
 [features]
 default = ["cookies"]

@@ -22,7 +22,6 @@ use crate::common::http::{Error as HttpClientError, HttpClient};
 use crate::common::data::{ForwardingRuleConfig, ProxyRuleConfig, RecordingRuleConfig};
 
 use crate::prelude::HttpMockRequest;
-use async_std::{sync::Mutex, task};
 use async_trait::async_trait;
 use http::{HeaderMap, HeaderName, HeaderValue, StatusCode, Uri};
 use http_body_util::BodyExt;
