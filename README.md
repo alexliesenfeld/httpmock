@@ -18,9 +18,9 @@
     ·
     <a href="https://docs.rs/httpmock/">API Reference</a>
     ·
-    <a href="https://github.com/alexliesenfeld/httpmock/discussions">Forum</a>
-    ·
     <a href="https://crates.io/crates/httpmock">Crate</a>
+    ·
+    <a href="https://discord.com/invite/7QzTfBUe">Chat on Discord</a>
     ·
     <a href="https://github.com/alexliesenfeld/httpmock/issues">Report Bug</a>
     ·
