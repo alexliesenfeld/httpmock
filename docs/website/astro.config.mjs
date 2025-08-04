@@ -14,6 +14,7 @@ export default defineConfig({
             },
             social: {
                 github: 'https://github.com/alexliesenfeld/httpmock',
+                discord: 'https://discord.com/invite/7QzTfBUe',
             },
             sidebar: [
                 {
