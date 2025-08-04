@@ -123,12 +123,12 @@ fn substring_of<S: ToString>(s: S, part: SubstringPart) -> String {
     let half_length = len / 2;
 
     match part {
-        SubstringPart::Prefix => (&s[..half_length]).to_string(),
+        SubstringPart::Prefix => s[..half_length].to_string(),
         SubstringPart::Mid => {
             let start = (len - half_length) / 2;
-            (&s[start..start + half_length]).to_string()
+            s[start..start + half_length].to_string()
         }
-        SubstringPart::Suffix => (&s[len - half_length..]).to_string(),
+        SubstringPart::Suffix => s[len - half_length..].to_string(),
     }
 }
 
@@ -186,16 +186,16 @@ impl MultiValueMatcherTestSet<&'static str, &'static str, usize, &'static str> {
         mismatch_header: &'static str,
         case_sensitive: bool,
     ) -> Self {
-        return MultiValueMatcherTestSet {
+        MultiValueMatcherTestSet {
             attribute: vec![
                 MultiValueMatcherData {
-                    scenario_name: format!("{} where 'word' equals 'hello'", entity),
+                    scenario_name: format!("{entity} where 'word' equals 'hello'"),
                     expect: ("word", "hello"),
                     actual: vec![("lang", "en"), ("word", "hello"), ("short", "hi")],
                     failure_msg: None,
                 },
                 MultiValueMatcherData {
-                    scenario_name: format!("{} with multiple keys in the request not matching", entity),
+                    scenario_name: format!("{entity} with multiple keys in the request not matching"),
                     expect: ("word", "hello world"),
                     actual: vec![
                         ("lang", "en"),
@@ -216,25 +216,25 @@ impl MultiValueMatcherTestSet<&'static str, &'static str, usize, &'static str> {
                 }],
             attribute_not: vec![
                 MultiValueMatcherData {
-                    scenario_name: format!("{}_not where 'word' does not equal 'hello'", entity),
+                    scenario_name: format!("{entity}_not where 'word' does not equal 'hello'"),
                     expect: ("word", "hello"),
                     actual: vec![("word", "hallo")],
                     failure_msg: None,
                 },
                 MultiValueMatcherData {
-                    scenario_name: format!("{}_not where 'word' is empty", entity),
+                    scenario_name: format!("{entity}_not where 'word' is empty"),
                     expect: ("word", "hello"),
                     actual: vec![("word", "")],
                     failure_msg: None,
                 },
                 MultiValueMatcherData {
-                    scenario_name: format!("{}_not where 'word' does not exactly equal 'hello'", entity),
+                    scenario_name: format!("{entity}_not where 'word' does not exactly equal 'hello'"),
                     expect: ("word", "hello"),
                     actual: vec![("word", "hello world")],
                     failure_msg: None,
                 },
                 MultiValueMatcherData {
-                    scenario_name: format!("{}_not with correct value but missing key", entity),
+                    scenario_name: format!("{entity}_not with correct value but missing key"),
                     expect: ("hello", "world"),
                     actual: vec![("wrong_key", "world")],
                     failure_msg: Some(vec![
@@ -253,7 +253,7 @@ impl MultiValueMatcherTestSet<&'static str, &'static str, usize, &'static str> {
                     ]),
                 },
                 MultiValueMatcherData {
-                    scenario_name: format!("{}_not with one key non-matching key", entity),
+                    scenario_name: format!("{entity}_not with one key non-matching key"),
                     expect: ("hello", "world"),
                     actual: vec![("hello", "world")],
                     failure_msg: Some(vec![
@@ -272,7 +272,7 @@ impl MultiValueMatcherTestSet<&'static str, &'static str, usize, &'static str> {
                     ]),
                 },
                 MultiValueMatcherData {
-                    scenario_name: format!("{}_not where 'word' key should not match 'hello' but is not present", entity),
+                    scenario_name: format!("{entity}_not where 'word' key should not match 'hello' but is not present"),
                     expect: ("word", "hello"),
                     actual: vec![("not_word", "hello world")],
                     failure_msg: Some(vec![
@@ -287,19 +287,19 @@ impl MultiValueMatcherTestSet<&'static str, &'static str, usize, &'static str> {
             ],
             attribute_exists: vec![
                 MultiValueMatcherData {
-                    scenario_name: format!("{}_exists where 'word' is present with value", entity),
+                    scenario_name: format!("{entity}_exists where 'word' is present with value"),
                     expect: "word",
                     actual: vec![("word", "hello")],
                     failure_msg: None,
                 },
                 MultiValueMatcherData {
-                    scenario_name: format!("{}_exists where 'word' is present without value", entity),
+                    scenario_name: format!("{entity}_exists where 'word' is present without value"),
                     expect: "word",
                     actual: vec![("word", "")],
                     failure_msg: None,
                 },
                 MultiValueMatcherData {
-                    scenario_name: format!("{}_exists where parameter should be present but is missing", entity),
+                    scenario_name: format!("{entity}_exists where parameter should be present but is missing"),
                     expect: "word",
                     actual: vec![("wald", "word"), ("world", "hello")],
                     failure_msg: Some(vec![
@@ -313,13 +313,13 @@ impl MultiValueMatcherTestSet<&'static str, &'static str, usize, &'static str> {
             ],
             attribute_missing: vec![
                 MultiValueMatcherData {
-                    scenario_name: format!("{}_missing where 'word' is absent", entity),
+                    scenario_name: format!("{entity}_missing where 'word' is absent"),
                     expect: "word",
                     actual: vec![("something", "different")],
                     failure_msg: None,
                 },
                 MultiValueMatcherData {
-                    scenario_name: format!("{}_missing where parameter 'word' should not be present but is found", entity),
+                    scenario_name: format!("{entity}_missing where parameter 'word' should not be present but is found"),
                     expect: "word",
                     actual: vec![("welt", "different"), ("word", "")],  // Capturing 'word' as empty
                     failure_msg: Some(vec![
@@ -333,13 +333,13 @@ impl MultiValueMatcherTestSet<&'static str, &'static str, usize, &'static str> {
             ],
             attribute_includes: vec![
                 MultiValueMatcherData {
-                    scenario_name: format!("{}_includes where 'word' includes 'ello'", entity),
+                    scenario_name: format!("{entity}_includes where 'word' includes 'ello'"),
                     expect: ("word", "ello"),
                     actual: vec![("word", "hello")],
                     failure_msg: None,
                 },
                 MultiValueMatcherData {
-                    scenario_name: format!("{}_includes where 'word' value should include 'ello'", entity),
+                    scenario_name: format!("{entity}_includes where 'word' value should include 'ello'"),
                     expect: ("word", "ello"),
                     actual: vec![("word", "world")],  // Actual value that fails to meet the expectation
                     failure_msg: Some(vec![
@@ -354,13 +354,13 @@ impl MultiValueMatcherTestSet<&'static str, &'static str, usize, &'static str> {
             ],
             attribute_excludes: vec![
                 MultiValueMatcherData {
-                    scenario_name: format!("{}_excludes where 'word' excludes 'ello'", entity),
+                    scenario_name: format!("{entity}_excludes where 'word' excludes 'ello'"),
                     expect: ("word", "ello"),
                     actual: vec![("word", "hallo")],
                     failure_msg: None,
                 },
                 MultiValueMatcherData {
-                    scenario_name: format!("{}_excludes where 'word' value should exclude 'ello'", entity),
+                    scenario_name: format!("{entity}_excludes where 'word' value should exclude 'ello'"),
                     expect: ("word", "ello"),
                     actual: vec![("word", "hello")],
                     failure_msg: Some(vec![
@@ -375,13 +375,13 @@ impl MultiValueMatcherTestSet<&'static str, &'static str, usize, &'static str> {
             ],
             attribute_prefix: vec![
                 MultiValueMatcherData {
-                    scenario_name: format!("{}_prefix where 'word' starts with 'ha'", entity),
+                    scenario_name: format!("{entity}_prefix where 'word' starts with 'ha'"),
                     expect: ("word", "ha"),
                     actual: vec![("word", "hallo")],
                     failure_msg: None,
                 },
                 MultiValueMatcherData {
-                    scenario_name: format!("{}_prefix where 'word' value should start with 'ha'", entity),
+                    scenario_name: format!("{entity}_prefix where 'word' value should start with 'ha'"),
                     expect: ("word", "ha"),
                     actual: vec![("word", "hello")],  // Actual value that correctly matches the prefix condition
                     failure_msg: Some(vec![
@@ -396,13 +396,13 @@ impl MultiValueMatcherTestSet<&'static str, &'static str, usize, &'static str> {
             ],
             attribute_suffix: vec![
                 MultiValueMatcherData {
-                    scenario_name: format!("{}_suffix where 'word' ends with 'llo'", entity),
+                    scenario_name: format!("{entity}_suffix where 'word' ends with 'llo'"),
                     expect: ("word", "llo"),
                     actual: vec![("word", "hello")],
                     failure_msg: None,
                 },
                 MultiValueMatcherData {
-                    scenario_name: format!("{}_suffix where 'word' value should end with 'llo'", entity),
+                    scenario_name: format!("{entity}_suffix where 'word' value should end with 'llo'"),
                     expect: ("word", "llo"),
                     actual: vec![("word", "world")],  // Actual value that fails to meet the suffix condition
                     failure_msg: Some(vec![
@@ -417,13 +417,13 @@ impl MultiValueMatcherTestSet<&'static str, &'static str, usize, &'static str> {
             ],
             attribute_prefix_not: vec![
                 MultiValueMatcherData {
-                    scenario_name: format!("{}_prefix_not where 'word' does not start with 'ha'", entity),
+                    scenario_name: format!("{entity}_prefix_not where 'word' does not start with 'ha'"),
                     expect: ("word", "ha"),
                     actual: vec![("word", "hello")],
                     failure_msg: None,
                 },
                 MultiValueMatcherData {
-                    scenario_name: format!("{}_prefix_not where 'word' value should not start with 'ha'", entity),
+                    scenario_name: format!("{entity}_prefix_not where 'word' value should not start with 'ha'"),
                     expect: ("word", "ha"),
                     actual: vec![("word", "hallo")],  // Actual value that incorrectly matches the prefix condition
                     failure_msg: Some(vec![
@@ -438,13 +438,13 @@ impl MultiValueMatcherTestSet<&'static str, &'static str, usize, &'static str> {
             ],
             attribute_suffix_not: vec![
                 MultiValueMatcherData {
-                    scenario_name: format!("{}_suffix_not where 'word' does not end with 'll'", entity),
+                    scenario_name: format!("{entity}_suffix_not where 'word' does not end with 'll'"),
                     expect: ("word", "ll"),
                     actual: vec![("word", "hallo")],
                     failure_msg: None,
                 },
                 MultiValueMatcherData {
-                    scenario_name: format!("{}_suffix_not where 'word' value should not end with 'ld'", entity),
+                    scenario_name: format!("{entity}_suffix_not where 'word' value should not end with 'ld'"),
                     expect: ("word", "ld"),
                     actual: vec![("word", "world")],  // Actual value that incorrectly matches the suffix condition
                     failure_msg: Some(vec![
@@ -459,13 +459,13 @@ impl MultiValueMatcherTestSet<&'static str, &'static str, usize, &'static str> {
             ],
             attribute_matches: vec![
                 MultiValueMatcherData {
-                    scenario_name: format!("{}_matches where key matches '.*ll.*' and value matches '.*or.*'", entity),
+                    scenario_name: format!("{entity}_matches where key matches '.*ll.*' and value matches '.*or.*'"),
                     expect: (".*ll.*", ".*or.*"),
                     actual: vec![("hello", "world")],
                     failure_msg: None,
                 },
                 MultiValueMatcherData {
-                    scenario_name: format!("{}_matches where key and value should match regex patterns", entity),
+                    scenario_name: format!("{entity}_matches where key and value should match regex patterns"),
                     expect: (".*ll.*", ".*or.*"),
                     actual: vec![("hello", "peter")],  // Actual key-value that fails to match the expected regex patterns fully
                     failure_msg: Some(vec![
@@ -478,7 +478,7 @@ impl MultiValueMatcherTestSet<&'static str, &'static str, usize, &'static str> {
                     ]),
                 },
                 MultiValueMatcherData {
-                    scenario_name: format!("{}_matches where key and value should match regex patterns again", entity),
+                    scenario_name: format!("{entity}_matches where key and value should match regex patterns again"),
                     expect: (".*ll.*", ".*or.*"),
                     actual: vec![("peter", "world")],  // Actual key-value that fails both expected regex conditions
                     failure_msg: Some(vec![
@@ -493,19 +493,19 @@ impl MultiValueMatcherTestSet<&'static str, &'static str, usize, &'static str> {
             ],
             attribute_count: vec![
                 MultiValueMatcherData {
-                    scenario_name: format!("{}_count where key matches '.*el.*' and value matches '.*al.*' appears 2 times", entity),
+                    scenario_name: format!("{entity}_count where key matches '.*el.*' and value matches '.*al.*' appears 2 times"),
                     expect: (".*el.*", ".*al.*", 2),
                     actual: vec![("hello", "peter"), ("hello", "wallie"), ("nothing", ""), ("hello", ""), ("hello", "metallica")],
                     failure_msg: None,
                 },
                 MultiValueMatcherData {
-                    scenario_name: format!("{}_count where key matches '.*el.*' and value matches '.*al.*' appears 2 times", entity),
+                    scenario_name: format!("{entity}_count where key matches '.*el.*' and value matches '.*al.*' appears 2 times"),
                     expect: (".*el.*", ".*al.*", 2),
                     actual: vec![("hello", "peter"), ("hello", "wallie"), ("nothing", ""), ("hello", ""), ("hello", "metallica")],
                     failure_msg: None,
                 },
                 MultiValueMatcherData {
-                    scenario_name: format!("{}_count where parameters should match key and value regex and appear a specified number of times", entity),
+                    scenario_name: format!("{entity}_count where parameters should match key and value regex and appear a specified number of times"),
                     expect: (".*ll.*", ".*", 10),
                     actual: vec![("hello", "peter"), ("hello", "wallie"), ("nothing", ""), ("hello", ""), ("hello", "metallica")],
                     failure_msg: Some(vec![
@@ -518,7 +518,7 @@ impl MultiValueMatcherTestSet<&'static str, &'static str, usize, &'static str> {
                     ]),
                 },
             ],
-        };
+        }
     }
 }
 
@@ -557,16 +557,16 @@ impl SingleValueMatcherDataSet<&'static str, &'static str> {
         mismatch_header: &'static str,
         case_sensitive: bool,
     ) -> Self {
-        return SingleValueMatcherDataSet {
+        SingleValueMatcherDataSet {
             attribute: vec![
                 SingleValueMatcherData {
-                    scenario_name: format!("{} TODO", entity),
+                    scenario_name: format!("{entity} TODO"),
                     expect: "test",
                     actual: "test",
                     failure_msg: None,
                 },
                 SingleValueMatcherData {
-                    scenario_name: format!("{} TODO", entity),
+                    scenario_name: format!("{entity} TODO"),
                     expect: "test",
                     actual: "not-test",
                     failure_msg: Some(vec![
@@ -582,13 +582,13 @@ impl SingleValueMatcherDataSet<&'static str, &'static str> {
             ],
             attribute_not: vec![
                 SingleValueMatcherData {
-                    scenario_name: format!("{}_not TODO", entity),
+                    scenario_name: format!("{entity}_not TODO"),
                     expect: "test",
                     actual: "twist",
                     failure_msg: None,
                 },
                 SingleValueMatcherData {
-                    scenario_name: format!("{}_not TODO", entity),
+                    scenario_name: format!("{entity}_not TODO"),
                     expect: "test",
                     actual: "test",
                     failure_msg: Some(vec![
@@ -604,13 +604,13 @@ impl SingleValueMatcherDataSet<&'static str, &'static str> {
             ],
             attribute_includes: vec![
                 SingleValueMatcherData {
-                    scenario_name: format!("{}_includes TODO", entity),
+                    scenario_name: format!("{entity}_includes TODO"),
                     expect: "is-a",
                     actual: "this-is-a-value",
                     failure_msg: None,
                 },
                 SingleValueMatcherData {
-                    scenario_name: format!("{}_includes TODO", entity),
+                    scenario_name: format!("{entity}_includes TODO"),
                     expect: "dog",
                     actual: "tomato",
                     failure_msg: Some(vec![
@@ -626,13 +626,13 @@ impl SingleValueMatcherDataSet<&'static str, &'static str> {
             ],
             attribute_excludes: vec![
                 SingleValueMatcherData {
-                    scenario_name: format!("{}_excludes TODO", entity),
+                    scenario_name: format!("{entity}_excludes TODO"),
                     expect: "is-a",
                     actual: "this-is-the-value",
                     failure_msg: None,
                 },
                 SingleValueMatcherData {
-                    scenario_name: format!("{}_excludes TODO", entity),
+                    scenario_name: format!("{entity}_excludes TODO"),
                     expect: "na",
                     actual: "banana",
                     failure_msg: Some(vec![
@@ -648,13 +648,13 @@ impl SingleValueMatcherDataSet<&'static str, &'static str> {
             ],
             attribute_prefix: vec![
                 SingleValueMatcherData {
-                    scenario_name: format!("{}_prefix TODO", entity),
+                    scenario_name: format!("{entity}_prefix TODO"),
                     expect: "this",
                     actual: "this-is-the-value",
                     failure_msg: None,
                 },
                 SingleValueMatcherData {
-                    scenario_name: format!("{}_prefix TODO", entity),
+                    scenario_name: format!("{entity}_prefix TODO"),
                     expect: "thi",
                     actual: "that",
                     failure_msg: Some(vec![
@@ -670,13 +670,13 @@ impl SingleValueMatcherDataSet<&'static str, &'static str> {
             ],
             attribute_suffix: vec![
                 SingleValueMatcherData {
-                    scenario_name: format!("{}_includes TODO", entity),
+                    scenario_name: format!("{entity}_includes TODO"),
                     expect: "value",
                     actual: "this-is-the-value",
                     failure_msg: None,
                 },
                 SingleValueMatcherData {
-                    scenario_name: format!("{}_includes TODO", entity),
+                    scenario_name: format!("{entity}_includes TODO"),
                     expect: "bear",
                     actual: "banana",
                     failure_msg: Some(vec![
@@ -692,13 +692,13 @@ impl SingleValueMatcherDataSet<&'static str, &'static str> {
             ],
             attribute_prefix_not: vec![
                 SingleValueMatcherData {
-                    scenario_name: format!("{}_prefix_not TODO", entity),
+                    scenario_name: format!("{entity}_prefix_not TODO"),
                     expect: "value",
                     actual: "that-is-the-value",
                     failure_msg: None,
                 },
                 SingleValueMatcherData {
-                    scenario_name: format!("{}_prefix_not TODO", entity),
+                    scenario_name: format!("{entity}_prefix_not TODO"),
                     expect: "this",
                     actual: "this-is-the-value",
                     failure_msg: Some(vec![
@@ -714,13 +714,13 @@ impl SingleValueMatcherDataSet<&'static str, &'static str> {
             ],
             attribute_suffix_not: vec![
                 SingleValueMatcherData {
-                    scenario_name: format!("{}_suffix_not TODO", entity),
+                    scenario_name: format!("{entity}_suffix_not TODO"),
                     expect: "thing",
                     actual: "that-is-the-value",
                     failure_msg: None,
                 },
                 SingleValueMatcherData {
-                    scenario_name: format!("{}_suffix_not TODO", entity),
+                    scenario_name: format!("{entity}_suffix_not TODO"),
                     expect: "to",
                     actual: "potato",
                     failure_msg: Some(vec![
@@ -736,13 +736,13 @@ impl SingleValueMatcherDataSet<&'static str, &'static str> {
             ],
             attribute_matches: vec![
                 SingleValueMatcherData {
-                    scenario_name: format!("{}_matches TODO", entity),
+                    scenario_name: format!("{entity}_matches TODO"),
                     expect: ".*ll.*",
                     actual: "hello",
                     failure_msg: None,
                 },
                 SingleValueMatcherData {
-                    scenario_name: format!("{}_matches TODO", entity),
+                    scenario_name: format!("{entity}_matches TODO"),
                     expect: ".*is-the.*",
                     actual: "giggity",
                     failure_msg: Some(vec![
@@ -756,7 +756,7 @@ impl SingleValueMatcherDataSet<&'static str, &'static str> {
                     ]),
                 },
             ],
-        };
+        }
     }
 }
 

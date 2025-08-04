@@ -5,10 +5,7 @@ use httpmock::{MockServer, When};
 fn path() {
     for (idx, data) in generate_data().attribute.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.path(format!("/{}", data.expect)),
             data.actual,
             data.failure_msg.clone(),
@@ -20,10 +17,7 @@ fn path() {
 fn path_not() {
     for (idx, data) in generate_data().attribute_not.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.path_not(format!("/{}", data.expect)),
             data.actual,
             data.failure_msg.clone(),
@@ -35,10 +29,7 @@ fn path_not() {
 fn path_includes() {
     for (idx, data) in generate_data().attribute_includes.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.path_includes(data.expect),
             data.actual,
             data.failure_msg.clone(),
@@ -50,10 +41,7 @@ fn path_includes() {
 fn path_excludes() {
     for (idx, data) in generate_data().attribute_excludes.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.path_excludes(data.expect),
             data.actual,
             data.failure_msg.clone(),
@@ -65,10 +53,7 @@ fn path_excludes() {
 fn path_prefix() {
     for (idx, data) in generate_data().attribute_prefix.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.path_prefix(format!("/{}", data.expect)),
             data.actual,
             data.failure_msg.clone(),
@@ -80,10 +65,7 @@ fn path_prefix() {
 fn path_prefix_not() {
     for (idx, data) in generate_data().attribute_prefix_not.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.path_prefix_not(format!("/{}", data.expect)),
             data.actual,
             data.failure_msg.clone(),
@@ -95,10 +77,7 @@ fn path_prefix_not() {
 fn path_suffix() {
     for (idx, data) in generate_data().attribute_suffix.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.path_suffix(data.expect),
             data.actual,
             data.failure_msg.clone(),
@@ -110,10 +89,7 @@ fn path_suffix() {
 fn path_suffix_not() {
     for (idx, data) in generate_data().attribute_suffix_not.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.path_suffix_not(data.expect),
             data.actual,
             data.failure_msg.clone(),
@@ -125,10 +101,7 @@ fn path_suffix_not() {
 fn path_matches() {
     for (idx, data) in generate_data().attribute_matches.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.path_matches(data.expect),
             data.actual,
             data.failure_msg.clone(),
@@ -162,7 +135,7 @@ fn run_test<F, S>(
 
         // Act
         let response = reqwest::blocking::Client::new()
-            .get(server.url(format!("/{}", actual)))
+            .get(server.url(format!("/{actual}")))
             .send()
             .unwrap();
 

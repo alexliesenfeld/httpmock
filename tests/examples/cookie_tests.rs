@@ -17,7 +17,7 @@ fn cookie_matching_test() {
     // Act: Send the request with cookies
     let client = Client::new();
     let response = client
-        .get(&format!("http://{}", server.address()))
+        .get(format!("http://{}", server.address()))
         .header(
             "Cookie",
             "OTHERCOOKIE1=01234; SESSIONID=298zf09hf012fh2; OTHERCOOKIE2=56789; HttpOnly",

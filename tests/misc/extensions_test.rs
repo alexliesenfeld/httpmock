@@ -31,6 +31,6 @@ fn wrapper_test() {
     sw.mocks.borrow_mut().push(MyMockWrapper { id: mock.id });
     drop(mock);
 
-    let mock = Mock::new(sw.mocks.borrow_mut().get(0).unwrap().id, &sw.server);
+    let mock = Mock::new(sw.mocks.borrow_mut().first().unwrap().id, &sw.server);
     mock.calls();
 }

@@ -19,7 +19,7 @@ fn body_test() {
     // Act: Send the request
     let client = Client::new();
     let response = client
-        .post(&format!("http://{}/books", server.address()))
+        .post(format!("http://{}/books", server.address()))
         .body("The Fellowship of the Ring")
         .send()
         .unwrap();

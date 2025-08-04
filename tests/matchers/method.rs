@@ -16,7 +16,7 @@ fn success_method() {
     });
 
     // Act
-    let response = get(&server.base_url()).unwrap();
+    let response = get(server.base_url()).unwrap();
 
     // Assert
     m.assert();
@@ -36,7 +36,7 @@ fn failure_method() {
             });
 
             // Act
-            get(&server.base_url()).unwrap();
+            get(server.base_url()).unwrap();
 
             m.assert()
         },
@@ -61,7 +61,7 @@ fn success_method_not() {
     });
 
     // Act
-    let response = get(&server.base_url()).unwrap();
+    let response = get(server.base_url()).unwrap();
 
     // Assert
     m.assert();
@@ -81,7 +81,7 @@ fn failure_method_not() {
             });
 
             // Act
-            get(&server.base_url()).unwrap();
+            get(server.base_url()).unwrap();
 
             m.assert()
         },

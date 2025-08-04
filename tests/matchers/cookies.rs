@@ -7,10 +7,7 @@ use httpmock::{MockServer, When};
 fn cookie() {
     for (idx, data) in generate_data().attribute.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.cookie(data.expect.0, data.expect.1),
             data.actual.clone(),
             data.failure_msg.clone(),
@@ -23,10 +20,7 @@ fn cookie() {
 fn cookie_not() {
     for (idx, data) in generate_data().attribute_not.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.cookie_not(data.expect.0, data.expect.1),
             data.actual.clone(),
             data.failure_msg.clone(),
@@ -39,10 +33,7 @@ fn cookie_not() {
 fn cookie_exists() {
     for (idx, data) in generate_data().attribute_exists.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.cookie_exists(data.expect),
             data.actual.clone(),
             data.failure_msg.clone(),
@@ -55,10 +46,7 @@ fn cookie_exists() {
 fn cookie_missing() {
     for (idx, data) in generate_data().attribute_missing.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.cookie_missing(data.expect),
             data.actual.clone(),
             data.failure_msg.clone(),
@@ -71,10 +59,7 @@ fn cookie_missing() {
 fn cookie_includes() {
     for (idx, data) in generate_data().attribute_includes.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.cookie_includes(data.expect.0, data.expect.1),
             data.actual.clone(),
             data.failure_msg.clone(),
@@ -87,10 +72,7 @@ fn cookie_includes() {
 fn cookie_excludes() {
     for (idx, data) in generate_data().attribute_excludes.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.cookie_excludes(data.expect.0, data.expect.1),
             data.actual.clone(),
             data.failure_msg.clone(),
@@ -103,10 +85,7 @@ fn cookie_excludes() {
 fn cookie_prefix() {
     for (idx, data) in generate_data().attribute_prefix.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.cookie_prefix(data.expect.0, data.expect.1),
             data.actual.clone(),
             data.failure_msg.clone(),
@@ -119,10 +98,7 @@ fn cookie_prefix() {
 fn cookie_suffix() {
     for (idx, data) in generate_data().attribute_suffix.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.cookie_suffix(data.expect.0, data.expect.1),
             data.actual.clone(),
             data.failure_msg.clone(),
@@ -135,10 +111,7 @@ fn cookie_suffix() {
 fn cookie_prefix_not() {
     for (idx, data) in generate_data().attribute_prefix_not.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.cookie_prefix_not(data.expect.0, data.expect.1),
             data.actual.clone(),
             data.failure_msg.clone(),
@@ -151,10 +124,7 @@ fn cookie_prefix_not() {
 fn cookie_suffix_not() {
     for (idx, data) in generate_data().attribute_suffix_not.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.cookie_suffix_not(data.expect.0, data.expect.1),
             data.actual.clone(),
             data.failure_msg.clone(),
@@ -167,10 +137,7 @@ fn cookie_suffix_not() {
 fn cookie_matches() {
     for (idx, data) in generate_data().attribute_matches.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.cookie_matches(data.expect.0, data.expect.1),
             data.actual.clone(),
             data.failure_msg.clone(),
@@ -183,10 +150,7 @@ fn cookie_matches() {
 fn cookie_count() {
     for (idx, data) in generate_data().attribute_count.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.cookie_count(data.expect.0, data.expect.1, data.expect.2),
             data.actual.clone(),
             data.failure_msg.clone(),
@@ -224,7 +188,7 @@ fn run_test<F, S>(
             if value.contains(' ') || value.contains(';') || value.contains(',') {
                 content.push(format!("{}={}", key, value.replace('"', "\\\"")))
             } else {
-                content.push(format!("{}={}", key, value))
+                content.push(format!("{key}={value}"))
             }
         }
 

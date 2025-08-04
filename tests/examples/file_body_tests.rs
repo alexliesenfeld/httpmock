@@ -11,7 +11,7 @@ fn file_body_test() {
     });
 
     // Act
-    let response = reqwest::blocking::get(&server.url("/hello")).unwrap();
+    let response = reqwest::blocking::get(server.url("/hello")).unwrap();
 
     // Assert
     m.assert();

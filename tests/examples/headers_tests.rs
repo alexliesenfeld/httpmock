@@ -16,7 +16,7 @@ fn headers_test() {
     // Act: Send the request using reqwest
     let client = Client::new();
     let response = client
-        .post(&format!("http://{}/test", server.address()))
+        .post(format!("http://{}/test", server.address()))
         .header("Authorization", "token 123456789")
         .send()
         .unwrap();
@@ -50,7 +50,7 @@ fn headers_test_2() {
     // Act: Make a request that includes the required headers using reqwest
     let client = Client::new();
     client
-        .post(&format!("http://{}/test", server.address()))
+        .post(format!("http://{}/test", server.address()))
         .header("x-custom-header-1", "value1")
         .header("X-Custom-Header-2", "value2")
         .send()

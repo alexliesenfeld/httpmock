@@ -5,10 +5,7 @@ use httpmock::{MockServer, When};
 fn header() {
     for (idx, data) in generate_data().attribute.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.header(data.expect.0, data.expect.1),
             data.actual.clone(),
             data.failure_msg.clone(),
@@ -20,10 +17,7 @@ fn header() {
 fn header_not() {
     for (idx, data) in generate_data().attribute_not.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.header_not(data.expect.0, data.expect.1),
             data.actual.clone(),
             data.failure_msg.clone(),
@@ -35,10 +29,7 @@ fn header_not() {
 fn header_exists() {
     for (idx, data) in generate_data().attribute_exists.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.header_exists(data.expect),
             data.actual.clone(),
             data.failure_msg.clone(),
@@ -50,10 +41,7 @@ fn header_exists() {
 fn header_missing() {
     for (idx, data) in generate_data().attribute_missing.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.header_missing(data.expect),
             data.actual.clone(),
             data.failure_msg.clone(),
@@ -65,10 +53,7 @@ fn header_missing() {
 fn header_includes() {
     for (idx, data) in generate_data().attribute_includes.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.header_includes(data.expect.0, data.expect.1),
             data.actual.clone(),
             data.failure_msg.clone(),
@@ -80,10 +65,7 @@ fn header_includes() {
 fn header_excludes() {
     for (idx, data) in generate_data().attribute_excludes.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.header_excludes(data.expect.0, data.expect.1),
             data.actual.clone(),
             data.failure_msg.clone(),
@@ -95,10 +77,7 @@ fn header_excludes() {
 fn header_prefix() {
     for (idx, data) in generate_data().attribute_prefix.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.header_prefix(data.expect.0, data.expect.1),
             data.actual.clone(),
             data.failure_msg.clone(),
@@ -110,10 +89,7 @@ fn header_prefix() {
 fn header_suffix() {
     for (idx, data) in generate_data().attribute_suffix.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.header_suffix(data.expect.0, data.expect.1),
             data.actual.clone(),
             data.failure_msg.clone(),
@@ -125,10 +101,7 @@ fn header_suffix() {
 fn header_prefix_not() {
     for (idx, data) in generate_data().attribute_prefix_not.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.header_prefix_not(data.expect.0, data.expect.1),
             data.actual.clone(),
             data.failure_msg.clone(),
@@ -140,10 +113,7 @@ fn header_prefix_not() {
 fn header_suffix_not() {
     for (idx, data) in generate_data().attribute_suffix_not.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.header_suffix_not(data.expect.0, data.expect.1),
             data.actual.clone(),
             data.failure_msg.clone(),
@@ -155,10 +125,7 @@ fn header_suffix_not() {
 fn header_matches() {
     for (idx, data) in generate_data().attribute_matches.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.header_matches(data.expect.0, data.expect.1),
             data.actual.clone(),
             data.failure_msg.clone(),
@@ -170,10 +137,7 @@ fn header_matches() {
 fn header_count() {
     for (idx, data) in generate_data().attribute_count.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.header_count(data.expect.0, data.expect.1, data.expect.2),
             data.actual.clone(),
             data.failure_msg.clone(),
@@ -208,7 +172,7 @@ fn run_test<F, S>(
         // Act
         // Build the request with custom headers
         let client = reqwest::blocking::Client::new();
-        let mut request_builder = client.get(&server.url("/test"));
+        let mut request_builder = client.get(server.url("/test"));
 
         for (key, value) in actual {
             request_builder = request_builder.header(key, value);

@@ -8,7 +8,7 @@ fn path_success_table_test() {
         expectation: fn(when: When) -> When,
     }
 
-    let tests = vec![
+    let tests = [
         TestData {
             expectation: |when| when.host("127.0.0.1"),
         },
@@ -45,7 +45,7 @@ fn path_success_table_test() {
     ];
 
     for (idx, test_data) in tests.iter().enumerate() {
-        println!("Running test case with index '{}'", idx);
+        println!("Running test case with index '{idx}'");
 
         let target_server = MockServer::start();
         target_server.mock(|when, then| {
@@ -66,7 +66,7 @@ fn path_success_table_test() {
             .build()
             .unwrap();
 
-        let response = client.get(&target_server.url("/get")).send().unwrap();
+        let response = client.get(target_server.url("/get")).send().unwrap();
         assert_eq!(response.status(), 200);
     }
 }
@@ -115,7 +115,7 @@ fn path_failure_table_test() {
     ];
 
     for (idx, test_data) in tests.iter().enumerate() {
-        println!("Running test case with index '{}'", idx);
+        println!("Running test case with index '{idx}'");
 
         let err_msg = test_data.failure_message.clone();
 
@@ -138,7 +138,7 @@ fn path_failure_table_test() {
                 .build()
                 .unwrap();
 
-            let response = client.get(&target_server.url("/get")).send().unwrap();
+            let response = client.get(target_server.url("/get")).send().unwrap();
             assert_eq!(404, response.status());
 
             m.assert();

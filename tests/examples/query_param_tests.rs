@@ -12,7 +12,7 @@ fn url_param_matching_test() {
     });
 
     // Act: Send the request using the fully qualified path
-    reqwest::blocking::get(&server.url("/search?query=Metallica")).unwrap();
+    reqwest::blocking::get(server.url("/search?query=Metallica")).unwrap();
 
     // Assert
     m.assert();
@@ -30,7 +30,7 @@ fn url_param_urlencoded_matching_test() {
     });
 
     // Act: Send the request using the fully qualified path
-    reqwest::blocking::get(&server.url("/search?query=Mot%C3%B6rhead")).unwrap();
+    reqwest::blocking::get(server.url("/search?query=Mot%C3%B6rhead")).unwrap();
 
     // Assert
     m.assert();
@@ -48,7 +48,7 @@ fn url_param_unencoded_matching_test() {
     });
 
     // Act: Send the request using the fully qualified path
-    reqwest::blocking::get(&server.url("/search?query=Motörhead")).unwrap();
+    reqwest::blocking::get(server.url("/search?query=Motörhead")).unwrap();
 
     // Assert
     m.assert();
@@ -65,7 +65,7 @@ fn url_param_encoding_issue_56() {
     });
 
     // Act: Send the request using the fully qualified path
-    reqwest::blocking::get(&server.url("/search?query=Metallica+is+cool")).unwrap();
+    reqwest::blocking::get(server.url("/search?query=Metallica+is+cool")).unwrap();
 
     // Assert
     m.assert();

@@ -18,7 +18,7 @@ fn scheme_test() {
     });
 
     // Act
-    let response = get(&server.base_url()).unwrap();
+    let response = get(server.base_url()).unwrap();
 
     // Assert
     m.assert();
@@ -46,7 +46,7 @@ fn scheme_failure() {
             });
 
             // Act
-            get(&server.base_url()).unwrap();
+            get(server.base_url()).unwrap();
 
             m.assert()
         },
@@ -77,7 +77,7 @@ fn scheme_not_test() {
     });
 
     // Act
-    let response = get(&server.base_url()).unwrap();
+    let response = get(server.base_url()).unwrap();
 
     // Assert
     m.assert();
@@ -106,7 +106,7 @@ fn scheme_not_failure() {
             });
 
             // Act
-            get(&server.base_url()).unwrap();
+            get(server.base_url()).unwrap();
 
             m.assert()
         },

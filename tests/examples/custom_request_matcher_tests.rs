@@ -11,7 +11,7 @@ fn my_custom_request_matcher_test() {
     });
 
     // Act: Send the HTTP request using reqwest
-    let response = reqwest::blocking::get(&server.url("/thisIsMyTest")).unwrap();
+    let response = reqwest::blocking::get(server.url("/thisIsMyTest")).unwrap();
 
     // Assert
     mock.assert();

@@ -22,7 +22,7 @@ fn large_body_test() {
     // Act: Send the HTTP request
     let client = Client::new();
     let response = client
-        .post(&server.url("/search"))
+        .post(server.url("/search"))
         .body("wow so large".repeat(1024 * 1024 * 10)) // 10 MB body
         .send()
         .unwrap();

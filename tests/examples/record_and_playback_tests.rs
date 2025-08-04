@@ -137,7 +137,7 @@ fn record_github_api_with_forwarding_test() {
 
     // Since the request was forwarded, we should see a GitHub API response.
     assert_eq!(response.status().as_u16(), 200);
-    assert_eq!(true, response.text().unwrap().contains("\"private\":false"));
+    assert!(response.text().unwrap().contains("\"private\":false"));
 
     // Save the recording to
     // "target/httpmock/recordings/github-torvalds-scenario_<timestamp>.yaml".

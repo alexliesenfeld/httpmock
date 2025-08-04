@@ -14,7 +14,7 @@ fn binary_body_test() {
     });
 
     // Act
-    let mut response = reqwest::blocking::get(&server.url("/hello")).unwrap();
+    let mut response = reqwest::blocking::get(server.url("/hello")).unwrap();
 
     // Assert
     m.assert();

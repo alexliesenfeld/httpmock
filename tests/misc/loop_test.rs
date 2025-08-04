@@ -19,12 +19,12 @@ fn loop_with_standalone_test() {
 
     for x in 0..1000 {
         let search_mock = server.mock(|when, then| {
-            when.path(format!("/test/{}", x));
+            when.path(format!("/test/{x}"));
             then.status(202);
         });
 
         // Act: Send the HTTP request
-        let response = get(&server.url(&format!("/test/{}", x))).unwrap();
+        let response = get(server.url(format!("/test/{x}"))).unwrap();
 
         // Assert
         search_mock.assert();
@@ -48,12 +48,12 @@ fn loop_with_local_test() {
 
     for x in 0..1000 {
         let search_mock = server.mock(|when, then| {
-            when.path(format!("/test/{}", x));
+            when.path(format!("/test/{x}"));
             then.status(202);
         });
 
         // Act: Send the HTTP request
-        let response = get(&server.url(&format!("/test/{}", x))).unwrap();
+        let response = get(server.url(format!("/test/{x}"))).unwrap();
 
         // Assert
         search_mock.assert();

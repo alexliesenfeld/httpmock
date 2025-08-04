@@ -5,10 +5,7 @@ use httpmock::{MockServer, When};
 fn body() {
     for (idx, data) in generate_data().attribute.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.body(data.expect),
             data.actual,
             data.failure_msg.clone(),
@@ -40,10 +37,7 @@ fn body_fail_message() {
 fn body_not() {
     for (idx, data) in generate_data().attribute_not.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.body_not(data.expect),
             data.actual,
             data.failure_msg.clone(),
@@ -76,10 +70,7 @@ fn body_not_fail_message() {
 fn body_includes() {
     for (idx, data) in generate_data().attribute_includes.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.body_includes(data.expect),
             data.actual,
             data.failure_msg.clone(),
@@ -155,10 +146,7 @@ fn body_includes_multiline() {
 fn body_excludes() {
     for (idx, data) in generate_data().attribute_excludes.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.body_excludes(data.expect),
             data.actual,
             data.failure_msg.clone(),
@@ -198,10 +186,7 @@ fn body_excludes_fail_message() {
 fn body_prefix() {
     for (idx, data) in generate_data().attribute_prefix.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.body_prefix(data.expect),
             data.actual,
             data.failure_msg.clone(),
@@ -235,10 +220,7 @@ fn body_prefix_fail_message() {
 fn body_prefix_not() {
     for (idx, data) in generate_data().attribute_prefix_not.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.body_prefix_not(data.expect),
             data.actual,
             data.failure_msg.clone(),
@@ -272,10 +254,7 @@ fn body_prefix_not_fail_message() {
 fn body_suffix() {
     for (idx, data) in generate_data().attribute_suffix.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.body_suffix(data.expect),
             data.actual,
             data.failure_msg.clone(),
@@ -307,10 +286,7 @@ fn body_suffix_fail_message() {
 fn body_suffix_not() {
     for (idx, data) in generate_data().attribute_suffix_not.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.body_suffix_not(data.expect),
             data.actual,
             data.failure_msg.clone(),
@@ -342,10 +318,7 @@ fn body_suffix_not_fail_message() {
 fn body_matches() {
     for (idx, data) in generate_data().attribute_matches.iter().enumerate() {
         run_test(
-            format!(
-                "Running test case with index '{}' and test data: {:?}",
-                idx, data
-            ),
+            format!("Running test case with index '{idx}' and test data: {data:?}"),
             |when| when.body_matches(data.expect),
             data.actual,
             data.failure_msg.clone(),
