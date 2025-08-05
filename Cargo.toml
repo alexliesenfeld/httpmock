@@ -27,7 +27,7 @@ crossbeam-utils = "0.8"
 futures-util = "0.3"
 similar = "2"
 form_urlencoded = "1"
-thiserror = "1"
+thiserror = "2"
 path-tree = ">=0.8.0, <0.8.1"
 http = "1"
 bytes = { version = "1", features = ["serde"] }
