@@ -16,7 +16,7 @@ jobs:
         rust:
           - 1.82.0  # MSRV
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - uses: actions-rs/toolchain@v1
         with:
@@ -52,7 +52,7 @@ jobs:
         rust:
           - 1.82.0  # MSRV
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - uses: actions-rs/toolchain@v1
         with:
@@ -79,7 +79,7 @@ jobs:
         rust:
           - 1.82.0  # MSRV
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - uses: actions-rs/toolchain@v1
         with:
@@ -100,7 +100,7 @@ jobs:
   docker:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Build development version
         uses: docker/build-push-action@v4
         with:
