@@ -1,10 +1,8 @@
-use async_std::{
-    io::{ReadExt, WriteExt},
-    net::TcpStream,
-};
 use async_trait::async_trait;
 use bytes::Bytes;
 use std::{borrow::Borrow, fmt::Debug, net::SocketAddr, sync::Arc};
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::net::TcpStream;
 
 use futures_util::TryFutureExt;
 
