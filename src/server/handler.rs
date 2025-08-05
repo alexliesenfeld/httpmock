@@ -75,6 +75,7 @@ enum RoutePath {
     Reset,
     MockCollection,
     SingleMock,
+    SingleMockDeleteAfter,
     History,
     Verify,
     SingleForwardingRule,
@@ -126,6 +127,10 @@ where
                 RoutePath::SingleMock => match method {
                     Method::GET => return self.handle_read_mock(params),
                     Method::DELETE => return self.handle_delete_mock(params),
+                    _ => {}
+                },
+                RoutePath::SingleMockDeleteAfter => match method {
+                    Method::POST => return self.handle_delete_mock_after_calls(params),
                     _ => {}
                 },
                 RoutePath::MockCollection => match method {
@@ -194,6 +199,10 @@ where
             path_tree.insert("/__httpmock__/state", RoutePath::Reset);
             path_tree.insert("/__httpmock__/mocks", RoutePath::MockCollection);
             path_tree.insert("/__httpmock__/mocks/:id", RoutePath::SingleMock);
+            path_tree.insert(
+                "/__httpmock__/mocks/:id/delete_after/:count",
+                RoutePath::SingleMockDeleteAfter,
+            );
             path_tree.insert("/__httpmock__/verify", RoutePath::Verify);
             path_tree.insert("/__httpmock__/history", RoutePath::History);
             path_tree.insert(
@@ -245,6 +254,19 @@ where
     fn handle_delete_mock(&self, params: Path) -> Result<Response<Bytes>, Error> {
         let deleted = self.state.delete_mock(param("id", params)?)?;
         let status_code = if deleted {
+            StatusCode::NO_CONTENT
+        } else {
+            StatusCode::NOT_FOUND
+        };
+        return response::<()>(status_code, None);
+    }
+
+    fn handle_delete_mock_after_calls(&self, params: Path) -> Result<Response<Bytes>, Error> {
+        let id = param("id", params.clone())?;
+        let count = param("count", params)?;
+
+        let delete_set = self.state.delete_mock_after_calls(id, count)?;
+        let status_code = if delete_set {
             StatusCode::NO_CONTENT
         } else {
             StatusCode::NOT_FOUND
