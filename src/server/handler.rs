@@ -77,9 +77,13 @@ enum RoutePath {
     SingleMock,
     History,
     Verify,
+    #[cfg(feature = "proxy")]
     SingleForwardingRule,
+    #[cfg(feature = "proxy")]
     ForwardingRuleCollection,
+    #[cfg(feature = "proxy")]
     ProxyRuleCollection,
+    #[cfg(feature = "proxy")]
     SingleProxyRule,
     #[cfg(feature = "record")]
     RecordingCollection,
@@ -141,20 +145,24 @@ where
                     Method::POST => return self.handle_verify(req),
                     _ => {}
                 },
+                #[cfg(feature = "proxy")]
                 RoutePath::ForwardingRuleCollection => match method {
                     Method::POST => return self.handle_add_forwarding_rule(req),
                     Method::DELETE => return self.handle_delete_all_forwarding_rules(),
                     _ => {}
                 },
+                #[cfg(feature = "proxy")]
                 RoutePath::SingleForwardingRule => match method {
                     Method::DELETE => return self.handle_delete_forwarding_rule(params),
                     _ => {}
                 },
+                #[cfg(feature = "proxy")]
                 RoutePath::ProxyRuleCollection => match method {
                     Method::POST => return self.handle_add_proxy_rule(req),
                     Method::DELETE => return self.handle_delete_all_proxy_rules(),
                     _ => {}
                 },
+                #[cfg(feature = "proxy")]
                 RoutePath::SingleProxyRule => match method {
                     Method::DELETE => return self.handle_delete_proxy_rule(params),
                     _ => {}
@@ -196,15 +204,20 @@ where
             path_tree.insert("/__httpmock__/mocks/:id", RoutePath::SingleMock);
             path_tree.insert("/__httpmock__/verify", RoutePath::Verify);
             path_tree.insert("/__httpmock__/history", RoutePath::History);
-            path_tree.insert(
-                "/__httpmock__/forwarding_rules",
-                RoutePath::ForwardingRuleCollection,
-            );
+
+            #[cfg(feature = "proxy")]
+            {
+                path_tree.insert("/__httpmock__/forwarding_rules", RoutePath::ForwardingRuleCollection);
+                path_tree.insert("/__httpmock__/forwarding_rules/:id", RoutePath::SingleForwardingRule);
+                path_tree.insert("/__httpmock__/proxy_rules", RoutePath::ProxyRuleCollection);
+                path_tree.insert("/__httpmock__/proxy_rules/:id", RoutePath::SingleProxyRule);
+            }
 
             #[cfg(feature = "record")]
-            path_tree.insert("/__httpmock__/proxy_rules", RoutePath::ProxyRuleCollection);
-            #[cfg(feature = "record")]
-            path_tree.insert("/__httpmock__/recordings", RoutePath::RecordingCollection);
+            {
+                path_tree.insert("/__httpmock__/recordings", RoutePath::RecordingCollection);
+                path_tree.insert("/__httpmock__/recordings/:id", RoutePath::SingleRecording);
+            }
         }
 
         Self {
