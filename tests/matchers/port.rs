@@ -66,7 +66,6 @@ fn host_not_failure() {
         || {
             // Arrange
             let server = MockServer::start();
-            let port = server.port();
 
             let m = server.mock(|when, then| {
                 when.host_not("127.0.0.1");
