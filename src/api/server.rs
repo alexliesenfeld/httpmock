@@ -18,7 +18,7 @@ use crate::{
     api::proxy::{ForwardingRule, ForwardingRuleBuilder, ProxyRule, ProxyRuleBuilder},
     common::{
         data::{ForwardingRuleConfig, ProxyRuleConfig},
-        util::read_file_async,
+        util::read_file,
     },
 };
 
@@ -1179,7 +1179,7 @@ impl MockServer {
     #[cfg(feature = "record")]
     pub async fn playback_async<IntoPathBuf: Into<PathBuf>>(&self, path: IntoPathBuf) -> MockSet {
         let path = path.into();
-        let content = read_file_async(&path).await.expect(&format!(
+        let content = read_file(&path).expect(&format!(
             "could not read from file {}",
             path.as_os_str()
                 .to_str()

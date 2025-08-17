@@ -52,8 +52,11 @@ This pattern can be found throughout the entire API of `httpmock`.
 `httpmock` is designed to be executor-agnostic. Our CI/CD pipeline includes dedicated tests to verify compatibility with at least the following async executors:
 
 - [tokio](https://docs.rs/tokio/latest/tokio/)
-- [async-std](https://docs.rs/async-std/latest/async_std)
+- [smol](https://docs.rs/smol/latest/smol/)
 - [actix-rt](https://docs.rs/actix-rt/latest/actix_rt)
+
+
+[async-std](https://docs.rs/async-std/latest/async_std) support is not guaranteed, as it is not actively maintained and has been deprecated in favor of [smol](https://docs.rs/smol/latest/smol/).
 
 ## Test Execution and Pooling
 

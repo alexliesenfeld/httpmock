@@ -1,8 +1,6 @@
 use async_trait::async_trait;
 use bytes::Bytes;
 use std::{borrow::Borrow, fmt::Debug, net::SocketAddr, sync::Arc};
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::net::TcpStream;
 
 use futures_util::TryFutureExt;
 
@@ -36,19 +34,6 @@ impl LocalMockServerAdapter {
 
 #[async_trait]
 impl MockServerAdapter for LocalMockServerAdapter {
-    async fn ping(&self) -> Result<(), ServerAdapterError> {
-        let response = simple_http_get_request(&self.addr, "/__httpmock__/ping").await?;
-
-        if !response.contains("200 OK") {
-            return Err(PingError(format!(
-                "Expected server response body to contain '200 OK' but it didn't. Body: '{}'",
-                response
-            )));
-        }
-
-        Ok(())
-    }
-
     fn host(&self) -> String {
         self.addr.ip().to_string()
     }
@@ -180,37 +165,4 @@ impl MockServerAdapter for LocalMockServerAdapter {
             .load_mocks_from_recording(recording_file_content)
             .map_err(|err| UpstreamError(err.to_string()))?)
     }
-}
-
-pub async fn simple_http_get_request(
-    addr: &SocketAddr,
-    path: &str,
-) -> Result<String, ServerAdapterError> {
-    let addr = addr.to_string();
-
-    let mut stream = TcpStream::connect(&addr)
-        .await
-        .map_err(|err| UpstreamError(err.to_string()))?;
-
-    let request = format!(
-        "GET {} HTTP/1.1\r\nHost: {}\r\nConnection: close\r\n\r\n",
-        path, addr
-    );
-
-    stream
-        .write_all(request.as_bytes())
-        .await
-        .map_err(|err| UpstreamError(err.to_string()))?;
-
-    let mut buf = vec![0u8; 1024];
-    let bytes_read = stream
-        .read(&mut buf)
-        .await
-        .map_err(|err| UpstreamError(err.to_string()))?;
-
-    buf.resize(bytes_read, 0);
-
-    let response = String::from_utf8_lossy(&buf);
-
-    Ok(response.to_string())
 }
