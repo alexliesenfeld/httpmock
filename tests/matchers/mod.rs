@@ -110,41 +110,6 @@ where
     }
 }
 
-enum SubstringPart {
-    Prefix,
-    Mid,
-    Suffix,
-}
-
-fn substring_of<S: ToString>(s: S, part: SubstringPart) -> String {
-    let s = s.to_string();
-
-    let len = s.len();
-    let half_length = len / 2;
-
-    match part {
-        SubstringPart::Prefix => s[..half_length].to_string(),
-        SubstringPart::Mid => {
-            let start = (len - half_length) / 2;
-            s[start..start + half_length].to_string()
-        }
-        SubstringPart::Suffix => s[len - half_length..].to_string(),
-    }
-}
-
-fn inverse_char(c: char) -> char {
-    match c {
-        'a'..='z' => (b'z' - (c as u8 - b'a')) as char,
-        'A'..='Z' => (b'Z' - (c as u8 - b'A')) as char,
-        '0'..='9' => (b'9' - (c as u8 - b'0')) as char,
-        _ => c,
-    }
-}
-
-fn string_inverse<S: ToString>(s: S) -> String {
-    s.to_string().chars().map(inverse_char).collect()
-}
-
 #[derive(Debug)]
 pub struct MultiValueMatcherData<ExpectedValue, K, V, M>
 where

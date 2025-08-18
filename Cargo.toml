@@ -28,7 +28,7 @@ futures-util = "0.3"
 similar = "2"
 form_urlencoded = "1"
 thiserror = "2"
-path-tree = ">=0.8.0, <0.8.1"
+path-tree = ">=0.8.0, <0.8.4"
 http = "1"
 bytes = { version = "1", features = ["serde"] }
 hyper = { version = "1", features = ["server", "http1", "client"] }

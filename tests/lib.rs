@@ -24,11 +24,11 @@ pub fn with_standalone_server() {
                 .build()
                 .expect("cannot create mock server");
 
-            let mut runtime = tokio::runtime::Builder::new_current_thread()
+            let runtime = tokio::runtime::Builder::new_current_thread()
                 .enable_all()
                 .build()
                 .unwrap();
-            LocalSet::new().block_on(&mut runtime, srv.start())
+            LocalSet::new().block_on(&runtime, srv.start())
         });
     }
     *started = true
