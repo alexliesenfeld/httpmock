@@ -19,7 +19,7 @@ jobs:
           - nightly
           - 1.82.0  # MSRV
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: ${{ github.event.inputs.branch }}
       - uses: actions-rs/toolchain@v1
@@ -59,7 +59,7 @@ jobs:
           - nightly
           - 1.82.0  # MSRV
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: ${{ github.event.inputs.branch }}
 
@@ -91,7 +91,7 @@ jobs:
           - nightly
           - 1.82.0  # MSRV
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: ${{ github.event.inputs.branch }}
 
@@ -119,7 +119,7 @@ jobs:
   docker:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Login to DockerHub
         uses: docker/login-action@v3
         with:
