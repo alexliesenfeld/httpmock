@@ -36,7 +36,7 @@ fn headers_test() {
 }
 
 #[test]
-fn headers_test_2() {
+fn headers_test_header_count_regex() {
     // Arrange
     let server = MockServer::start();
 
