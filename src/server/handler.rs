@@ -207,8 +207,14 @@ where
 
             #[cfg(feature = "proxy")]
             {
-                path_tree.insert("/__httpmock__/forwarding_rules", RoutePath::ForwardingRuleCollection);
-                path_tree.insert("/__httpmock__/forwarding_rules/:id", RoutePath::SingleForwardingRule);
+                path_tree.insert(
+                    "/__httpmock__/forwarding_rules",
+                    RoutePath::ForwardingRuleCollection,
+                );
+                path_tree.insert(
+                    "/__httpmock__/forwarding_rules/:id",
+                    RoutePath::SingleForwardingRule,
+                );
                 path_tree.insert("/__httpmock__/proxy_rules", RoutePath::ProxyRuleCollection);
                 path_tree.insert("/__httpmock__/proxy_rules/:id", RoutePath::SingleProxyRule);
             }
