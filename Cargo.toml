@@ -51,6 +51,7 @@ tls-detect = { version = "0.1", optional = true }
 hyper-rustls = { version = "0.27", default-features = false, features = ["http1", "logging", "tls12", "native-tokio"], optional = true }
 futures-timer = "3"
 
+
 [dev-dependencies]
 env_logger = "0.11"
 actix-rt = "2"
@@ -58,7 +59,7 @@ colored = "3"
 reqwest = { version = "0.12", features = ["blocking", "cookies", "rustls-tls", "rustls-tls-native-roots"] }
 syn = { version = "2", features = ["full"] }
 urlencoding = "2"
-async-std = { version = "1", features = ["attributes", "unstable"] }
+smol = "2"
 
 
 [features]

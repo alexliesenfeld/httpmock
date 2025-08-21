@@ -18,7 +18,7 @@ fn all_runtimes_test() {
     assert_eq!(actix_rt::Runtime::new().unwrap().block_on(test_fn()), 202);
 
     // async_std
-    assert_eq!(async_std::task::block_on(test_fn()), 202);
+    assert_eq!(smol::block_on(test_fn()), 202);
 }
 
 async fn test_fn() -> u16 {
