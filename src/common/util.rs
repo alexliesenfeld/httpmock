@@ -1,16 +1,14 @@
-use async_std::fs::{create_dir_all as create_dir_all_async, File as AsyncFile};
 use std::{
     borrow::Cow,
     env,
-    fs::File,
+    fs::{create_dir_all, File},
     future::Future,
-    io::Read,
+    io::{Read, Write},
     path::{Path, PathBuf},
     sync::Arc,
     task::{Context, Poll},
 };
 
-use async_std::io::{ReadExt, WriteExt};
 use bytes::Bytes;
 /// Extension trait for efficiently blocking on a future.
 use crossbeam_utils::sync::{Parker, Unparker};
@@ -140,24 +138,15 @@ pub async fn write_file<P: AsRef<Path>>(
 
     if create_dir {
         if let Some(parent) = path.parent() {
-            create_dir_all_async(parent).await?;
+            create_dir_all(parent)?;
         }
     }
 
-    let mut file = AsyncFile::create(&path).await?;
-    file.write_all(content).await?;
-    file.flush().await?;
+    let mut file = File::create(&path)?;
+    file.write_all(content)?;
+    file.flush()?;
 
     Ok(path)
-}
-
-pub async fn read_file_async<IntoPathBuf: Into<PathBuf>>(
-    path: IntoPathBuf,
-) -> std::io::Result<Vec<u8>> {
-    let mut file = async_std::fs::File::open(path.into()).await?;
-    let mut content = Vec::new();
-    file.read_to_end(&mut content).await?;
-    Ok(content)
 }
 
 // Checks if the executing thread is running in a Tokio runtime.

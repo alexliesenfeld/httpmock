@@ -40,7 +40,6 @@ colored = { version = "3", optional = true }
 clap = { version = "4", features = ["derive", "env"], optional = true }
 env_logger = { version = "0.11", optional = true }
 serde_yaml = { version = "0.9", optional = true }
-async-std = { version = "1", features = ["attributes", "unstable"] }
 headers = { version = "0.4", optional = true }
 
 ### TLS / HTTPS / PROXY
@@ -52,6 +51,7 @@ tls-detect = { version = "0.1", optional = true }
 hyper-rustls = { version = "0.27", default-features = false, features = ["http1", "logging", "tls12", "native-tokio"], optional = true }
 futures-timer = "3"
 
+
 [dev-dependencies]
 env_logger = "0.11"
 actix-rt = "2"
@@ -59,6 +59,8 @@ colored = "3"
 reqwest = { version = "0.12", features = ["blocking", "cookies", "rustls-tls", "rustls-tls-native-roots"] }
 syn = { version = "2", features = ["full"] }
 urlencoding = "2"
+smol = "2"
+
 
 [features]
 default = ["cookies"]

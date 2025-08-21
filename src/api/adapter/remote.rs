@@ -70,25 +70,6 @@ impl RemoteMockServerAdapter {
 
 #[async_trait]
 impl MockServerAdapter for RemoteMockServerAdapter {
-    async fn ping(&self) -> Result<(), ServerAdapterError> {
-        let request = Request::builder()
-            .method("GET")
-            .uri(format!("http://{}/__httpmock__/ping", &self.addr))
-            .body(Bytes::new())
-            .map_err(|e| UpstreamError(e.to_string()))?;
-
-        let (status, body) = self.do_request(request).await?;
-
-        if status != StatusCode::OK {
-            return Err(UpstreamError(format!(
-                "Could not ping the mock server. Expected response status 202 but was {} (response body = '{}')",
-                status, body
-            )));
-        }
-
-        Ok(())
-    }
-
     fn host(&self) -> String {
         self.addr.ip().to_string()
     }

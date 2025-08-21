@@ -38,7 +38,6 @@ pub mod remote;
 
 #[async_trait]
 pub trait MockServerAdapter {
-    async fn ping(&self) -> Result<(), ServerAdapterError>;
     fn host(&self) -> String;
     fn port(&self) -> u16;
     fn address(&self) -> &SocketAddr;
