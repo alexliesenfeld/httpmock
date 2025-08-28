@@ -1,5 +1,3 @@
-use httpmock::prelude::*;
-use reqwest::blocking::Client;
 
 #[cfg(feature = "proxy")]
 #[test]

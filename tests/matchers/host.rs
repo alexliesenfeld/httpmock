@@ -1,5 +1,3 @@
-use crate::matchers::expect_fails_with2;
-use httpmock::{MockServer, When};
 
 #[cfg(feature = "proxy")]
 #[test]

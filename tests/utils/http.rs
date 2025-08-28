@@ -88,4 +88,3 @@ pub async fn get(uri: &str, proxy: Option<&str>) -> Result<(u16, String), BoxErr
 
     rx.await.unwrap()
 }
-
