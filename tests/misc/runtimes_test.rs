@@ -20,8 +20,8 @@ fn all_runtimes_test() {
 #[cfg(all(feature = "proxy", feature = "remote"))]
 #[cfg(all(feature = "proxy", feature = "remote"))]
 async fn test_fn() -> u16 {
-    use httpmock::prelude::*;
     use crate::utils::http::get;
+    use httpmock::prelude::*;
 
     // Fake GitHub target
     let server3 = MockServer::start_async().await;
@@ -36,7 +36,9 @@ async fn test_fn() -> u16 {
     let server2 = MockServer::connect_async("localhost:5050").await;
     server2
         .forward_to_async(server3.base_url(), |rule| {
-            rule.filter(|when| { when.any_request(); });
+            rule.filter(|when| {
+                when.any_request();
+            });
         })
         .await;
 
@@ -44,7 +46,9 @@ async fn test_fn() -> u16 {
     let server1 = MockServer::start_async().await;
     server1
         .proxy_async(|rule| {
-            rule.filter(|when| { when.any_request(); });
+            rule.filter(|when| {
+                when.any_request();
+            });
         })
         .await;
 
@@ -68,14 +72,16 @@ async fn test_fn() -> u16 {
 #[cfg(feature = "remote")]
 #[cfg(not(feature = "proxy"))]
 async fn test_fn() -> u16 {
-    use httpmock::prelude::*;
     use crate::utils::http;
+    use httpmock::prelude::*;
 
     let server = MockServer::connect_async("localhost:5050").await;
-    let mock = server.mock_async(|when, then| {
-        when.path("/get");
-        then.status(202);
-    }).await;
+    let mock = server
+        .mock_async(|when, then| {
+            when.path("/get");
+            then.status(202);
+        })
+        .await;
 
     let (status, _body) = http::get(&server.url("/get"), None)
         .await
@@ -88,14 +94,16 @@ async fn test_fn() -> u16 {
 
 #[cfg(not(any(feature = "proxy", feature = "remote")))]
 async fn test_fn() -> u16 {
-    use httpmock::prelude::*;
     use crate::utils::http;
+    use httpmock::prelude::*;
 
     let server = MockServer::start_async().await;
-    let mock = server.mock_async(|when, then| {
-        when.path("/get");
-        then.status(202);
-    }).await;
+    let mock = server
+        .mock_async(|when, then| {
+            when.path("/get");
+            then.status(202);
+        })
+        .await;
 
     let (status, _body) = http::get(&server.url("/get"), None)
         .await
