@@ -1,4 +1,3 @@
-
 #[test]
 fn all_runtimes_test() {
     use crate::with_standalone_server;
@@ -19,11 +18,12 @@ fn all_runtimes_test() {
 }
 
 #[cfg(all(feature = "proxy", feature = "remote"))]
+#[cfg(all(feature = "proxy", feature = "remote"))]
 async fn test_fn() -> u16 {
     use httpmock::prelude::*;
-    use isahc::{http::Uri, prelude::*, HttpClient};
+    use crate::utils::http::get;
 
-    // We will create this mock server to simulate a real service (e.g., GitHub, AWS, etc.).
+    // Fake GitHub target
     let server3 = MockServer::start_async().await;
     server3
         .mock_async(|when, then| {
@@ -32,49 +32,35 @@ async fn test_fn() -> u16 {
         })
         .await;
 
+    // Proxy forwarder
     let server2 = MockServer::connect_async("localhost:5050").await;
     server2
         .forward_to_async(server3.base_url(), |rule| {
-            rule.filter(|when| {
-                when.any_request(); // We want all requests to be proxied.
-            });
+            rule.filter(|when| { when.any_request(); });
         })
         .await;
 
-    // Let's create our mock server for the test
+    // Outer proxy
     let server1 = MockServer::start_async().await;
-
-    // We configure our server to proxy the request to the target host instead of
-    // answering with a mocked response. The 'when' variable lets you configure
-    // rules under which requests are proxied.
     server1
         .proxy_async(|rule| {
-            rule.filter(|when| {
-                when.any_request(); // We want all requests to be proxied.
-            });
+            rule.filter(|when| { when.any_request(); });
         })
         .await;
 
-    // The following will send a request to the mock server. The request will be forwarded
-    // to the target host, as we configured before.
-    // Build client with proxy
-    let proxy_server_uri: Uri = server1.base_url().parse().unwrap();
+    // External check (through proxy to httpbin)
+    let (_status, body) = get("https://httpbin.org/ip", Some(server1.base_url().as_str()))
+        .await
+        .expect("proxy to httpbin failed");
+    println!("{}", body);
 
-    let client = HttpClient::builder()
-        .proxy(proxy_server_uri)
-        .build()
-        .unwrap();
+    // Through proxy to server2
+    let (status_code, body) = get(&server2.url("/get"), Some(server1.base_url().as_str()))
+        .await
+        .expect("proxy to server2 failed");
 
-    // Forwarded request
-    let mut res = client.get_async("https://httpbin.org/ip").await.unwrap();
-    println!("{}", res.text().await.unwrap());
-
-    // Request to server2
-    let mut response = client.get_async(server2.url("/get")).await.unwrap();
-    let status_code = response.status().as_u16();
-
-    assert_eq!("Hi from fake GitHub!", response.text().await.unwrap());
-    assert_eq!(status_code, 202);
+    assert_eq!("Hi from fake GitHub!", body);
+    assert_eq!(202, status_code);
 
     status_code
 }
@@ -83,7 +69,7 @@ async fn test_fn() -> u16 {
 #[cfg(not(feature = "proxy"))]
 async fn test_fn() -> u16 {
     use httpmock::prelude::*;
-    use isahc::HttpClient;
+    use crate::utils::http;
 
     let server = MockServer::connect_async("localhost:5050").await;
     let mock = server.mock_async(|when, then| {
@@ -91,18 +77,19 @@ async fn test_fn() -> u16 {
         then.status(202);
     }).await;
 
-    let client = HttpClient::new().unwrap();
-    let response = client.get_async(server.url("/get")).await.unwrap();
+    let (status, _body) = http::get(&server.url("/get"), None)
+        .await
+        .expect("request failed");
 
     mock.assert_async().await;
 
-    response.status().as_u16()
+    status
 }
 
 #[cfg(not(any(feature = "proxy", feature = "remote")))]
 async fn test_fn() -> u16 {
     use httpmock::prelude::*;
-    use isahc::HttpClient;
+    use crate::utils::http;
 
     let server = MockServer::start_async().await;
     let mock = server.mock_async(|when, then| {
@@ -110,10 +97,11 @@ async fn test_fn() -> u16 {
         then.status(202);
     }).await;
 
-    let client = HttpClient::new().unwrap();
-    let response = client.get_async(server.url("/get")).await.unwrap();
+    let (status, _body) = http::get(&server.url("/get"), None)
+        .await
+        .expect("request failed");
 
     mock.assert_async().await;
 
-    response.status().as_u16()
+    status
 }
