@@ -18,7 +18,6 @@ fn all_runtimes_test() {
 }
 
 #[cfg(all(feature = "proxy", feature = "remote"))]
-#[cfg(all(feature = "proxy", feature = "remote"))]
 async fn test_fn() -> u16 {
     use crate::utils::http::get;
     use httpmock::prelude::*;
