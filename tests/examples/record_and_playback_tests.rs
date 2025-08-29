@@ -1,5 +1,7 @@
+use httpmock::prelude::*;
 #[cfg(feature = "record")]
 use httpmock::RecordingRuleBuilder;
+use reqwest::blocking::Client;
 
 #[cfg(feature = "record")]
 #[test]

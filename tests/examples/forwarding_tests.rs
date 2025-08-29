@@ -1,3 +1,5 @@
+use httpmock::prelude::*;
+use reqwest::blocking::Client;
 
 // @example-start: forwarding
 #[cfg(feature = "proxy")]
