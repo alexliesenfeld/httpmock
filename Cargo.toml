@@ -59,8 +59,6 @@ reqwest = { version = "0.12", features = ["blocking", "cookies", "rustls-tls", "
 syn = { version = "2", features = ["full"] }
 urlencoding = "2"
 smol = "2"
-curl = "0.4.49"
-futures = "0.3"
 
 [features]
 default = ["cookies"]
