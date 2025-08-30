@@ -1,7 +1,7 @@
 use bytes::{BufMut, Bytes, BytesMut};
 use std::{
     convert::{TryFrom, TryInto},
-    fs::read_dir,
+    fs::{read_dir, read_to_string},
     path::PathBuf,
     str::FromStr,
 };
@@ -13,10 +13,7 @@ use serde_yaml::{Deserializer, Value as YamlValue};
 use thiserror::Error;
 
 use crate::{
-    common::{
-        data::{MockDefinition, StaticMockDefinition},
-        util::read_file,
-    },
+    common::data::{MockDefinition, StaticMockDefinition},
     server::{
         persistence::Error::{DeserializationError, FileReadError},
         state,
@@ -66,8 +63,7 @@ fn read_static_mocks(path: PathBuf) -> Result<Vec<StaticMockDefinition>, Error> 
             file_path.to_string_lossy()
         );
 
-        let content = read_file(file_path).map_err(|err| FileReadError(err.to_string()))?;
-        let content = String::from_utf8(content).map_err(|err| FileReadError(err.to_string()))?;
+        let content = read_to_string(file_path).map_err(|err| FileReadError(err.to_string()))?;
 
         definitions.extend(deserialize_mock_defs_from_yaml(&content)?);
     }

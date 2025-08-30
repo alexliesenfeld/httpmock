@@ -16,10 +16,7 @@ use crate::{
 #[cfg(feature = "proxy")]
 use crate::{
     api::proxy::{ForwardingRule, ForwardingRuleBuilder, ProxyRule, ProxyRuleBuilder},
-    common::{
-        data::{ForwardingRuleConfig, ProxyRuleConfig},
-        util::read_file,
-    },
+    common::data::{ForwardingRuleConfig, ProxyRuleConfig},
 };
 
 #[cfg(feature = "record")]
@@ -1178,19 +1175,17 @@ impl MockServer {
     /// This method is only available when the `record` feature is enabled.
     #[cfg(feature = "record")]
     pub async fn playback_async<IntoPathBuf: Into<PathBuf>>(&self, path: IntoPathBuf) -> MockSet {
+        use std::fs;
+
         let path = path.into();
-        let content = read_file(&path).expect(&format!(
+        let content = fs::read_to_string(&path).expect(&format!(
             "could not read from file {}",
             path.as_os_str()
                 .to_str()
                 .map_or(String::new(), |p| p.to_string())
         ));
 
-        return self
-            .playback_from_yaml_async(
-                String::from_utf8(content).expect("cannot convert file content to UTF-8"),
-            )
-            .await;
+        return self.playback_from_yaml_async(content).await;
     }
 
     /// Configures the mock server to respond with the recorded responses based on a provided recording
