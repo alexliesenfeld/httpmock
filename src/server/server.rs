@@ -188,8 +188,8 @@ where
         log::trace!("New HTTP request received: {}", req.uri());
 
         if req.method() == Method::CONNECT {
-            return Ok(Response::new(empty()));
-            // return handle_connect(req).await;
+            // return Ok(Response::new(empty()));
+            return handle_connect(req).await;
         }
 
         let req = match buffer_request(req).await {

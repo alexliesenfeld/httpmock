@@ -510,5 +510,4 @@ features = "standalone,cookies,remote,proxy,record,https,http2"
 release = true
 
 [report]
-coveralls = "coveralls_key"
-out = ["Html", "Xml"]
+out = ["Html", "Xml", "Lcov"]

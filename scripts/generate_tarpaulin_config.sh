@@ -47,6 +47,5 @@ generate_powerset() {
 generate_powerset "${feature_array[@]}"
 
 echo '[report]'
-echo 'coveralls = "coveralls_key"'
 echo 'out = ["Html", "Xml"]'
 
