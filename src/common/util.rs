@@ -102,28 +102,6 @@ pub fn get_test_resource_file_path(relative_resource_path: &str) -> Result<PathB
     }
 }
 
-pub fn read_file<P: AsRef<Path>>(absolute_resource_path: P) -> Result<Vec<u8>, String> {
-    let mut f = match File::open(&absolute_resource_path) {
-        Ok(mut opened_file) => opened_file,
-        Err(e) => return Err(e.to_string()),
-    };
-    let mut buffer = Vec::new();
-    match f.read_to_end(&mut buffer) {
-        Ok(len) => log::trace!(
-            "Read {} bytes from file {:?}",
-            &len,
-            &absolute_resource_path
-                .as_ref()
-                .as_os_str()
-                .to_str()
-                .expect("Invalid file path")
-        ),
-        Err(e) => return Err(e.to_string()),
-    }
-
-    Ok(buffer)
-}
-
 pub async fn write_file<P: AsRef<Path>>(
     resource_path: P,
     content: &Bytes,

@@ -1,7 +1,7 @@
 use crate::{
     common::{
         data::{MockServerHttpResponse, RequestRequirements},
-        util::{get_test_resource_file_path, read_file, update_cell, HttpMockBytes},
+        util::{get_test_resource_file_path, update_cell, HttpMockBytes},
     },
     prelude::HttpMockRequest,
     Method, Regex,
@@ -10,7 +10,8 @@ use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::{
-    cell::Cell, convert::TryInto, path::Path, rc::Rc, str::FromStr, sync::Arc, time::Duration,
+    cell::Cell, convert::TryInto, fs::read_to_string, path::Path, rc::Rc, str::FromStr, sync::Arc,
+    time::Duration,
 };
 
 /// A function that encapsulates one or more
@@ -5067,7 +5068,7 @@ impl Then {
                 &resource_file_path
             )),
         };
-        let content = read_file(&absolute_path).expect(&format!(
+        let content = read_to_string(&absolute_path).expect(&format!(
             "Cannot read from file {}",
             absolute_path.to_str().expect("Invalid OS path")
         ));
