@@ -958,12 +958,115 @@ pub fn hostname_equals(
         let mv_is = mv.eq_ignore_ascii_case("localhost") || mv.eq_ignore_ascii_case("127.0.0.1");
         let rv_is = rv.eq_ignore_ascii_case("localhost") || rv.eq_ignore_ascii_case("127.0.0.1");
 
-        if mv_is == rv_is {
+        if mv_is && rv_is {
             return !negated;
         }
     }
 
     return string_equals(false, negated, mock_value, req_value);
+}
+
+#[cfg(test)]
+mod hostname_equals_tests {
+    use super::*;
+
+    #[test]
+    fn test_hostname_is_not_equal() {
+        let mock_value_str = "github.com".to_string();
+        let req_value_str = "not_github.com".to_string();
+
+        assert_eq!(
+            hostname_equals(false, &Some(&mock_value_str), &Some(&req_value_str)),
+            false
+        );
+
+        assert_eq!(
+            hostname_equals(true, &Some(&mock_value_str), &Some(&req_value_str)),
+            true
+        );
+    }
+
+    #[test]
+    fn test_hostname_is_equal() {
+        let mock_value_str = "github.com".to_string();
+        let req_value_str = "github.com".to_string();
+
+        assert_eq!(
+            hostname_equals(false, &Some(&mock_value_str), &Some(&req_value_str)),
+            true
+        );
+
+        assert_eq!(
+            hostname_equals(true, &Some(&mock_value_str), &Some(&req_value_str)),
+            false
+        );
+    }
+
+    #[test]
+    fn test_hostname_localhost_equals() {
+        let localhost_str = "localhost".to_string();
+        let ip_str = "127.0.0.1".to_string();
+
+        assert_eq!(
+            hostname_equals(false, &Some(&localhost_str), &Some(&localhost_str)),
+            true
+        );
+
+        assert_eq!(
+            hostname_equals(true, &Some(&localhost_str), &Some(&localhost_str)),
+            false
+        );
+
+        assert_eq!(
+            hostname_equals(false, &Some(&localhost_str), &Some(&ip_str)),
+            true
+        );
+
+        assert_eq!(
+            hostname_equals(true, &Some(&localhost_str), &Some(&ip_str)),
+            false
+        );
+
+        assert_eq!(
+            hostname_equals(false, &Some(&ip_str), &Some(&localhost_str)),
+            true
+        );
+
+        assert_eq!(
+            hostname_equals(true, &Some(&ip_str), &Some(&localhost_str)),
+            false
+        );
+
+        assert_eq!(hostname_equals(false, &Some(&ip_str), &Some(&ip_str)), true);
+
+        assert_eq!(hostname_equals(true, &Some(&ip_str), &Some(&ip_str)), false);
+    }
+
+    #[test]
+    fn test_hostname_is_not_equal_to_localhost() {
+        let github_str = "github.com".to_string();
+        let localhost_str = "localhost".to_string();
+
+        assert_eq!(
+            hostname_equals(false, &Some(&github_str), &Some(&localhost_str)),
+            false
+        );
+
+        assert_eq!(
+            hostname_equals(true, &Some(&github_str), &Some(&localhost_str)),
+            true
+        );
+
+        assert_eq!(
+            hostname_equals(false, &Some(&localhost_str), &Some(&github_str)),
+            false
+        );
+
+        assert_eq!(
+            hostname_equals(true, &Some(&localhost_str), &Some(&github_str)),
+            true
+        );
+    }
 }
 
 /// Computes the distance between two optional strings (`mock_value` and `req_value`),
