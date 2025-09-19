@@ -1,10 +1,6 @@
-use crate::with_standalone_server;
-use httpmock::prelude::*;
-use reqwest::Client;
-
 #[test]
 fn all_runtimes_test() {
-    return; // TODO: This needs to be fixed. New HTTP client requires tokio runtime!
+    use crate::with_standalone_server;
 
     with_standalone_server();
 
@@ -21,8 +17,12 @@ fn all_runtimes_test() {
     assert_eq!(smol::block_on(test_fn()), 202);
 }
 
+#[cfg(all(feature = "proxy", feature = "remote", not(feature = "standalone")))]
 async fn test_fn() -> u16 {
-    // We will create this mock server to simulate a real service (e.g., GitHub, AWS, etc.).
+    use crate::utils::http::get;
+    use httpmock::prelude::*;
+
+    // Fake GitHub target
     let server3 = MockServer::start_async().await;
     server3
         .mock_async(|when, then| {
@@ -31,42 +31,86 @@ async fn test_fn() -> u16 {
         })
         .await;
 
+    // Proxy forwarder
     let server2 = MockServer::connect_async("localhost:5050").await;
     server2
         .forward_to_async(server3.base_url(), |rule| {
             rule.filter(|when| {
-                when.any_request(); // We want all requests to be proxied.
+                when.any_request();
             });
         })
         .await;
 
-    // Let's create our mock server for the test
+    // Outer proxy
     let server1 = MockServer::start_async().await;
-
-    // We configure our server to proxy the request to the target host instead of
-    // answering with a mocked response. The 'when' variable lets you configure
-    // rules under which requests are proxied.
     server1
         .proxy_async(|rule| {
             rule.filter(|when| {
-                when.any_request(); // We want all requests to be proxied.
+                when.any_request();
             });
         })
         .await;
 
-    // The following will send a request to the mock server. The request will be forwarded
-    // to the target host, as we configured before.
-    let client = Client::builder()
-        .proxy(reqwest::Proxy::all(server1.base_url()).unwrap()) // Configure to use a proxy server
-        .build()
-        .unwrap();
+    // External check (through proxy to httpbin)
+    let (_status, body) = get("https://httpbin.org/ip", Some(server1.base_url().as_str()))
+        .await
+        .expect("proxy to httpbin failed");
+    println!("{}", body);
 
-    // Since the request was forwarded, we should see the target host's response.
-    let response = client.get(server2.url("/get")).send().await.unwrap();
-    let status_code = response.status().as_u16();
+    // Through proxy to server2
+    let (status_code, body) = get(&server2.url("/get"), Some(server1.base_url().as_str()))
+        .await
+        .expect("proxy to server2 failed");
 
-    assert_eq!("Hi from fake GitHub!", response.text().await.unwrap());
-    assert_eq!(status_code, 202);
+    assert_eq!("Hi from fake GitHub!", body);
+    assert_eq!(202, status_code);
 
     status_code
+}
+
+#[cfg(any(
+    all(feature = "remote", not(feature = "proxy")),
+    feature = "standalone"
+))]
+async fn test_fn() -> u16 {
+    use crate::utils::http;
+    use httpmock::prelude::*;
+
+    let server = MockServer::connect_async("localhost:5050").await;
+    let mock = server
+        .mock_async(|when, then| {
+            when.path("/get");
+            then.status(202);
+        })
+        .await;
+
+    let (status, _body) = http::get(&server.url("/get"), None)
+        .await
+        .expect("request failed");
+
+    mock.assert_async().await;
+
+    status
+}
+
+#[cfg(not(any(feature = "proxy", feature = "remote")))]
+async fn test_fn() -> u16 {
+    use crate::utils::http;
+    use httpmock::prelude::*;
+
+    let server = MockServer::start_async().await;
+    let mock = server
+        .mock_async(|when, then| {
+            when.path("/get");
+            then.status(202);
+        })
+        .await;
+
+    let (status, _body) = http::get(&server.url("/get"), None)
+        .await
+        .expect("request failed");
+
+    mock.assert_async().await;
+
+    status
 }
