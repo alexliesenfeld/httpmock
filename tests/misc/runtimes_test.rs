@@ -51,8 +51,11 @@ async fn test_fn() -> u16 {
         })
         .await;
 
+    // TODO: https://github.com/alexliesenfeld/httpmock/issues/161
+    //  We are using http scheme here, not https. This should be changed once the proxy feature
+    //  works with https
     // External check (through proxy to httpbin)
-    let (_status, body) = get("https://httpbin.org/ip", Some(server1.base_url().as_str()))
+    let (_status, body) = get("http://httpbin.org/ip", Some(server1.base_url().as_str()))
         .await
         .expect("proxy to httpbin failed");
     println!("{}", body);
