@@ -7,8 +7,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  coverage:
-    name: coverage
+  full-test:
+    name: full-test
     runs-on: ubuntu-latest
     container:
       image: xd009642/tarpaulin:develop-nightly
@@ -16,6 +16,36 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+
+      - name: Trust custom CA certificates
+        run: |
+          apt-get update
+          apt-get install -y ca-certificates
+          cp certs/*.crt /usr/local/share/ca-certificates/ || true
+          update-ca-certificates
+
+      - name: Generate code coverage
+        run: make coverage-full
+
+      - name: Generate code coverage
+        run: make test-https
+
+  https-tests:
+    name: https-tests
+    runs-on: ubuntu-latest
+    container:
+      image: xd009642/tarpaulin:develop-nightly
+      options: --security-opt seccomp=unconfined
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Trust custom CA certificates
+        run: |
+          apt-get update
+          apt-get install -y ca-certificates
+          cp certs/*.crt /usr/local/share/ca-certificates/ || true
+          update-ca-certificates
 
       - name: Generate code coverage
         run: make coverage-full
