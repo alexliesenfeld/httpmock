@@ -1,0 +1,24 @@
+on: workflow_dispatch
+
+name: Paranoid Test Coverage Check
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  coverage:
+    name: coverage
+    runs-on: ubuntu-latest
+    container:
+      image: xd009642/tarpaulin:develop-nightly
+      options: --security-opt seccomp=unconfined
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Generate code coverage
+        run: make coverage-full
+
+      - name: Generate code coverage
+        run: make test-https

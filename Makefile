@@ -25,7 +25,7 @@ coverage:
 coverage-full: clean-coverage
 	cargo tarpaulin --config tarpaulin.full.toml --out
 
-.PHONY: coverage-https
+.PHONY: test-https
 test-https: clean-coverage
 	./scripts/test_all_feature_sets.sh "standalone,remote,proxy,record,https"
 
