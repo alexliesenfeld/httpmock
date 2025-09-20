@@ -18,7 +18,10 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Trust custom CA certificates
+        shell: bash
         run: |
+          set -e
+          cp certs/ca.pem certs/ca.crt
           apt-get update
           apt-get install -y ca-certificates
           cp certs/*.crt /usr/local/share/ca-certificates/ || true
@@ -41,7 +44,10 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Trust custom CA certificates
+        shell: bash
         run: |
+          set -e
+          cp certs/ca.pem certs/ca.crt
           apt-get update
           apt-get install -y ca-certificates
           cp certs/*.crt /usr/local/share/ca-certificates/ || true
