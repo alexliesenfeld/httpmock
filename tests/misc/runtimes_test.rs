@@ -18,7 +18,11 @@ fn all_runtimes_test() {
     assert_eq!(smol::block_on(test_fn()), 202);
 }
 
-#[cfg(all(feature = "proxy", feature = "remote", not(any(feature = "standalone", feature = "https"))))]
+#[cfg(all(
+    feature = "proxy",
+    feature = "remote",
+    not(any(feature = "standalone", feature = "https"))
+))]
 async fn test_fn() -> u16 {
     use crate::utils::http::get;
     use httpmock::prelude::*;

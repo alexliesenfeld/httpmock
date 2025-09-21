@@ -3,6 +3,7 @@ use std::{env, path::PathBuf};
 use clap::Parser;
 
 use httpmock::server::HttpMockServerBuilder;
+use tracing_subscriber::EnvFilter;
 
 /// Holds command line parameters provided by the user.
 #[derive(Parser, Debug)]
@@ -30,24 +31,28 @@ struct ExecutionParameters {
 
 #[tokio::main]
 async fn main() {
-    env_logger::init_from_env(env_logger::Env::default().default_filter_or("httpmock=info"));
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("httpmock=info")),
+        )
+        .init();
 
     let params: ExecutionParameters = ExecutionParameters::parse();
 
-    log::info!("██╗  ██╗████████╗████████╗██████╗ ███╗   ███╗ ██████╗  ██████╗██╗  ██╗");
-    log::info!("██║  ██║╚══██╔══╝╚══██╔══╝██╔══██╗████╗ ████║██╔═══██╗██╔════╝██║ ██╔╝");
-    log::info!("███████║   ██║      ██║   ██████╔╝██╔████╔██║██║   ██║██║     █████╔╝");
-    log::info!("██╔══██║   ██║      ██║   ██╔═══╝ ██║╚██╔╝██║██║   ██║██║     ██╔═██╗");
-    log::info!("██║  ██║   ██║      ██║   ██║     ██║ ╚═╝ ██║╚██████╔╝╚██████╗██║  ██╗");
-    log::info!("╚═╝  ╚═╝   ╚═╝      ╚═╝   ╚═╝     ╚═╝     ╚═╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝");
+    tracing::info!("██╗  ██╗████████╗████████╗██████╗ ███╗   ███╗ ██████╗  ██████╗██╗  ██╗");
+    tracing::info!("██║  ██║╚══██╔══╝╚══██╔══╝██╔══██╗████╗ ████║██╔═══██╗██╔════╝██║ ██╔╝");
+    tracing::info!("███████║   ██║      ██║   ██████╔╝██╔████╔██║██║   ██║██║     █████╔╝");
+    tracing::info!("██╔══██║   ██║      ██║   ██╔═══╝ ██║╚██╔╝██║██║   ██║██║     ██╔═██╗");
+    tracing::info!("██║  ██║   ██║      ██║   ██║     ██║ ╚═╝ ██║╚██████╔╝╚██████╗██║  ██╗");
+    tracing::info!("╚═╝  ╚═╝   ╚═╝      ╚═╝   ╚═╝     ╚═╝     ╚═╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝");
 
-    log::info!(
+    tracing::info!(
         "Starting {} server V{}",
         env!("CARGO_PKG_NAME"),
         env!("CARGO_PKG_VERSION")
     );
 
-    log::info!("{params:?}");
+    tracing::info!("{params:?}");
 
     let server = HttpMockServerBuilder::new()
         .port(params.port)
@@ -76,9 +81,9 @@ async fn shutdown_signal() {
             .expect("Cannot install SIGINT signal handler");
 
     tokio::select! {
-        _val = hangup_stream.recv() => log::trace!("Received SIGINT"),
-        _val = sigint_stream.recv() => log::trace!("Received SIGINT"),
-        _val = sigterm_stream.recv() => log::trace!("Received SIGTERM"),
+        _val = hangup_stream.recv() => tracing::trace!("Received SIGINT"),
+        _val = sigint_stream.recv() => tracing::trace!("Received SIGINT"),
+        _val = sigterm_stream.recv() => tracing::trace!("Received SIGTERM"),
     }
 }
 

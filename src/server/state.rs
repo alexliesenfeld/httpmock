@@ -158,7 +158,7 @@ impl StateManager for HttpMockStateManager {
         let id = state.next_mock_id;
         let active_mock = ActiveMock::new(id, definition, 0, is_static);
 
-        log::debug!("Adding new mock with ID={}", id);
+        tracing::debug!("Adding new mock with ID={}", id);
 
         state.mocks.insert(id, active_mock.clone());
 
@@ -186,7 +186,7 @@ impl StateManager for HttpMockStateManager {
             }
         }
 
-        log::debug!("Deleting mock with id={}", id);
+        tracing::debug!("Deleting mock with id={}", id);
 
         Ok(state.mocks.remove(&id).is_some())
     }
@@ -205,13 +205,13 @@ impl StateManager for HttpMockStateManager {
             state.mocks.remove(k);
         });
 
-        log::trace!("Deleted all mocks");
+        tracing::trace!("Deleted all mocks");
     }
 
     fn delete_history(&self) {
         let mut state = self.state.lock().unwrap();
         state.history.clear();
-        log::trace!("Deleted request history");
+        tracing::trace!("Deleted request history");
     }
 
     fn verify(&self, requirements: &RequestRequirements) -> Result<Option<ClosestMatch>, Error> {
@@ -264,7 +264,7 @@ impl StateManager for HttpMockStateManager {
         };
 
         if let Some(found_id) = found_mock_id {
-            log::debug!(
+            tracing::debug!(
                 "Matched mock with id={} to the following request: {:#?}",
                 found_id,
                 req
@@ -276,7 +276,7 @@ impl StateManager for HttpMockStateManager {
             return Ok(Some(mock.definition.response.clone()));
         }
 
-        log::debug!(
+        tracing::debug!(
             "Could not match any mock to the following request: {:#?}",
             req
         );
@@ -305,9 +305,9 @@ impl StateManager for HttpMockStateManager {
         let result = state.forwarding_rules.remove(&id);
 
         if result.is_some() {
-            log::debug!("Deleting proxy rule with id={}", id);
+            tracing::debug!("Deleting proxy rule with id={}", id);
         } else {
-            log::warn!(
+            tracing::warn!(
                 "Could not delete proxy rule with id={} (no proxy rule with that id found)",
                 id
             );
@@ -320,7 +320,7 @@ impl StateManager for HttpMockStateManager {
         let mut state = self.state.lock().unwrap();
         state.forwarding_rules.clear();
 
-        log::debug!("Deleted all forwarding rules");
+        tracing::debug!("Deleted all forwarding rules");
     }
 
     fn create_proxy_rule(&self, config: ProxyRuleConfig) -> ActiveProxyRule {
@@ -344,9 +344,9 @@ impl StateManager for HttpMockStateManager {
         let result = state.proxy_rules.remove(&id);
 
         if result.is_some() {
-            log::debug!("Deleting proxy rule with id={}", id);
+            tracing::debug!("Deleting proxy rule with id={}", id);
         } else {
-            log::warn!(
+            tracing::warn!(
                 "Could not delete proxy rule with id={} (no proxy rule with that id found)",
                 id
             );
@@ -359,7 +359,7 @@ impl StateManager for HttpMockStateManager {
         let mut state = self.state.lock().unwrap();
         state.proxy_rules.clear();
 
-        log::debug!("Deleted all proxy rules");
+        tracing::debug!("Deleted all proxy rules");
     }
 
     fn create_recording(&self, config: RecordingRuleConfig) -> ActiveRecording {
@@ -384,9 +384,9 @@ impl StateManager for HttpMockStateManager {
         let result = state.recordings.remove(&id);
 
         if result.is_some() {
-            log::debug!("Deleting proxy rule with id={}", id);
+            tracing::debug!("Deleting proxy rule with id={}", id);
         } else {
-            log::warn!(
+            tracing::warn!(
                 "Could not delete proxy rule with id={} (no proxy rule with that id found)",
                 id
             );
@@ -399,7 +399,7 @@ impl StateManager for HttpMockStateManager {
         let mut state = self.state.lock().unwrap();
         state.recordings.clear();
 
-        log::debug!("Deleted all recorders");
+        tracing::debug!("Deleted all recorders");
     }
 
     #[cfg(feature = "record")]
@@ -690,7 +690,7 @@ fn request_matches(
     req: &HttpMockRequest,
     request_requirements: &RequestRequirements,
 ) -> bool {
-    log::trace!("Matching incoming HTTP request");
+    tracing::trace!("Matching incoming HTTP request");
     matchers
         .iter()
         .enumerate()

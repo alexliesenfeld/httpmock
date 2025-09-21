@@ -58,7 +58,7 @@ fn read_static_mocks(path: PathBuf) -> Result<Vec<StaticMockDefinition>, Error> 
             }
         }
 
-        log::info!(
+        tracing::info!(
             "Loading static mock file from '{}'",
             file_path.to_string_lossy()
         );

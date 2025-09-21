@@ -144,7 +144,7 @@ where
 
         // ****************************************************************************************
         // SERVER START
-        log::info!("Listening on {}", addr);
+        tracing::info!("Listening on {}", addr);
         self.run_accept_loop(listener, shutdown).await
     }
 
@@ -163,12 +163,12 @@ where
                             let server = server.clone();
                             spawn(async move {
                                if let Err(err) = server.handle_tcp_stream(tcp_stream, remote_address).await {
-                                    log::error!("{:?}", err);
+                                    tracing::error!("{:?}", err);
                                 }
                             });
                         },
                         Err(err) =>  {
-                            log::error!("TCP error: {:?}", err);
+                            tracing::error!("TCP error: {:?}", err);
                         },
                     };
                 }
@@ -185,7 +185,7 @@ where
         self: Arc<Self>,
         req: Request<Incoming>,
     ) -> Result<Response<BoxBody<Bytes, hyper::Error>>, Error> {
-        log::trace!("New HTTP request received: {}", req.uri());
+        tracing::trace!("New HTTP request received: {}", req.uri());
 
         if req.method() == Method::CONNECT {
             return Ok(Response::new(empty()));
@@ -210,13 +210,13 @@ where
         tcp_stream: TcpStream,
         remote_address: SocketAddr,
     ) -> Result<(), Error> {
-        log::trace!("new TCP connection incoming");
+        tracing::trace!("new TCP connection incoming");
 
         #[cfg(feature = "https")]
         {
             let mut peek_buffer = TcpStreamPeekBuffer::new(&tcp_stream);
             if is_encrypted(&mut peek_buffer, 0).await {
-                log::trace!("TCP connection seems to be TLS encrypted");
+                tracing::trace!("TCP connection seems to be TLS encrypted");
 
                 let tcp_address = tcp_stream.local_addr().map_err(|err| IOError(err))?;
 
@@ -243,17 +243,13 @@ where
                 return serve_connection(self.clone(), tls_stream, "https").await;
             }
 
-            if log::max_level() >= log::LevelFilter::Trace {
-                let peeked_str =
-                    String::from_utf8_lossy(&peek_buffer.buffer().to_vec()).to_string();
-                log::trace!(
-                    "TCP connection seems NOT to be TLS encrypted (based on peeked data: {}",
-                    peeked_str
-                );
-            }
+            tracing::trace!(
+                "TCP connection seems NOT to be TLS encrypted (based on peeked data: {}",
+                String::from_utf8_lossy(&peek_buffer.buffer())
+            );
         }
 
-        log::trace!("TCP connection is not TLS encrypted");
+        tracing::trace!("TCP connection is not TLS encrypted");
 
         return serve_connection(self.clone(), tcp_stream, "http").await;
     }
@@ -295,20 +291,20 @@ async fn handle_connect(
             match upgrade_on(req).await {
                 Ok(upgraded) => {
                     if let Err(e) = tunnel(upgraded, addr).await {
-                        log::warn!("Proxy I/O error: {}", e);
+                        tracing::warn!("Proxy I/O error: {}", e);
                     } else {
-                        log::info!("Proxied request");
+                        tracing::info!("Proxied request");
                     };
                 }
                 Err(e) => {
-                    log::warn!("Proxy upgrade error: {}", e)
+                    tracing::warn!("Proxy upgrade error: {}", e)
                 }
             }
         });
 
         Ok(Response::new(empty()))
     } else {
-        log::warn!("CONNECT host is not socket addr: {:?}", req.uri());
+        tracing::warn!("CONNECT host is not socket addr: {:?}", req.uri());
         let mut resp = Response::new(full("CONNECT must be sent to a socket address"));
         *resp.status_mut() = StatusCode::BAD_REQUEST;
 
@@ -345,7 +341,7 @@ async fn tunnel(upgraded: hyper::upgrade::Upgraded, addr: String) -> std::io::Re
     let (from_client, from_server) =
         tokio::io::copy_bidirectional(&mut server, &mut upgraded).await?;
 
-    log::info!(
+    tracing::info!(
         "client wrote {} bytes and received {} bytes. \n\nread:\n{}\n\n wrote: {}\n\n",
         from_client,
         from_server,
@@ -360,7 +356,7 @@ fn error_response(
     code: StatusCode,
     err: Error,
 ) -> Result<Response<BoxBody<Bytes, hyper::Error>>, Error> {
-    log::error!("failed to process request: {}", err.to_string());
+    tracing::error!("failed to process request: {}", err.to_string());
     Ok(Response::builder()
         .status(code)
         .body(full(err.to_string()))?)
