@@ -244,7 +244,7 @@ where
             }
 
             tracing::trace!(
-                "TCP connection seems NOT to be TLS encrypted (based on peeked data: {}",
+                "TCP connection seems NOT to be TLS encrypted (based on peeked data: {})",
                 String::from_utf8_lossy(&peek_buffer.buffer())
             );
         }
