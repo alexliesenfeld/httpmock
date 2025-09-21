@@ -15,7 +15,6 @@ mod handler;
 pub mod matchers;
 mod server;
 pub mod state;
-mod util;
 
 #[cfg(feature = "record")]
 mod persistence;

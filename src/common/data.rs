@@ -305,19 +305,6 @@ impl HttpMockRequest {
     }
 }
 
-fn headers_to_vec(parts: &http::request::Parts) -> Vec<(String, String)> {
-    parts
-        .headers
-        .iter()
-        .map(|(name, value)| {
-            (
-                name.as_str().to_string(),
-                value.to_str().unwrap().to_string(),
-            )
-        })
-        .collect()
-}
-
 fn http_headers_to_vec<T>(req: &http::Request<T>) -> Result<Vec<(String, String)>, Error> {
     req.headers()
         .iter()
