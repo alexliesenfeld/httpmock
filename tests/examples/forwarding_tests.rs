@@ -46,7 +46,7 @@ fn forward_to_github_test() {
     // host instead of answering with a mocked response. The 'when'
     // variable lets you configure rules under which forwarding
     // should take place.
-    server.forward_to("https://api.github.com", |rule| {
+    server.forward_to("https://httpbin.org", |rule| {
         rule.filter(|when| {
             when.any_request(); // Ensure all requests are forwarded.
         });
@@ -57,14 +57,12 @@ fn forward_to_github_test() {
     let client = Client::new();
 
     let response = client
-        .get(server.url("/repos/torvalds/linux"))
-        // GitHub requires us to send a user agent header
-        .header("User-Agent", "httpmock-test")
+        .get(server.url("/base64/aHR0cG1vY2sgaXMgYXdlc29tZQ=="))
         .send()
         .unwrap();
 
     // Since the request was forwarded, we should see a GitHub API response.
     assert_eq!(response.status().as_u16(), 200);
-    assert!(response.text().unwrap().contains("\"private\":false"));
+    assert_eq!(response.text().unwrap(), "httpmock is awesome");
 }
 // @example-end

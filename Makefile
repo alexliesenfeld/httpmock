@@ -29,6 +29,10 @@ coverage-full: clean-coverage
 all-features-test: clean-coverage
 	./scripts/test_all_feature_sets.sh "standalone,cookies,remote,remote-https,proxy,https,http2,record"
 
+.PHONY: https-full-features-test
+https-full-features-test: clean-coverage
+	./scripts/test_all_feature_sets.sh "standalone,remote,remote-https,proxy,https,record"
+
 .PHONY: coverage-debug
 coverage-debug:
 	 RUST_BACKTRACE=1 RUST_LOG=trace cargo tarpaulin --out -- --nocapture
