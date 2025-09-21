@@ -188,8 +188,20 @@ where
         tracing::trace!("New HTTP request received: {}", req.uri());
 
         if req.method() == Method::CONNECT {
-            return Ok(Response::new(empty()));
-            // return handle_connect(req).await;
+            // Prepare upgrade before moving req
+            let on_upgrade = upgrade_on(req);
+            let this = self.clone();
+
+            spawn(async move {
+                if let Err(e) = this.handle_connect_upgraded(on_upgrade).await {
+                    log::warn!("CONNECT upgraded handling failed: {:?}", e);
+                }
+            });
+
+            // Respond with 200 Connection Established and empty body
+            return Ok(Response::builder()
+                .status(StatusCode::OK)
+                .body(empty())?);
         }
 
         let req = match buffer_request(req).await {
@@ -220,22 +232,7 @@ where
 
                 let tcp_address = tcp_stream.local_addr().map_err(|err| IOError(err))?;
 
-                let cert_resolver = self.config.https.cert_resolver_factory.build(tcp_address);
-                let mut server_config = ServerConfig::builder()
-                    .with_no_client_auth()
-                    .with_cert_resolver(cert_resolver);
-
-                #[cfg(feature = "http2")]
-                {
-                    server_config.alpn_protocols =
-                        vec![b"h2".to_vec(), b"http/1.1".to_vec(), b"http/1.0".to_vec()];
-                }
-                #[cfg(not(feature = "http2"))]
-                {
-                    server_config.alpn_protocols = vec![b"http/1.1".to_vec(), b"http/1.0".to_vec()];
-                }
-
-                let tls_acceptor = TlsAcceptor::from(Arc::new(server_config));
+                let tls_acceptor = self.build_tls_acceptor_for_addr(tcp_address)?;
                 let tls_stream = tls_acceptor.accept(tcp_stream).await.map_err(|e| {
                     TlsError(format!("Could not accept TLS from TCP stream: {:?}", e))
                 })?;
@@ -252,6 +249,86 @@ where
         tracing::trace!("TCP connection is not TLS encrypted");
 
         return serve_connection(self.clone(), tcp_stream, "http").await;
+    }
+
+    #[cfg(feature = "https")]
+    fn build_tls_acceptor_for_addr(&self, tcp_address: SocketAddr) -> Result<TlsAcceptor, Error> {
+        let cert_resolver = self.config.https.cert_resolver_factory.build(tcp_address);
+        let mut server_config = ServerConfig::builder()
+            .with_no_client_auth()
+            .with_cert_resolver(cert_resolver);
+
+        #[cfg(feature = "http2")]
+        {
+            server_config.alpn_protocols =
+                vec![b"h2".to_vec(), b"http/1.1".to_vec(), b"http/1.0".to_vec()];
+        }
+        #[cfg(not(feature = "http2"))]
+        {
+            server_config.alpn_protocols = vec![b"http/1.1".to_vec(), b"http/1.0".to_vec()];
+        }
+
+        Ok(TlsAcceptor::from(Arc::new(server_config)))
+    }
+
+    async fn handle_connect_upgraded(
+        self: Arc<Self>,
+        on_upgrade: hyper::upgrade::OnUpgrade,
+    ) -> Result<(), Error> {
+        let upgraded = on_upgrade
+            .await
+            .map_err(|err| ServerConnectionError(Box::new(err)))?;
+
+        #[cfg(feature = "https")]
+        {
+            let tls_acceptor = self.build_tls_acceptor_for_addr("0.0.0.0:0".parse().unwrap())?;
+            let io = TokioIo::new(upgraded);
+            let tls_stream = tls_acceptor.accept(io).await.map_err(|e| {
+                TlsError(format!("TLS accept after CONNECT failed: {:?}", e))
+            })?;
+
+            // Build a Hyper server over the decrypted TLS stream and delegate to handler without CONNECT logic
+            let mut server_builder = ServerBuilder::new(TokioExecutor::new());
+            server_builder.http1().preserve_header_case(true);
+            server_builder.http2();
+
+            let server = self.clone();
+            return server_builder
+                .serve_connection_with_upgrades(
+                    TokioIo::new(tls_stream),
+                    service_fn(move |mut req| {
+                        req.extensions_mut().insert(RequestMetadata::new("https"));
+                        server.clone().service_mitm(req)
+                    }),
+                )
+                .await
+                .map_err(|err| ServerConnectionError(err));
+        }
+
+        #[allow(unreachable_code)]
+        Ok(())
+    }
+
+    async fn service_mitm(
+        self: Arc<Self>,
+        req: Request<Incoming>,
+    ) -> Result<Response<BoxBody<Bytes, hyper::Error>>, Error> {
+        // This mirrors service() but without CONNECT handling, since we're already inside the MITM TLS leg
+        let mut req = match buffer_request(req).await {
+            Ok(req) => req,
+            Err(err) => {
+                return error_response(StatusCode::INTERNAL_SERVER_ERROR, BufferError(err));
+            }
+        };
+
+        // After CONNECT+TLS MITM the client speaks origin-form ("/path") with Host header.
+        // Normalize to an absolute URI so the existing forwarder can send it upstream.
+        normalize_absolute_uri(&mut req, "https")?;
+
+        match self.handler.handle(req).await {
+            Ok(response) => to_service_response(response),
+            Err(err) => error_response(StatusCode::INTERNAL_SERVER_ERROR, RouterError(err)),
+        }
     }
 }
 
@@ -459,4 +536,36 @@ impl<S: AsyncRead + AsyncWrite + Unpin> AsyncWrite for RecordingStream<S> {
     fn poll_shutdown(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), io::Error>> {
         Pin::new(&mut self.get_mut().stream).poll_shutdown(cx)
     }
+}
+
+
+fn normalize_absolute_uri(
+    req: &mut http::Request<Bytes>,
+    default_scheme: &str,
+) -> Result<(), Error> {
+    // If already absolute-form (scheme + authority), leave as-is
+    let uri = req.uri().clone();
+    if uri.scheme().is_some() && uri.authority().is_some() {
+        return Ok(());
+    }
+
+    // Use Host header to reconstruct the absolute URI
+    let host = req
+        .headers()
+        .get(http::header::HOST)
+        .and_then(|v| v.to_str().ok())
+        .ok_or_else(|| Error::ConfigurationError("Missing Host header on origin-form request".into()))?;
+
+    let path_and_query = uri
+        .path_and_query()
+        .map(|pq| pq.as_str())
+        .unwrap_or("/");
+
+    let abs = format!("{}://{}{}", default_scheme, host, path_and_query);
+    let new_uri: http::Uri = abs
+        .parse()
+        .map_err(|e| Error::ConfigurationError(format!("Invalid absolute URI constructed from Host+path: {}", e)))?;
+
+    *req.uri_mut() = new_uri;
+    Ok(())
 }
