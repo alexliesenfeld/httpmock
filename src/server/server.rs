@@ -516,14 +516,16 @@ async fn handle_connect_mitm<H: Handler + Send + Sync + 'static>(
 async fn mitm_serve_tls_terminated<H: Handler + Send + Sync + 'static>(
     server: Arc<MockServer<H>>,
     upgraded: hyper::upgrade::Upgraded,
-    _authority: String,
+    authority: String,
 ) -> Result<(), Error> {
     use hyper_util::rt::tokio::TokioIo;
     use rustls::ServerConfig;
     use tokio_rustls::TlsAcceptor;
 
     // Build TLS acceptor using dynamic certificate resolver (forged per SNI)
-    let tcp_address: std::net::SocketAddr = "0.0.0.0:0".parse().expect("valid");
+    let tcp_address: std::net::SocketAddr = authority
+        .parse()
+        .unwrap_or_else(|_| "0.0.0.0:0".parse().unwrap());
     let cert_resolver = server.config.https.cert_resolver_factory.build(tcp_address);
 
     let mut server_config = ServerConfig::builder()
