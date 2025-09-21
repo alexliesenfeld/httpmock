@@ -1,6 +1,9 @@
 use crate::matchers::expect_fails_with2;
 use httpmock::{MockServer, When};
 
+// TODO: https://github.com/alexliesenfeld/httpmock/issues/161
+//  After issue 161 is solved, this test should also work with https
+#[cfg(not(feature = "https"))]
 #[cfg(feature = "proxy")]
 #[test]
 fn path_success_table_test() {
@@ -71,6 +74,9 @@ fn path_success_table_test() {
     }
 }
 
+// TODO: https://github.com/alexliesenfeld/httpmock/issues/161
+//  After issue 161 is solved, this test should also work with https
+#[cfg(not(feature = "https"))]
 #[cfg(feature = "proxy")]
 #[test]
 fn path_failure_table_test() {

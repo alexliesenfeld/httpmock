@@ -24,8 +24,8 @@ jobs:
           cp certs/ca.pem certs/ca.crt
           apt-get update
           apt-get install -y ca-certificates
-          cp certs/*.crt /usr/local/share/ca-certificates/ || true
+          cp certs/*.crt /usr/local/share/ca-certificates/
           update-ca-certificates
 
       - name: Run feature power set test
-        run: make test-all-features
+        run: make all-features-test
