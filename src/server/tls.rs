@@ -2,7 +2,7 @@ use rustls::pki_types::{CertificateDer, PrivateKeyDer};
 
 use crate::server::tls::Error::{CaCertificateError, GenerateCertificateError};
 use async_trait::async_trait;
-use rcgen::{Certificate, CertificateParams, KeyPair};
+use rcgen::{Certificate, CertificateParams, KeyPair, SanType};
 use rustls::{
     crypto::ring::sign::any_supported_type,
     server::{ClientHello, ResolvesServerCert},
@@ -117,12 +117,20 @@ impl<'a> GeneratingCertificateResolver {
         })?;
 
         // Set up certificate parameters for the new certificate
-        let params = CertificateParams::new(vec![hostname.to_owned()]).map_err(|err| {
-            GenerateCertificateError(format!(
-                "Cannot generate Certificate (host: {}: error: {:?})",
-                hostname, err
-            ))
-        })?;
+        let mut params = if let Ok(ip) = hostname.parse::<std::net::IpAddr>() {
+            // If the hostname is an IP address, place it into IP SANs
+            let mut p = CertificateParams::default();
+            p.subject_alt_names.push(SanType::IpAddress(ip));
+            p
+        } else {
+            // Otherwise, treat it as a DNS name
+            CertificateParams::new(vec![hostname.to_owned()]).map_err(|err| {
+                GenerateCertificateError(format!(
+                    "Cannot generate Certificate (host: {}: error: {:?})",
+                    hostname, err
+                ))
+            })?
+        };
 
         let key_pair = KeyPair::generate_for(&rcgen::PKCS_ECDSA_P256_SHA256).map_err(|err| {
             GenerateCertificateError(format!(

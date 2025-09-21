@@ -53,7 +53,6 @@ fn record_with_forwarding_test() {
 #[cfg(all(feature = "proxy"))]
 #[test]
 fn record_with_proxy_test() {
-    env_logger::init();
 
     // Start a mock server to act as a proxy for the HTTP client
     let recording_proxy_server = MockServer::start();

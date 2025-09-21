@@ -188,12 +188,14 @@ where
         tracing::trace!("New HTTP request received: {}", req.uri());
 
         if req.method() == Method::CONNECT {
+            // Capture the CONNECT authority (e.g., host:port) before moving req
+            let authority = req.uri().authority().map(|a| a.to_string());
             // Prepare upgrade before moving req
             let on_upgrade = upgrade_on(req);
             let this = self.clone();
 
             spawn(async move {
-                if let Err(e) = this.handle_connect_upgraded(on_upgrade).await {
+                if let Err(e) = this.handle_connect_upgraded(on_upgrade, authority).await {
                     log::warn!("CONNECT upgraded handling failed: {:?}", e);
                 }
             });
@@ -274,6 +276,7 @@ where
     async fn handle_connect_upgraded(
         self: Arc<Self>,
         on_upgrade: hyper::upgrade::OnUpgrade,
+        authority: Option<String>,
     ) -> Result<(), Error> {
         let upgraded = on_upgrade
             .await
@@ -281,7 +284,20 @@ where
 
         #[cfg(feature = "https")]
         {
-            let tls_acceptor = self.build_tls_acceptor_for_addr("0.0.0.0:0".parse().unwrap())?;
+            // Prefer the real target from CONNECT authority if available and an IP:port
+            let tls_acceptor = if let Some(auth) = &authority {
+                match auth.parse::<std::net::SocketAddr>() {
+                    Ok(sa) => self.build_tls_acceptor_for_addr(sa)?,
+                    Err(_) => {
+                        // Not a socket addr (likely hostname:port). We'll rely on SNI during TLS.
+                        self.build_tls_acceptor_for_addr("0.0.0.0:0".parse().unwrap())?
+                    }
+                }
+            } else {
+                // Unknown target; rely on SNI.
+                self.build_tls_acceptor_for_addr("0.0.0.0:0".parse().unwrap())?
+            };
+
             let io = TokioIo::new(upgraded);
             let tls_stream = tls_acceptor.accept(io).await.map_err(|e| {
                 TlsError(format!("TLS accept after CONNECT failed: {:?}", e))
