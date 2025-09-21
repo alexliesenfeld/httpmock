@@ -50,14 +50,14 @@ fn record_with_forwarding_test() {
 }
 
 // @example-start: record-proxy-github
-#[cfg(all(feature = "proxy", feature = "experimental"))]
+#[cfg(all(feature = "proxy"))]
 #[test]
 fn record_with_proxy_test() {
     // Start a mock server to act as a proxy for the HTTP client
-    let server = MockServer::start();
+    let recording_proxy_server = MockServer::start();
 
     // Configure the mock server to proxy all incoming requests
-    server.proxy(|rule| {
+    recording_proxy_server.proxy(|rule| {
         rule.filter(|when| {
             when.any_request(); // Intercept all requests
         });
@@ -65,25 +65,37 @@ fn record_with_proxy_test() {
 
     // Set up recording on the mock server to capture all proxied
     // requests and responses
-    let recording = server.record(|rule: RecordingRuleBuilder| {
-        rule.filter(|when| {
-            when.any_request(); // Record all requests
-        });
+    let recording = recording_proxy_server.record(|rule: RecordingRuleBuilder| {
+        // Specify which headers to record.
+        // Only the headers listed here will be captured and stored
+        // as part of the recorded mock. This selective recording is
+        // necessary because some headers may vary between requests
+        // and could cause issues when replaying the mock later.
+        // For instance, headers like 'Authorization' or 'Date' may
+        // change with each request.
+        rule.record_request_header("User-Agent")
+            .filter(|when| {
+                when.any_request(); // Record all requests
+            });
     });
 
     // Create an HTTP client configured to route requests
     // through the mock proxy server
     let github_client = Client::builder()
         // Set the proxy URL to the mock server's URL
-        .proxy(reqwest::Proxy::all(server.base_url()).unwrap())
+        .proxy(reqwest::Proxy::all(recording_proxy_server.base_url()).unwrap())
         .build()
         .unwrap();
 
-    // Send a GET request using the client, which will be proxied by the mock server
-    let response = github_client.get(server.base_url()).send().unwrap();
+    let response = github_client
+        .get("https://api.github.com/repos/torvalds/linux")
+        // GitHub requires us to send a user agent header
+        .header("User-Agent", "httpmock-test")
+        .send()
+        .unwrap();
 
     // Verify that the response matches the expected mock response
-    assert_eq!(response.text().unwrap(), "This is a mock response");
+    assert!(response.text().unwrap().contains("\"private\":false"));
 
     // Save the recorded HTTP interactions to a file for future reference or testing
     recording

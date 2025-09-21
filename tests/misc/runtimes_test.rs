@@ -1,4 +1,4 @@
-#[cfg(not(any(feature = "standalone", feature = "https")))]
+#[cfg(not(any(feature = "standalone")))]
 #[test]
 fn all_runtimes_test() {
     use crate::with_standalone_server;
@@ -18,7 +18,7 @@ fn all_runtimes_test() {
     assert_eq!(smol::block_on(test_fn()), 202);
 }
 
-#[cfg(all(feature = "proxy", feature = "remote", not(any(feature = "standalone", feature = "https"))))]
+#[cfg(all(feature = "proxy", feature = "remote", not(any(feature = "standalone"))))]
 async fn test_fn() -> u16 {
     use crate::utils::http::get;
     use httpmock::prelude::*;
@@ -52,9 +52,6 @@ async fn test_fn() -> u16 {
         })
         .await;
 
-    // TODO: https://github.com/alexliesenfeld/httpmock/issues/161
-    //  We are using http scheme here, not https. This should be changed once the proxy feature
-    //  works with https
     // External check (through proxy to httpbin)
     let (_status, body) = get("http://httpbin.org/ip", Some(server1.base_url().as_str()))
         .await
