@@ -188,8 +188,25 @@ where
         log::trace!("New HTTP request received: {}", req.uri());
 
         if req.method() == Method::CONNECT {
-            return Ok(Response::new(empty()));
-            // return handle_connect(req).await;
+            #[cfg(feature = "proxy")]
+            {
+                #[cfg(feature = "https")]
+                {
+                    return handle_connect_mitm(self.clone(), req).await;
+                }
+                #[cfg(not(feature = "https"))]
+                {
+                    // Fallback to a plain TCP tunnel when HTTPS feature is disabled.
+                    // This allows CONNECT to non-TLS targets or blind tunneling without MITM.
+                    return handle_connect(req).await;
+                }
+            }
+            #[cfg(not(feature = "proxy"))]
+            {
+                let mut resp = Response::new(full("CONNECT not supported - enable feature `proxy`"));
+                *resp.status_mut() = StatusCode::NOT_IMPLEMENTED;
+                return Ok(resp);
+            }
         }
 
         let req = match buffer_request(req).await {
@@ -463,4 +480,219 @@ impl<S: AsyncRead + AsyncWrite + Unpin> AsyncWrite for RecordingStream<S> {
     fn poll_shutdown(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), io::Error>> {
         Pin::new(&mut self.get_mut().stream).poll_shutdown(cx)
     }
+}
+
+
+// ===== MITM HTTPS over CONNECT support =====
+
+#[cfg(all(feature = "https", feature = "proxy"))]
+async fn handle_connect_mitm<H: Handler + Send + Sync + 'static>(
+    server: Arc<MockServer<H>>,
+    req: Request<Incoming>,
+) -> Result<Response<BoxBody<Bytes, hyper::Error>>, Error> {
+    let Some(authority) = host_addr(req.uri()) else {
+        log::warn!("CONNECT host is not socket addr: {:?}", req.uri());
+        let mut resp = Response::new(full("CONNECT must be sent to a socket address"));
+        *resp.status_mut() = StatusCode::BAD_REQUEST;
+        return Ok(resp);
+    };
+
+    tokio::spawn(async move {
+        match upgrade_on(req).await {
+            Ok(upgraded) => {
+                if let Err(e) = mitm_serve_tls_terminated(server, upgraded, authority).await {
+                    log::warn!("MITM proxy I/O error: {}", e);
+                }
+            }
+            Err(e) => log::warn!("Proxy upgrade error: {}", e),
+        }
+    });
+
+    Ok(Response::new(empty()))
+}
+
+
+#[cfg(all(feature = "https", feature = "proxy"))]
+async fn mitm_serve_tls_terminated<H: Handler + Send + Sync + 'static>(
+    server: Arc<MockServer<H>>,
+    upgraded: hyper::upgrade::Upgraded,
+    _authority: String,
+) -> Result<(), Error> {
+    use hyper_util::rt::tokio::TokioIo;
+    use rustls::ServerConfig;
+    use tokio_rustls::TlsAcceptor;
+
+    // Build TLS acceptor using dynamic certificate resolver (forged per SNI)
+    let tcp_address: std::net::SocketAddr = "0.0.0.0:0".parse().expect("valid");
+    let cert_resolver = server.config.https.cert_resolver_factory.build(tcp_address);
+
+    let mut server_config = ServerConfig::builder()
+        .with_no_client_auth()
+        .with_cert_resolver(cert_resolver);
+
+    #[cfg(feature = "http2")]
+    {
+        server_config.alpn_protocols =
+            vec![b"h2".to_vec(), b"http/1.1".to_vec(), b"http/1.0".to_vec()];
+    }
+    #[cfg(not(feature = "http2"))]
+    {
+        server_config.alpn_protocols = vec![b"http/1.1".to_vec(), b"http/1.0".to_vec()];
+    }
+
+    let tls_acceptor = TlsAcceptor::from(Arc::new(server_config));
+
+    let tls_stream = tls_acceptor
+        .accept(TokioIo::new(upgraded))
+        .await
+        .map_err(|e| TlsError(format!("Could not accept TLS on upgraded stream: {:?}", e)))?;
+
+    serve_connection_with_proxy(server, tls_stream).await
+}
+
+#[cfg(feature = "proxy")]
+fn strip_hop_by_hop_headers(headers: &mut http::HeaderMap) {
+    use http::header::{
+        CONNECTION, PROXY_AUTHENTICATE, PROXY_AUTHORIZATION, TE, TRAILER, TRANSFER_ENCODING,
+        UPGRADE,
+    };
+
+    // Capture `Connection` tokens first to avoid borrow conflicts
+    let connection_tokens = headers
+        .get(CONNECTION)
+        .and_then(|v| v.to_str().ok())
+        .map(|s| s.to_string());
+
+    headers.remove(PROXY_AUTHENTICATE);
+    headers.remove(PROXY_AUTHORIZATION);
+    headers.remove(TE);
+    headers.remove(TRAILER);
+    headers.remove(TRANSFER_ENCODING);
+    headers.remove(UPGRADE);
+
+    if let Some(conn_val) = connection_tokens {
+        for name in conn_val.split(',').map(|s| s.trim()).filter(|s| !s.is_empty()) {
+            headers.remove(name);
+        }
+    }
+
+    headers.remove(CONNECTION);
+}
+
+#[cfg(feature = "proxy")]
+async fn serve_connection_with_proxy<H, S>(
+    _server: Arc<MockServer<H>>, // reserved for future recording hooks
+    stream: S,
+) -> Result<(), Error>
+where
+    H: Handler + Send + Sync + 'static,
+    S: AsyncRead + AsyncWrite + Unpin + Send + 'static,
+{
+    use hyper::service::service_fn;
+    use hyper_util::rt::TokioExecutor;
+    use hyper_util::rt::tokio::TokioIo;
+
+    // Build a client that can talk to both HTTP and HTTPS upstreams
+    let client = {
+        use hyper_rustls::HttpsConnectorBuilder;
+        use hyper_util::client::legacy::Client;
+        use http_body_util::Full;
+        use bytes::Bytes;
+        let https = HttpsConnectorBuilder::new()
+            .with_native_roots()
+            .expect("native root certificates")
+            .https_or_http()
+            .enable_http1()
+            .enable_http2()
+            .build();
+        Client::builder(TokioExecutor::new())
+            .http2_adaptive_window(true)
+            .build::<_, Full<Bytes>>(https)
+    };
+
+    let mut server_builder = ServerBuilder::new(TokioExecutor::new());
+    server_builder.http1().preserve_header_case(true);
+    server_builder.http2();
+
+    server_builder
+        .serve_connection_with_upgrades(
+            TokioIo::new(stream),
+            service_fn(move |req: Request<Incoming>| {
+                let client = client.clone();
+                async move {
+                    // Buffer request to Bytes
+                    let req = match buffer_request(req).await {
+                        Ok(r) => r,
+                        Err(e) => {
+                            let mut resp = Response::new(full(format!("buffering error: {}", e)));
+                            *resp.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
+                            return Ok::<_, Error>(resp);
+                        }
+                    };
+
+                    // Determine upstream host and path
+                    let host = req
+                        .headers()
+                        .get(http::header::HOST)
+                        .and_then(|v| v.to_str().ok())
+                        .unwrap_or("");
+                    let path_and_query = req
+                        .uri()
+                        .path_and_query()
+                        .map(|pq| pq.as_str())
+                        .unwrap_or("/");
+
+                    // Default to https for CONNECT MITM
+                    let upstream_uri: http::Uri = match format!("https://{}{}", host, path_and_query).parse() {
+                        Ok(u) => u,
+                        Err(e) => {
+                            let mut resp = Response::new(full(format!("invalid upstream uri: {}", e)));
+                            *resp.status_mut() = StatusCode::BAD_REQUEST;
+                            return Ok::<_, Error>(resp);
+                        }
+                    };
+
+                    // Build upstream request
+                    let (mut parts, body_bytes) = req.into_parts();
+                    parts.uri = upstream_uri;
+                    strip_hop_by_hop_headers(&mut parts.headers);
+                    let upstream_req = http::Request::from_parts(
+                        parts,
+                        http_body_util::Full::new(body_bytes),
+                    );
+
+                    // Execute upstream request
+                    match client.request(upstream_req).await {
+                        Ok(res) => {
+                            let (parts, body) = res.into_parts();
+                            match body.collect().await {
+                                Ok(collected) => {
+                                    let bytes = collected.to_bytes();
+                                    let resp = http::Response::from_parts(parts, full(bytes));
+                                    Ok::<_, Error>(resp)
+                                }
+                                Err(e) => {
+                                    let mut resp = Response::new(full(format!(
+                                        "upstream body error: {}",
+                                        e
+                                    )));
+                                    *resp.status_mut() = StatusCode::BAD_GATEWAY;
+                                    Ok::<_, Error>(resp)
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            let mut resp = Response::new(full(format!(
+                                "upstream request error: {}",
+                                e
+                            )));
+                            *resp.status_mut() = StatusCode::BAD_GATEWAY;
+                            Ok::<_, Error>(resp)
+                        }
+                    }
+                }
+            }),
+        )
+        .await
+        .map_err(|err| ServerConnectionError(err))
 }

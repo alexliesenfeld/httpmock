@@ -720,7 +720,6 @@ impl MockServer {
     /// # Feature
     /// This method is only available when the `proxy` feature is enabled.
     #[cfg(feature = "proxy")]
-    #[cfg(not(feature = "https"))] // see https://github.com/alexliesenfeld/httpmock/issues/161
     pub fn proxy<ProxyRuleBuilderFn>(&self, rule: ProxyRuleBuilderFn) -> ProxyRule
     where
         ProxyRuleBuilderFn: FnOnce(ProxyRuleBuilder),
@@ -789,7 +788,6 @@ impl MockServer {
     /// # Feature
     /// This method is only available when the `proxy` feature is enabled.
     #[cfg(feature = "proxy")]
-    #[cfg(not(feature = "https"))] // see https://github.com/alexliesenfeld/httpmock/issues/161
     pub async fn proxy_async<'a, ProxyRuleBuilderFn>(
         &'a self,
         rule: ProxyRuleBuilderFn,
