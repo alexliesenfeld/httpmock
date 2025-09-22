@@ -19,7 +19,7 @@ fn standalone_test() {
     });
 
     // Act: Send the HTTP request
-    let client = Client::new();
+    let client = Client::builder().tls_built_in_native_certs(true).build().unwrap();
     let response = client
         .post(server.url("/search"))
         .body("wow so large".repeat(1000000))

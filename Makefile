@@ -29,9 +29,9 @@ coverage-full: clean-coverage
 core-features-test: clean-coverage
 	./scripts/test_all_feature_sets.sh "standalone,remote,remote-https,http2,cookies"
 
-.PHONY: https-features-test
-https-features-test: clean-coverage
-	./scripts/test_all_feature_sets.sh "standalone,remote,remote-https,proxy,https,record"
+.PHONY: advanced-features-test
+advanced-features-test: clean-coverage
+	./scripts/test_all_feature_sets.sh "https,proxy,record,standalone,remote-https,remote"
 
 .PHONY: coverage-debug
 coverage-debug:

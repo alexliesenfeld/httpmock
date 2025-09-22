@@ -118,18 +118,46 @@ impl<'a> GeneratingCertificateResolver {
 
         // Set up certificate parameters for the new certificate
         let mut params = if let Ok(ip) = hostname.parse::<std::net::IpAddr>() {
-            // If the hostname is an IP address, place it into IP SANs
+            // If the hostname is an IP address, place it into IP SANs unless it's unspecified (0.0.0.0 / ::)
             let mut p = CertificateParams::default();
-            p.subject_alt_names.push(SanType::IpAddress(ip));
+            if !ip.is_unspecified() {
+                p.subject_alt_names.push(SanType::IpAddress(ip));
+            }
+
+            // If this call originated from a no-SNI fallback, hostname equals the
+            // local TCP address of this resolver. In that case, enrich the cert
+            // with local-friendly SANs and any extras from HTTPMOCK_EXTRA_SANS.
+            if ip == self.tcp_address.ip() {
+                // Add localhost variants
+                if let Ok(localhost_dns) = <rcgen::Ia5String as std::convert::TryFrom<&str>>::try_from("localhost") {
+                    p.subject_alt_names.push(SanType::DnsName(localhost_dns));
+                }
+                if let Ok(loopback_v4) = "127.0.0.1".parse::<std::net::IpAddr>() {
+                    p.subject_alt_names.push(SanType::IpAddress(loopback_v4));
+                }
+                if let Ok(loopback_v6) = "::1".parse::<std::net::IpAddr>() {
+                    p.subject_alt_names.push(SanType::IpAddress(loopback_v6));
+                }
+
+                // Merge extras from env, avoiding duplicates
+                let extra_sans = parse_extra_sans_from_env();
+                push_unique_sans(&mut p.subject_alt_names, extra_sans);
+            }
             p
         } else {
             // Otherwise, treat it as a DNS name
-            CertificateParams::new(vec![hostname.to_owned()]).map_err(|err| {
+            let mut p = CertificateParams::new(vec![hostname.to_owned()]).map_err(|err| {
                 GenerateCertificateError(format!(
                     "Cannot generate Certificate (host: {}: error: {:?})",
                     hostname, err
                 ))
-            })?
+            })?;
+
+            // When SNI is provided (DNS case), we intentionally do NOT add extra
+            // SANs like localhost/loopbacks by default. If users need more SANs
+            // here, they can still set HTTPMOCK_EXTRA_SANS explicitly; however the
+            // requirement is to only add extras when there is no hostname.
+            p
         };
 
         let key_pair = KeyPair::generate_for(&rcgen::PKCS_ECDSA_P256_SHA256).map_err(|err| {
@@ -215,6 +243,37 @@ impl<'a> GeneratingCertificateResolver {
         }
 
         Ok(key)
+    }
+}
+
+// Parses HTTPMOCK_EXTRA_SANS (comma-separated) into SAN entries. Non-IP tokens are treated as DNS names.
+fn parse_extra_sans_from_env() -> Vec<SanType> {
+    let raw = match std::env::var("HTTPMOCK_EXTRA_SANS") {
+        Ok(v) => v,
+        Err(_) => return Vec::new(),
+    };
+    let mut out = Vec::new();
+    for item in raw.split(',').map(|s| s.trim()).filter(|s| !s.is_empty()) {
+        if let Ok(ip) = item.parse::<std::net::IpAddr>() {
+            out.push(SanType::IpAddress(ip));
+        } else if let Ok(dns) = <rcgen::Ia5String as std::convert::TryFrom<&str>>::try_from(item) {
+            out.push(SanType::DnsName(dns));
+        }
+    }
+    out
+}
+
+// Deduplicate SANs before pushing extras.
+fn push_unique_sans(target: &mut Vec<SanType>, extras: Vec<SanType>) {
+    for e in extras {
+        let exists = target.iter().any(|t| match (t, &e) {
+            (SanType::DnsName(a), SanType::DnsName(b)) => a == b,
+            (SanType::IpAddress(a), SanType::IpAddress(b)) => a == b,
+            _ => false,
+        });
+        if !exists {
+            target.push(e);
+        }
     }
 }
 
