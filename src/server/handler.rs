@@ -111,7 +111,7 @@ where
     H: StateManager + Send + Sync + 'static,
 {
     async fn handle(&self, req: Request<Bytes>) -> Result<Response<Bytes>, Error> {
-        log::trace!("Routing incoming request: {:?}", req);
+        tracing::trace!("Routing incoming request: {:?}", req);
 
         let method = req.method().clone();
         let path = req.uri().path().to_string();

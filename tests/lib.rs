@@ -13,7 +13,7 @@ pub fn with_standalone_server() {
         .unwrap_or_else(|_| "0".to_string());
 
     if disable_server == "1" {
-        log::info!("Skipping creating a simulated mock server.");
+        tracing::info!("Skipping creating a simulated mock server.");
         return;
     }
 

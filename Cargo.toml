@@ -17,7 +17,7 @@ serde_json = "1"
 serde_regex = "1"
 base64 = "0.22"
 regex = "1"
-log = "0.4"
+tracing = { version = "0.1", features = ["log"] }
 url = "2"
 stringmetrics = "2"
 assert-json-diff = "2"
@@ -38,7 +38,6 @@ tokio = { version = "1.43", features = ["sync", "macros", "rt-multi-thread", "si
 tabwriter = "1"
 colored = { version = "3", optional = true }
 clap = { version = "4", features = ["derive", "env"], optional = true }
-env_logger = { version = "0.11", optional = true }
 serde_yaml = { version = "0.9", optional = true }
 headers = { version = "0.4", optional = true }
 
@@ -50,6 +49,7 @@ rustls-pemfile = { version = "2", optional = true }
 tls-detect = { version = "0.1", optional = true }
 hyper-rustls = { version = "0.27", default-features = false, features = ["http1", "logging", "tls12", "native-tokio"], optional = true }
 futures-timer = "3"
+tracing-subscriber = { version = "0.3", features = ["env-filter"], optional = true }
 
 [dev-dependencies]
 env_logger = "0.11"
@@ -62,7 +62,7 @@ smol = "2"
 
 [features]
 default = ["cookies"]
-standalone =  ["clap", "env_logger", "record", "http2", "cookies", "remote", "remote-https"] # enables standalone mode
+standalone =  ["clap", "tracing-subscriber", "record", "http2", "cookies", "remote", "remote-https"] # enables standalone mode
 color = ["colored"] # enables colorful output in standalone mode
 cookies = ["headers"] # enables support for matching cookies
 remote = ["hyper-util/client-legacy", "hyper-util/http2"] # allows to connect to remote mock servers

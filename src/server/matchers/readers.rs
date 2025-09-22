@@ -688,7 +688,7 @@ pub mod request_value {
 
         match serde_json::from_slice(body) {
             Err(e) => {
-                log::trace!("Cannot parse json value: {}", e);
+                tracing::trace!("Cannot parse json value: {}", e);
                 None
             }
             Ok(v) => Some(v),

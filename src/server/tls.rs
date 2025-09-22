@@ -220,7 +220,7 @@ impl ResolvesServerCert for GeneratingCertificateResolver {
     //  definitely be looked into and improved later!
     fn resolve(&self, client_hello: ClientHello) -> Option<Arc<CertifiedKey>> {
         if let Some(hostname) = client_hello.server_name() {
-            log::info!("have hostname: {}", hostname);
+            tracing::info!("have hostname: {}", hostname);
 
             return Some(self.generate(hostname).expect(&format!(
                 "Cannot generate certificate for host {}",
@@ -233,7 +233,7 @@ impl ResolvesServerCert for GeneratingCertificateResolver {
         // messages. If there is no SNI extension, we assume the client used an IP address instead
         // of a hostname.
         let hostname = self.tcp_address.ip().to_string();
-        log::info!("no hostname using: {}", hostname);
+        tracing::info!("no hostname using: {}", hostname);
         return Some(
             self.generate(&hostname)
                 .expect(&format!("Cannot generate wildcard certificate")),
