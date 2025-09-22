@@ -201,27 +201,3 @@ fn playback_github_api() {
 }
 // @example-end
 
-
-
-#[test]
-fn testik() {
-    env_logger::init();
-    
-    let server = httpmock::MockServer::start();
-    server.proxy(|rule| {
-        rule.filter(|when| {
-            when.any_request();
-        });
-    });
-
-    let client = ClientBuilder::new()
-        .proxy(reqwest::Proxy::all(server.base_url()).unwrap())
-        .redirect(Policy::none())
-        .build().unwrap();
-
-    let response = client.get("https://yahoo.com/").send().unwrap();
-    assert_eq!(response.status(), 301);
-    let response = client.get("https://google.com/").send().unwrap();
-    // assert_eq!(response.status(), 301);
-    assert_eq!(response.text().unwrap(), "asdasd");
-}

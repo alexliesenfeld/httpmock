@@ -1,6 +1,6 @@
 use httpmock::prelude::*;
-use reqwest::blocking::Client;
-
+use reqwest::blocking::{Client, ClientBuilder};
+use reqwest::redirect::Policy;
 
 #[cfg(feature = "proxy")]
 #[test]
@@ -44,4 +44,27 @@ fn proxy_test() {
 
     assert_eq!("Hi from fake GitHub!", response_text); // Use the stored text for comparison
     assert_eq!(status_code, 200); // Now compare the status code
+}
+
+
+#[cfg(all(feature = "proxy", feature = "https"))]
+#[test]
+fn testik() {
+    let server = httpmock::MockServer::start();
+    server.proxy(|rule| {
+        rule.filter(|when| {
+            when.any_request();
+        });
+    });
+
+    let client = ClientBuilder::new()
+        .proxy(reqwest::Proxy::all(server.base_url()).unwrap())
+        .redirect(Policy::none())
+        .build().unwrap();
+
+    let response = client.get("https://yahoo.com/").send().unwrap();
+    assert_eq!(response.status(), 301);
+
+    let response = client.get("https://google.com/").send().unwrap();
+    assert_eq!(response.status(), 301);
 }
