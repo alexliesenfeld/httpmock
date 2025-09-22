@@ -111,6 +111,15 @@ impl<'a> GeneratingCertificateResolver {
         Ok(private_key)
     }
 
+    fn authority_ip(&self) -> Option<std::net::IpAddr> {
+        let auth = self.authority.as_deref()?;
+        if let Ok(sa) = auth.parse::<std::net::SocketAddr>() {
+            return Some(sa.ip());
+        }
+        let host = auth.rsplit_once(':').map(|(h, _)| h).unwrap_or(auth);
+        host.parse::<std::net::IpAddr>().ok()
+    }
+
     pub fn generate_host_certificate(&'a self, hostname: &str) -> Result<Arc<CertifiedKey>, Error> {
         // Create a key pair for the CA from the provided PEM
         let ca_key = KeyPair::from_pem(&self.state.ca_key_str).map_err(|err| {
@@ -128,8 +137,8 @@ impl<'a> GeneratingCertificateResolver {
             // If this call originated from a no-SNI fallback, hostname equals the
             // local TCP address of this resolver. In that case, enrich the cert
             // with local-friendly SANs and any extras from HTTPMOCK_EXTRA_SANS.
-            if ip == self.tcp_address.ip() {
-                // Add localhost variants
+            if self.authority.is_none() || self.authority_ip().map(|a| a == ip).unwrap_or(false) {
+                // No-SNI fallback or no authority: add localhost variants, all local IPs, and extras from env
                 if let Ok(localhost_dns) = <rcgen::Ia5String as std::convert::TryFrom<&str>>::try_from("localhost") {
                     p.subject_alt_names.push(SanType::DnsName(localhost_dns));
                 }
@@ -139,7 +148,10 @@ impl<'a> GeneratingCertificateResolver {
                 if let Ok(loopback_v6) = "::1".parse::<std::net::IpAddr>() {
                     p.subject_alt_names.push(SanType::IpAddress(loopback_v6));
                 }
-
+                // Add all local interface IPs
+                let locals = collect_local_ips();
+                let local_sans: Vec<SanType> = locals.into_iter().map(SanType::IpAddress).collect();
+                push_unique_sans(&mut p.subject_alt_names, local_sans);
                 // Merge extras from env, avoiding duplicates
                 let extra_sans = parse_extra_sans_from_env();
                 push_unique_sans(&mut p.subject_alt_names, extra_sans);
@@ -288,7 +300,7 @@ impl ResolvesServerCert for GeneratingCertificateResolver {
     //  definitely be looked into and improved later!
     fn resolve(&self, client_hello: ClientHello) -> Option<Arc<CertifiedKey>> {
         if let Some(hostname) = client_hello.server_name() {
-            tracing::info!("have hostname: {}", hostname);
+            log::info!("have hostname: {}", hostname);
 
             return Some(self.generate(hostname).expect(&format!(
                 "Cannot generate certificate for host {}",
@@ -300,11 +312,14 @@ impl ResolvesServerCert for GeneratingCertificateResolver {
         // clients may choose to not include a server name (SNI extension) in TLS ClientHello
         // messages. If there is no SNI extension, we assume the client used an IP address instead
         // of a hostname.
-        let hostname = self.tcp_address.ip().to_string();
-        tracing::info!("no hostname using: {}", hostname);
+        let hostname = self
+            .authority_ip()
+            .map(|ip| ip.to_string())
+            .unwrap_or_else(|| "0.0.0.0".to_string());
+        log::info!("no hostname using: {}", hostname);
         return Some(
             self.generate(&hostname)
-                .expect(&format!("Cannot generate wildcard certificate")),
+                .expect(&format!("Cannot generate fallback certificate")),
         );
     }
 }
@@ -376,4 +391,19 @@ impl<'a> tls_detect::Read<'a> for TcpStreamPeekBuffer<'a> {
     async fn buffer_to(&mut self, limit: usize) -> std::io::Result<()> {
         self.advance(limit).await
     }
+}
+
+
+// Collect all local interface IP addresses (IPv4 and IPv6), excluding unspecified.
+fn collect_local_ips() -> Vec<std::net::IpAddr> {
+    let mut out = Vec::new();
+    if let Ok(ifaces) = if_addrs::get_if_addrs() {
+        for iface in ifaces {
+            let ip = iface.ip();
+            if !ip.is_unspecified() && !out.contains(&ip) {
+                out.push(ip);
+            }
+        }
+    }
+    out
 }
