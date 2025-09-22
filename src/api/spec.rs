@@ -17,12 +17,10 @@ use std::{
 /// A function that encapsulates one or more
 /// [`When`](When) method calls as an abstraction
 /// or convenience
-pub type AndWhenFunction = fn(When) -> When;
 
 /// A function that encapsulates one or more
 /// [`Then`](Then) method calls as an abstraction
 /// or convenience
-pub type AndThenFunction = fn(Then) -> Then;
 
 /// Represents the conditions that an incoming HTTP request must satisfy to be handled by the mock server.
 ///

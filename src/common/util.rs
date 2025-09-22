@@ -128,12 +128,6 @@ pub async fn write_file<P: AsRef<Path>>(
 }
 
 // Checks if the executing thread is running in a Tokio runtime.
-fn is_tokio_runtime_running() -> bool {
-    match tokio::runtime::Handle::try_current() {
-        Ok(_) => true,
-        Err(_) => false,
-    }
-}
 
 #[cfg(test)]
 mod test {

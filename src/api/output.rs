@@ -366,10 +366,6 @@ fn quote_if_whitespace(s: &str) -> (String, bool) {
     }
 }
 
-fn remove_linebreaks(s: &str) -> String {
-    s.replace("\r\n", "").replace('\n', "").replace('\r', "")
-}
-
 fn remove_trailing_linebreak(s: &str) -> String {
     let mut result = s.to_string();
     if result.ends_with('\n') {

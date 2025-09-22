@@ -28,7 +28,6 @@ where
     pub expectation: for<'a> fn(&'a RequestRequirements) -> Option<Vec<&'a S>>,
     pub request_value: fn(&HttpMockRequest) -> Option<T>,
     pub comparator: Box<dyn ValueComparator<S, T> + Send + Sync>,
-    pub with_reason: bool,
     pub diff_with: Option<Tokenizer>,
     pub weight: usize,
 }

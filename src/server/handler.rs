@@ -233,10 +233,6 @@ where
         }
     }
 
-    fn ping(&self) -> Result<(), Error> {
-        Ok(())
-    }
-
     fn handle_ping(&self) -> Result<Response<Bytes>, Error> {
         return response::<()>(StatusCode::OK, None);
     }
