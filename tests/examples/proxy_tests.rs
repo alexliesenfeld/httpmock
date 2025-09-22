@@ -47,9 +47,14 @@ fn proxy_test() {
 }
 
 
+// When httpmock operates as an HTTPS MITM proxy, the client→proxy leg speaks origin-form ("/", with a Host header).
+// Internally we normalize to absolute-form for matching/recording, but before sending upstream we convert back to
+// origin-form. Many HTTPS origin servers (especially those negotiating HTTP/2, like google.com) reject absolute-form
+// requests on origin connections, which previously caused a 500 with "client error (SendRequest)". With the
+// conversion in place, both yahoo.com and google.com should return a normal redirect (301) here instead of failing.
 #[cfg(all(feature = "proxy", feature = "https"))]
 #[test]
-fn testik() {
+fn absolute_origin_form_test() {
     let server = httpmock::MockServer::start();
     server.proxy(|rule| {
         rule.filter(|when| {
