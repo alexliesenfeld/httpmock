@@ -56,7 +56,6 @@ jobs:
 
       - name: Run httpmock server container
         env:
-          RUST_LOG: httpmock=debug
           HTTPMOCK_PORT: "5050"
         run: |
           docker run -d --rm \
@@ -80,7 +79,7 @@ jobs:
       - name: Run feature power set test
         env:
           HTTPMOCK_TESTS_DISABLE_SIMULATED_STANDALONE_SERVER: "1"
-          RUST_LOG: httpmock=debug,hyper=info
+          RUST_LOG: httpmock=info,hyper=info
         run: |
           make advanced-features-test
 

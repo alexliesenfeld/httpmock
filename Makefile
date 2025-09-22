@@ -29,9 +29,17 @@ coverage-full: clean-coverage
 core-features-test: clean-coverage
 	./scripts/test_all_feature_sets.sh "standalone,remote,remote-https,http2,cookies"
 
+.PHONY: core-features-integration-test
+core-features-integration-test: clean-coverage
+	./scripts/test_all_feature_sets.sh "standalone,remote,remote-https,http2,cookies" "tests"
+
 .PHONY: advanced-features-test
 advanced-features-test: clean-coverage
 	./scripts/test_all_feature_sets.sh "https,proxy,record,standalone,remote-https,remote"
+
+.PHONY: advanced-features-integration-test
+advanced-features-integration-test: clean-coverage
+	./scripts/test_all_feature_sets.sh "https,proxy,record,standalone,remote-https,remote" "tests"
 
 .PHONY: coverage-debug
 coverage-debug:
@@ -68,7 +76,6 @@ docs:
 	cd tools && cargo run --bin extract_example_tests
 	rm -rf docs/website/generated && cp -r tools/target/generated docs/website/generated
 	cd docs/website && npm install && npm run generate-docs
-
 
 .PHONY: fmt
 fmt:

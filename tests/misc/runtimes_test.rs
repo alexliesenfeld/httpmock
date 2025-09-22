@@ -131,7 +131,7 @@ async fn test_fn() -> u16 {
     status_code
 }
 
-#[cfg(not(any(feature = "proxy", feature = "remote")))]
+#[cfg(not(any(feature = "proxy")))]
 async fn test_fn() -> u16 {
     use crate::utils::http;
     use httpmock::prelude::*;
