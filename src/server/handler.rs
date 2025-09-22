@@ -436,6 +436,15 @@ where
         Ok(self.http_client.send(req).await?)
     }
 
+    // Proxying strategy with absolute vs origin-form URIs
+    // - After CONNECT the client→proxy leg speaks origin-form ("/", "Host: ...").
+    // - server::MockServer::service_mitm() normalizes the URI to absolute-form so matching/recording can
+    //   read scheme/host/port from req.uri().
+    // - For the upstream hop to the real origin we must switch back to origin-form; many HTTPS+HTTP/2
+    //   servers expect a path-only :path and derive :authority from the Host header.
+    // - The HttpMockHttpClient will reconstruct an absolute URI (for dialing) from Host + RequestMetadata.scheme
+    //   and then remove Host again so hyper sets the correct header or :authority.
+    // See also: server::server::service_mitm() and RequestMetadata.
     #[cfg(feature = "proxy")]
     async fn proxy(
         &self,
@@ -456,6 +465,31 @@ where
 
                 headers.insert(key, value);
             }
+        }
+
+        // Convert absolute-form to origin-form before sending upstream.
+        // This ensures HTTP/2 origin servers receive a proper :path while :authority comes from Host.
+        let uri = req.uri().clone();
+        if uri.scheme().is_some() && uri.authority().is_some() {
+            // Ensure Host header matches the authority
+            if let Some(auth) = uri.authority() {
+                let host_val = HeaderValue::from_str(auth.as_str()).map_err(|err| {
+                    InvalidHeader(format!("invalid header value: {}", err.to_string()))
+                })?;
+                req.headers_mut().insert(http::header::HOST, host_val);
+            }
+
+            let path_and_query = uri
+                .path_and_query()
+                .map(|pq| pq.as_str())
+                .unwrap_or("/");
+
+            let new_uri = Uri::builder()
+                .path_and_query(path_and_query)
+                .build()
+                .map_err(|e| RequestConversionError(e.to_string()))?;
+
+            *req.uri_mut() = new_uri;
         }
 
         Ok(self.http_client.send(req).await?)

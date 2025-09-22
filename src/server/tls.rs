@@ -316,7 +316,7 @@ impl ResolvesServerCert for GeneratingCertificateResolver {
             .authority_ip()
             .map(|ip| ip.to_string())
             .unwrap_or_else(|| "0.0.0.0".to_string());
-        log::info!("no hostname using: {}", hostname);
+        log::debug!("no hostname using: {}", hostname);
         return Some(
             self.generate(&hostname)
                 .expect(&format!("Cannot generate fallback certificate")),

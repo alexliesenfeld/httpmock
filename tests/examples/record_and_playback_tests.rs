@@ -1,7 +1,7 @@
 use httpmock::prelude::*;
-#[cfg(feature = "record")]
-use httpmock::RecordingRuleBuilder;
-use reqwest::blocking::Client;
+
+use reqwest::blocking::{Client, ClientBuilder};
+use reqwest::redirect::Policy;
 
 #[cfg(feature = "record")]
 #[test]
@@ -50,9 +50,10 @@ fn record_with_forwarding_test() {
 }
 
 // @example-start: record-proxy-github
-#[cfg(all(feature = "proxy", feature = "https"))]
+#[cfg(all(feature = "proxy", feature = "https", feature = "record"))]
 #[test]
 fn record_with_proxy_test() {
+    use httpmock::RecordingRuleBuilder;
 
     // Start a mock server to act as a proxy for the HTTP client
     let recording_proxy_server = MockServer::start();
@@ -82,13 +83,13 @@ fn record_with_proxy_test() {
 
     // Send a GET request using the client, which will be proxied by the mock server
     let response = github_client
-        .get("https://httpbin.org/base64/aHR0cG1vY2sgaXMgYXdlc29tZQ==")
+        .get("https://httpmock.rs")
         .send()
         .unwrap();
 
     // Since the request was forwarded, we should see a GitHub API response.
     assert_eq!(response.status().as_u16(), 200);
-    assert_eq!(response.text().unwrap(), "httpmock is awesome");
+    assert!(response.text().unwrap().contains("Simple yet powerful HTTP mocking library for Rust"));
 
     // Save the recorded HTTP interactions to a file for future reference or testing
     recording
@@ -108,7 +109,7 @@ fn record_github_api_with_forwarding_test() {
     // host instead of answering with a mocked response. The 'when'
     // variable lets you configure rules under which forwarding
     // should take place.
-    server.forward_to("https://httpbin.org", |rule| {
+    server.forward_to("https://httpmock.rs", |rule| {
         rule.filter(|when| {
             when.any_request(); // Ensure all requests are forwarded.
         });
@@ -125,13 +126,13 @@ fn record_github_api_with_forwarding_test() {
     let client = Client::new();
 
     let response = client
-        .get(server.url("/base64/aHR0cG1vY2sgaXMgYXdlc29tZQ=="))
+        .get(server.base_url())
         .send()
         .unwrap();
 
     // Since the request was forwarded, we should see a GitHub API response.
     assert_eq!(response.status().as_u16(), 200);
-    assert_eq!(response.text().unwrap(), "httpmock is awesome");
+    assert!(response.text().unwrap().contains("Simple yet powerful HTTP mocking library for Rust"));
 
     // Save the recording to
     // "target/httpmock/recordings/github-torvalds-scenario_<timestamp>.yaml".
@@ -152,7 +153,7 @@ fn playback_github_api() {
     // host (GitHub API) instead of responding with a mock. The 'rule'
     // parameter allows you to define conditions under which forwarding
     // should occur.
-    server.forward_to("https://httpbin.org", |rule| {
+    server.forward_to("https://httpmock.rs", |rule| {
         rule.filter(|when| {
             when.any_request(); // Forward all requests.
         });
@@ -169,13 +170,13 @@ fn playback_github_api() {
     // to the GitHub API
     let client = Client::new();
     let response = client
-        .get(server.url("/base64/aHR0cG1vY2sgaXMgYXdlc29tZQ=="))
+        .get(server.base_url())
         .send()
         .unwrap();
 
     // Assert that the response from the forwarded request is as expected
     assert_eq!(response.status().as_u16(), 200);
-    assert_eq!(response.text().unwrap(), "httpmock is awesome");
+    assert!(response.text().unwrap().contains("Simple yet powerful HTTP mocking library for Rust"));
 
     // Save the recorded interactions to a file
     let target_path = recording
@@ -192,10 +193,35 @@ fn playback_github_api() {
     // Send a request to the playback server and verify the response
     // matches the recorded data
     let response = client
-        .get(playback_server.url("/base64/aHR0cG1vY2sgaXMgYXdlc29tZQ=="))
+        .get(playback_server.base_url())
         .send()
         .unwrap();
     assert_eq!(response.status().as_u16(), 200);
-    assert_eq!(response.text().unwrap(), "httpmock is awesome");
+    assert!(response.text().unwrap().contains("Simple yet powerful HTTP mocking library for Rust"));
 }
 // @example-end
+
+
+
+#[test]
+fn testik() {
+    env_logger::init();
+    
+    let server = httpmock::MockServer::start();
+    server.proxy(|rule| {
+        rule.filter(|when| {
+            when.any_request();
+        });
+    });
+
+    let client = ClientBuilder::new()
+        .proxy(reqwest::Proxy::all(server.base_url()).unwrap())
+        .redirect(Policy::none())
+        .build().unwrap();
+
+    let response = client.get("https://yahoo.com/").send().unwrap();
+    assert_eq!(response.status(), 301);
+    let response = client.get("https://google.com/").send().unwrap();
+    // assert_eq!(response.status(), 301);
+    assert_eq!(response.text().unwrap(), "asdasd");
+}

@@ -12,6 +12,9 @@ use std::{convert::TryInto, sync::Arc};
 use thiserror::Error;
 use tokio::runtime::Runtime;
 
+// Needed to recover scheme for origin-form requests proxied via CONNECT+MITM
+use crate::server::RequestMetadata;
+
 #[derive(Error, Debug)]
 pub enum Error {
     #[error("cannot send request: {0}")]
@@ -72,7 +75,36 @@ impl<'a> HttpMockHttpClient {
 #[async_trait]
 impl HttpClient for HttpMockHttpClient {
     async fn send(&self, req: Request<Bytes>) -> Result<Response<Bytes>, Error> {
-        let (req_parts, req_body) = req.into_parts();
+        let (mut req_parts, req_body) = req.into_parts();
+
+        // If the request is origin-form (no scheme/authority), reconstruct an absolute URI
+        // so the connector knows where to dial. Use Host header and scheme from RequestMetadata.
+        let needs_target = req_parts.uri.scheme().is_none() || req_parts.uri.authority().is_none();
+        if needs_target {
+            if let Some(host) = req_parts
+                .headers
+                .get(http::header::HOST)
+                .and_then(|v| v.to_str().ok())
+            {
+                let scheme = req_parts
+                    .extensions
+                    .get::<RequestMetadata>()
+                    .map(|m| m.scheme)
+                    .unwrap_or("http");
+                let path_and_query = req_parts
+                    .uri
+                    .path_and_query()
+                    .map(|pq| pq.as_str())
+                    .unwrap_or("/");
+
+                if let Ok(new_uri) = format!("{}://{}{}", scheme, host, path_and_query).parse() {
+                    req_parts.uri = new_uri;
+                }
+            }
+        }
+
+        // Remove Host header and let hyper set it (HTTP/1.1) or :authority (HTTP/2)
+        req_parts.headers.remove(http::header::HOST);
         let hyper_req = Request::from_parts(req_parts, Full::new(req_body));
 
         let res = if let Some(rt) = self.runtime.clone() {

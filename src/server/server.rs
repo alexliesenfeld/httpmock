@@ -324,8 +324,13 @@ where
             }
         };
 
-        // After CONNECT+TLS MITM the client speaks origin-form ("/path") with Host header.
-        // Normalize to an absolute URI so the existing forwarder can send it upstream.
+        // After CONNECT+TLS MITM the client speaks origin-form ("/path") with a Host header.
+        // Internally we normalize to absolute-form (scheme://authority/path?query) because:
+        // - Our matchers and the recorder read scheme/host/port from req.uri().
+        // - Keeping absolute-form avoids scattering Host-header parsing throughout the code.
+        // See handler::proxy() for the inverse step where we convert back to origin-form
+        // right before sending the request upstream, since many HTTPS origin servers
+        // (especially over HTTP/2) expect origin-form on the wire.
         normalize_absolute_uri(&mut req, "https")?;
 
         match self.handler.handle(req).await {
