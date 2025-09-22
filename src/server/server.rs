@@ -233,8 +233,7 @@ where
                 tracing::trace!("TCP connection seems to be TLS encrypted");
 
                 let tcp_address = tcp_stream.local_addr().map_err(|err| IOError(err))?;
-
-                let tls_acceptor = self.build_tls_acceptor_for_addr(tcp_address)?;
+                let tls_acceptor = self.build_tls_acceptor_for_addr(Some(tcp_address.to_string()))?;
                 let tls_stream = tls_acceptor.accept(tcp_stream).await.map_err(|e| {
                     TlsError(format!("Could not accept TLS from TCP stream: {:?}", e))
                 })?;
@@ -254,8 +253,8 @@ where
     }
 
     #[cfg(feature = "https")]
-    fn build_tls_acceptor_for_addr(&self, tcp_address: SocketAddr) -> Result<TlsAcceptor, Error> {
-        let cert_resolver = self.config.https.cert_resolver_factory.build(tcp_address);
+    fn build_tls_acceptor_for_addr(&self, authority: Option<String>) -> Result<TlsAcceptor, Error> {
+        let cert_resolver = self.config.https.cert_resolver_factory.build(authority);
         let mut server_config = ServerConfig::builder()
             .with_no_client_auth()
             .with_cert_resolver(cert_resolver);
@@ -285,19 +284,7 @@ where
         #[cfg(feature = "https")]
         {
             // Prefer the real target from CONNECT authority if available and an IP:port
-            let tls_acceptor = if let Some(auth) = &authority {
-                match auth.parse::<std::net::SocketAddr>() {
-                    Ok(sa) => self.build_tls_acceptor_for_addr(sa)?,
-                    Err(_) => {
-                        // Not a socket addr (likely hostname:port). We'll rely on SNI during TLS.
-                        self.build_tls_acceptor_for_addr("0.0.0.0:0".parse().unwrap())?
-                    }
-                }
-            } else {
-                // Unknown target; rely on SNI.
-                self.build_tls_acceptor_for_addr("0.0.0.0:0".parse().unwrap())?
-            };
-
+            let tls_acceptor =  self.build_tls_acceptor_for_addr(authority)?;
             let io = TokioIo::new(upgraded);
             let tls_stream = tls_acceptor.accept(io).await.map_err(|e| {
                 TlsError(format!("TLS accept after CONNECT failed: {:?}", e))

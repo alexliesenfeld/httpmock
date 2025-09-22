@@ -15,6 +15,7 @@ use std::{
     net::SocketAddr,
     sync::{Arc, Mutex, RwLock},
 };
+
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -26,7 +27,7 @@ pub enum Error {
 }
 
 pub trait CertificateResolverFactory {
-    fn build(&self, tcp_address: SocketAddr) -> Arc<dyn ResolvesServerCert>;
+    fn build(&self, authority: Option<String>) -> Arc<dyn ResolvesServerCert>;
 }
 
 struct SharedState {
@@ -69,10 +70,10 @@ impl<'a> GeneratingCertificateResolverFactory {
 }
 
 impl CertificateResolverFactory for GeneratingCertificateResolverFactory {
-    fn build(&self, tcp_address: SocketAddr) -> Arc<dyn ResolvesServerCert> {
+    fn build(&self, authority: Option<String>) -> Arc<dyn ResolvesServerCert> {
         Arc::new(GeneratingCertificateResolver {
             state: self.state.clone(),
-            tcp_address,
+            authority,
         })
     }
 }
@@ -80,7 +81,7 @@ impl CertificateResolverFactory for GeneratingCertificateResolverFactory {
 #[derive(Debug)]
 pub struct GeneratingCertificateResolver {
     state: Arc<SharedState>,
-    tcp_address: SocketAddr,
+    authority: Option<String>,
 }
 
 impl<'a> GeneratingCertificateResolver {
