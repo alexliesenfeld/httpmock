@@ -121,9 +121,12 @@ async fn test_fn() -> u16 {
     //  We are using http scheme here, not https. This should be changed once the proxy feature
     //  works with https
     // Through proxy to server2
-    let (status_code, body) = get(&target_server.url("/get"), Some(proxy_server.base_url().as_str()))
-        .await
-        .expect("proxy to server2 failed");
+    let (status_code, body) = get(
+        &target_server.url("/get"),
+        Some(proxy_server.base_url().as_str()),
+    )
+    .await
+    .expect("proxy to server2 failed");
 
     assert_eq!("Hi from fake GitHub!", body);
     assert_eq!(202, status_code);

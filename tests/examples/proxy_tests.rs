@@ -46,7 +46,6 @@ fn proxy_test() {
     assert_eq!(status_code, 200); // Now compare the status code
 }
 
-
 // When httpmock operates as an HTTPS MITM proxy, the client→proxy leg speaks origin-form ("/", with a Host header).
 // Internally we normalize to absolute-form for matching/recording, but before sending upstream we convert back to
 // origin-form. Many HTTPS origin servers (especially those negotiating HTTP/2, like google.com) reject absolute-form
@@ -65,7 +64,8 @@ fn absolute_origin_form_test() {
     let client = ClientBuilder::new()
         .proxy(reqwest::Proxy::all(server.base_url()).unwrap())
         .redirect(Policy::none())
-        .build().unwrap();
+        .build()
+        .unwrap();
 
     let response = client.get("https://yahoo.com/").send().unwrap();
     assert_eq!(response.status(), 301);

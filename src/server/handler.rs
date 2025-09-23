@@ -479,10 +479,7 @@ where
                 req.headers_mut().insert(http::header::HOST, host_val);
             }
 
-            let path_and_query = uri
-                .path_and_query()
-                .map(|pq| pq.as_str())
-                .unwrap_or("/");
+            let path_and_query = uri.path_and_query().map(|pq| pq.as_str()).unwrap_or("/");
 
             let new_uri = Uri::builder()
                 .path_and_query(path_and_query)

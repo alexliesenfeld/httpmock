@@ -201,9 +201,7 @@ where
             });
 
             // Respond with 200 Connection Established and empty body
-            return Ok(Response::builder()
-                .status(StatusCode::OK)
-                .body(empty())?);
+            return Ok(Response::builder().status(StatusCode::OK).body(empty())?);
         }
 
         let req = match buffer_request(req).await {
@@ -233,7 +231,8 @@ where
                 tracing::trace!("TCP connection seems to be TLS encrypted");
 
                 let tcp_address = tcp_stream.local_addr().map_err(|err| IOError(err))?;
-                let tls_acceptor = self.build_tls_acceptor_for_addr(Some(tcp_address.to_string()))?;
+                let tls_acceptor =
+                    self.build_tls_acceptor_for_addr(Some(tcp_address.to_string()))?;
                 let tls_stream = tls_acceptor.accept(tcp_stream).await.map_err(|e| {
                     TlsError(format!("Could not accept TLS from TCP stream: {:?}", e))
                 })?;
@@ -284,11 +283,12 @@ where
         #[cfg(feature = "https")]
         {
             // Prefer the real target from CONNECT authority if available and an IP:port
-            let tls_acceptor =  self.build_tls_acceptor_for_addr(authority)?;
+            let tls_acceptor = self.build_tls_acceptor_for_addr(authority)?;
             let io = TokioIo::new(upgraded);
-            let tls_stream = tls_acceptor.accept(io).await.map_err(|e| {
-                TlsError(format!("TLS accept after CONNECT failed: {:?}", e))
-            })?;
+            let tls_stream = tls_acceptor
+                .accept(io)
+                .await
+                .map_err(|e| TlsError(format!("TLS accept after CONNECT failed: {:?}", e)))?;
 
             // Build a Hyper server over the decrypted TLS stream and delegate to handler without CONNECT logic
             let mut server_builder = ServerBuilder::new(TokioExecutor::new());
@@ -546,7 +546,6 @@ impl<S: AsyncRead + AsyncWrite + Unpin> AsyncWrite for RecordingStream<S> {
     }
 }
 
-
 fn normalize_absolute_uri(
     req: &mut http::Request<Bytes>,
     default_scheme: &str,
@@ -562,17 +561,19 @@ fn normalize_absolute_uri(
         .headers()
         .get(http::header::HOST)
         .and_then(|v| v.to_str().ok())
-        .ok_or_else(|| Error::ConfigurationError("Missing Host header on origin-form request".into()))?;
+        .ok_or_else(|| {
+            Error::ConfigurationError("Missing Host header on origin-form request".into())
+        })?;
 
-    let path_and_query = uri
-        .path_and_query()
-        .map(|pq| pq.as_str())
-        .unwrap_or("/");
+    let path_and_query = uri.path_and_query().map(|pq| pq.as_str()).unwrap_or("/");
 
     let abs = format!("{}://{}{}", default_scheme, host, path_and_query);
-    let new_uri: http::Uri = abs
-        .parse()
-        .map_err(|e| Error::ConfigurationError(format!("Invalid absolute URI constructed from Host+path: {}", e)))?;
+    let new_uri: http::Uri = abs.parse().map_err(|e| {
+        Error::ConfigurationError(format!(
+            "Invalid absolute URI constructed from Host+path: {}",
+            e
+        ))
+    })?;
 
     *req.uri_mut() = new_uri;
     Ok(())

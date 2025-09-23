@@ -56,13 +56,13 @@ fn forward_to_github_test() {
     // will be forwarded to the GitHub API, as we configured before.
     let client = Client::new();
 
-    let response = client
-        .get(server.base_url())
-        .send()
-        .unwrap();
+    let response = client.get(server.base_url()).send().unwrap();
 
     // Since the request was forwarded, we should see a GitHub API response.
     assert_eq!(response.status().as_u16(), 200);
-    assert!(response.text().unwrap().contains("Simple yet powerful HTTP mocking library for Rust"));
+    assert!(response
+        .text()
+        .unwrap()
+        .contains("Simple yet powerful HTTP mocking library for Rust"));
 }
 // @example-end

@@ -139,7 +139,9 @@ impl<'a> GeneratingCertificateResolver {
             // with local-friendly SANs and any extras from HTTPMOCK_EXTRA_SANS.
             if self.authority.is_none() || self.authority_ip().map(|a| a == ip).unwrap_or(false) {
                 // No-SNI fallback or no authority: add localhost variants, all local IPs, and extras from env
-                if let Ok(localhost_dns) = <rcgen::Ia5String as std::convert::TryFrom<&str>>::try_from("localhost") {
+                if let Ok(localhost_dns) =
+                    <rcgen::Ia5String as std::convert::TryFrom<&str>>::try_from("localhost")
+                {
                     p.subject_alt_names.push(SanType::DnsName(localhost_dns));
                 }
                 if let Ok(loopback_v4) = "127.0.0.1".parse::<std::net::IpAddr>() {
@@ -392,7 +394,6 @@ impl<'a> tls_detect::Read<'a> for TcpStreamPeekBuffer<'a> {
         self.advance(limit).await
     }
 }
-
 
 // Collect all local interface IP addresses (IPv4 and IPv6), excluding unspecified.
 fn collect_local_ips() -> Vec<std::net::IpAddr> {
