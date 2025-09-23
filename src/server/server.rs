@@ -221,7 +221,8 @@ where
                     match on_upgrade.await {
                         Ok(upgraded) => {
                             spawn(async move {
-                                if let Err(e) = serve_upgraded_tls(server, upgraded, authority).await {
+                                let io = TokioIo::new(upgraded);
+                                if let Err(e) = serve_tls_connection(server, io, authority).await {
                                     log::warn!("failed to serve upgraded TLS connection: {:?}", e);
                                 }
                             });
@@ -272,7 +273,7 @@ where
     async fn handle_tcp_stream(
         self: Arc<Self>,
         tcp_stream: TcpStream,
-        remote_address: SocketAddr,
+        _remote_address: SocketAddr,
     ) -> Result<(), Error> {
         log::trace!("new TCP connection incoming");
 
@@ -312,38 +313,21 @@ where
     where
         S: AsyncRead + AsyncWrite + Unpin + Send + 'static,
     {
-        // Build TLS acceptor inline for this connection
-        let cert_resolver = self.config.https.cert_resolver_factory.build(authority);
-        let mut server_config = ServerConfig::builder()
-            .with_no_client_auth()
-            .with_cert_resolver(cert_resolver);
-
-        server_config.alpn_protocols = vec![
-            #[cfg(feature = "http2")]
-            b"h2".to_vec(),
-            b"http/1.1".to_vec(),
-            b"http/1.0".to_vec(),
-        ];
-
-        let tls_acceptor = TlsAcceptor::from(Arc::new(server_config));
-        let tls_stream = tls_acceptor
-            .accept(stream)
-            .await
-            .map_err(|e| TlsError(format!("TLS accept failed: {:?}", e)))?;
-
-        serve_connection(self, tls_stream, "https").await
+        // Reuse the common TLS accept-and-serve flow
+        serve_tls_connection(self, stream, authority).await
     }
 
 }
 
 #[cfg(feature = "https")]
-async fn serve_upgraded_tls<H>(
+async fn serve_tls_connection<H, S>(
     server: Arc<MockServer<H>>,
-    upgraded: hyper::upgrade::Upgraded,
+    stream: S,
     authority: Option<String>,
 ) -> Result<(), Error>
 where
     H: Handler + Send + Sync + 'static,
+    S: AsyncRead + AsyncWrite + Unpin + Send + 'static,
 {
     // Build TLS acceptor inline for this connection
     let cert_resolver = server.config.https.cert_resolver_factory.build(authority);
@@ -359,9 +343,8 @@ where
     ];
 
     let tls_acceptor = TlsAcceptor::from(Arc::new(server_config));
-    let io = TokioIo::new(upgraded);
     let tls_stream = tls_acceptor
-        .accept(io)
+        .accept(stream)
         .await
         .map_err(|e| TlsError(format!("TLS accept failed: {:?}", e)))?;
 
