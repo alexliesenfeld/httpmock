@@ -215,15 +215,16 @@ where
 
                 let authority = req.uri().authority().map(|a| a.to_string());
                 let on_upgrade = upgrade_on(req);
-                let this = self.clone();
+                let server = self.clone();
 
                 spawn(async move {
                     match on_upgrade.await {
                         Ok(upgraded) => {
-                            let io = TokioIo::new(upgraded);
-                            if let Err(e) = this.serve_tls_connection(io, authority).await {
-                                log::warn!("failed to serve upgraded TLS connection: {:?}", e);
-                            }
+                            spawn(async move {
+                                if let Err(e) = serve_upgraded_tls(server, upgraded, authority).await {
+                                    log::warn!("failed to serve upgraded TLS connection: {:?}", e);
+                                }
+                            });
                         }
                         Err(err) => {
                             let e = crate::server::server::Error::ServerConnectionError(Box::new(err));
@@ -335,31 +336,65 @@ where
 
 }
 
-async fn serve_connection<H, S>(
+#[cfg(feature = "https")]
+async fn serve_upgraded_tls<H>(
+    server: Arc<MockServer<H>>,
+    upgraded: hyper::upgrade::Upgraded,
+    authority: Option<String>,
+) -> Result<(), Error>
+where
+    H: Handler + Send + Sync + 'static,
+{
+    // Build TLS acceptor inline for this connection
+    let cert_resolver = server.config.https.cert_resolver_factory.build(authority);
+    let mut server_config = ServerConfig::builder()
+        .with_no_client_auth()
+        .with_cert_resolver(cert_resolver);
+
+    server_config.alpn_protocols = vec![
+        #[cfg(feature = "http2")]
+        b"h2".to_vec(),
+        b"http/1.1".to_vec(),
+        b"http/1.0".to_vec(),
+    ];
+
+    let tls_acceptor = TlsAcceptor::from(Arc::new(server_config));
+    let io = TokioIo::new(upgraded);
+    let tls_stream = tls_acceptor
+        .accept(io)
+        .await
+        .map_err(|e| TlsError(format!("TLS accept failed: {:?}", e)))?;
+
+    serve_connection(server, tls_stream, "https").await
+}
+
+fn serve_connection<H, S>(
     server: Arc<MockServer<H>>,
     stream: S,
     scheme: &'static str,
-) -> Result<(), Error>
+) -> impl Future<Output = Result<(), Error>> + Send + 'static
 where
     H: Handler + Send + Sync + 'static,
     S: AsyncRead + AsyncWrite + Unpin + Send + 'static,
 {
-    let mut server_builder = ServerBuilder::new(TokioExecutor::new());
+    async move {
+        let mut server_builder = ServerBuilder::new(TokioExecutor::new());
 
-    server_builder.http1().preserve_header_case(true);
-    server_builder.http2();
-    //.enable_connect_protocol();
+        server_builder.http1().preserve_header_case(true);
+        server_builder.http2();
+        //.enable_connect_protocol();
 
-    server_builder
-        .serve_connection_with_upgrades(
-            TokioIo::new(stream),
-            service_fn(|mut req| {
-                req.extensions_mut().insert(RequestMetadata::new(scheme));
-                server.clone().service(req)
-            }),
-        )
-        .await
-        .map_err(|err| ServerConnectionError(err))
+        server_builder
+            .serve_connection_with_upgrades(
+                TokioIo::new(stream),
+                service_fn(|mut req| {
+                    req.extensions_mut().insert(RequestMetadata::new(scheme));
+                    server.clone().service(req)
+                }),
+            )
+            .await
+            .map_err(ServerConnectionError)
+    }
 }
 
 async fn handle_connect(
