@@ -302,9 +302,16 @@ where
         serve_connection(self.clone(), tcp_stream, "http").await
     }
 
-    /* TODO: CLEAN UP */
     #[cfg(feature = "https")]
-    fn build_tls_acceptor_for_addr(&self, authority: Option<String>) -> Result<TlsAcceptor, Error> {
+    async fn serve_tls_connection<S>(
+        self: Arc<Self>,
+        stream: S,
+        authority: Option<String>,
+    ) -> Result<(), Error>
+    where
+        S: AsyncRead + AsyncWrite + Unpin + Send + 'static,
+    {
+        // Build TLS acceptor inline for this connection
         let cert_resolver = self.config.https.cert_resolver_factory.build(authority);
         let mut server_config = ServerConfig::builder()
             .with_no_client_auth()
@@ -320,19 +327,8 @@ where
             server_config.alpn_protocols = vec![b"http/1.1".to_vec(), b"http/1.0".to_vec()];
         }
 
-        Ok(TlsAcceptor::from(Arc::new(server_config)))
-    }
+        let tls_acceptor = TlsAcceptor::from(Arc::new(server_config));
 
-    #[cfg(feature = "https")]
-    async fn serve_tls_connection<S>(
-        self: Arc<Self>,
-        stream: S,
-        authority: Option<String>,
-    ) -> Result<(), Error>
-    where
-        S: AsyncRead + AsyncWrite + Unpin + Send + 'static,
-    {
-        let tls_acceptor = self.build_tls_acceptor_for_addr(authority)?;
         let tls_stream = tls_acceptor
             .accept(stream)
             .await
@@ -548,7 +544,6 @@ impl<S: AsyncRead + AsyncWrite + Unpin> AsyncWrite for RecordingStream<S> {
     }
 }
 
-/* TODO: CLEAN UP */
 fn normalize_absolute_uri(
     req: &mut http::Request<Bytes>,
 ) -> Result<(), Error> {
