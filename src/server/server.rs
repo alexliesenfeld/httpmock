@@ -218,8 +218,17 @@ where
                 let this = self.clone();
 
                 spawn(async move {
-                    if let Err(e) = this.handle_connect_upgraded(on_upgrade, authority).await {
-                        log::warn!("CONNECT upgraded handling failed: {:?}", e);
+                    match on_upgrade.await {
+                        Ok(upgraded) => {
+                            let io = TokioIo::new(upgraded);
+                            if let Err(e) = this.serve_tls_connection(io, authority).await {
+                                log::warn!("failed to server upgraded TLS connection: {:?}", e);
+                            }
+                        }
+                        Err(err) => {
+                            let e = crate::server::server::Error::ServerConnectionError(Box::new(err));
+                            log::warn!("CONNECT upgraded handling failed: {:?}", e);
+                        }
                     }
                 });
             }
@@ -273,13 +282,10 @@ where
                 log::trace!("TCP connection seems to be TLS encrypted");
 
                 let tcp_address = tcp_stream.local_addr().map_err(|err| IOError(err))?;
-                let tls_acceptor =
-                    self.build_tls_acceptor_for_addr(Some(tcp_address.to_string()))?;
-                let tls_stream = tls_acceptor.accept(tcp_stream).await.map_err(|e| {
-                    TlsError(format!("Could not accept TLS from TCP stream: {:?}", e))
-                })?;
-
-                return serve_connection(self.clone(), tls_stream, "https").await;
+                return self
+                    .clone()
+                    .serve_tls_connection(tcp_stream, Some(tcp_address.to_string()))
+                    .await;
             }
 
             if log::max_level() >= log::LevelFilter::Trace {
@@ -317,41 +323,22 @@ where
         Ok(TlsAcceptor::from(Arc::new(server_config)))
     }
 
-    /* TODO: CLEAN UP */
     #[cfg(feature = "https")]
-    async fn handle_connect_upgraded(
+    async fn serve_tls_connection<S>(
         self: Arc<Self>,
-        on_upgrade: hyper::upgrade::OnUpgrade,
+        stream: S,
         authority: Option<String>,
-    ) -> Result<(), Error> {
-        let upgraded = on_upgrade
-            .await
-            .map_err(|err| crate::server::server::Error::ServerConnectionError(Box::new(err)))?;
-
-        // Prefer the real target from CONNECT authority if available and an IP:port
+    ) -> Result<(), Error>
+    where
+        S: AsyncRead + AsyncWrite + Unpin + Send + 'static,
+    {
         let tls_acceptor = self.build_tls_acceptor_for_addr(authority)?;
-        let io = TokioIo::new(upgraded);
         let tls_stream = tls_acceptor
-            .accept(io)
+            .accept(stream)
             .await
-            .map_err(|e| TlsError(format!("TLS accept after CONNECT failed: {:?}", e)))?;
+            .map_err(|e| TlsError(format!("TLS accept failed: {:?}", e)))?;
 
-        // Build a Hyper server over the decrypted TLS stream and delegate to the unified service
-        let mut server_builder = ServerBuilder::new(TokioExecutor::new());
-        server_builder.http1().preserve_header_case(true);
-        server_builder.http2();
-
-        let server = self.clone();
-        return server_builder
-            .serve_connection_with_upgrades(
-                TokioIo::new(tls_stream),
-                service_fn(move |mut req| {
-                    req.extensions_mut().insert(RequestMetadata::new("https"));
-                    server.clone().service(req)
-                }),
-            )
-            .await
-            .map_err(|err| ServerConnectionError(err));
+        serve_connection(self, tls_stream, "https").await
     }
 
 }
