@@ -228,12 +228,30 @@ where
             return Ok(Response::builder().status(StatusCode::OK).body(empty())?);
         }
 
-        let req = match buffer_request(req).await {
+        let mut req = match buffer_request(req).await {
             Ok(req) => req,
             Err(err) => {
                 return error_response(StatusCode::INTERNAL_SERVER_ERROR, BufferError(err));
             }
         };
+
+
+        // Normalize the request URI to absolute-form for both HTTP and HTTPS.
+        //
+        // Clients typically send origin-form ("/path") with a Host header; after a
+        // CONNECT+TLS MITM this is also what the browser sends to us. We normalize to
+        // absolute-form (scheme://authority/path?query) so that:
+        // - matchers and the recorder can reliably read scheme/host/port from req.uri();
+        // - we can avoid ad-hoc Host-header parsing throughout the codebase.
+        //
+        // See handler::proxy() for the inverse step where we convert back to
+        // origin-form right before sending the request upstream, since most origin
+        // servers (HTTP/1.1 and HTTP/2) expect origin-form on the wire.
+        // TODO: Rather than normalizing to absolute-form here, we should consider
+        //       enhancing the RequestMetadata to carry the scheme/authority separately
+        if let Err(err) = normalize_absolute_uri(&mut req) {
+            return error_response(StatusCode::INTERNAL_SERVER_ERROR, err);
+        }
 
         match self.handler.handle(req).await {
             Ok(response) => to_service_response(response),
@@ -318,7 +336,7 @@ where
             .await
             .map_err(|e| TlsError(format!("TLS accept after CONNECT failed: {:?}", e)))?;
 
-        // Build a Hyper server over the decrypted TLS stream and delegate to handler without CONNECT logic
+        // Build a Hyper server over the decrypted TLS stream and delegate to the unified service
         let mut server_builder = ServerBuilder::new(TokioExecutor::new());
         server_builder.http1().preserve_header_case(true);
         server_builder.http2();
@@ -329,41 +347,13 @@ where
                 TokioIo::new(tls_stream),
                 service_fn(move |mut req| {
                     req.extensions_mut().insert(RequestMetadata::new("https"));
-                    server.clone().service_mitm(req)
+                    server.clone().service(req)
                 }),
             )
             .await
             .map_err(|err| ServerConnectionError(err));
     }
 
-    /* TODO: CLEAN UP */
-    #[cfg(feature = "https")]
-    async fn service_mitm(
-        self: Arc<Self>,
-        req: Request<Incoming>,
-    ) -> Result<Response<BoxBody<Bytes, hyper::Error>>, Error> {
-        // This mirrors service() but without CONNECT handling, since we're already inside the MITM TLS leg
-        let mut req = match buffer_request(req).await {
-            Ok(req) => req,
-            Err(err) => {
-                return error_response(StatusCode::INTERNAL_SERVER_ERROR, BufferError(err));
-            }
-        };
-
-        // After CONNECT+TLS MITM the client speaks origin-form ("/path") with a Host header.
-        // Internally we normalize to absolute-form (scheme://authority/path?query) because:
-        // - Our matchers and the recorder read scheme/host/port from req.uri().
-        // - Keeping absolute-form avoids scattering Host-header parsing throughout the code.
-        // See handler::proxy() for the inverse step where we convert back to origin-form
-        // right before sending the request upstream, since many HTTPS origin servers
-        // (especially over HTTP/2) expect origin-form on the wire.
-        normalize_absolute_uri(&mut req, "https")?;
-
-        match self.handler.handle(req).await {
-            Ok(response) => to_service_response(response),
-            Err(err) => error_response(StatusCode::INTERNAL_SERVER_ERROR, RouterError(err)),
-        }
-    }
 }
 
 async fn serve_connection<H, S>(
@@ -574,8 +564,13 @@ impl<S: AsyncRead + AsyncWrite + Unpin> AsyncWrite for RecordingStream<S> {
 /* TODO: CLEAN UP */
 fn normalize_absolute_uri(
     req: &mut http::Request<Bytes>,
-    default_scheme: &str,
 ) -> Result<(), Error> {
+    let default_scheme = req
+        .extensions()
+        .get::<RequestMetadata>()
+        .map(|m| m.scheme)
+        .unwrap_or("http");
+
     // If already absolute-form (scheme + authority), leave as-is
     let uri = req.uri().clone();
     if uri.scheme().is_some() && uri.authority().is_some() {
