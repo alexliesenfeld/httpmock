@@ -571,6 +571,7 @@ impl<S: AsyncRead + AsyncWrite + Unpin> AsyncWrite for RecordingStream<S> {
     }
 }
 
+/* TODO: CLEAN UP */
 fn normalize_absolute_uri(
     req: &mut http::Request<Bytes>,
     default_scheme: &str,
