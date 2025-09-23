@@ -222,7 +222,7 @@ where
                         Ok(upgraded) => {
                             let io = TokioIo::new(upgraded);
                             if let Err(e) = this.serve_tls_connection(io, authority).await {
-                                log::warn!("failed to server upgraded TLS connection: {:?}", e);
+                                log::warn!("failed to serve upgraded TLS connection: {:?}", e);
                             }
                         }
                         Err(err) => {
@@ -317,18 +317,14 @@ where
             .with_no_client_auth()
             .with_cert_resolver(cert_resolver);
 
-        #[cfg(feature = "http2")]
-        {
-            server_config.alpn_protocols =
-                vec![b"h2".to_vec(), b"http/1.1".to_vec(), b"http/1.0".to_vec()];
-        }
-        #[cfg(not(feature = "http2"))]
-        {
-            server_config.alpn_protocols = vec![b"http/1.1".to_vec(), b"http/1.0".to_vec()];
-        }
+        server_config.alpn_protocols = vec![
+            #[cfg(feature = "http2")]
+            b"h2".to_vec(),
+            b"http/1.1".to_vec(),
+            b"http/1.0".to_vec(),
+        ];
 
         let tls_acceptor = TlsAcceptor::from(Arc::new(server_config));
-
         let tls_stream = tls_acceptor
             .accept(stream)
             .await
