@@ -363,35 +363,6 @@ where
     }
 }
 
-async fn handle_connect(
-    req: Request<Incoming>,
-) -> Result<Response<BoxBody<Bytes, hyper::Error>>, Error> {
-    if let Some(addr) = host_addr(req.uri()) {
-        spawn(async move {
-            match upgrade_on(req).await {
-                Ok(upgraded) => {
-                    if let Err(e) = tunnel(upgraded, addr).await {
-                        log::warn!("Proxy I/O error: {}", e);
-                    } else {
-                        log::info!("Proxied request");
-                    };
-                }
-                Err(e) => {
-                    log::warn!("Proxy upgrade error: {}", e)
-                }
-            }
-        });
-
-        Ok(Response::new(empty()))
-    } else {
-        log::warn!("CONNECT host is not socket addr: {:?}", req.uri());
-        let mut resp = Response::new(full("CONNECT must be sent to a socket address"));
-        *resp.status_mut() = StatusCode::BAD_REQUEST;
-
-        Ok(resp)
-    }
-}
-
 async fn buffer_request(req: Request<Incoming>) -> Result<Request<Bytes>, hyper::Error> {
     let (parts, body) = req.into_parts();
     let body = body.collect().await?.to_bytes();
