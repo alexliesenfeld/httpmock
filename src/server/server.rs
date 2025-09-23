@@ -144,7 +144,7 @@ where
 
         // ****************************************************************************************
         // SERVER START
-        tracing::info!("Listening on {}", addr);
+        log::info!("Listening on {}", addr);
         self.run_accept_loop(listener, shutdown).await
     }
 
@@ -163,12 +163,12 @@ where
                             let server = server.clone();
                             spawn(async move {
                                if let Err(err) = server.handle_tcp_stream(tcp_stream, remote_address).await {
-                                    tracing::error!("{:?}", err);
+                                    log::error!("{:?}", err);
                                 }
                             });
                         },
                         Err(err) =>  {
-                            tracing::error!("TCP error: {:?}", err);
+                            log::error!("TCP error: {:?}", err);
                         },
                     };
                 }
@@ -185,20 +185,44 @@ where
         self: Arc<Self>,
         req: Request<Incoming>,
     ) -> Result<Response<BoxBody<Bytes, hyper::Error>>, Error> {
-        tracing::trace!("New HTTP request received: {}", req.uri());
+        log::trace!("New HTTP request received: {}", req.uri());
 
         if req.method() == Method::CONNECT {
-            // Capture the CONNECT authority (e.g., host:port) before moving req
-            let authority = req.uri().authority().map(|a| a.to_string());
-            // Prepare upgrade before moving req
-            let on_upgrade = upgrade_on(req);
-            let this = self.clone();
+            #[cfg(feature = "https")]
+            {
+                // CONNECT handling (HTTP proxy tunneling):
+                //
+                // For a CONNECT request the client asks us to turn the HTTP connection into a
+                // raw, bidirectional byte tunnel (e.g., for TLS-over-HTTP proxies).
+                //
+                // In Hyper, the upgrade to this raw mode only happens AFTER we return the
+                // 200 Connection Established response so the server can flush it and switch
+                // the underlying socket into “upgraded” mode. The future from
+                // `hyper::upgrade::on(req)` (captured as `on_upgrade`) will only resolve once
+                // that response is sent and the connection is upgraded.
+                //
+                // If we awaited `on_upgrade` inline here, we would deadlock/block the upgrade:
+                //   - We would wait for the upgrade to complete, but Hyper can’t complete it
+                //     until we first return 200.
+                //
+                // Therefore we must detach the upgrade handling from this request future. We
+                // do that by spawning a background task which:
+                //   1) awaits `on_upgrade` once Hyper has upgraded the connection, and
+                //   2) runs the tunnel logic in `handle_connect_upgraded`.
+                //
+                // Meanwhile, we immediately return `200 Connection Established` (with an empty
+                // body) to let Hyper proceed with the upgrade.
 
-            spawn(async move {
-                if let Err(e) = this.handle_connect_upgraded(on_upgrade, authority).await {
-                    log::warn!("CONNECT upgraded handling failed: {:?}", e);
-                }
-            });
+                let authority = req.uri().authority().map(|a| a.to_string());
+                let on_upgrade = upgrade_on(req);
+                let this = self.clone();
+
+                spawn(async move {
+                    if let Err(e) = this.handle_connect_upgraded(on_upgrade, authority).await {
+                        log::warn!("CONNECT upgraded handling failed: {:?}", e);
+                    }
+                });
+            }
 
             // Respond with 200 Connection Established and empty body
             return Ok(Response::builder().status(StatusCode::OK).body(empty())?);
@@ -222,13 +246,13 @@ where
         tcp_stream: TcpStream,
         remote_address: SocketAddr,
     ) -> Result<(), Error> {
-        tracing::trace!("new TCP connection incoming");
+        log::trace!("new TCP connection incoming");
 
         #[cfg(feature = "https")]
         {
             let mut peek_buffer = TcpStreamPeekBuffer::new(&tcp_stream);
             if is_encrypted(&mut peek_buffer, 0).await {
-                tracing::trace!("TCP connection seems to be TLS encrypted");
+                log::trace!("TCP connection seems to be TLS encrypted");
 
                 let tcp_address = tcp_stream.local_addr().map_err(|err| IOError(err))?;
                 let tls_acceptor =
@@ -240,17 +264,21 @@ where
                 return serve_connection(self.clone(), tls_stream, "https").await;
             }
 
-            tracing::trace!(
-                "TCP connection seems NOT to be TLS encrypted (based on peeked data: {})",
-                String::from_utf8_lossy(&peek_buffer.buffer())
-            );
+            if log::max_level() >= log::LevelFilter::Trace {
+                let peeked_str =
+                    String::from_utf8_lossy(&peek_buffer.buffer().to_vec()).to_string();
+                log::trace!(
+                    "TCP connection seems NOT to be TLS encrypted (based on peeked data: {}",
+                    peeked_str
+                );
+            }
         }
 
-        tracing::trace!("TCP connection is not TLS encrypted");
-
-        return serve_connection(self.clone(), tcp_stream, "http").await;
+        log::trace!("TCP connection is not TLS encrypted");
+        serve_connection(self.clone(), tcp_stream, "http").await
     }
 
+    /* TODO: CLEAN UP */
     #[cfg(feature = "https")]
     fn build_tls_acceptor_for_addr(&self, authority: Option<String>) -> Result<TlsAcceptor, Error> {
         let cert_resolver = self.config.https.cert_resolver_factory.build(authority);
@@ -271,6 +299,8 @@ where
         Ok(TlsAcceptor::from(Arc::new(server_config)))
     }
 
+    /* TODO: CLEAN UP */
+    #[cfg(feature = "https")]
     async fn handle_connect_upgraded(
         self: Arc<Self>,
         on_upgrade: hyper::upgrade::OnUpgrade,
@@ -278,40 +308,36 @@ where
     ) -> Result<(), Error> {
         let upgraded = on_upgrade
             .await
-            .map_err(|err| ServerConnectionError(Box::new(err)))?;
+            .map_err(|err| crate::server::server::Error::ServerConnectionError(Box::new(err)))?;
 
-        #[cfg(feature = "https")]
-        {
-            // Prefer the real target from CONNECT authority if available and an IP:port
-            let tls_acceptor = self.build_tls_acceptor_for_addr(authority)?;
-            let io = TokioIo::new(upgraded);
-            let tls_stream = tls_acceptor
-                .accept(io)
-                .await
-                .map_err(|e| TlsError(format!("TLS accept after CONNECT failed: {:?}", e)))?;
+        // Prefer the real target from CONNECT authority if available and an IP:port
+        let tls_acceptor = self.build_tls_acceptor_for_addr(authority)?;
+        let io = TokioIo::new(upgraded);
+        let tls_stream = tls_acceptor
+            .accept(io)
+            .await
+            .map_err(|e| TlsError(format!("TLS accept after CONNECT failed: {:?}", e)))?;
 
-            // Build a Hyper server over the decrypted TLS stream and delegate to handler without CONNECT logic
-            let mut server_builder = ServerBuilder::new(TokioExecutor::new());
-            server_builder.http1().preserve_header_case(true);
-            server_builder.http2();
+        // Build a Hyper server over the decrypted TLS stream and delegate to handler without CONNECT logic
+        let mut server_builder = ServerBuilder::new(TokioExecutor::new());
+        server_builder.http1().preserve_header_case(true);
+        server_builder.http2();
 
-            let server = self.clone();
-            return server_builder
-                .serve_connection_with_upgrades(
-                    TokioIo::new(tls_stream),
-                    service_fn(move |mut req| {
-                        req.extensions_mut().insert(RequestMetadata::new("https"));
-                        server.clone().service_mitm(req)
-                    }),
-                )
-                .await
-                .map_err(|err| ServerConnectionError(err));
-        }
-
-        #[allow(unreachable_code)]
-        Ok(())
+        let server = self.clone();
+        return server_builder
+            .serve_connection_with_upgrades(
+                TokioIo::new(tls_stream),
+                service_fn(move |mut req| {
+                    req.extensions_mut().insert(RequestMetadata::new("https"));
+                    server.clone().service_mitm(req)
+                }),
+            )
+            .await
+            .map_err(|err| ServerConnectionError(err));
     }
 
+    /* TODO: CLEAN UP */
+    #[cfg(feature = "https")]
     async fn service_mitm(
         self: Arc<Self>,
         req: Request<Incoming>,
@@ -352,7 +378,6 @@ where
     let mut server_builder = ServerBuilder::new(TokioExecutor::new());
 
     server_builder.http1().preserve_header_case(true);
-
     server_builder.http2();
     //.enable_connect_protocol();
 
@@ -376,20 +401,20 @@ async fn handle_connect(
             match upgrade_on(req).await {
                 Ok(upgraded) => {
                     if let Err(e) = tunnel(upgraded, addr).await {
-                        tracing::warn!("Proxy I/O error: {}", e);
+                        log::warn!("Proxy I/O error: {}", e);
                     } else {
-                        tracing::info!("Proxied request");
+                        log::info!("Proxied request");
                     };
                 }
                 Err(e) => {
-                    tracing::warn!("Proxy upgrade error: {}", e)
+                    log::warn!("Proxy upgrade error: {}", e)
                 }
             }
         });
 
         Ok(Response::new(empty()))
     } else {
-        tracing::warn!("CONNECT host is not socket addr: {:?}", req.uri());
+        log::warn!("CONNECT host is not socket addr: {:?}", req.uri());
         let mut resp = Response::new(full("CONNECT must be sent to a socket address"));
         *resp.status_mut() = StatusCode::BAD_REQUEST;
 
@@ -400,7 +425,7 @@ async fn handle_connect(
 async fn buffer_request(req: Request<Incoming>) -> Result<Request<Bytes>, hyper::Error> {
     let (parts, body) = req.into_parts();
     let body = body.collect().await?.to_bytes();
-    return Ok(Request::from_parts(parts, body));
+    Ok(Request::from_parts(parts, body))
 }
 
 fn host_addr(uri: &http::Uri) -> Option<String> {
@@ -426,7 +451,7 @@ async fn tunnel(upgraded: hyper::upgrade::Upgraded, addr: String) -> std::io::Re
     let (from_client, from_server) =
         tokio::io::copy_bidirectional(&mut server, &mut upgraded).await?;
 
-    tracing::info!(
+    log::info!(
         "client wrote {} bytes and received {} bytes. \n\nread:\n{}\n\n wrote: {}\n\n",
         from_client,
         from_server,
@@ -441,7 +466,7 @@ fn error_response(
     code: StatusCode,
     err: Error,
 ) -> Result<Response<BoxBody<Bytes, hyper::Error>>, Error> {
-    tracing::error!("failed to process request: {}", err.to_string());
+    log::error!("failed to process request: {}", err.to_string());
     Ok(Response::builder()
         .status(code)
         .body(full(err.to_string()))?)

@@ -12,7 +12,6 @@ use std::{convert::TryInto, sync::Arc};
 use thiserror::Error;
 use tokio::runtime::Runtime;
 
-// Needed to recover scheme for origin-form requests proxied via CONNECT+MITM
 use crate::server::RequestMetadata;
 
 #[derive(Error, Debug)]
