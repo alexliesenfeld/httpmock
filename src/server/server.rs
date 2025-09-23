@@ -228,7 +228,8 @@ where
                             });
                         }
                         Err(err) => {
-                            let e = crate::server::server::Error::ServerConnectionError(Box::new(err));
+                            let e =
+                                crate::server::server::Error::ServerConnectionError(Box::new(err));
                             log::warn!("CONNECT upgraded handling failed: {:?}", e);
                         }
                     }
@@ -245,7 +246,6 @@ where
                 return error_response(StatusCode::INTERNAL_SERVER_ERROR, BufferError(err));
             }
         };
-
 
         // Normalize the request URI to absolute-form for both HTTP and HTTPS.
         //
@@ -284,10 +284,7 @@ where
                 log::trace!("TCP connection seems to be TLS encrypted");
 
                 let tcp_address = tcp_stream.local_addr().map_err(|err| IOError(err))?;
-                return self
-                    .clone()
-                    .serve_tls_connection(tcp_stream, Some(tcp_address.to_string()))
-                    .await;
+                return serve_tls_connection(self, tcp_stream, Some(tcp_address.to_string())).await;
             }
 
             if log::max_level() >= log::LevelFilter::Trace {
@@ -303,20 +300,6 @@ where
         log::trace!("TCP connection is not TLS encrypted");
         serve_connection(self.clone(), tcp_stream, "http").await
     }
-
-    #[cfg(feature = "https")]
-    async fn serve_tls_connection<S>(
-        self: Arc<Self>,
-        stream: S,
-        authority: Option<String>,
-    ) -> Result<(), Error>
-    where
-        S: AsyncRead + AsyncWrite + Unpin + Send + 'static,
-    {
-        // Reuse the common TLS accept-and-serve flow
-        serve_tls_connection(self, stream, authority).await
-    }
-
 }
 
 #[cfg(feature = "https")]
@@ -558,9 +541,7 @@ impl<S: AsyncRead + AsyncWrite + Unpin> AsyncWrite for RecordingStream<S> {
     }
 }
 
-fn normalize_absolute_uri(
-    req: &mut http::Request<Bytes>,
-) -> Result<(), Error> {
+fn normalize_absolute_uri(req: &mut http::Request<Bytes>) -> Result<(), Error> {
     let default_scheme = req
         .extensions()
         .get::<RequestMetadata>()
