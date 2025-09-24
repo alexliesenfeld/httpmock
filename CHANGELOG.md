@@ -1,5 +1,31 @@
 # Changelog
 
+## Version 0.8.0
+This release includes refactoring, dependency updates, and internal cleanups.  
+The Rust edition has been updated to 2021.  
+No breaking changes expected.
+
+The following pull requests have been merged:
+- [#172](https://github.com/alexliesenfeld/httpmock/pull/172): "Update Rust edition to 2021" (thanks [@FalkWoldmann](https://github.com/FalkWoldmann))
+- [#169](https://github.com/alexliesenfeld/httpmock/pull/169): "Proxy HTTPS fix"
+- [#167](https://github.com/alexliesenfeld/httpmock/pull/167): "Replace log and env_logger with tracing and tracing-subscriber"  (thanks [@FalkWoldmann](https://github.com/FalkWoldmann))
+- [#166](https://github.com/alexliesenfeld/httpmock/pull/166): "Remove unused code" (thanks [@FalkWoldmann](https://github.com/FalkWoldmann))
+- [#163](https://github.com/alexliesenfeld/httpmock/pull/163): "fix: issue 162, non localhost hosts match" (thanks [@Thomblin](https://github.com/Thomblin))
+- [#160](https://github.com/alexliesenfeld/httpmock/pull/160): "Replace custom read_file with std::fs::read_to_string" (thanks [@FalkWoldmann](https://github.com/FalkWoldmann))
+- [#158](https://github.com/alexliesenfeld/httpmock/pull/158): "Improve async executor support"
+- [#156](https://github.com/alexliesenfeld/httpmock/pull/156): "Bump async-object-pool to replace async-std"
+- [#153](https://github.com/alexliesenfeld/httpmock/pull/153): "ci(deps): bump actions/checkout from 4 to 5"
+- [#152](https://github.com/alexliesenfeld/httpmock/pull/152): "Fix missing standalone routes"
+- [#151](https://github.com/alexliesenfeld/httpmock/pull/151): "Cleanup unused test functions"
+- [#147](https://github.com/alexliesenfeld/httpmock/pull/147): "ci(deps): bump codecov/codecov-action from 2 to 5"
+- [#146](https://github.com/alexliesenfeld/httpmock/pull/146): "cargo(deps): update thiserror requirement from 1 to 2"
+- [#145](https://github.com/alexliesenfeld/httpmock/pull/145): "ci(deps): bump actions/checkout from 2 to 4"
+- [#144](https://github.com/alexliesenfeld/httpmock/pull/144): "ci(deps): bump docker/build-push-action from 4 to 6
+- [#141](https://github.com/alexliesenfeld/httpmock/pull/141): "cargo(deps): update path-tree requirement from >=0.8.0, <0.8.1 to >=0.8.0, <0.8.4"
+- [#140](https://github.com/alexliesenfeld/httpmock/pull/140): "ci(deps): bump docker/login-action from 1 to 3"
+- [#139](https://github.com/alexliesenfeld/httpmock/pull/139): "ci(deps): bump withastro/action from 2 to 4"
+- [#138](https://github.com/alexliesenfeld/httpmock/pull/138): "Create dependabot.yml" (thanks [@FalkWoldmann](https://github.com/FalkWoldmann))
+
 ## Version 0.8.0-beta.1
 This release mainly contains internal improvements and bugfixes.
 The minimum required Rust version has been increased to 1.81.
