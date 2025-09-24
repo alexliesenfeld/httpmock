@@ -1,3 +1,5 @@
+use httpmock::prelude::*;
+use reqwest::blocking::Client;
 
 // TODO: https://github.com/alexliesenfeld/httpmock/issues/161
 //  After issue 161 is solved, this test should also work with https
