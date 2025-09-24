@@ -247,6 +247,13 @@ where
             }
         };
 
+        // Ensure RequestMetadata has the authority set from either URI or Host header
+        // so that matchers and handlers can rely on it. We need to do this here, because
+        // we must have the full buffered request to reliably determine the authority.
+        if let Err(err) = add_authority_extension(&mut req) {
+            return error_response(StatusCode::INTERNAL_SERVER_ERROR, err);
+        }
+
         // Normalize the request URI to absolute-form for both HTTP and HTTPS.
         //
         // Clients typically send origin-form ("/path") with a Host header; after a
@@ -263,7 +270,7 @@ where
         if let Err(err) = normalize_absolute_uri(&mut req) {
             return error_response(StatusCode::INTERNAL_SERVER_ERROR, err);
         }
-
+        
         match self.handler.handle(req).await {
             Ok(response) => to_service_response(response),
             Err(err) => error_response(StatusCode::INTERNAL_SERVER_ERROR, RouterError(err)),
@@ -283,6 +290,10 @@ where
             if is_encrypted(&mut peek_buffer, 0).await {
                 log::trace!("TCP connection seems to be TLS encrypted");
 
+                // Since we get a request via HTTPS, the target host for this request is this server.
+                // This is important for SNI and selecting the right certificate.
+                // We are not yet in the tunneling case here, so we need to use the servers
+                // local address. The tunneling case is handled in the CONNECT branch of `service()`.
                 let tcp_address = tcp_stream.local_addr().map_err(|err| IOError(err))?;
                 return serve_tls_connection(self, tcp_stream, Some(tcp_address.to_string())).await;
             }
@@ -306,7 +317,7 @@ where
 async fn serve_tls_connection<H, S>(
     server: Arc<MockServer<H>>,
     stream: S,
-    authority: Option<String>,
+    authority: Option<String>, // The target host:port for SNI and cert selection
 ) -> Result<(), Error>
 where
     H: Handler + Send + Sync + 'static,
@@ -354,7 +365,10 @@ where
             .serve_connection_with_upgrades(
                 TokioIo::new(stream),
                 service_fn(|mut req| {
-                    req.extensions_mut().insert(RequestMetadata::new(scheme));
+                    // We pass authority None here since we don't know it for non-CONNECT requests
+                    // yet. We only know it when the full request has been buffered in `service()`.
+                    // Here, we only the scheme is known from the connection type.
+                    req.extensions_mut().insert(RequestMetadata::new(scheme, None));
                     server.clone().service(req)
                 }),
             )
@@ -545,5 +559,31 @@ fn normalize_absolute_uri(req: &mut http::Request<Bytes>) -> Result<(), Error> {
     })?;
 
     *req.uri_mut() = new_uri;
+    Ok(())
+}
+
+fn add_authority_extension(req: &mut Request<Bytes>) -> Result<(), Error> {
+    let uri_authority: Option<String> = req.uri().authority().map(|a| a.to_string());
+    let host_header: Option<String> = req
+        .headers()
+        .get(http::header::HOST)
+        .and_then(|v| v.to_str().ok())
+        .map(|s| s.to_string());
+
+    let meta = req
+        .extensions_mut()
+        .get_mut::<RequestMetadata>()
+        .ok_or_else(|| Error::ConfigurationError("RequestMetadata missing from request extensions".into()))?;
+
+    if meta.authority.is_none() {
+        meta.authority = uri_authority.clone().or(host_header.clone());
+
+        if meta.authority.is_none() {
+            return Err(Error::ConfigurationError(
+                "Missing authority: request does not have absolute-form authority and no Host header".into(),
+            ));
+        }
+    }
+
     Ok(())
 }
