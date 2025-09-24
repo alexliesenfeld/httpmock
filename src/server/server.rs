@@ -255,6 +255,8 @@ where
         }
 
         // Normalize the request URI to absolute-form for both HTTP and HTTPS.
+        // The forms can be different and depends on how the client is talking to us and which
+        // role our server plays (origin or proxy) and the protocol version.
         //
         // Clients typically send origin-form ("/path") with a Host header; after a
         // CONNECT+TLS MITM this is also what the browser sends to us. We normalize to
