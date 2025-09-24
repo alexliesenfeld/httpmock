@@ -113,11 +113,41 @@ impl<'a> GeneratingCertificateResolver {
 
     fn authority_ip(&self) -> Option<std::net::IpAddr> {
         let auth = self.authority.as_deref()?;
+
+        // 1) Full socket address like "127.0.0.1:8080" or "[::1]:443"
         if let Ok(sa) = auth.parse::<std::net::SocketAddr>() {
             return Some(sa.ip());
         }
-        let host = auth.rsplit_once(':').map(|(h, _)| h).unwrap_or(auth);
-        host.parse::<std::net::IpAddr>().ok()
+
+        // 2) Bracketed IPv6 without port: "[::1]"
+        if let Some(inner) = auth.strip_prefix('[').and_then(|s| s.strip_suffix(']')) {
+            if let Ok(ip) = inner.parse::<std::net::IpAddr>() {
+                return Some(ip);
+            }
+        }
+
+        // 3) Parse as HTTP authority and take the host (handles bracketed IPv6 and ports)
+        if let Ok(a) = auth.parse::<http::uri::Authority>() {
+            if let Ok(ip) = a.host().parse::<std::net::IpAddr>() {
+                return Some(ip);
+            }
+        }
+
+        // 4) Plain IP literal (v4 or v6)
+        if let Ok(ip) = auth.parse::<std::net::IpAddr>() {
+            return Some(ip);
+        }
+
+        // 5) Conservative host:port split only if there's exactly one ':' (avoids mangling IPv6)
+        if auth.matches(':').count() == 1 {
+            if let Some((host, _)) = auth.rsplit_once(':') {
+                if let Ok(ip) = host.parse::<std::net::IpAddr>() {
+                    return Some(ip);
+                }
+            }
+        }
+
+        None
     }
 
     pub fn generate_host_certificate(&'a self, hostname: &str) -> Result<Arc<CertifiedKey>, Error> {
