@@ -2,7 +2,7 @@
 name = "httpmock"
 version = "0.8.0-beta.1"
 authors = ["Alexander Liesenfeld <alexander.liesenfeld@outlook.com>"]
-edition = "2018"
+edition = "2021"
 description = "HTTP mocking library for Rust"
 readme = "README.md"
 keywords = ["http", "mock", "test"]
@@ -34,7 +34,7 @@ bytes = { version = "1", features = ["serde"] }
 hyper = { version = "1", features = ["server", "http1", "client"] }
 hyper-util = { version = "0.1", features = ["tokio", "server", "http1", "server-auto"] }
 http-body-util = "0.1"
-tokio = { version = "1.43", features = ["sync", "macros", "rt-multi-thread", "signal"] }
+tokio = { version = "1.43", features = ["sync", "macros", "rt-multi-thread", "signal", "net"] }
 tabwriter = "1"
 colored = { version = "3", optional = true }
 clap = { version = "4", features = ["derive", "env"], optional = true }
