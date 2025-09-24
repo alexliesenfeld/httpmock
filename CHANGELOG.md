@@ -1,8 +1,7 @@
 # Changelog
 
 ## Version 0.8.0
-This release includes refactoring, dependency updates, and internal cleanups.  
-The Rust edition has been updated to 2021.  
+This release includes refactoring, dependency updates, and internal cleanups.
 No breaking changes expected.
 
 The following pull requests have been merged:
