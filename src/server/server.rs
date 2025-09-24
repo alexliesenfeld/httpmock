@@ -267,7 +267,7 @@ where
         if let Err(err) = to_absolute_form_uri(&mut req) {
             return error_response(StatusCode::INTERNAL_SERVER_ERROR, err);
         }
-        
+
         match self.handler.handle(req).await {
             Ok(response) => to_service_response(response),
             Err(err) => error_response(StatusCode::INTERNAL_SERVER_ERROR, RouterError(err)),

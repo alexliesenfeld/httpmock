@@ -105,8 +105,8 @@ impl<'a> GeneratingCertificateResolver {
             .map_err(|err| {
                 GenerateCertificateError(format!("cannot use generated private key: {:?}", err))
             })?
-            .ok_or(GenerateCertificateError(format!(
-                "invalid generated private key"
+            .ok_or(GenerateCertificateError(String::from(
+                "invalid generated private key",
             )))?;
         Ok(private_key)
     }
