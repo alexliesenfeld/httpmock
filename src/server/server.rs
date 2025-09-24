@@ -144,7 +144,7 @@ where
 
         // ****************************************************************************************
         // SERVER START
-        log::info!("Listening on {}", addr);
+        tracing::info!("Listening on {}", addr);
         self.run_accept_loop(listener, shutdown).await
     }
 
@@ -163,12 +163,12 @@ where
                             let server = server.clone();
                             spawn(async move {
                                if let Err(err) = server.handle_tcp_stream(tcp_stream, remote_address).await {
-                                    log::error!("{:?}", err);
+                                    tracing::error!("{:?}", err);
                                 }
                             });
                         },
                         Err(err) =>  {
-                            log::error!("TCP error: {:?}", err);
+                            tracing::error!("TCP error: {:?}", err);
                         },
                     };
                 }
@@ -185,7 +185,7 @@ where
         self: Arc<Self>,
         req: Request<Incoming>,
     ) -> Result<Response<BoxBody<Bytes, hyper::Error>>, Error> {
-        log::trace!("New HTTP request received: {}", req.uri());
+        tracing::trace!("New HTTP request received: {}", req.uri());
 
         if req.method() == Method::CONNECT {
             #[cfg(feature = "https")]
@@ -223,14 +223,14 @@ where
                             spawn(async move {
                                 let io = TokioIo::new(upgraded);
                                 if let Err(e) = serve_tls_connection(server, io, authority).await {
-                                    log::warn!("failed to serve upgraded TLS connection: {:?}", e);
+                                    tracing::warn!("failed to serve upgraded TLS connection: {:?}", e);
                                 }
                             });
                         }
                         Err(err) => {
                             let e =
                                 crate::server::server::Error::ServerConnectionError(Box::new(err));
-                            log::warn!("CONNECT upgraded handling failed: {:?}", e);
+                            tracing::warn!("CONNECT upgraded handling failed: {:?}", e);
                         }
                     }
                 });
@@ -279,13 +279,13 @@ where
         tcp_stream: TcpStream,
         _remote_address: SocketAddr,
     ) -> Result<(), Error> {
-        log::trace!("new TCP connection incoming");
+        tracing::trace!("new TCP connection incoming");
 
         #[cfg(feature = "https")]
         {
             let mut peek_buffer = TcpStreamPeekBuffer::new(&tcp_stream);
             if is_encrypted(&mut peek_buffer, 0).await {
-                log::trace!("TCP connection seems to be TLS encrypted");
+                tracing::trace!("TCP connection seems to be TLS encrypted");
 
                 // Since we get a request via HTTPS, the target host for this request is this server.
                 // This is important for SNI and selecting the right certificate.
@@ -295,17 +295,17 @@ where
                 return serve_tls_connection(self, tcp_stream, Some(tcp_address.to_string())).await;
             }
 
-            if log::max_level() >= log::LevelFilter::Trace {
+            if tracing::log::max_level() >= tracing::log::LevelFilter::Trace {
                 let peeked_str =
                     String::from_utf8_lossy(&peek_buffer.buffer().to_vec()).to_string();
-                log::trace!(
+                tracing::trace!(
                     "TCP connection seems NOT to be TLS encrypted (based on peeked data: {}",
                     peeked_str
                 );
             }
         }
 
-        log::trace!("TCP connection is not TLS encrypted");
+        tracing::trace!("TCP connection is not TLS encrypted");
         serve_connection(self.clone(), tcp_stream, "http").await
     }
 }
@@ -403,7 +403,7 @@ async fn tunnel(upgraded: hyper::upgrade::Upgraded, addr: String) -> std::io::Re
     let (from_client, from_server) =
         tokio::io::copy_bidirectional(&mut server, &mut upgraded).await?;
 
-    log::info!(
+    tracing::info!(
         "client wrote {} bytes and received {} bytes. \n\nread:\n{}\n\n wrote: {}\n\n",
         from_client,
         from_server,
@@ -418,7 +418,7 @@ fn error_response(
     code: StatusCode,
     err: Error,
 ) -> Result<Response<BoxBody<Bytes, hyper::Error>>, Error> {
-    log::error!("failed to process request: {}", err.to_string());
+    tracing::error!("failed to process request: {}", err.to_string());
     Ok(Response::builder()
         .status(code)
         .body(full(err.to_string()))?)

@@ -332,7 +332,7 @@ impl ResolvesServerCert for GeneratingCertificateResolver {
     //  definitely be looked into and improved later!
     fn resolve(&self, client_hello: ClientHello) -> Option<Arc<CertifiedKey>> {
         if let Some(hostname) = client_hello.server_name() {
-            log::info!("have hostname: {}", hostname);
+            tracing::info!("have hostname: {}", hostname);
 
             return Some(self.generate(hostname).expect(&format!(
                 "Cannot generate certificate for host {}",
@@ -348,7 +348,7 @@ impl ResolvesServerCert for GeneratingCertificateResolver {
             .authority_ip()
             .map(|ip| ip.to_string())
             .unwrap_or_else(|| "0.0.0.0".to_string());
-        log::debug!("no hostname using: {}", hostname);
+        tracing::debug!("no hostname using: {}", hostname);
         return Some(
             self.generate(&hostname)
                 .expect(&format!("Cannot generate fallback certificate")),
