@@ -251,6 +251,10 @@ where
         // The forms can be different and depends on how the client is talking to us and which
         // role our server plays (origin or proxy) and the protocol version.
         //
+        // By normalizing it here, the rest of our servers application logic can uniformly
+        // expect absolute-form URIs (e.g., matchers can read the correct host/authority
+        // from the URI without falling back to reading the HOST header, etc.).
+        //
         // Clients typically send origin-form ("/path") with a Host header; after a
         // CONNECT+TLS MITM this is also what the browser sends to us. We normalize to
         // absolute-form (scheme://authority/path?query) so that:
@@ -260,8 +264,6 @@ where
         // See handler::proxy() for the inverse step where we convert back to
         // origin-form right before sending the request upstream, since most origin
         // servers (HTTP/1.1 and HTTP/2) expect origin-form on the wire.
-        // TODO: Rather than normalizing to absolute-form here, we should consider
-        //       enhancing the RequestMetadata to carry the scheme/authority separately
         if let Err(err) = to_absolute_form_uri(&mut req) {
             return error_response(StatusCode::INTERNAL_SERVER_ERROR, err);
         }

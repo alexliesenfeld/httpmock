@@ -587,17 +587,17 @@ fn headers_to_vec<T>(req: &Request<T>) -> Result<Vec<(String, String)>, Error> {
         .collect()
 }
 
-/// Convert an absolute-form request URI into origin-form before dispatching it to an upstream server.
+/// Convert an absolute-form request URI into origin-form prior to dispatching upstream.
 ///
 /// Rationale:
-/// - Inside our server we normalize incoming requests to absolute-form for uniformity so
-///   matchers/recorders can reliably read scheme/host/port from `req.uri()` without parsing
-///   the Host header in many places.
-/// - However, most origin servers (HTTP/1.1 and HTTP/2) expect origin-form on the wire
-///   (just path-and-query) with the Host header carrying the authority. Absolute-form is
-///   primarily used by proxies.
-/// - Therefore we must convert to origin-form first before sending to other servers and
-///   synchronize the Host header with the URI authority.
+/// - The server normalizes inbound requests to absolute-form (`scheme://authority/path?query`) so
+///   matchers and recorders can read scheme/host/port directly from `req.uri()`.
+/// - Upstream origin servers typically expect origin-form on the wire (path-and-query only), with
+///   the `Host` header carrying the authority; absolute-form is mainly used by proxies.
+/// - Consequently, if `req.uri()` has both `scheme` and `authority`, we treat it as absolute-form,
+///   set `Host` to that authority, and strip scheme/authority from the URI to yield origin-form.
+/// - Requests lacking either part are already in origin- or asterisk-form and are left untouched.
+///   CONNECT (authority-form) is handled separately.
 pub fn to_origin_form(mut req: Request<Bytes>) -> Result<Request<Bytes>, Error> {
     let uri = req.uri().clone();
 
