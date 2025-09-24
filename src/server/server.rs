@@ -247,13 +247,6 @@ where
             }
         };
 
-        // Ensure RequestMetadata has the authority set from either URI or Host header
-        // so that matchers and handlers can rely on it. We need to do this here, because
-        // we must have the full buffered request to reliably determine the authority.
-        if let Err(err) = add_authority_extension(&mut req) {
-            return error_response(StatusCode::INTERNAL_SERVER_ERROR, err);
-        }
-
         // Normalize the request URI to absolute-form for both HTTP and HTTPS.
         // The forms can be different and depends on how the client is talking to us and which
         // role our server plays (origin or proxy) and the protocol version.
@@ -269,7 +262,7 @@ where
         // servers (HTTP/1.1 and HTTP/2) expect origin-form on the wire.
         // TODO: Rather than normalizing to absolute-form here, we should consider
         //       enhancing the RequestMetadata to carry the scheme/authority separately
-        if let Err(err) = normalize_absolute_uri(&mut req) {
+        if let Err(err) = to_absolute_form_uri(&mut req) {
             return error_response(StatusCode::INTERNAL_SERVER_ERROR, err);
         }
         
@@ -370,7 +363,7 @@ where
                     // We pass authority None here since we don't know it for non-CONNECT requests
                     // yet. We only know it when the full request has been buffered in `service()`.
                     // Here, we only the scheme is known from the connection type.
-                    req.extensions_mut().insert(RequestMetadata::new(scheme, None));
+                    req.extensions_mut().insert(RequestMetadata::new(scheme));
                     server.clone().service(req)
                 }),
             )
@@ -528,7 +521,7 @@ impl<S: AsyncRead + AsyncWrite + Unpin> AsyncWrite for RecordingStream<S> {
     }
 }
 
-fn normalize_absolute_uri(req: &mut http::Request<Bytes>) -> Result<(), Error> {
+fn to_absolute_form_uri(req: &mut Request<Bytes>) -> Result<(), Error> {
     let default_scheme = req
         .extensions()
         .get::<RequestMetadata>()
@@ -561,31 +554,5 @@ fn normalize_absolute_uri(req: &mut http::Request<Bytes>) -> Result<(), Error> {
     })?;
 
     *req.uri_mut() = new_uri;
-    Ok(())
-}
-
-fn add_authority_extension(req: &mut Request<Bytes>) -> Result<(), Error> {
-    let uri_authority: Option<String> = req.uri().authority().map(|a| a.to_string());
-    let host_header: Option<String> = req
-        .headers()
-        .get(http::header::HOST)
-        .and_then(|v| v.to_str().ok())
-        .map(|s| s.to_string());
-
-    let meta = req
-        .extensions_mut()
-        .get_mut::<RequestMetadata>()
-        .ok_or_else(|| Error::ConfigurationError("RequestMetadata missing from request extensions".into()))?;
-
-    if meta.authority.is_none() {
-        meta.authority = uri_authority.clone().or(host_header.clone());
-
-        if meta.authority.is_none() {
-            return Err(Error::ConfigurationError(
-                "Missing authority: request does not have absolute-form authority and no Host header".into(),
-            ));
-        }
-    }
-
     Ok(())
 }

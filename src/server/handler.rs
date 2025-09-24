@@ -377,7 +377,6 @@ where
             .map_err(|err: DataError| RequestConversionError(err.to_string()))?;
 
         let mut is_proxied = false;
-
         let start = Instant::now();
 
         #[cfg(feature = "proxy")]
@@ -433,6 +432,11 @@ where
         }
 
         let req = Request::from_parts(req_parts, body);
+        // Requests are normalized to absolute-form inside this server for internal uniformity
+        // (matchers/recorders can read scheme/host/port from req.uri()). Before talking to an
+        // upstream origin server we MUST convert to origin-form (path + query only) and provide
+        // the authority via the Host header, as expected by HTTP/1.1 and HTTP/2 origin servers.
+        let req = to_origin_form(req)?;
         Ok(self.http_client.send(req).await?)
     }
 
@@ -458,38 +462,11 @@ where
             }
         }
 
-        // Proxying strategy with absolute vs origin-form URIs
-        // - After CONNECT the client→proxy leg speaks origin-form ("/", "Host: ...").
-        // - server::MockServer::service_mitm() normalizes the URI to absolute-form so matching/recording can
-        //   read scheme/host/port from req.uri().
-        // - For the upstream hop to the real origin we must switch back to origin-form; many HTTPS+HTTP/2
-        //   servers expect a path-only :path and derive :authority from the Host header.
-        // - The HttpMockHttpClient will reconstruct an absolute URI (for dialing) from Host + RequestMetadata.scheme
-        //   and then remove Host again so hyper sets the correct header or :authority.
-        // See also: server::server::service_mitm() and RequestMetadata.
-        //
-        // Convert absolute-form to origin-form before sending upstream.
-        // This ensures HTTP/2 origin servers receive a proper :path while :authority comes from Host.
-        let uri = req.uri().clone();
-        if uri.scheme().is_some() && uri.authority().is_some() {
-            // Ensure Host header matches the authority
-            if let Some(auth) = uri.authority() {
-                let host_val = HeaderValue::from_str(auth.as_str()).map_err(|err| {
-                    InvalidHeader(format!("invalid header value: {}", err.to_string()))
-                })?;
-                req.headers_mut().insert(http::header::HOST, host_val);
-            }
-
-            let path_and_query = uri.path_and_query().map(|pq| pq.as_str()).unwrap_or("/");
-
-            let new_uri = Uri::builder()
-                .path_and_query(path_and_query)
-                .build()
-                .map_err(|e| RequestConversionError(e.to_string()))?;
-
-            *req.uri_mut() = new_uri;
-        }
-
+        // Requests are normalized to absolute-form inside this server for internal uniformity
+        // (matchers/recorders can read scheme/host/port from req.uri()). Before talking to an
+        // upstream origin server we MUST convert to origin-form (path + query only) and provide
+        // the authority via the Host header, as expected by HTTP/1.1 and HTTP/2 origin servers.
+        let req = to_origin_form(req)?;
         Ok(self.http_client.send(req).await?)
     }
 
@@ -608,4 +585,39 @@ fn headers_to_vec<T>(req: &Request<T>) -> Result<Vec<(String, String)>, Error> {
             Ok((name.as_str().to_string(), value_str.to_string()))
         })
         .collect()
+}
+
+/// Convert an absolute-form request URI into origin-form before dispatching it to an upstream server.
+///
+/// Rationale:
+/// - Inside our server we normalize incoming requests to absolute-form for uniformity so
+///   matchers/recorders can reliably read scheme/host/port from `req.uri()` without parsing
+///   the Host header in many places.
+/// - However, most origin servers (HTTP/1.1 and HTTP/2) expect origin-form on the wire
+///   (just path-and-query) with the Host header carrying the authority. Absolute-form is
+///   primarily used by proxies.
+/// - Therefore we must convert to origin-form first before sending to other servers and
+///   synchronize the Host header with the URI authority.
+pub fn to_origin_form(mut req: Request<Bytes>) -> Result<Request<Bytes>, Error> {
+    let uri = req.uri().clone();
+
+    if uri.scheme().is_some() && uri.authority().is_some() {
+        // Ensure Host header matches the authority
+        if let Some(auth) = uri.authority() {
+            let host_val = HeaderValue::from_str(auth.as_str()).map_err(|err| {
+                InvalidHeader(format!("invalid header value: {}", err.to_string()))
+            })?;
+            req.headers_mut().insert(http::header::HOST, host_val);
+        }
+
+        // Set path-and-query only (origin-form)
+        let path_and_query = uri.path_and_query().map(|pq| pq.as_str()).unwrap_or("/");
+        let new_uri = Uri::builder()
+            .path_and_query(path_and_query)
+            .build()
+            .map_err(|e| RequestConversionError(e.to_string()))?;
+        *req.uri_mut() = new_uri;
+    }
+
+    Ok(req)
 }
