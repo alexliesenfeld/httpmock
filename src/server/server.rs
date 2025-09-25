@@ -223,7 +223,10 @@ where
                             spawn(async move {
                                 let io = TokioIo::new(upgraded);
                                 if let Err(e) = serve_tls_connection(server, io, authority).await {
-                                    tracing::warn!("failed to serve upgraded TLS connection: {:?}", e);
+                                    tracing::warn!(
+                                        "failed to serve upgraded TLS connection: {:?}",
+                                        e
+                                    );
                                 }
                             });
                         }
