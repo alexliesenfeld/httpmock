@@ -8,7 +8,7 @@
 
 [![Build](https://github.com/httpmock/httpmock/actions/workflows/build.yml/badge.svg)](https://github.com/httpmock/httpmock/actions/workflows/build.yml)
 [![crates.io](https://img.shields.io/crates/d/httpmock.svg)](https://crates.io/crates/httpmock)
-[![Mentioned in Awesome](https://raw.githubusercontent.com/httpmock/docs-assets/refs/heads/main/ab.svg)](https://github.com/rust-unofficial/awesome-rust#testing)
+[![Mentioned in Awesome](https://raw.githubusercontent.com/alexliesenfeld/docs-assets/refs/heads/main/ab.svg)](https://github.com/rust-unofficial/awesome-rust#testing)
 [![Rust](https://img.shields.io/badge/rust-1.81%2B-blue.svg?maxAge=3600)](https://github.com/rust-lang/rust/blob/master/RELEASES.md#version-1700-2023-06-01)
 
 </div>
