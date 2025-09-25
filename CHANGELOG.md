@@ -4,6 +4,8 @@
 This release includes refactoring, dependency updates, and internal cleanups.
 No breaking changes expected.
 
+The minimum required Rust version has been increased to 1.82.
+
 The following pull requests have been merged:
 - [#172](https://github.com/httpmock/httpmock/pull/172): "Update Rust edition to 2021" (thanks [@FalkWoldmann](https://github.com/FalkWoldmann))
 - [#169](https://github.com/httpmock/httpmock/pull/169): "Proxy HTTPS fix"
