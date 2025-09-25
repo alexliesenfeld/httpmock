@@ -3,6 +3,7 @@
 </div>
 
 <p align="center">Simple yet powerful HTTP mocking library for Rust</p>
+
 <div align="center">
 
 [![Build](https://github.com/httpmock/httpmock/actions/workflows/build.yml/badge.svg)](https://github.com/httpmock/httpmock/actions/workflows/build.yml)
