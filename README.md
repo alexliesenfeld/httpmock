@@ -1,5 +1,9 @@
 <div align="center">
-<img width="275" src="https://raw.githubusercontent.com/httpmock/httpmock/master/assets/logo-pink.svg" alt="httpmock Logo"/>
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/httpmock/httpmock/master/assets/logo-dark.svg" />
+      <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/httpmock/httpmock/master/assets/logo-light.svg" />
+      <img width="275" src="https://raw.githubusercontent.com/httpmock/httpmock/master/assets/logo-light.svg" alt="httpmock" />
+    </picture>
 </div>
 
 <p align="center">Simple yet powerful HTTP mocking library for Rust</p>
