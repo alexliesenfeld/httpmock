@@ -1,9 +1,7 @@
 use httpmock::prelude::*;
-use reqwest::blocking::Client;
+use reqwest::blocking::{Client, ClientBuilder};
+use reqwest::redirect::Policy;
 
-// TODO: https://github.com/httpmock/httpmock/issues/161
-//  After issue 161 is solved, this test should also work with https
-#[cfg(not(feature = "https"))]
 #[cfg(feature = "proxy")]
 #[test]
 fn proxy_test() {
@@ -46,4 +44,32 @@ fn proxy_test() {
 
     assert_eq!("Hi from fake GitHub!", response_text); // Use the stored text for comparison
     assert_eq!(status_code, 200); // Now compare the status code
+}
+
+// When httpmock operates as an HTTPS MITM proxy, the client→proxy leg speaks origin-form ("/", with a Host header).
+// Internally we normalize to absolute-form for matching/recording, but before sending upstream we convert back to
+// origin-form. Many HTTPS origin servers (especially those negotiating HTTP/2, like google.com) reject absolute-form
+// requests on origin connections, which previously caused a 500 with "client error (SendRequest)". With the
+// conversion in place, both yahoo.com and google.com should return a normal redirect (301) here instead of failing.
+#[cfg(all(feature = "proxy", feature = "https"))]
+#[test]
+fn absolute_origin_form_test() {
+    let server = httpmock::MockServer::start();
+    server.proxy(|rule| {
+        rule.filter(|when| {
+            when.any_request();
+        });
+    });
+
+    let client = ClientBuilder::new()
+        .proxy(reqwest::Proxy::all(server.base_url()).unwrap())
+        .redirect(Policy::none())
+        .build()
+        .unwrap();
+
+    let response = client.get("https://yahoo.com/").send().unwrap();
+    assert_eq!(response.status(), 301);
+
+    let response = client.get("https://google.com/").send().unwrap();
+    assert_eq!(response.status(), 301);
 }

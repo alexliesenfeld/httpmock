@@ -104,6 +104,9 @@ or [`MockServer::connect_from_env_async()`](https://docs.rs/httpmock/latest/http
 - `HTTPMOCK_EXPOSE`: If set to `1`, the mock server will be configured to accept external connections (binds to `0.0.0.0`). Otherwise, only connections from your local machine will be accepted.
 - `HTTPMOCK_MOCK_FILES_DIR`: The location where the mock server should look for mock definition files (YAML format).
 - `HTTPMOCK_DISABLE_ACCESS_LOG`: When set to `0`, the mock server will not log incoming requests.
+- `HTTPMOCK_EXTRA_SANS`: When a standalone mock server runs inside a Docker container, this comma separated list of IPs or
+hostnames tells httpmock which hostnames to include in the generated TLS certificates for HTTPS communication.
+Without this additional list, it would use Docker-internal IPs/hostnames that are not reachable from another machine.
 
 ## Cargo Features
 

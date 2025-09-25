@@ -188,16 +188,88 @@ where
         tracing::trace!("New HTTP request received: {}", req.uri());
 
         if req.method() == Method::CONNECT {
-            return Ok(Response::new(empty()));
-            // return handle_connect(req).await;
+            #[cfg(feature = "https")]
+            {
+                // CONNECT handling (HTTP proxy tunneling):
+                //
+                // For a CONNECT request the client asks us to turn the HTTP connection into a
+                // raw, bidirectional byte tunnel (e.g., for TLS-over-HTTP proxies).
+                //
+                // In Hyper, the upgrade to this raw mode only happens AFTER we return the
+                // 200 Connection Established response so the server can flush it and switch
+                // the underlying socket into “upgraded” mode. The future from
+                // `hyper::upgrade::on(req)` (captured as `on_upgrade`) will only resolve once
+                // that response is sent and the connection is upgraded.
+                //
+                // If we awaited `on_upgrade` inline here, we would deadlock/block the upgrade:
+                //   - We would wait for the upgrade to complete, but Hyper can’t complete it
+                //     until we first return 200.
+                //
+                // Therefore we must detach the upgrade handling from this request future. We
+                // do that by spawning a background task which:
+                //   1) awaits `on_upgrade` once Hyper has upgraded the connection, and
+                //   2) runs the tunnel logic in `handle_connect_upgraded`.
+                //
+                // Meanwhile, we immediately return `200 Connection Established` (with an empty
+                // body) to let Hyper proceed with the upgrade.
+
+                let authority = req.uri().authority().map(|a| a.to_string());
+                let on_upgrade = upgrade_on(req);
+                let server = self.clone();
+
+                spawn(async move {
+                    match on_upgrade.await {
+                        Ok(upgraded) => {
+                            spawn(async move {
+                                let io = TokioIo::new(upgraded);
+                                if let Err(e) = serve_tls_connection(server, io, authority).await {
+                                    tracing::warn!(
+                                        "failed to serve upgraded TLS connection: {:?}",
+                                        e
+                                    );
+                                }
+                            });
+                        }
+                        Err(err) => {
+                            let e =
+                                crate::server::server::Error::ServerConnectionError(Box::new(err));
+                            tracing::warn!("CONNECT upgraded handling failed: {:?}", e);
+                        }
+                    }
+                });
+            }
+
+            // Respond with 200 Connection Established and empty body
+            return Ok(Response::builder().status(StatusCode::OK).body(empty())?);
         }
 
-        let req = match buffer_request(req).await {
+        let mut req = match buffer_request(req).await {
             Ok(req) => req,
             Err(err) => {
                 return error_response(StatusCode::INTERNAL_SERVER_ERROR, BufferError(err));
             }
         };
+
+        // Normalize the request URI to absolute-form for both HTTP and HTTPS.
+        // The forms can be different and depends on how the client is talking to us and which
+        // role our server plays (origin or proxy) and the protocol version.
+        //
+        // By normalizing it here, the rest of our servers application logic can uniformly
+        // expect absolute-form URIs (e.g., matchers can read the correct host/authority
+        // from the URI without falling back to reading the HOST header, etc.).
+        //
+        // Clients typically send origin-form ("/path") with a Host header; after a
+        // CONNECT+TLS MITM this is also what the browser sends to us. We normalize to
+        // absolute-form (scheme://authority/path?query) so that:
+        // - matchers and the recorder can reliably read scheme/host/port from req.uri();
+        // - we can avoid ad-hoc Host-header parsing throughout the codebase.
+        //
+        // See handler::proxy() for the inverse step where we convert back to
+        // origin-form right before sending the request upstream, since most origin
+        // servers (HTTP/1.1 and HTTP/2) expect origin-form on the wire.
+        if let Err(err) = to_absolute_form_uri(&mut req) {
+            return error_response(StatusCode::INTERNAL_SERVER_ERROR, err);
+        }
 
         match self.handler.handle(req).await {
             Ok(response) => to_service_response(response),
@@ -208,7 +280,7 @@ where
     async fn handle_tcp_stream(
         self: Arc<Self>,
         tcp_stream: TcpStream,
-        remote_address: SocketAddr,
+        _remote_address: SocketAddr,
     ) -> Result<(), Error> {
         tracing::trace!("new TCP connection incoming");
 
@@ -218,104 +290,97 @@ where
             if is_encrypted(&mut peek_buffer, 0).await {
                 tracing::trace!("TCP connection seems to be TLS encrypted");
 
+                // Since we get a request via HTTPS, the target host for this request is this server.
+                // This is important for SNI and selecting the right certificate.
+                // We are not yet in the tunneling case here, so we need to use the servers
+                // local address. The tunneling case is handled in the CONNECT branch of `service()`.
                 let tcp_address = tcp_stream.local_addr().map_err(|err| IOError(err))?;
-
-                let cert_resolver = self.config.https.cert_resolver_factory.build(tcp_address);
-                let mut server_config = ServerConfig::builder()
-                    .with_no_client_auth()
-                    .with_cert_resolver(cert_resolver);
-
-                #[cfg(feature = "http2")]
-                {
-                    server_config.alpn_protocols =
-                        vec![b"h2".to_vec(), b"http/1.1".to_vec(), b"http/1.0".to_vec()];
-                }
-                #[cfg(not(feature = "http2"))]
-                {
-                    server_config.alpn_protocols = vec![b"http/1.1".to_vec(), b"http/1.0".to_vec()];
-                }
-
-                let tls_acceptor = TlsAcceptor::from(Arc::new(server_config));
-                let tls_stream = tls_acceptor.accept(tcp_stream).await.map_err(|e| {
-                    TlsError(format!("Could not accept TLS from TCP stream: {:?}", e))
-                })?;
-
-                return serve_connection(self.clone(), tls_stream, "https").await;
+                return serve_tls_connection(self, tcp_stream, Some(tcp_address.to_string())).await;
             }
 
-            tracing::trace!(
-                "TCP connection seems NOT to be TLS encrypted (based on peeked data: {})",
-                String::from_utf8_lossy(&peek_buffer.buffer())
-            );
+            if tracing::log::max_level() >= tracing::log::LevelFilter::Trace {
+                let peeked_str =
+                    String::from_utf8_lossy(&peek_buffer.buffer().to_vec()).to_string();
+                tracing::trace!(
+                    "TCP connection seems NOT to be TLS encrypted (based on peeked data: {}",
+                    peeked_str
+                );
+            }
         }
 
         tracing::trace!("TCP connection is not TLS encrypted");
-
-        return serve_connection(self.clone(), tcp_stream, "http").await;
+        serve_connection(self.clone(), tcp_stream, "http").await
     }
 }
 
-async fn serve_connection<H, S>(
+#[cfg(feature = "https")]
+async fn serve_tls_connection<H, S>(
     server: Arc<MockServer<H>>,
     stream: S,
-    scheme: &'static str,
+    authority: Option<String>, // The target host:port for SNI and cert selection
 ) -> Result<(), Error>
 where
     H: Handler + Send + Sync + 'static,
     S: AsyncRead + AsyncWrite + Unpin + Send + 'static,
 {
-    let mut server_builder = ServerBuilder::new(TokioExecutor::new());
+    // Build TLS acceptor inline for this connection
+    let cert_resolver = server.config.https.cert_resolver_factory.build(authority);
+    let mut server_config = ServerConfig::builder()
+        .with_no_client_auth()
+        .with_cert_resolver(cert_resolver);
 
-    server_builder.http1().preserve_header_case(true);
+    server_config.alpn_protocols = vec![
+        #[cfg(feature = "http2")]
+        b"h2".to_vec(),
+        b"http/1.1".to_vec(),
+        b"http/1.0".to_vec(),
+    ];
 
-    server_builder.http2();
-    //.enable_connect_protocol();
-
-    server_builder
-        .serve_connection_with_upgrades(
-            TokioIo::new(stream),
-            service_fn(|mut req| {
-                req.extensions_mut().insert(RequestMetadata::new(scheme));
-                server.clone().service(req)
-            }),
-        )
+    let tls_acceptor = TlsAcceptor::from(Arc::new(server_config));
+    let tls_stream = tls_acceptor
+        .accept(stream)
         .await
-        .map_err(|err| ServerConnectionError(err))
+        .map_err(|e| TlsError(format!("TLS accept failed: {:?}", e)))?;
+
+    serve_connection(server, tls_stream, "https").await
 }
 
-async fn handle_connect(
-    req: Request<Incoming>,
-) -> Result<Response<BoxBody<Bytes, hyper::Error>>, Error> {
-    if let Some(addr) = host_addr(req.uri()) {
-        spawn(async move {
-            match upgrade_on(req).await {
-                Ok(upgraded) => {
-                    if let Err(e) = tunnel(upgraded, addr).await {
-                        tracing::warn!("Proxy I/O error: {}", e);
-                    } else {
-                        tracing::info!("Proxied request");
-                    };
-                }
-                Err(e) => {
-                    tracing::warn!("Proxy upgrade error: {}", e)
-                }
-            }
-        });
+fn serve_connection<H, S>(
+    server: Arc<MockServer<H>>,
+    stream: S,
+    scheme: &'static str,
+) -> impl Future<Output = Result<(), Error>> + Send + 'static
+where
+    H: Handler + Send + Sync + 'static,
+    S: AsyncRead + AsyncWrite + Unpin + Send + 'static,
+{
+    async move {
+        let mut server_builder = ServerBuilder::new(TokioExecutor::new());
 
-        Ok(Response::new(empty()))
-    } else {
-        tracing::warn!("CONNECT host is not socket addr: {:?}", req.uri());
-        let mut resp = Response::new(full("CONNECT must be sent to a socket address"));
-        *resp.status_mut() = StatusCode::BAD_REQUEST;
+        server_builder.http1().preserve_header_case(true);
+        server_builder.http2();
+        //.enable_connect_protocol();
 
-        Ok(resp)
+        server_builder
+            .serve_connection_with_upgrades(
+                TokioIo::new(stream),
+                service_fn(|mut req| {
+                    // We pass authority None here since we don't know it for non-CONNECT requests
+                    // yet. We only know it when the full request has been buffered in `service()`.
+                    // Here, we only the scheme is known from the connection type.
+                    req.extensions_mut().insert(RequestMetadata::new(scheme));
+                    server.clone().service(req)
+                }),
+            )
+            .await
+            .map_err(ServerConnectionError)
     }
 }
 
 async fn buffer_request(req: Request<Incoming>) -> Result<Request<Bytes>, hyper::Error> {
     let (parts, body) = req.into_parts();
     let body = body.collect().await?.to_bytes();
-    return Ok(Request::from_parts(parts, body));
+    Ok(Request::from_parts(parts, body))
 }
 
 fn host_addr(uri: &http::Uri) -> Option<String> {
@@ -459,4 +524,40 @@ impl<S: AsyncRead + AsyncWrite + Unpin> AsyncWrite for RecordingStream<S> {
     fn poll_shutdown(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), io::Error>> {
         Pin::new(&mut self.get_mut().stream).poll_shutdown(cx)
     }
+}
+
+fn to_absolute_form_uri(req: &mut Request<Bytes>) -> Result<(), Error> {
+    let default_scheme = req
+        .extensions()
+        .get::<RequestMetadata>()
+        .map(|m| m.scheme)
+        .unwrap_or("http");
+
+    // If already absolute-form (scheme + authority), leave as-is
+    let uri = req.uri().clone();
+    if uri.scheme().is_some() && uri.authority().is_some() {
+        return Ok(());
+    }
+
+    // Use Host header to reconstruct the absolute URI
+    let host = req
+        .headers()
+        .get(http::header::HOST)
+        .and_then(|v| v.to_str().ok())
+        .ok_or_else(|| {
+            Error::ConfigurationError("Missing Host header on origin-form request".into())
+        })?;
+
+    let path_and_query = uri.path_and_query().map(|pq| pq.as_str()).unwrap_or("/");
+
+    let abs = format!("{}://{}{}", default_scheme, host, path_and_query);
+    let new_uri: http::Uri = abs.parse().map_err(|e| {
+        Error::ConfigurationError(format!(
+            "Invalid absolute URI constructed from Host+path: {}",
+            e
+        ))
+    })?;
+
+    *req.uri_mut() = new_uri;
+    Ok(())
 }

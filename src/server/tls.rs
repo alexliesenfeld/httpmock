@@ -2,7 +2,7 @@ use rustls::pki_types::{CertificateDer, PrivateKeyDer};
 
 use crate::server::tls::Error::{CaCertificateError, GenerateCertificateError};
 use async_trait::async_trait;
-use rcgen::{Certificate, CertificateParams, KeyPair};
+use rcgen::{Certificate, CertificateParams, KeyPair, SanType};
 use rustls::{
     crypto::ring::sign::any_supported_type,
     server::{ClientHello, ResolvesServerCert},
@@ -15,6 +15,7 @@ use std::{
     net::SocketAddr,
     sync::{Arc, Mutex, RwLock},
 };
+
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -26,7 +27,7 @@ pub enum Error {
 }
 
 pub trait CertificateResolverFactory {
-    fn build(&self, tcp_address: SocketAddr) -> Arc<dyn ResolvesServerCert>;
+    fn build(&self, authority: Option<String>) -> Arc<dyn ResolvesServerCert>;
 }
 
 struct SharedState {
@@ -69,10 +70,10 @@ impl<'a> GeneratingCertificateResolverFactory {
 }
 
 impl CertificateResolverFactory for GeneratingCertificateResolverFactory {
-    fn build(&self, tcp_address: SocketAddr) -> Arc<dyn ResolvesServerCert> {
+    fn build(&self, authority: Option<String>) -> Arc<dyn ResolvesServerCert> {
         Arc::new(GeneratingCertificateResolver {
             state: self.state.clone(),
-            tcp_address,
+            authority,
         })
     }
 }
@@ -80,7 +81,7 @@ impl CertificateResolverFactory for GeneratingCertificateResolverFactory {
 #[derive(Debug)]
 pub struct GeneratingCertificateResolver {
     state: Arc<SharedState>,
-    tcp_address: SocketAddr,
+    authority: Option<String>,
 }
 
 impl<'a> GeneratingCertificateResolver {
@@ -104,10 +105,49 @@ impl<'a> GeneratingCertificateResolver {
             .map_err(|err| {
                 GenerateCertificateError(format!("cannot use generated private key: {:?}", err))
             })?
-            .ok_or(GenerateCertificateError(format!(
-                "invalid generated private key"
+            .ok_or(GenerateCertificateError(String::from(
+                "invalid generated private key",
             )))?;
         Ok(private_key)
+    }
+
+    fn authority_ip(&self) -> Option<std::net::IpAddr> {
+        let auth = self.authority.as_deref()?;
+
+        // 1) Full socket address like "127.0.0.1:8080" or "[::1]:443"
+        if let Ok(sa) = auth.parse::<std::net::SocketAddr>() {
+            return Some(sa.ip());
+        }
+
+        // 2) Bracketed IPv6 without port: "[::1]"
+        if let Some(inner) = auth.strip_prefix('[').and_then(|s| s.strip_suffix(']')) {
+            if let Ok(ip) = inner.parse::<std::net::IpAddr>() {
+                return Some(ip);
+            }
+        }
+
+        // 3) Parse as HTTP authority and take the host (handles bracketed IPv6 and ports)
+        if let Ok(a) = auth.parse::<http::uri::Authority>() {
+            if let Ok(ip) = a.host().parse::<std::net::IpAddr>() {
+                return Some(ip);
+            }
+        }
+
+        // 4) Plain IP literal (v4 or v6)
+        if let Ok(ip) = auth.parse::<std::net::IpAddr>() {
+            return Some(ip);
+        }
+
+        // 5) Conservative host:port split only if there's exactly one ':' (avoids mangling IPv6)
+        if auth.matches(':').count() == 1 {
+            if let Some((host, _)) = auth.rsplit_once(':') {
+                if let Ok(ip) = host.parse::<std::net::IpAddr>() {
+                    return Some(ip);
+                }
+            }
+        }
+
+        None
     }
 
     pub fn generate_host_certificate(&'a self, hostname: &str) -> Result<Arc<CertifiedKey>, Error> {
@@ -117,12 +157,53 @@ impl<'a> GeneratingCertificateResolver {
         })?;
 
         // Set up certificate parameters for the new certificate
-        let params = CertificateParams::new(vec![hostname.to_owned()]).map_err(|err| {
-            GenerateCertificateError(format!(
-                "Cannot generate Certificate (host: {}: error: {:?})",
-                hostname, err
-            ))
-        })?;
+        let mut params = if let Ok(ip) = hostname.parse::<std::net::IpAddr>() {
+            // If the hostname is an IP address, place it into IP SANs unless it's unspecified (0.0.0.0 / ::)
+            let mut p = CertificateParams::default();
+            if !ip.is_unspecified() {
+                p.subject_alt_names.push(SanType::IpAddress(ip));
+            }
+
+            // If this call originated from a no-SNI fallback, hostname equals the
+            // local TCP address of this resolver. In that case, enrich the cert
+            // with local-friendly SANs and any extras from HTTPMOCK_EXTRA_SANS.
+            if self.authority.is_none() || self.authority_ip().map(|a| a == ip).unwrap_or(false) {
+                // No-SNI fallback or no authority: add localhost variants, all local IPs, and extras from env
+                if let Ok(localhost_dns) =
+                    <rcgen::Ia5String as std::convert::TryFrom<&str>>::try_from("localhost")
+                {
+                    p.subject_alt_names.push(SanType::DnsName(localhost_dns));
+                }
+                if let Ok(loopback_v4) = "127.0.0.1".parse::<std::net::IpAddr>() {
+                    p.subject_alt_names.push(SanType::IpAddress(loopback_v4));
+                }
+                if let Ok(loopback_v6) = "::1".parse::<std::net::IpAddr>() {
+                    p.subject_alt_names.push(SanType::IpAddress(loopback_v6));
+                }
+                // Add all local interface IPs
+                let locals = collect_local_ips();
+                let local_sans: Vec<SanType> = locals.into_iter().map(SanType::IpAddress).collect();
+                push_unique_sans(&mut p.subject_alt_names, local_sans);
+                // Merge extras from env, avoiding duplicates
+                let extra_sans = parse_extra_sans_from_env();
+                push_unique_sans(&mut p.subject_alt_names, extra_sans);
+            }
+            p
+        } else {
+            // Otherwise, treat it as a DNS name
+            let mut p = CertificateParams::new(vec![hostname.to_owned()]).map_err(|err| {
+                GenerateCertificateError(format!(
+                    "Cannot generate Certificate (host: {}: error: {:?})",
+                    hostname, err
+                ))
+            })?;
+
+            // When SNI is provided (DNS case), we intentionally do NOT add extra
+            // SANs like localhost/loopbacks by default. If users need more SANs
+            // here, they can still set HTTPMOCK_EXTRA_SANS explicitly; however the
+            // requirement is to only add extras when there is no hostname.
+            p
+        };
 
         let key_pair = KeyPair::generate_for(&rcgen::PKCS_ECDSA_P256_SHA256).map_err(|err| {
             GenerateCertificateError(format!(
@@ -210,6 +291,37 @@ impl<'a> GeneratingCertificateResolver {
     }
 }
 
+// Parses HTTPMOCK_EXTRA_SANS (comma-separated) into SAN entries. Non-IP tokens are treated as DNS names.
+fn parse_extra_sans_from_env() -> Vec<SanType> {
+    let raw = match std::env::var("HTTPMOCK_EXTRA_SANS") {
+        Ok(v) => v,
+        Err(_) => return Vec::new(),
+    };
+    let mut out = Vec::new();
+    for item in raw.split(',').map(|s| s.trim()).filter(|s| !s.is_empty()) {
+        if let Ok(ip) = item.parse::<std::net::IpAddr>() {
+            out.push(SanType::IpAddress(ip));
+        } else if let Ok(dns) = <rcgen::Ia5String as std::convert::TryFrom<&str>>::try_from(item) {
+            out.push(SanType::DnsName(dns));
+        }
+    }
+    out
+}
+
+// Deduplicate SANs before pushing extras.
+fn push_unique_sans(target: &mut Vec<SanType>, extras: Vec<SanType>) {
+    for e in extras {
+        let exists = target.iter().any(|t| match (t, &e) {
+            (SanType::DnsName(a), SanType::DnsName(b)) => a == b,
+            (SanType::IpAddress(a), SanType::IpAddress(b)) => a == b,
+            _ => false,
+        });
+        if !exists {
+            target.push(e);
+        }
+    }
+}
+
 // TODO: Change ResolvesServerCert to acceptor so that async operations are supported
 impl ResolvesServerCert for GeneratingCertificateResolver {
     // TODO: This implementation is synchronous, which will cause synchronous locking to
@@ -232,11 +344,14 @@ impl ResolvesServerCert for GeneratingCertificateResolver {
         // clients may choose to not include a server name (SNI extension) in TLS ClientHello
         // messages. If there is no SNI extension, we assume the client used an IP address instead
         // of a hostname.
-        let hostname = self.tcp_address.ip().to_string();
-        tracing::info!("no hostname using: {}", hostname);
+        let hostname = self
+            .authority_ip()
+            .map(|ip| ip.to_string())
+            .unwrap_or_else(|| "0.0.0.0".to_string());
+        tracing::debug!("no hostname using: {}", hostname);
         return Some(
             self.generate(&hostname)
-                .expect(&format!("Cannot generate wildcard certificate")),
+                .expect(&format!("Cannot generate fallback certificate")),
         );
     }
 }
@@ -308,4 +423,18 @@ impl<'a> tls_detect::Read<'a> for TcpStreamPeekBuffer<'a> {
     async fn buffer_to(&mut self, limit: usize) -> std::io::Result<()> {
         self.advance(limit).await
     }
+}
+
+// Collect all local interface IP addresses (IPv4 and IPv6), excluding unspecified.
+fn collect_local_ips() -> Vec<std::net::IpAddr> {
+    let mut out = Vec::new();
+    if let Ok(ifaces) = if_addrs::get_if_addrs() {
+        for iface in ifaces {
+            let ip = iface.ip();
+            if !ip.is_unspecified() && !out.contains(&ip) {
+                out.push(ip);
+            }
+        }
+    }
+    out
 }
