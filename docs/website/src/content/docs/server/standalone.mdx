@@ -24,11 +24,11 @@ of the development lifecycle.
 
 ### Docker Image
 Although you can build the mock server in standalone mode yourself, it is easiest to use the accompanying
-[Docker image](https://hub.docker.com/r/alexliesenfeld/httpmock) hosted on Docker Hub.
+[Docker image](https://hub.docker.com/r/httpmock/httpmock) hosted on Docker Hub.
 
 You can run it as follows:
 ```bash
-docker run alexliesenfeld/httpmock
+docker run httpmock/httpmock
 ````
 
 #### Build Docker Image
@@ -38,7 +38,7 @@ build it yourself using the Dockerfile that is contained in the project root dir
 
 ```bash
 # Clone the repository
-git clone git@github.com:alexliesenfeld/httpmock.git
+git clone git@github.com:httpmock/httpmock.git
 
 # Build the Docker image
 docker build -t my-httpmock-image .
@@ -53,7 +53,7 @@ and execute it as follows:
 
 ```bash
 # Clone the repository
-git clone git@github.com:alexliesenfeld/httpmock.git
+git clone git@github.com:httpmock/httpmock.git
 
 # Build a standalone mock server binary
 cargo build --release --all-features
@@ -116,5 +116,5 @@ then:
     [`Then`](https://docs.rs/httpmock/latest/httpmock/struct.Then.html) data structures.
 </Aside>
 
-Please refer to [this example file](https://github.com/alexliesenfeld/httpmock/blob/master/tests/resources/static_yaml_mock.yaml),
+Please refer to [this example file](https://github.com/httpmock/httpmock/blob/master/tests/resources/static_yaml_mock.yaml),
 which includes many of the usable fields.

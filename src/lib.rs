@@ -10,12 +10,12 @@
 //! * HTTPS support
 //! * Fault and network delay simulation.
 //! * Custom request matchers.
-//! * Standalone mode with an accompanying [Docker image](https://hub.docker.com/r/alexliesenfeld/httpmock).
+//! * Standalone mode with an accompanying [Docker image](https://hub.docker.com/r/httpmock/httpmock).
 //! * Helpful error messages
-//! * [Advanced verification and debugging support](https://alexliesenfeld.github.io/posts/mocking-http--services-in-rust/#creating-mocks) (including diff generation between actual and expected HTTP request values)
+//! * [Advanced verification and debugging support](https://httpmock.github.io/posts/mocking-http--services-in-rust/#creating-mocks) (including diff generation between actual and expected HTTP request values)
 //! * Parallel test execution.
 //! * Fully asynchronous core with synchronous and asynchronous APIs.
-//! * Support for [mock configuration using YAML files](https://github.com/alexliesenfeld/httpmock/tree/master#file-based-mock-specification).
+//! * Support for [mock configuration using YAML files](https://github.com/httpmock/httpmock/tree/master#file-based-mock-specification).
 //!
 //! # Getting Started
 //! Add `httpmock` to `Cargo.toml`:
@@ -84,7 +84,7 @@
 //! ## Examples
 //!
 //! You can find examples in the
-//! [`httpmock` test directory](https://github.com/alexliesenfeld/httpmock/blob/master/tests/).
+//! [`httpmock` test directory](https://github.com/httpmock/httpmock/blob/master/tests/).
 //! The [official website](http://httpmock.rs) and [reference docs](https://docs.rs/httpmock/)
 //! also contain _**a lot**_ of examples.
 //!

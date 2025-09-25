@@ -56,7 +56,7 @@ async fn test_fn() -> u16 {
         })
         .await;
 
-    // TODO: https://github.com/alexliesenfeld/httpmock/issues/161
+    // TODO: https://github.com/httpmock/httpmock/issues/161
     //  We are using http scheme here, not https. This should be changed once the proxy feature
     //  works with https
     // External check (through proxy to httpbin)

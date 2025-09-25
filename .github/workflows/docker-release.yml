@@ -36,7 +36,7 @@ jobs:
         with:
           context: .
           push: ${{ github.event.inputs.push }}
-          tags: alexliesenfeld/httpmock:${{ github.event.inputs.version }}
+          tags: httpmock/httpmock:${{ github.event.inputs.version }}
       - name: Build and push (provided version + latest)
         uses: docker/build-push-action@v6
         if: github.event.inputs.latest == 'true'
@@ -44,5 +44,5 @@ jobs:
           context: .
           push: ${{ github.event.inputs.push }}
           tags: |
-            alexliesenfeld/httpmock:${{ github.event.inputs.version }},
-            alexliesenfeld/httpmock:latest
+            httpmock/httpmock:${{ github.event.inputs.version }},
+            httpmock/httpmock:latest

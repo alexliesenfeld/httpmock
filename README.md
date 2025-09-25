@@ -1,14 +1,14 @@
 <div align="center">
-<img width="275" src="https://raw.githubusercontent.com/alexliesenfeld/httpmock/master/assets/logo-dark.svg#gh-dark-mode-only" alt="httpmock Logo"/>
-<img width="275" src="https://raw.githubusercontent.com/alexliesenfeld/httpmock/master/assets/logo-light.svg#gh-light-mode-only" alt="httpmock Logo"/>
+<img width="275" src="https://raw.githubusercontent.com/httpmock/httpmock/master/assets/logo-dark.svg#gh-dark-mode-only" alt="httpmock Logo"/>
+<img width="275" src="https://raw.githubusercontent.com/httpmock/httpmock/master/assets/logo-light.svg#gh-light-mode-only" alt="httpmock Logo"/>
 </div>
 
 <p align="center">Simple yet powerful HTTP mocking library for Rust</p>
 <div align="center">
 
-[![Build](https://github.com/alexliesenfeld/httpmock/actions/workflows/build.yml/badge.svg)](https://github.com/alexliesenfeld/httpmock/actions/workflows/build.yml)
+[![Build](https://github.com/httpmock/httpmock/actions/workflows/build.yml/badge.svg)](https://github.com/httpmock/httpmock/actions/workflows/build.yml)
 [![crates.io](https://img.shields.io/crates/d/httpmock.svg)](https://crates.io/crates/httpmock)
-[![Mentioned in Awesome](https://raw.githubusercontent.com/alexliesenfeld/docs-assets/refs/heads/main/ab.svg)](https://github.com/rust-unofficial/awesome-rust#testing)
+[![Mentioned in Awesome](https://raw.githubusercontent.com/httpmock/docs-assets/refs/heads/main/ab.svg)](https://github.com/rust-unofficial/awesome-rust#testing)
 [![Rust](https://img.shields.io/badge/rust-1.81%2B-blue.svg?maxAge=3600)](https://github.com/rust-lang/rust/blob/master/RELEASES.md#version-1700-2023-06-01)
 
 </div>
@@ -22,13 +22,13 @@
     ·
     <a href="https://discord.com/invite/7QzTfBUe">Chat on Discord</a>
     ·
- <a href="https://github.com/alexliesenfeld/httpmock/discussions">Forum</a>
+ <a href="https://github.com/httpmock/httpmock/discussions">Forum</a>
     ·
-    <a href="https://github.com/alexliesenfeld/httpmock/issues">Report Bug</a>
+    <a href="https://github.com/httpmock/httpmock/issues">Report Bug</a>
     ·
-    <a href="https://github.com/alexliesenfeld/httpmock/issues">Request Feature</a>
+    <a href="https://github.com/httpmock/httpmock/issues">Request Feature</a>
     ·
-    <a href="https://github.com/sponsors/alexliesenfeld">Support this Project</a>
+    <a href="https://github.com/sponsors/httpmock">Support this Project</a>
 </p>
 
 
@@ -42,12 +42,12 @@
 * HTTPS support
 * Fault and network delay simulation.
 * Custom request matchers.
-* Standalone mode with an accompanying [Docker image](https://hub.docker.com/r/alexliesenfeld/httpmock).
+* Standalone mode with an accompanying [Docker image](https://hub.docker.com/r/httpmock/httpmock).
 * Helpful error messages
 * [Advanced verification and debugging support](https://alexliesenfeld.github.io/posts/mocking-http--services-in-rust/#creating-mocks) (including diff generation between actual and expected HTTP request values)
 * Parallel test execution.
 * Fully asynchronous core with synchronous and asynchronous APIs.
-* Support for [mock configuration using YAML files](https://github.com/alexliesenfeld/httpmock/tree/master#file-based-mock-specification).
+* Support for [mock configuration using YAML files](https://github.com/httpmock/httpmock/tree/master#file-based-mock-specification).
 
 ## Getting Started
 
@@ -122,7 +122,7 @@ See the [official website](http://httpmock.rs) for detailed API documentation.
 ## Examples
 
 You can find examples in the
-[`httpmock` test directory](https://github.com/alexliesenfeld/httpmock/blob/master/tests/).
+[`httpmock` test directory](https://github.com/httpmock/httpmock/blob/master/tests/).
 The [official website](http://httpmock.rs) and [reference docs](https://docs.rs/httpmock/) also contain _**a lot**_ of examples. 
 
 ## License

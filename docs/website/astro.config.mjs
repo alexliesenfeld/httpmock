@@ -13,7 +13,7 @@ export default defineConfig({
                 replacesTitle: true,
             },
             social: {
-                github: 'https://github.com/alexliesenfeld/httpmock',
+                github: 'https://github.com/httpmock/httpmock',
                 discord: 'https://discord.com/invite/7QzTfBUe',
             },
             sidebar: [
@@ -75,7 +75,7 @@ export default defineConfig({
                     label: 'Miscellaneous',
                     items: [
 						{label: 'FAQ', link: '/miscellaneous/faq/'},
-                        {label: 'License', link: 'https://github.com/alexliesenfeld/httpmock/blob/master/LICENSE'},
+                        {label: 'License', link: 'https://github.com/httpmock/httpmock/blob/master/LICENSE'},
                     ],
                 },
             ],

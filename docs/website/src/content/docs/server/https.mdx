@@ -25,7 +25,7 @@ any additional configuration.
 Since HTTPS requires the use of certificates, you'll need to accept the `httpmock` CA certificate
 in your client settings or, more conveniently, in your system preferences when using HTTPS.
 You can find the `httpmock` CA certificate in the `httpmock`
-[GitHub repository](https://github.com/alexliesenfeld/httpmock/blob/master/certs) (ca.pem file).
+[GitHub repository](https://github.com/httpmock/httpmock/blob/master/certs) (ca.pem file).
 
 
 `httpmock` uses its CA certificate to generate domain-specific certificates for your tests. For instance, if you want
@@ -42,7 +42,7 @@ Here is how you can add the `httpmock` CA crtificate to your system.
 
 ```bash
 # Download the CA certificate
-curl -o httpmock-ca.crt https://github.com/alexliesenfeld/httpmock/raw/master/certs/ca.pem
+curl -o httpmock-ca.crt https://github.com/httpmock/httpmock/raw/master/certs/ca.pem
 
 # Open Keychain Access manually or use the open command
 open /Applications/Utilities/Keychain\ Access.app
@@ -55,7 +55,7 @@ open /Applications/Utilities/Keychain\ Access.app
 #### Windows
 ```
 # Download the CA certificate
-Invoke-WebRequest -Uri "https://github.com/alexliesenfeld/httpmock/raw/master/certs/ca.pem" -OutFile "C:\Path\To\httpmock-ca.crt"
+Invoke-WebRequest -Uri "https://github.com/httpmock/httpmock/raw/master/certs/ca.pem" -OutFile "C:\Path\To\httpmock-ca.crt"
 
 # Open the Certificate Manager
 # Press 'Win + R', type 'mmc', and press Enter.
@@ -70,7 +70,7 @@ Invoke-WebRequest -Uri "https://github.com/alexliesenfeld/httpmock/raw/master/ce
 #### Ubuntu
 ```bash
 # Clone the repository to get the CA certificate
-git clone git@github.com:alexliesenfeld/httpmock.git
+git clone git@github.com:httpmock/httpmock.git
 
 # Copy the certificate to the system's trusted certificates directory
 sudo cp httpmock/certs/ca.pem /usr/local/share/ca-certificates/httpmock.crt
