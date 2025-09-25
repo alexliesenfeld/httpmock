@@ -79,9 +79,6 @@ async fn test_fn() -> u16 {
         })
         .await;
 
-    // TODO: https://github.com/httpmock/httpmock/issues/161
-    //  We are using http scheme here, not https. This should be changed once the proxy feature
-    //  works with https
     // Through proxy to server2
     let (status_code, body) = get(&server2.url("/get"), Some(server1.base_url().as_str()))
         .await
@@ -117,9 +114,6 @@ async fn test_fn() -> u16 {
         })
         .await;
 
-    // TODO: https://github.com/httpmock/httpmock/issues/161
-    //  We are using http scheme here, not https. This should be changed once the proxy feature
-    //  works with https
     // Through proxy to server2
     let (status_code, body) = get(
         &target_server.url("/get"),
