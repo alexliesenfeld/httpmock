@@ -1,6 +1,5 @@
 <div align="center">
-<img width="275" src="https://raw.githubusercontent.com/httpmock/httpmock/master/assets/logo-dark.svg#gh-dark-mode-only" alt="httpmock Logo"/>
-<img width="275" src="https://raw.githubusercontent.com/httpmock/httpmock/master/assets/logo-light.svg#gh-light-mode-only" alt="httpmock Logo"/>
+<img width="275" src="https://raw.githubusercontent.com/httpmock/httpmock/master/assets/logo-adaptive.svg" alt="httpmock Logo"/>
 </div>
 
 <p align="center">Simple yet powerful HTTP mocking library for Rust</p>
