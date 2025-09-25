@@ -48,7 +48,7 @@ use crate::common::util::Join;
 /// ```
 pub struct Mock<'a> {
     // Please find the reason why id is public in
-    // https://github.com/alexliesenfeld/httpmock/issues/26.
+    // https://github.com/httpmock/httpmock/issues/26.
     pub id: usize,
     pub(crate) server: &'a MockServer,
 }
@@ -644,7 +644,7 @@ pub trait MockExt<'a> {
     /// recreated_mock.assert();
     /// assert_eq!(response.status(), 202);
     /// ```
-    /// For more detailed use cases, see [`Issue 26`](https://github.com/alexliesenfeld/httpmock/issues/26) on GitHub.
+    /// For more detailed use cases, see [`Issue 26`](https://github.com/httpmock/httpmock/issues/26) on GitHub.
     fn new(id: usize, mock_server: &'a MockServer) -> Mock<'a>;
 
     /// Returns the unique identifier (ID) assigned to the mock on the [MockServer](struct.MockServer.html).

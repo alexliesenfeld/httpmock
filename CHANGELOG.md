@@ -5,26 +5,26 @@ This release includes refactoring, dependency updates, and internal cleanups.
 No breaking changes expected.
 
 The following pull requests have been merged:
-- [#172](https://github.com/alexliesenfeld/httpmock/pull/172): "Update Rust edition to 2021" (thanks [@FalkWoldmann](https://github.com/FalkWoldmann))
-- [#169](https://github.com/alexliesenfeld/httpmock/pull/169): "Proxy HTTPS fix"
-- [#167](https://github.com/alexliesenfeld/httpmock/pull/167): "Replace log and env_logger with tracing and tracing-subscriber"  (thanks [@FalkWoldmann](https://github.com/FalkWoldmann))
-- [#166](https://github.com/alexliesenfeld/httpmock/pull/166): "Remove unused code" (thanks [@FalkWoldmann](https://github.com/FalkWoldmann))
-- [#163](https://github.com/alexliesenfeld/httpmock/pull/163): "fix: issue 162, non localhost hosts match" (thanks [@Thomblin](https://github.com/Thomblin))
-- [#160](https://github.com/alexliesenfeld/httpmock/pull/160): "Replace custom read_file with std::fs::read_to_string" (thanks [@FalkWoldmann](https://github.com/FalkWoldmann))
-- [#158](https://github.com/alexliesenfeld/httpmock/pull/158): "Improve async executor support"
-- [#156](https://github.com/alexliesenfeld/httpmock/pull/156): "Bump async-object-pool to replace async-std"
-- [#153](https://github.com/alexliesenfeld/httpmock/pull/153): "ci(deps): bump actions/checkout from 4 to 5"
-- [#152](https://github.com/alexliesenfeld/httpmock/pull/152): "Fix missing standalone routes"
-- [#151](https://github.com/alexliesenfeld/httpmock/pull/151): "Cleanup unused test functions"
-- [#147](https://github.com/alexliesenfeld/httpmock/pull/147): "ci(deps): bump codecov/codecov-action from 2 to 5"
-- [#146](https://github.com/alexliesenfeld/httpmock/pull/146): "cargo(deps): update thiserror requirement from 1 to 2"
-- [#145](https://github.com/alexliesenfeld/httpmock/pull/145): "ci(deps): bump actions/checkout from 2 to 4"
-- [#144](https://github.com/alexliesenfeld/httpmock/pull/144): "ci(deps): bump docker/build-push-action from 4 to 6
-- [#141](https://github.com/alexliesenfeld/httpmock/pull/141): "cargo(deps): update path-tree requirement from >=0.8.0, <0.8.1 to >=0.8.0, <0.8.4"
-- [#140](https://github.com/alexliesenfeld/httpmock/pull/140): "ci(deps): bump docker/login-action from 1 to 3"
-- [#139](https://github.com/alexliesenfeld/httpmock/pull/139): "ci(deps): bump withastro/action from 2 to 4"
-- [#138](https://github.com/alexliesenfeld/httpmock/pull/138): "Create dependabot.yml" (thanks [@FalkWoldmann](https://github.com/FalkWoldmann))
-- [#136](https://github.com/alexliesenfeld/httpmock/pull/136): "Replace async_std with tokio" (thanks [@FalkWoldmann](https://github.com/FalkWoldmann))
+- [#172](https://github.com/httpmock/httpmock/pull/172): "Update Rust edition to 2021" (thanks [@FalkWoldmann](https://github.com/FalkWoldmann))
+- [#169](https://github.com/httpmock/httpmock/pull/169): "Proxy HTTPS fix"
+- [#167](https://github.com/httpmock/httpmock/pull/167): "Replace log and env_logger with tracing and tracing-subscriber"  (thanks [@FalkWoldmann](https://github.com/FalkWoldmann))
+- [#166](https://github.com/httpmock/httpmock/pull/166): "Remove unused code" (thanks [@FalkWoldmann](https://github.com/FalkWoldmann))
+- [#163](https://github.com/httpmock/httpmock/pull/163): "fix: issue 162, non localhost hosts match" (thanks [@Thomblin](https://github.com/Thomblin))
+- [#160](https://github.com/httpmock/httpmock/pull/160): "Replace custom read_file with std::fs::read_to_string" (thanks [@FalkWoldmann](https://github.com/FalkWoldmann))
+- [#158](https://github.com/httpmock/httpmock/pull/158): "Improve async executor support"
+- [#156](https://github.com/httpmock/httpmock/pull/156): "Bump async-object-pool to replace async-std"
+- [#153](https://github.com/httpmock/httpmock/pull/153): "ci(deps): bump actions/checkout from 4 to 5"
+- [#152](https://github.com/httpmock/httpmock/pull/152): "Fix missing standalone routes"
+- [#151](https://github.com/httpmock/httpmock/pull/151): "Cleanup unused test functions"
+- [#147](https://github.com/httpmock/httpmock/pull/147): "ci(deps): bump codecov/codecov-action from 2 to 5"
+- [#146](https://github.com/httpmock/httpmock/pull/146): "cargo(deps): update thiserror requirement from 1 to 2"
+- [#145](https://github.com/httpmock/httpmock/pull/145): "ci(deps): bump actions/checkout from 2 to 4"
+- [#144](https://github.com/httpmock/httpmock/pull/144): "ci(deps): bump docker/build-push-action from 4 to 6
+- [#141](https://github.com/httpmock/httpmock/pull/141): "cargo(deps): update path-tree requirement from >=0.8.0, <0.8.1 to >=0.8.0, <0.8.4"
+- [#140](https://github.com/httpmock/httpmock/pull/140): "ci(deps): bump docker/login-action from 1 to 3"
+- [#139](https://github.com/httpmock/httpmock/pull/139): "ci(deps): bump withastro/action from 2 to 4"
+- [#138](https://github.com/httpmock/httpmock/pull/138): "Create dependabot.yml" (thanks [@FalkWoldmann](https://github.com/FalkWoldmann))
+- [#136](https://github.com/httpmock/httpmock/pull/136): "Replace async_std with tokio" (thanks [@FalkWoldmann](https://github.com/FalkWoldmann))
 
 ## Version 0.8.0-beta.1
 This release mainly contains internal improvements and bugfixes.
@@ -32,14 +32,14 @@ The minimum required Rust version has been increased to 1.81.
 Apart from the updated MSRV, there are no breaking changes.
 
 The following pull requests have been merged:
-- [#112](https://github.com/alexliesenfeld/httpmock/pull/112): "Fix building without cookies feature" by [@jayvdb](https://github.com/jayvdb).
-- [#117](https://github.com/alexliesenfeld/httpmock/pull/117): "fix rustls crypto provider features" by [@Taowyoo](https://github.com/Taowyoo).
-- [#120](https://github.com/alexliesenfeld/httpmock/pull/120): "Refactoring and cleanup". THanks by [@FalkWoldmann](https://github.com/FalkWoldmann).
+- [#112](https://github.com/httpmock/httpmock/pull/112): "Fix building without cookies feature" by [@jayvdb](https://github.com/jayvdb).
+- [#117](https://github.com/httpmock/httpmock/pull/117): "fix rustls crypto provider features" by [@Taowyoo](https://github.com/Taowyoo).
+- [#120](https://github.com/httpmock/httpmock/pull/120): "Refactoring and cleanup". THanks by [@FalkWoldmann](https://github.com/FalkWoldmann).
 
 ## Version 0.8.0-alpha.1
 
 ### BREAKING CHANGES
-- A new [MockServer::reset](https://docs.rs/httpmock/latest/httpmock/struct.MockServer.html#method.reset) method was added that resets a mock server. Thanks for providing the [pull request](https://github.com/alexliesenfeld/httpmock/pull/100) for this feature, [@dax](https://github.com/dax).
+- A new [MockServer::reset](https://docs.rs/httpmock/latest/httpmock/struct.MockServer.html#method.reset) method was added that resets a mock server. Thanks for providing the [pull request](https://github.com/httpmock/httpmock/pull/100) for this feature, [@dax](https://github.com/dax).
 - The default port for standalone server was changed from `5000` to `5050` due to conflicts with system services on macOS.
 - [Custom matcher functions](https://docs.rs/httpmock/latest/httpmock/struct.When.html#method.matches) are now closures rather than functions.
 - [When::json_body_partial](https://docs.rs/httpmock/0.7.0/httpmock/struct.When.html#method.json_body_partial) was renamed to `json_body_includes`.
@@ -72,7 +72,7 @@ The following pull requests have been merged:
 - Improvements:
   - The dependency tree has been significantly slimmed down when the `remote` feature is not enabled.
   - If the new `remote` feature is not enabled, `httpmock` no longer has a dependency on a real HTTP client. 
-    As a result, certain [TLS issues previously reported by users](https://github.com/alexliesenfeld/httpmock/issues/82) 
+    As a result, certain [TLS issues previously reported by users](https://github.com/httpmock/httpmock/issues/82) 
     should no longer arise.
 
 - This release also updates all dependencies to the most recent version.
@@ -89,14 +89,14 @@ The following pull requests have been merged:
 
 ## Version 0.6.6
 
-- Extended some API methods to allow for more type flexibility (see <https://github.com/alexliesenfeld/httpmock/issues/58>). Thanks to [@95th](https://github.com/95th) for providing the PR!
-- Fixed parsing query parameter values that contain `+` to represent space (see <https://github.com/alexliesenfeld/httpmock/issues/56>). Thanks to [@95th](https://github.com/95th) for providing the PR!
-- Added a new Cargo feature `cookie` to shorten compile time (see <https://github.com/alexliesenfeld/httpmock/pull/63>). Thanks to [mythmon](https://github.com/mythmon) for providing this PR!
+- Extended some API methods to allow for more type flexibility (see <https://github.com/httpmock/httpmock/issues/58>). Thanks to [@95th](https://github.com/95th) for providing the PR!
+- Fixed parsing query parameter values that contain `+` to represent space (see <https://github.com/httpmock/httpmock/issues/56>). Thanks to [@95th](https://github.com/95th) for providing the PR!
+- Added a new Cargo feature `cookie` to shorten compile time (see <https://github.com/httpmock/httpmock/pull/63>). Thanks to [mythmon](https://github.com/mythmon) for providing this PR!
 
 ## Version 0.6.5
 
-- Fixes a race condition that could occur when deleting mocks from the mock server (see <https://github.com/alexliesenfeld/httpmock/issues/53>).
-- Replaced internal diff library (switched from `difference` to `similar`, see <https://github.com/alexliesenfeld/httpmock/pull/55>).
+- Fixes a race condition that could occur when deleting mocks from the mock server (see <https://github.com/httpmock/httpmock/issues/53>).
+- Replaced internal diff library (switched from `difference` to `similar`, see <https://github.com/httpmock/httpmock/pull/55>).
 
 ## Version 0.6.4
 
@@ -111,7 +111,7 @@ The following pull requests have been merged:
 
 - A bug was fixed that has unexported the [When](https://docs.rs/httpmock/0.5.8/httpmock/struct.When.html) and
   [Then](https://docs.rs/httpmock/0.5.8/httpmock/struct.When.html) structures. Both types are now exported again.
-  Please refer to <https://github.com/alexliesenfeld/httpmock/issues/47> for more info.
+  Please refer to <https://github.com/httpmock/httpmock/issues/47> for more info.
 
 ## Version 0.6.1
 
@@ -127,7 +127,7 @@ The following pull requests have been merged:
   [Then](https://docs.rs/httpmock/0.5.8/httpmock/struct.When.html) structures.
 - The two methods `MockRef::times_called` and `MockRef::times_called_async` were deprecated since version 0.5.0 and
   have now been removed.
-- A [prelude module](https://github.com/alexliesenfeld/httpmock#getting-started) was added to shorten imports
+- A [prelude module](https://github.com/httpmock/httpmock#getting-started) was added to shorten imports
   that are usually required when using `httpmock` in tests.
 - The struct `MockRef` has been renamed to `Mock`.
 - Trait `MockRefExt` has been renamed to `MockExt`.

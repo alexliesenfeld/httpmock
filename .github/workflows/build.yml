@@ -106,4 +106,4 @@ jobs:
         with:
           context: .
           push: false
-          tags: alexliesenfeld/httpmock:build
+          tags: httpmock/httpmock:build

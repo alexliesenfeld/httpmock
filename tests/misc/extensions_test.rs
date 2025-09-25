@@ -3,7 +3,7 @@ extern crate httpmock;
 use self::httpmock::{prelude::*, Mock};
 use std::cell::RefCell;
 
-// Test for issue https://github.com/alexliesenfeld/httpmock/issues/26
+// Test for issue https://github.com/httpmock/httpmock/issues/26
 #[test]
 fn wrapper_test() {
     // Assume we have some other structures that wrap a MockServer along with its mock objects
