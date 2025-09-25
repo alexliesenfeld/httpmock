@@ -24,6 +24,7 @@ The following pull requests have been merged:
 - [#140](https://github.com/alexliesenfeld/httpmock/pull/140): "ci(deps): bump docker/login-action from 1 to 3"
 - [#139](https://github.com/alexliesenfeld/httpmock/pull/139): "ci(deps): bump withastro/action from 2 to 4"
 - [#138](https://github.com/alexliesenfeld/httpmock/pull/138): "Create dependabot.yml" (thanks [@FalkWoldmann](https://github.com/FalkWoldmann))
+- [#136](https://github.com/alexliesenfeld/httpmock/pull/136): "Replace async_std with tokio" (thanks [@FalkWoldmann](https://github.com/FalkWoldmann))
 
 ## Version 0.8.0-beta.1
 This release mainly contains internal improvements and bugfixes.
