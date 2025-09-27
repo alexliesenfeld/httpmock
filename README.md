@@ -24,7 +24,7 @@
     ·
     <a href="https://crates.io/crates/httpmock">Crate</a>
     ·
-    <a href="https://discord.com/invite/7QzTfBUe">Chat on Discord</a>
+    <a href="https://discord.gg/BMyywgTJWK">Chat on Discord</a>
     ·
  <a href="https://github.com/httpmock/httpmock/discussions">Forum</a>
     ·
