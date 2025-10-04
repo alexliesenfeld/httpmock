@@ -38,7 +38,7 @@ fn forwarding_test() {
 // @example-start: forwarding-github
 #[cfg(feature = "proxy")]
 #[test]
-fn forward_to_github_test() {
+fn forward_to_website() {
     // Let's create our mock server for the test
     let server = MockServer::start();
 
