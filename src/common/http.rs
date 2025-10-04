@@ -76,22 +76,23 @@ impl HttpClient for HttpMockHttpClient {
     async fn send(&self, req: Request<Bytes>) -> Result<Response<Bytes>, Error> {
         let (mut req_parts, req_body) = req.into_parts();
 
-        // If the request is origin-form (no scheme/authority), reconstruct an absolute URI
-        // so the connector knows where to dial. Use Host header and scheme from RequestMetadata.
-        let needs_target = req_parts.uri.scheme().is_none() || req_parts.uri.authority().is_none();
+        // If the request is origin-form or incomplete, reconstruct an absolute URI
+        let uri = req_parts.uri.clone();
+
+        let needs_target = uri.scheme().is_none() || uri.authority().is_none();
         if needs_target {
             if let Some(host) = req_parts
                 .headers
                 .get(http::header::HOST)
                 .and_then(|v| v.to_str().ok())
             {
-                let scheme = req_parts
-                    .extensions
-                    .get::<RequestMetadata>()
-                    .map(|m| m.scheme)
+                // Prefer scheme from the URI if present; otherwise use RequestMetadata; fallback to http
+                let scheme = uri
+                    .scheme_str()
+                    .or_else(|| req_parts.extensions.get::<RequestMetadata>().map(|m| m.scheme))
                     .unwrap_or("http");
-                let path_and_query = req_parts
-                    .uri
+
+                let path_and_query = uri
                     .path_and_query()
                     .map(|pq| pq.as_str())
                     .unwrap_or("/");
@@ -108,8 +109,7 @@ impl HttpClient for HttpMockHttpClient {
 
         let res = if let Some(rt) = self.runtime.clone() {
             let client = self.client.clone();
-            rt.spawn(async move { client.request(hyper_req).await })
-                .await??
+            rt.spawn(async move { client.request(hyper_req).await }).await??
         } else {
             self.client.request(hyper_req).await?
         };
@@ -117,6 +117,6 @@ impl HttpClient for HttpMockHttpClient {
         let (res_parts, res_body) = res.into_parts();
         let body = res_body.collect().await?.to_bytes();
 
-        return Ok(Response::from_parts(res_parts, body));
+        Ok(Response::from_parts(res_parts, body))
     }
 }
