@@ -89,13 +89,15 @@ impl HttpClient for HttpMockHttpClient {
                 // Prefer scheme from the URI if present; otherwise use RequestMetadata; fallback to http
                 let scheme = uri
                     .scheme_str()
-                    .or_else(|| req_parts.extensions.get::<RequestMetadata>().map(|m| m.scheme))
+                    .or_else(|| {
+                        req_parts
+                            .extensions
+                            .get::<RequestMetadata>()
+                            .map(|m| m.scheme)
+                    })
                     .unwrap_or("http");
 
-                let path_and_query = uri
-                    .path_and_query()
-                    .map(|pq| pq.as_str())
-                    .unwrap_or("/");
+                let path_and_query = uri.path_and_query().map(|pq| pq.as_str()).unwrap_or("/");
 
                 if let Ok(new_uri) = format!("{}://{}{}", scheme, host, path_and_query).parse() {
                     req_parts.uri = new_uri;
@@ -109,7 +111,8 @@ impl HttpClient for HttpMockHttpClient {
 
         let res = if let Some(rt) = self.runtime.clone() {
             let client = self.client.clone();
-            rt.spawn(async move { client.request(hyper_req).await }).await??
+            rt.spawn(async move { client.request(hyper_req).await })
+                .await??
         } else {
             self.client.request(hyper_req).await?
         };
