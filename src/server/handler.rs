@@ -781,6 +781,21 @@ mod tests {
         }
 
         #[test]
+        fn valid_forwarding_rule_can_be_added() {
+            let config = ForwardingRuleConfig {
+                target_base_url: "http://example.com".to_string(),
+                ..Default::default()
+            };
+            let request = Request::post("/__httpmock__/forwarding_rules")
+                .body(Bytes::from(serde_json::to_vec(&config).unwrap()))
+                .unwrap();
+
+            let response = handler().handle_add_forwarding_rule(&request).unwrap();
+
+            assert_eq!(response.status(), 201);
+        }
+
+        #[test]
         fn forwarding_rule_takes_precedence_over_proxy_rule() {
             let handler = handler();
             handler.state.create_proxy_rule(ProxyRuleConfig::default());
