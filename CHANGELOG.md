@@ -11,6 +11,17 @@ remains 1.88.
   ([#312](https://github.com/httpmock/httpmock/pull/312)). Its matcher, comparator and reader
   types are implementation details rather than a supported extension API; there is no
   replacement public path. Custom predicates remain possible with `When::is_true`.
+- `HttpMockRequest` now stores validated `http` types
+  ([#273](https://github.com/httpmock/httpmock/pull/273)). `uri()`, `scheme()`, `method()` and
+  `headers()` return borrowed `Uri`, `Scheme`, `Method` and `HeaderMap` values, and `host()`
+  returns `Option<&str>`. `uri_str()` and `headers_vec()` were removed; use
+  `uri().to_string()` and `headers()` instead.
+- Converting an `http::Request` into an `HttpMockRequest` now uses `TryFrom` and returns the
+  public `HttpMockRequestConversionError`
+  ([#273](https://github.com/httpmock/httpmock/pull/273)). Requests whose URI has no scheme
+  need `RequestMetadata` in their extensions to supply one.
+- `RequestMetadata::new` and its public `scheme` field now use `http::uri::Scheme` instead of
+  `&'static str` ([#273](https://github.com/httpmock/httpmock/pull/273)).
 - The body helpers `is_blank`, `contains_str`, `contains_slice` and `contains_vec`
   were removed ([#246](https://github.com/httpmock/httpmock/pull/246)). Use
   `request.body_string().contains("..")`, which also works inside `respond_with`, or
