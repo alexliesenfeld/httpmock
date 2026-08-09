@@ -115,6 +115,30 @@ fn dynamic_responder_test() {
 }
 
 #[test]
+fn dynamic_responder_preserves_binary_body() {
+    use httpmock::prelude::*;
+    use reqwest::blocking::Client;
+
+    let server = MockServer::start();
+    let mock = server.mock(|when, then| {
+        when.method("POST").path("/echo");
+        then.respond_with(|request: &HttpMockRequest| {
+            HttpMockResponse::builder().body(request.body().to_bytes()).build()
+        });
+    });
+
+    let body = vec![0, 159, 146, 150, 255];
+    let response = Client::new()
+        .post(server.url("/echo"))
+        .body(body.clone())
+        .send()
+        .unwrap();
+
+    mock.assert();
+    assert_eq!(response.bytes().unwrap().as_ref(), body);
+}
+
+#[test]
 fn dynamic_responder_http_crate_test() {
     use std::sync::Mutex;
 

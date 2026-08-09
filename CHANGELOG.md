@@ -11,6 +11,16 @@ remains 1.88.
   ([#312](https://github.com/httpmock/httpmock/pull/312)). Its matcher, comparator and reader
   types are implementation details rather than a supported extension API; there is no
   replacement public path. Custom predicates remain possible with `When::is_true`.
+- `HttpMockResponse` now wraps an `http::Response`
+  ([#274](https://github.com/httpmock/httpmock/pull/274)). Its public `status`, `headers` and
+  `body` fields are replaced by `status()`, `headers()` and `body()` accessors returning
+  `StatusCode`, `&HeaderMap` and `&[u8]`, and it no longer implements `Serialize` or
+  `Deserialize`. `HttpMockResponse::builder()` accepts the same arguments as before, but panics
+  on an invalid status code, header name or header value instead of failing when the response
+  is served.
+- Conversions between `HttpMockResponse` and `http::Response` are now `From` implementations
+  ([#274](https://github.com/httpmock/httpmock/pull/274)). `try_from` calls still compile, with
+  `Infallible` as the error type.
 - The body helpers `is_blank`, `contains_str`, `contains_slice` and `contains_vec`
   were removed ([#246](https://github.com/httpmock/httpmock/pull/246)). Use
   `request.body_string().contains("..")`, which also works inside `respond_with`, or
@@ -73,8 +83,7 @@ feature.
 ### Improvements
 
 - [#326](https://github.com/httpmock/httpmock/pull/326): Add `HttpMockResponse::to_http_response()`
-  for converting to an HTTP response with a byte body. The method borrows the response and
-  returns any conversion error.
+  for converting to an HTTP response with a byte body. The method borrows the response.
 - [#108](https://github.com/httpmock/httpmock/pull/108): Mocks can be limited to a number of
   calls with `Then::up_to_n_times`, `Mock::up_to_n_times` or `Mock::up_to_n_times_async`,
   after which they stop matching requests. Static mock YAML files support the same limit as
