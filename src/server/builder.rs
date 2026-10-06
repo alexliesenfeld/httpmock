@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::{error::Error, sync::Arc};
 
 #[cfg(feature = "proxy")]
-use crate::common::http::HttpMockHttpClient;
+use crate::common::http_client;
 #[cfg(feature = "record")]
 use crate::server::persistence::read_static_mock_definitions;
 use crate::server::{
@@ -180,7 +180,7 @@ pub struct HttpMockServerBuilder {
     #[cfg(feature = "https")]
     https_config_builder: HttpsConfigBuilder,
     #[cfg(feature = "proxy")]
-    http_client: Option<Arc<HttpMockHttpClient>>,
+    client: Option<Arc<http_client::Client>>,
 }
 
 impl HttpMockServerBuilder {
@@ -308,9 +308,7 @@ impl HttpMockServerBuilder {
         state: Arc<state::HttpMockStateManager>,
     ) -> Result<HttpMockServer, Box<dyn Error>> {
         #[cfg(feature = "proxy")]
-        let http_client = self
-            .http_client
-            .unwrap_or_else(|| Arc::new(HttpMockHttpClient::new(None)));
+        let client = self.client.unwrap_or_else(|| Arc::new(http_client::Client::new(None)));
 
         #[cfg(feature = "record")]
         if let Some(dir) = self.static_mock_dir {
@@ -327,7 +325,7 @@ impl HttpMockServerBuilder {
                 https: self.https_config_builder.build()?,
             },
             #[cfg(feature = "proxy")]
-            http_client,
+            client,
         ))
     }
 }
