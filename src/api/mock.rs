@@ -337,6 +337,18 @@ impl<'a> Mock<'a> {
             )
         }
 
+        // Once exhausted, mocks ignore matching requests.
+        if let Some(limit) = active_mock.up_to_n_times
+            && active_mock.is_exhausted()
+        {
+            assert_eq!(
+                active_mock.call_counter, hits,
+                "The number of matching requests was lower than expected (expected {} but was {}). The mock stopped \
+                 matching after reaching its up_to_n_times limit of {}",
+                hits, active_mock.call_counter, limit
+            )
+        }
+
         let closest_match = self
             .server
             .server_adapter
@@ -595,6 +607,113 @@ impl<'a> Mock<'a> {
             .delete_mock(self.id)
             .await
             .expect("could not delete mock from server");
+    }
+
+    /// Limits this mock to serving up to `n` calls in total, counting calls it has already served.
+    ///
+    /// Once the limit is reached, the mock stops matching and later requests fall through to
+    /// mocks created after it. Serving fewer than `n` calls does not fail the test, and
+    /// [Mock::calls](struct.Mock.html#method.calls) and
+    /// [Mock::assert_calls](struct.Mock.html#method.assert_calls) still work.
+    ///
+    /// The limit is set in a separate request after the mock was created. If the code under test
+    /// may already be sending requests, use
+    /// [Then::up_to_n_times](struct.Then.html#method.up_to_n_times) instead.
+    ///
+    /// # Example
+    /// Demonstrates limiting a mock to one call, after which a second mock takes over.
+    ///
+    /// ```rust
+    /// use httpmock::prelude::*;
+    /// use reqwest::blocking::get;
+    ///
+    /// // Arrange: Start a mock server and set up two mocks for the same path
+    /// let server = MockServer::start();
+    /// let first = server.mock(|when, then| {
+    ///    when.path("/test");
+    ///    then.status(202);
+    /// });
+    /// let second = server.mock(|when, then| {
+    ///    when.path("/test");
+    ///    then.status(302);
+    /// });
+    ///
+    /// // Limit the first mock to a single call
+    /// first.up_to_n_times(1);
+    ///
+    /// // Act: The first request is served by the first mock, the second one by the second mock
+    /// let response1 = get(&server.url("/test")).unwrap();
+    /// let response2 = get(&server.url("/test")).unwrap();
+    ///
+    /// // Assert
+    /// assert_eq!(response1.status(), 202);
+    /// assert_eq!(response2.status(), 302);
+    /// first.assert_calls(1);
+    /// second.assert_calls(1);
+    /// ```
+    ///
+    /// # Panics
+    /// This method will panic if `n` is zero, if the mock no longer exists on the server, if the
+    /// mock server is a remote server that predates this method, or if there are issues with the
+    /// mock server's availability.
+    pub fn up_to_n_times(&self, n: usize) {
+        self.up_to_n_times_async(n).join();
+    }
+
+    /// Asynchronously limits this mock to serving up to `n` calls in total. This method is the
+    /// asynchronous equivalent of [Mock::up_to_n_times](struct.Mock.html#method.up_to_n_times).
+    ///
+    /// # Example
+    /// Demonstrates limiting a mock to one call, after which a second mock takes over.
+    ///
+    /// ```rust
+    /// use httpmock::prelude::*;
+    /// use reqwest::get;
+    ///
+    /// let rt = tokio::runtime::Runtime::new().unwrap();
+    /// rt.block_on(async {
+    ///     // Arrange: Start an asynchronous mock server and set up two mocks for the same path
+    ///     let server = MockServer::start_async().await;
+    ///     let first = server
+    ///         .mock_async(|when, then| {
+    ///             when.path("/test");
+    ///             then.status(202);
+    ///         })
+    ///         .await;
+    ///     let second = server
+    ///         .mock_async(|when, then| {
+    ///             when.path("/test");
+    ///             then.status(302);
+    ///         })
+    ///         .await;
+    ///
+    ///     // Limit the first mock to a single call
+    ///     first.up_to_n_times_async(1).await;
+    ///
+    ///     // Act: The first request is served by the first mock, the second one by the second mock
+    ///     let response1 = get(&server.url("/test")).await.unwrap();
+    ///     let response2 = get(&server.url("/test")).await.unwrap();
+    ///
+    ///     // Assert
+    ///     assert_eq!(response1.status(), 202);
+    ///     assert_eq!(response2.status(), 302);
+    ///     first.assert_calls_async(1).await;
+    ///     second.assert_calls_async(1).await;
+    /// });
+    /// ```
+    ///
+    /// # Panics
+    /// This method will panic if `n` is zero, if the mock no longer exists on the server, if the
+    /// mock server is a remote server that predates this method, or if there are issues with the
+    /// mock server's availability.
+    pub async fn up_to_n_times_async(&self, n: usize) {
+        self.server
+            .server_adapter
+            .as_ref()
+            .unwrap()
+            .set_up_to_n_times(self.id, n)
+            .await
+            .expect("could not set the up_to_n_times limit on mock");
     }
 
     /// Returns the network address of the mock server where the associated mock object is stored.
