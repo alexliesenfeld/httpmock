@@ -211,6 +211,27 @@ then:
     }
 
     #[test]
+    fn up_to_n_times_is_read_from_yaml() {
+        let definition = deserialize_mock_defs_from_yaml(&mock_yaml("up_to_n_times: 2"))
+            .unwrap()
+            .pop()
+            .unwrap();
+        let mock: MockDefinition = definition.try_into().unwrap();
+
+        assert_eq!(mock.up_to_n_times, Some(2));
+    }
+
+    #[test]
+    fn zero_up_to_n_times_is_rejected_in_static_mock_directory() {
+        let directory = TestDirectory::new();
+        fs::write(directory.path().join("mock.yaml"), mock_yaml("up_to_n_times: 0")).unwrap();
+
+        let error = read_static_mock_definitions(directory.path().to_path_buf(), &state::Manager::default())
+            .expect_err("expected loading the mock to fail");
+        assert!(error.to_string().contains("up_to_n_times must be greater than 0"));
+    }
+
+    #[test]
     fn body_from_file_is_rejected_without_a_static_mock_directory() {
         let definition = deserialize_mock_defs_from_yaml(&mock_yaml("body_from_file: payload.bin"))
             .unwrap()

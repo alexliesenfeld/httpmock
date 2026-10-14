@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, fmt, fmt::Debug, str::FromStr, sync::Arc};
+use std::{cmp::Ordering, fmt, fmt::Debug, num::NonZero, str::FromStr, sync::Arc};
 
 use bytes::Bytes;
 #[cfg(feature = "cookies")]
@@ -877,6 +877,10 @@ pub struct RequestRequirements {
 pub struct MockDefinition {
     pub request: RequestRequirements,
     pub response: MockServerHttpResponse,
+    /// The number of calls after which the mock stops matching requests, if any. The server
+    /// validates it and moves it to [`ActiveMock::up_to_n_times`] when adding the mock.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub up_to_n_times: Option<usize>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -885,6 +889,23 @@ pub struct ActiveMock {
     pub call_counter: usize,
     pub definition: MockDefinition,
     pub is_static: bool,
+    /// The validated limit on the number of calls the mock serves, if any. Clients use its
+    /// presence to detect servers that do not support the limit.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub up_to_n_times: Option<NonZero<usize>>,
+}
+
+impl ActiveMock {
+    /// Returns whether the mock has served all the calls it is allowed to serve.
+    pub fn is_exhausted(&self) -> bool {
+        self.up_to_n_times.is_some_and(|limit| self.call_counter >= limit.get())
+    }
+}
+
+/// A request to limit the number of calls an existing mock serves.
+#[derive(Serialize, Deserialize, Clone)]
+pub struct UpToNTimesConfig {
+    pub up_to_n_times: usize,
 }
 
 #[cfg(feature = "proxy")]

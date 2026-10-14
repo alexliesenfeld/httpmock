@@ -263,6 +263,8 @@ pub struct StaticHTTPResponse {
     pub body_from_file: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub delay: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub up_to_n_times: Option<usize>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -411,6 +413,7 @@ impl TryInto<MockDefinition> for StaticMockDefinition {
                 delay: self.then.delay,
                 respond_with: None,
             },
+            up_to_n_times: self.then.up_to_n_times,
         })
     }
 }
@@ -729,6 +732,7 @@ impl TryFrom<&MockDefinition> for StaticMockDefinition {
                 // by 1000 and adding the milliseconds (also a u64), potentially
                 // exceeding the u64 limit.
                 delay: value.response.delay,
+                up_to_n_times: value.up_to_n_times,
             },
         })
     }

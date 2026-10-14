@@ -28,7 +28,7 @@ use crate::{
 use crate::{
     common::{
         data,
-        data::{Error as DataError, ErrorResponse, MockDefinition, RequestRequirements},
+        data::{Error as DataError, ErrorResponse, MockDefinition, RequestRequirements, UpToNTimesConfig},
         runtime,
     },
     prelude::{HttpMockRequest, HttpMockResponse},
@@ -71,6 +71,7 @@ enum RoutePath {
     Reset,
     MockCollection,
     SingleMock,
+    SingleMockUpToNTimes,
     History,
     Verify,
     #[cfg(feature = "proxy")]
@@ -108,6 +109,7 @@ impl Handler {
             path_tree.insert("/__httpmock__/state", RoutePath::Reset);
             path_tree.insert("/__httpmock__/mocks", RoutePath::MockCollection);
             path_tree.insert("/__httpmock__/mocks/:id", RoutePath::SingleMock);
+            path_tree.insert("/__httpmock__/mocks/:id/up_to_n_times", RoutePath::SingleMockUpToNTimes);
             path_tree.insert("/__httpmock__/verify", RoutePath::Verify);
             path_tree.insert("/__httpmock__/history", RoutePath::History);
 
@@ -157,6 +159,11 @@ impl Handler {
                     Method::DELETE => return self.handle_delete_mock(params),
                     _ => {}
                 },
+                RoutePath::SingleMockUpToNTimes => {
+                    if method == Method::PUT {
+                        return self.handle_set_up_to_n_times(params, req);
+                    }
+                }
                 RoutePath::MockCollection => match method {
                     Method::POST => return self.handle_add_mock(req),
                     Method::DELETE => return self.handle_delete_all_mocks(),
@@ -239,6 +246,19 @@ impl Handler {
     fn handle_delete_mock(&self, params: Path) -> Result<Response<Bytes>, Error> {
         let deleted = self.state.delete_mock(param("id", params)?)?;
         let status_code = if deleted {
+            StatusCode::NO_CONTENT
+        } else {
+            StatusCode::NOT_FOUND
+        };
+        response::<()>(status_code, None)
+    }
+
+    fn handle_set_up_to_n_times(&self, params: Path, req: Request<Bytes>) -> Result<Response<Bytes>, Error> {
+        let config: UpToNTimesConfig = parse_json_body(req)?;
+        let updated = self
+            .state
+            .set_up_to_n_times(param("id", params)?, config.up_to_n_times)?;
+        let status_code = if updated {
             StatusCode::NO_CONTENT
         } else {
             StatusCode::NOT_FOUND

@@ -5,6 +5,7 @@ mod record;
 
 use std::{
     collections::BTreeMap,
+    num::NonZero,
     sync::{Arc, Mutex},
 };
 
@@ -16,13 +17,13 @@ use crate::{
     server::{
         matchers,
         matchers::Matcher,
-        state::Error::{BodyMethodInvalid, StaticMockError},
+        state::Error::{BodyMethodInvalid, StaticMockError, ValidationError},
     },
 };
 
 #[derive(Error, Debug)]
 pub enum Error {
-    #[error("The mock is static and cannot be deleted")]
+    #[error("The mock is static and cannot be modified or deleted")]
     StaticMockError,
     #[error("Validation error: request HTTP method GET or HEAD cannot have a body")]
     BodyMethodInvalid,
@@ -82,6 +83,7 @@ impl Manager {
 
     pub(crate) fn reset(&self) {
         self.delete_all_mocks();
+        self.reset_static_mocks();
         self.delete_history();
         #[cfg(feature = "proxy")]
         {
@@ -92,8 +94,13 @@ impl Manager {
         self.delete_all_recordings();
     }
 
-    pub(crate) fn add_mock(&self, definition: MockDefinition, is_static: bool) -> Result<ActiveMock, Error> {
+    pub(crate) fn add_mock(&self, mut definition: MockDefinition, is_static: bool) -> Result<ActiveMock, Error> {
         validate_request_requirements(&definition.request)?;
+        let up_to_n_times = definition
+            .up_to_n_times
+            .take()
+            .map(validate_up_to_n_times)
+            .transpose()?;
 
         let mut state = self.state.lock().unwrap();
 
@@ -103,6 +110,7 @@ impl Manager {
             call_counter: 0,
             definition,
             is_static,
+            up_to_n_times,
         };
 
         tracing::debug!("Adding new mock with ID={}", id);
@@ -138,6 +146,28 @@ impl Manager {
         Ok(state.mocks.remove(&id).is_some())
     }
 
+    /// Limits the mock with the given ID to `count` calls in total, including the calls it has
+    /// already served. Returns `false` if no such mock exists.
+    pub(crate) fn set_up_to_n_times(&self, id: usize, count: usize) -> Result<bool, Error> {
+        let count = validate_up_to_n_times(count)?;
+
+        let mut state = self.state.lock().unwrap();
+
+        let Some(mock) = state.mocks.get_mut(&id) else {
+            return Ok(false);
+        };
+
+        if mock.is_static {
+            return Err(StaticMockError);
+        }
+
+        tracing::debug!("Limiting mock with id={} to {} calls", id, count);
+
+        mock.up_to_n_times = Some(count);
+
+        Ok(true)
+    }
+
     pub(crate) fn delete_all_mocks(&self) {
         let mut state = self.state.lock().unwrap();
 
@@ -153,6 +183,20 @@ impl Manager {
         });
 
         tracing::trace!("Deleted all mocks");
+    }
+
+    /// Clears the call counters of static mocks, which survive a reset, letting exhausted ones
+    /// match again.
+    fn reset_static_mocks(&self) {
+        let mut state = self.state.lock().unwrap();
+
+        state
+            .mocks
+            .values_mut()
+            .filter(|mock| mock.is_static)
+            .for_each(|mock| mock.call_counter = 0);
+
+        tracing::trace!("Reset static mocks");
     }
 
     pub(crate) fn delete_history(&self) {
@@ -201,7 +245,7 @@ impl Manager {
         let result = state
             .mocks
             .values()
-            .find(|&mock| request_matches(&state.matchers, &req, &mock.definition.request));
+            .find(|&mock| !mock.is_exhausted() && request_matches(&state.matchers, &req, &mock.definition.request));
 
         let found_mock_id = result.map(|mock| mock.id);
 
@@ -236,6 +280,10 @@ fn validate_request_requirements(req: &RequestRequirements) -> Result<(), Error>
         return Err(BodyMethodInvalid);
     }
     Ok(())
+}
+
+fn validate_up_to_n_times(count: usize) -> Result<NonZero<usize>, Error> {
+    NonZero::new(count).ok_or_else(|| ValidationError("up_to_n_times must be greater than 0".to_string()))
 }
 
 fn request_matches(
@@ -334,6 +382,113 @@ mod tests {
             "history length {history_len} exceeded the configured limit {history_limit}"
         );
         assert_eq!(history_len, history_limit + 1);
+    }
+
+    fn limited_mock(up_to_n_times: Option<usize>) -> MockDefinition {
+        MockDefinition {
+            request: RequestRequirements::default(),
+            response: MockServerHttpResponse::default(),
+            up_to_n_times,
+        }
+    }
+
+    #[test]
+    fn exhausted_mock_stops_matching_but_keeps_its_call_counter() {
+        let manager = Manager::default();
+        let id = manager.add_mock(limited_mock(Some(2)), false).unwrap().id;
+
+        let served: Vec<bool> = (0..3)
+            .map(|_| manager.serve_mock(&dummy_request()).unwrap().is_some())
+            .collect();
+
+        assert_eq!(served, vec![true, true, false]);
+        assert_eq!(manager.read_mock(id).unwrap().unwrap().call_counter, 2);
+    }
+
+    #[test]
+    fn up_to_n_times_counts_calls_served_before_the_limit_was_set() {
+        let manager = Manager::default();
+        let id = manager.add_mock(limited_mock(None), false).unwrap().id;
+        for _ in 0..3 {
+            assert!(manager.serve_mock(&dummy_request()).unwrap().is_some());
+        }
+
+        assert!(manager.set_up_to_n_times(id, 2).unwrap());
+
+        assert!(manager.serve_mock(&dummy_request()).unwrap().is_none());
+        assert_eq!(manager.read_mock(id).unwrap().unwrap().call_counter, 3);
+    }
+
+    #[test]
+    fn raising_up_to_n_times_lets_an_exhausted_mock_match_again() {
+        let manager = Manager::default();
+        let id = manager.add_mock(limited_mock(Some(1)), false).unwrap().id;
+        assert!(manager.serve_mock(&dummy_request()).unwrap().is_some());
+        assert!(manager.serve_mock(&dummy_request()).unwrap().is_none());
+
+        assert!(manager.set_up_to_n_times(id, 2).unwrap());
+
+        let served: Vec<bool> = (0..2)
+            .map(|_| manager.serve_mock(&dummy_request()).unwrap().is_some())
+            .collect();
+        assert_eq!(served, vec![true, false]);
+        assert_eq!(manager.read_mock(id).unwrap().unwrap().call_counter, 2);
+    }
+
+    #[test]
+    fn up_to_n_times_on_unknown_mock_reports_not_found() {
+        let manager = Manager::default();
+
+        assert!(!manager.set_up_to_n_times(42, 1).unwrap());
+    }
+
+    #[test]
+    fn up_to_n_times_on_static_mock_is_rejected() {
+        let manager = Manager::default();
+        let id = manager.add_mock(limited_mock(None), true).unwrap().id;
+
+        assert!(matches!(manager.set_up_to_n_times(id, 1), Err(StaticMockError)));
+    }
+
+    #[test]
+    fn reset_lets_exhausted_static_mocks_match_again() {
+        let manager = Manager::default();
+        let id = manager.add_mock(limited_mock(Some(1)), true).unwrap().id;
+        assert!(manager.serve_mock(&dummy_request()).unwrap().is_some());
+        assert!(manager.serve_mock(&dummy_request()).unwrap().is_none());
+
+        manager.reset();
+
+        assert_eq!(manager.read_mock(id).unwrap().unwrap().call_counter, 0);
+        assert!(manager.serve_mock(&dummy_request()).unwrap().is_some());
+    }
+
+    #[test]
+    fn zero_up_to_n_times_is_rejected() {
+        let manager = Manager::default();
+
+        assert!(matches!(
+            manager.add_mock(limited_mock(Some(0)), false),
+            Err(ValidationError(_))
+        ));
+
+        let id = manager.add_mock(limited_mock(None), false).unwrap().id;
+        assert!(matches!(manager.set_up_to_n_times(id, 0), Err(ValidationError(_))));
+        assert!(manager.read_mock(id).unwrap().unwrap().up_to_n_times.is_none());
+    }
+
+    #[test]
+    fn exhausted_mock_round_trips_through_serialization() {
+        let manager = Manager::default();
+        let id = manager.add_mock(limited_mock(Some(1)), false).unwrap().id;
+        assert!(manager.serve_mock(&dummy_request()).unwrap().is_some());
+
+        let json = serde_json::to_string(&manager.read_mock(id).unwrap().unwrap()).unwrap();
+        let mock: ActiveMock = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(mock.up_to_n_times.map(NonZero::get), Some(1));
+        assert_eq!(mock.call_counter, 1);
+        assert!(mock.is_exhausted());
     }
 
     #[test]
