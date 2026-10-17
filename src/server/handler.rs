@@ -64,10 +64,14 @@ pub enum Error {
     HttpClient(#[from] HttpClientError),
     #[error("invalid header: {0}")]
     InvalidHeader(String),
+    #[cfg(feature = "template")]
+    #[error("cannot render response template: {0}")]
+    ResponseTemplate(#[from] minijinja::Error),
 }
 
 enum RoutePath {
     Ping,
+    Capabilities,
     Reset,
     MockCollection,
     SingleMock,
@@ -105,6 +109,7 @@ impl Handler {
         #[allow(unused_must_use)]
         {
             path_tree.insert("/__httpmock__/ping", RoutePath::Ping);
+            path_tree.insert("/__httpmock__/capabilities", RoutePath::Capabilities);
             path_tree.insert("/__httpmock__/state", RoutePath::Reset);
             path_tree.insert("/__httpmock__/mocks", RoutePath::MockCollection);
             path_tree.insert("/__httpmock__/mocks/:id", RoutePath::SingleMock);
@@ -145,6 +150,14 @@ impl Handler {
                 RoutePath::Ping => {
                     if method == Method::GET {
                         return self.handle_ping();
+                    }
+                }
+                RoutePath::Capabilities => {
+                    if method == Method::GET {
+                        return response(
+                            StatusCode::OK,
+                            Some(serde_json::json!({ "response_templates": cfg!(feature = "template") })),
+                        );
                     }
                 }
                 RoutePath::Reset => {
@@ -297,12 +310,14 @@ impl Handler {
     }
 
     async fn serve_mock(&self, req: &HttpMockRequest) -> Result<http::Response<bytes::Bytes>, Error> {
-        let Some(definition) = self.state.serve_mock(req)? else {
+        let Some(mock_response) = self.state.serve_mock(req)? else {
             return response(
                 http::StatusCode::NOT_FOUND,
                 Some(ErrorResponse::new(&"Request did not match any route or mock")),
             );
         };
+
+        let definition = mock_response.definition;
 
         if let Some(duration) = definition.delay {
             runtime::sleep(std::time::Duration::from_millis(duration)).await;
@@ -317,6 +332,16 @@ impl Handler {
                 headers: definition.headers,
                 body: definition.body,
             });
+
+        #[cfg(feature = "template")]
+        let resp_def = {
+            let mut response = resp_def;
+            if let Some(templates) = mock_response.templates {
+                // Rendering happens after matching and outside the shared state lock.
+                templates.render(req, &mut response)?;
+            }
+            response
+        };
 
         // Convert via your TryFrom<HttpMockResponse> impl
         let http_resp: http::Response<bytes::Bytes> = resp_def.try_into().map_err(ResponseDataConversion)?;

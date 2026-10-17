@@ -3,12 +3,16 @@ use std::{net::SocketAddr, sync::Arc};
 use async_trait::async_trait;
 use bytes::Bytes;
 use http::{Request, StatusCode};
+#[cfg(feature = "record")]
+use serde::Deserialize;
 use serde::de::DeserializeOwned;
 
 #[cfg(feature = "proxy")]
 use crate::common::data::{ActiveForwardingRule, ActiveProxyRule, ForwardingRuleConfig, ProxyRuleConfig};
 #[cfg(feature = "record")]
 use crate::common::data::{ActiveRecording, RecordingRuleConfig};
+#[cfg(feature = "record")]
+use crate::common::static_mock::StaticMockDefinition;
 use crate::{
     api::{
         MockServerAdapter,
@@ -51,6 +55,29 @@ impl RemoteMockServerAdapter {
             )),
             None => Ok(()),
         }
+    }
+
+    async fn validate_template_support(&self) -> Result<(), ServerAdapterError> {
+        // Older servers ignore unknown mock fields. Check support before sending a template
+        // so registration cannot succeed while silently losing the requested behavior.
+        let capabilities: serde_json::Value = self
+            .request_json(
+                "GET",
+                "capabilities",
+                None,
+                StatusCode::OK,
+                "check response template support",
+            )
+            .await
+            .map_err(|error| InvalidMockDefinitionError(format!("Cannot verify remote template support: {error}")))?;
+
+        if capabilities.get("response_templates").and_then(|value| value.as_bool()) != Some(true) {
+            return Err(InvalidMockDefinitionError(
+                "Remote server does not support response templates; enable its 'template' Cargo feature".to_string(),
+            ));
+        }
+
+        Ok(())
     }
 
     /// Builds a request against the `__httpmock__` API. When `json_body` is
@@ -170,6 +197,10 @@ impl MockServerAdapter for RemoteMockServerAdapter {
     async fn create_mock(&self, mock: &MockDefinition) -> Result<ActiveMock, ServerAdapterError> {
         self.validate_request_requirements(&mock.request)?;
         self.validate_response(&mock.response)?;
+
+        if mock.response.has_templates() {
+            self.validate_template_support().await?;
+        }
 
         let json = serde_json::to_string(mock).map_err(JsonSerializationError)?;
 
@@ -331,19 +362,79 @@ impl MockServerAdapter for RemoteMockServerAdapter {
         &self,
         recording_file_content: &'a str,
     ) -> Result<Vec<usize>, ServerAdapterError> {
-        // Note: this endpoint receives the raw recording file content and,
-        // unlike the other POST calls, is intentionally sent without a JSON
-        // content-type header.
-        let request = Request::builder()
-            .method("POST")
-            .uri(format!("http://{}/__httpmock__/recordings", self.addr))
-            .body(Bytes::from(recording_file_content.to_owned()))
-            .map_err(|e| UpstreamError(e.to_string()))?;
+        let definitions = serde_yaml::Deserializer::from_str(recording_file_content)
+            .map(StaticMockDefinition::deserialize)
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|error| InvalidMockDefinitionError(error.to_string()))?;
 
-        let body = self
-            .send_checked(request, StatusCode::OK, "create mocks from recording")
-            .await?;
+        // Register through the same API as builder-created mocks, including template support
+        // checks. The recordings collection endpoint creates recording rules, not playback mocks.
+        let mut ids = Vec::with_capacity(definitions.len());
+        for definition in definitions {
+            let definition: MockDefinition = definition
+                .try_into()
+                .map_err(|error: crate::common::data::Error| InvalidMockDefinitionError(error.to_string()))?;
+            ids.push(self.create_mock(&definition).await?.id);
+        }
+        Ok(ids)
+    }
+}
 
-        serde_json::from_str(&body).map_err(JsonDeserializationError)
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    struct UnsupportedTemplateServer {
+        status: StatusCode,
+        body: &'static str,
+    }
+
+    #[async_trait]
+    impl HttpClient for UnsupportedTemplateServer {
+        async fn send(&self, request: Request<Bytes>) -> Result<http::Response<Bytes>, crate::common::http::Error> {
+            // Simulate an old or feature-disabled server. Any registration request is a test
+            // failure: unsupported templates must be rejected before a mock reaches the server.
+            assert_eq!(request.method(), "GET");
+            assert_eq!(request.uri().path(), "/__httpmock__/capabilities");
+            Ok(http::Response::builder()
+                .status(self.status)
+                .body(Bytes::from(self.body))
+                .unwrap())
+        }
+    }
+
+    #[tokio::test]
+    async fn remote_templates_require_server_support() {
+        for (status, body) in [
+            (StatusCode::NOT_FOUND, "old server"),
+            (StatusCode::OK, r#"{"response_templates":false}"#),
+            (StatusCode::OK, "{}"),
+        ] {
+            let adapter = RemoteMockServerAdapter::new(
+                "127.0.0.1:5050".parse().unwrap(),
+                Arc::new(UnsupportedTemplateServer { status, body }),
+            );
+            let definition = MockDefinition {
+                request: RequestRequirements::default(),
+                response: MockServerHttpResponse {
+                    body_template: Some("{{ request.path }}".to_string()),
+                    ..Default::default()
+                },
+            };
+
+            assert!(matches!(
+                adapter.create_mock(&definition).await,
+                Err(InvalidMockDefinitionError(_))
+            ));
+
+            // YAML playback uses a separate endpoint and must perform the same check.
+            #[cfg(feature = "record")]
+            assert!(matches!(
+                adapter
+                    .create_mocks_from_recording("when: {}\nthen:\n  body_template: '{{ request.path }}'")
+                    .await,
+                Err(InvalidMockDefinitionError(_))
+            ));
+        }
     }
 }

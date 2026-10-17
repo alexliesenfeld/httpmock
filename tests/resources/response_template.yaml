@@ -1,0 +1,8 @@
+when:
+  path: /greet
+then:
+  status: 200
+  header_template:
+    - name: x-request-id
+      value: '{{ request.headers["x-request-id"][0] }}'
+  body_template: 'Hello {{ request.query.name[0] }}!'

@@ -56,6 +56,7 @@ export default defineConfig({
                                 {label: 'Response Values', link: '/mocking_responses/all/'},
                                 {label: 'Network Delay', link: '/mocking_responses/delay/'},
                                 {label: 'Custom Responses', link: '/mocking_responses/custom/'},
+                                {label: 'Response Templates', link: '/mocking_responses/templates/'},
                             ],
                         },
                     ],

@@ -4541,6 +4541,60 @@ impl Then {
     pub fn body<SliceRef: AsRef<[u8]>>(self, body: SliceRef) -> Self {
         update_mutex(&self.response_template, |r| {
             r.body = Some(HttpMockBytes::from(Bytes::copy_from_slice(body.as_ref())));
+            r.body_template = None;
+        });
+        self
+    }
+    // @docs-group: Body
+
+    /// Generates the response body from a [MiniJinja](https://docs.rs/minijinja/latest/minijinja/syntax/index.html)
+    /// template for each matching request. Requires the `template` Cargo feature.
+    ///
+    /// Works with both local and remote servers; a remote server must also enable `template`.
+    /// The source is copied, so the caller can reuse or drop it after configuring the mock.
+    /// The last body setter wins, including `body`, `json_body`, and `body_from_file`.
+    /// Templates cannot be combined with `respond_with`.
+    ///
+    /// # Request data
+    ///
+    /// - `request.method`, `request.path`, `request.uri`: method, path, and request URI.
+    /// - `request.query`: decoded query parameters as arrays, e.g. `request.query.name[0]`.
+    /// - `request.headers`: lowercase header names with arrays of values, e.g.
+    ///   `request.headers["x-request-id"][0]`.
+    /// - `request.body`: body text, replacing invalid UTF-8; `request.body_base64` preserves bytes.
+    /// - `request.json`: parsed JSON, available only when the body is valid JSON.
+    ///
+    /// Values are inserted without HTML escaping. Use `|tojson` to insert a complete JSON value,
+    /// including its quotes and escaping. Missing values cause a rendering error; use MiniJinja's
+    /// `default` filter or `is defined` to handle optional data. Trailing newlines are preserved.
+    ///
+    /// # Errors
+    ///
+    /// Invalid template syntax causes mock registration to fail (`mock` / `mock_async` panic).
+    /// Rendering errors return HTTP 500 with a diagnostic. Rendering is limited to 1,000,000
+    /// MiniJinja execution steps per template. Templates have no filesystem loader.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use httpmock::MockServer;
+    ///
+    /// let server = MockServer::start();
+    /// let mock = server.mock(|when, then| {
+    ///     when.path_prefix("/users/");
+    ///     then.header("content-type", "application/json")
+    ///         .body_template(r#"{"path": {{ request.path | tojson }}}"#);
+    /// });
+    ///
+    /// let response = reqwest::blocking::get(server.url("/users/42")).unwrap();
+    /// assert_eq!(response.text().unwrap(), r#"{"path": "/users/42"}"#);
+    /// mock.assert();
+    /// ```
+    #[cfg(feature = "template")]
+    pub fn body_template<Template: AsRef<str>>(self, template: Template) -> Self {
+        update_mutex(&self.response_template, |r| {
+            r.body_template = Some(template.as_ref().to_owned());
+            r.body = None;
         });
         self
     }
@@ -4659,6 +4713,7 @@ impl Then {
     pub fn json_body<V: Into<Value>>(self, body: V) -> Self {
         update_mutex(&self.response_template, |r| {
             r.body = Some(HttpMockBytes::from(Bytes::from(body.into().to_string())));
+            r.body_template = None;
         });
         self
     }
@@ -4791,6 +4846,41 @@ impl Then {
     }
     // @docs-group: Headers
 
+    /// Appends a response header whose value is rendered for each matching request.
+    /// Requires the `template` Cargo feature on both the client and the server.
+    ///
+    /// The header name is literal; the value uses the same MiniJinja request context and error
+    /// behavior as [`Then::body_template`]. Multiple calls append headers, including repeated names.
+    /// Static headers configured with `header` are sent first, followed by templated headers.
+    /// Invalid header names fail registration; invalid rendered values return HTTP 500.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use httpmock::MockServer;
+    ///
+    /// let server = MockServer::start();
+    /// let mock = server.mock(|when, then| {
+    ///     when.path("/trace");
+    ///     then.header_template("x-request-id", r#"{{ request.headers["x-request-id"][0] }}"#);
+    /// });
+    ///
+    /// let response = reqwest::blocking::Client::new()
+    ///     .get(server.url("/trace"))
+    ///     .header("x-request-id", "example-123")
+    ///     .send().unwrap();
+    /// assert_eq!(response.headers()["x-request-id"], "example-123");
+    /// mock.assert();
+    /// ```
+    #[cfg(feature = "template")]
+    pub fn header_template<Name: Into<String>, Template: AsRef<str>>(self, name: Name, template: Template) -> Self {
+        update_mutex(&self.response_template, |r| {
+            push_to(&mut r.header_templates, (name.into(), template.as_ref().to_owned()));
+        });
+        self
+    }
+    // @docs-group: Headers
+
     /// Sets a delay for the mock server response.
     ///
     /// This method configures the server to wait for a specified duration before sending a response,
@@ -4907,6 +4997,7 @@ impl Then {
     /// > **Important:** Dynamic responders are only supported by the local server.
     /// > They are **not** supported by remote/standalone servers and this method **will panic**
     /// > when used against them.
+    /// > A dynamic responder cannot be combined with response templates.
     ///
     /// # Parameters
     /// - `f`: A response generator closure that is executed on the mock server’s request

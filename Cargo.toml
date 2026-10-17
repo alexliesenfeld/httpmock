@@ -48,6 +48,7 @@ colored = { version = "3", optional = true }
 clap = { version = "4", features = ["derive", "env"], optional = true }
 serde_yaml = { version = "0.9", optional = true }
 headers = { version = "0.4", optional = true }
+minijinja = { version = "2", default-features = false, features = ["builtins", "debug", "json", "fuel", "loader", "serde"], optional = true }
 
 ### TLS / HTTPS / PROXY
 rustls = { version = "0.23", default-features = false, features = ["std", "tls12"], optional = true }
@@ -70,6 +71,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 [features]
 default = ["cookies"]
 standalone =  ["clap", "tokio/signal", "tracing-subscriber", "record", "http2", "cookies", "remote", "remote-https"] # enables standalone mode
+template = ["dep:minijinja"] # enables response body and header templates for local and remote servers
 color = ["colored"] # enables colorful output in standalone mode
 cookies = ["headers"] # enables support for matching cookies
 remote = ["hyper-util/client-legacy", "hyper-util/http2"] # allows to connect to remote mock servers

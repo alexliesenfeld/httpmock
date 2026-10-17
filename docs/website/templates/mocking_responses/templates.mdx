@@ -1,0 +1,114 @@
+---
+title: Response Templates
+description: Generate response bodies and headers from request data, locally or on a remote server.
+---
+
+import codeExamples from "../../../../generated/example_tests.json";
+import { Code } from "@astrojs/starlight/components";
+
+Response templates generate a new response body or header value for each matching request.
+They use [MiniJinja syntax](https://docs.rs/minijinja/latest/minijinja/syntax/index.html)
+and work with both local and remote httpmock servers.
+
+Enable the optional Cargo feature:
+
+```toml
+[dev-dependencies]
+httpmock = { version = "0.9", features = ["template"] }
+```
+
+Default builds do not include MiniJinja. For a remote connection, also enable `remote`
+in your test project. Build the standalone server with both features:
+
+```sh
+cargo build --release --features standalone,template
+```
+
+## Generate a JSON response
+
+Use `body_template` for the body and `header_template` for a header value. Header names
+are literal. The template source is copied, so its lifetime is independent of the mock.
+
+The complete test below builds the JSON reply from the incoming path, query parameters,
+headers, and JSON body. It sends two different requests to show that templates are rendered
+again for every match, and copies the request ID into a response header.
+
+<Code code={codeExamples['templates']} lang="rust" />
+
+For a remote server, replace `MockServer::start()` with
+`MockServer::connect("localhost:5050")`. The templates are sent with the mock definition
+and rendered on that server. An unsupported remote server is rejected during setup.
+
+`tojson` inserts a complete JSON value, including quotes and escaping. Do not surround
+it with additional quotes. Ordinary template expressions do not perform HTML escaping.
+For example, `\{{ request.body }}` echoes text as-is; it does not make that text safe
+to insert into JSON or HTML.
+
+## Request context
+
+| Expression | Value |
+| --- | --- |
+| `request.method` | HTTP method, such as `POST`. |
+| `request.path` | URI path without the query string; percent encoding is preserved. |
+| `request.uri` | Request URI, including the query string; it may be an absolute URL. |
+| `request.query.name[0]` | First decoded `name` query parameter. Each key holds an array of values. |
+| `request.headers["x-request-id"][0]` | First header value. Names are lowercase; each key holds an array. |
+| `request.body` | Body as text, with replacement characters for invalid UTF-8. |
+| `request.body_base64` | Base64 encoding of the original body bytes. |
+| `request.json` | Parsed JSON body. Undefined when the body is not valid JSON. |
+
+Repeated query parameters and headers retain all values in their original order within
+each key. Conditions and loops use normal MiniJinja syntax:
+
+```jinja
+{% for name in request.query.name | default([]) %}
+Hello \{{ name }}!
+{% endfor %}
+```
+
+## Defaults and errors
+
+Missing values fail rendering unless the template handles them. Use `default`, for example
+`\{{ request.query.name | default(["guest"]) | first }}`, or an `is defined` condition.
+
+Templates are compiled when the mock is registered. Invalid syntax fails setup; the Rust
+`mock` and `mock_async` methods panic, like other invalid mock configurations. A rendering
+error returns HTTP 500 with a diagnostic. Invalid rendered header values also return HTTP 500.
+
+Trailing newlines are preserved. Each body or header template has a limit of 1,000,000
+MiniJinja execution steps. Filesystem loading, template imports, macros, and user-provided
+Rust functions are not enabled.
+
+## Combining response settings
+
+`body` and `header` always treat their inputs literally. The last body setter wins across
+`body`, `body_template`, `json_body`, `json_body_obj`, and `body_from_file`.
+Templated headers are appended after static headers; repeated names are supported.
+Status and delay work as usual.
+
+Templates cannot be combined with `respond_with` on the same mock. Use
+[custom responses](/mocking_responses/custom/) when you need arbitrary Rust response logic
+locally, and templates when the response also needs to work remotely.
+
+## YAML mocks
+
+With `record` and `template` enabled, the same templates can be loaded through YAML
+playback or a static mock directory. Standalone builds already include `record`.
+
+```yaml
+when:
+  path: /greet
+then:
+  status: 200
+  header_template:
+    - name: x-request-id
+      value: '\{{ request.headers["x-request-id"][0] }}'
+  body_template: 'Hello \{{ request.query.name[0] }}!'
+```
+
+In YAML, `body_template` cannot be combined with `body`, `body_base64`, `json_body`,
+or `body_from_file`. Recordings capture the rendered response, so playback reproduces
+the recorded bytes rather than generating new values from the original template.
+
+See the runnable examples in
+[`tests/examples/response_template_tests.rs`](https://github.com/httpmock/httpmock/blob/master/tests/examples/response_template_tests.rs).

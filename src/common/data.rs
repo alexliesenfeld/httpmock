@@ -622,8 +622,24 @@ pub struct MockServerHttpResponse {
     #[serde(default, with = "opt_vector_serde_base64")]
     pub body: Option<HttpMockBytes>,
     pub delay: Option<u64>,
+    /// MiniJinja source, rendered on the server for each matching request.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub body_template: Option<String>,
+    /// Response header names paired with MiniJinja value templates.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub header_templates: Option<Vec<(String, String)>>,
     #[serde(skip)]
     pub respond_with: Option<ResponseCallback>,
+}
+
+impl MockServerHttpResponse {
+    pub(crate) fn has_templates(&self) -> bool {
+        self.body_template.is_some()
+            || self
+                .header_templates
+                .as_ref()
+                .is_some_and(|headers| !headers.is_empty())
+    }
 }
 
 impl TryFrom<&http::Response<Bytes>> for MockServerHttpResponse {
@@ -647,6 +663,8 @@ impl TryFrom<&http::Response<Bytes>> for MockServerHttpResponse {
                 None
             },
             delay: None,
+            body_template: None,
+            header_templates: None,
             respond_with: None,
         })
     }
@@ -711,6 +729,8 @@ impl fmt::Debug for MockServerHttpResponse {
                     .map(|x| String::from_utf8_lossy(x.as_ref()).to_string()),
             )
             .field("delay", &self.delay)
+            .field("body_template", &self.body_template)
+            .field("header_templates", &self.header_templates)
             .finish()
     }
 }

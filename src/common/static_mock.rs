@@ -262,6 +262,10 @@ pub struct StaticHTTPResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub body_from_file: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub body_template: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub header_template: Option<Vec<NameValueStringPair>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub delay: Option<u64>,
 }
 
@@ -409,6 +413,8 @@ impl TryInto<MockDefinition> for StaticMockDefinition {
                 headers: from_name_value_string_pair_vec(self.then.header),
                 body: response_body,
                 delay: self.then.delay,
+                body_template: self.then.body_template,
+                header_templates: from_name_value_string_pair_vec(self.then.header_template),
                 respond_with: None,
             },
         })
@@ -722,6 +728,8 @@ impl TryFrom<&MockDefinition> for StaticMockDefinition {
                 body_base64: response_body_base64,
                 json_body: None,
                 body_from_file: None,
+                body_template: value.response.body_template,
+                header_template: to_name_value_string_pair_vec(value.response.header_templates),
                 // Reason for the cast to u64: The Duration::as_millis method returns the total
                 // number of milliseconds contained within the Duration as a u128. This is
                 // because Duration::as_millis needs to handle larger values that

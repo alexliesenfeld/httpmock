@@ -11,6 +11,11 @@ remains 1.88.
   are implementation details rather than a supported extension API; there is no
   replacement public path.
 
+- `MockServerHttpResponse` has new `body_template` and `header_templates` fields.
+  Code constructing this low-level type with a struct literal should use
+  `..Default::default()` for fields it does not configure. The `Then` builder API
+  remains compatible.
+
 - The methods `HttpMockRequest::query_params_map` and `HttpMockRequest::to_http_request`
   were removed ([#246](https://github.com/httpmock/httpmock/pull/246)). Use
   `query_params().into_iter().collect()` to obtain a map, and `http::Request::from(&request)`
@@ -52,6 +57,11 @@ Tests whose clients speak cleartext HTTP/2 to the mock server additionally need 
 feature.
 
 ### Improvements
+
+- The opt-in `template` Cargo feature adds MiniJinja response bodies and headers
+  through `Then::body_template`, `Then::header_template`, and YAML mock definitions.
+  Templates render on the server and work locally and remotely; the standalone
+  server must also be built with `template`. Default builds do not include MiniJinja.
 
 - Async mock, forwarding, proxy and recording setup futures implement `Send` when their
   inputs do, allowing registration inside `tokio::spawn`. Builders retain their owned API

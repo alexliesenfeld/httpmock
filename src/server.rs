@@ -2,6 +2,8 @@ mod builder;
 mod handler;
 pub(crate) mod matchers;
 pub mod state;
+#[cfg(feature = "template")]
+mod templating;
 mod transport;
 
 #[cfg(feature = "record")]

@@ -10,6 +10,9 @@ use std::{
 
 use thiserror::Error;
 
+#[cfg(feature = "template")]
+use crate::server::templating::ResponseTemplates;
+
 use crate::{
     common::data::{ActiveMock, ClosestMatch, Mismatch, MockDefinition, MockServerHttpResponse, RequestRequirements},
     prelude::HttpMockRequest,
@@ -38,12 +41,20 @@ pub enum Error {
 /// no explicit limit is configured.
 pub(crate) const DEFAULT_HISTORY_LIMIT: usize = 100;
 
+pub(crate) struct MockResponse {
+    pub definition: MockServerHttpResponse,
+    #[cfg(feature = "template")]
+    pub templates: Option<Arc<ResponseTemplates>>,
+}
+
 /// The mock server's mutable state: the registered mocks, the request history,
 /// and the active forwarding, proxy and recording rules.
 pub(crate) struct Inner {
     next_mock_id: usize,
     history_limit: usize,
     pub mocks: BTreeMap<usize, ActiveMock>,
+    #[cfg(feature = "template")]
+    templates: BTreeMap<usize, Arc<ResponseTemplates>>,
     pub history: Vec<Arc<HttpMockRequest>>,
     pub matchers: Vec<Box<dyn Matcher + Sync + Send>>,
     #[cfg(feature = "proxy")]
@@ -56,6 +67,8 @@ impl Inner {
     pub fn new(history_limit: usize) -> Self {
         Inner {
             mocks: BTreeMap::new(),
+            #[cfg(feature = "template")]
+            templates: BTreeMap::new(),
             #[cfg(feature = "proxy")]
             proxy: Default::default(),
             #[cfg(feature = "record")]
@@ -94,6 +107,17 @@ impl Manager {
 
     pub(crate) fn add_mock(&self, definition: MockDefinition, is_static: bool) -> Result<ActiveMock, Error> {
         validate_request_requirements(&definition.request)?;
+        validate_response_templates(&definition.response)?;
+
+        // Compile before acquiring the state lock; failed registration must not leave a mock behind.
+        #[cfg(feature = "template")]
+        let templates = if definition.response.has_templates() {
+            Some(Arc::new(ResponseTemplates::compile(&definition.response).map_err(
+                |error| Error::ValidationError(format!("cannot compile response template: {error}")),
+            )?))
+        } else {
+            None
+        };
 
         let mut state = self.state.lock().unwrap();
 
@@ -108,6 +132,10 @@ impl Manager {
         tracing::debug!("Adding new mock with ID={}", id);
 
         state.mocks.insert(id, active_mock.clone());
+        #[cfg(feature = "template")]
+        if let Some(templates) = templates {
+            state.templates.insert(id, templates);
+        }
 
         state.next_mock_id += 1;
 
@@ -135,6 +163,9 @@ impl Manager {
 
         tracing::debug!("Deleting mock with id={}", id);
 
+        #[cfg(feature = "template")]
+        state.templates.remove(&id);
+
         Ok(state.mocks.remove(&id).is_some())
     }
 
@@ -150,6 +181,8 @@ impl Manager {
 
         ids.iter().for_each(|k| {
             state.mocks.remove(k);
+            #[cfg(feature = "template")]
+            state.templates.remove(k);
         });
 
         tracing::trace!("Deleted all mocks");
@@ -188,7 +221,7 @@ impl Manager {
         }))
     }
 
-    pub(crate) fn serve_mock(&self, req: &HttpMockRequest) -> Result<Option<MockServerHttpResponse>, Error> {
+    pub(crate) fn serve_mock(&self, req: &HttpMockRequest) -> Result<Option<MockResponse>, Error> {
         let mut state = self.state.lock().unwrap();
 
         let req = Arc::new(req.clone());
@@ -211,7 +244,11 @@ impl Manager {
             let mock = state.mocks.get_mut(&found_id).unwrap();
             mock.call_counter += 1;
 
-            return Ok(Some(mock.definition.response.clone()));
+            return Ok(Some(MockResponse {
+                definition: mock.definition.response.clone(),
+                #[cfg(feature = "template")]
+                templates: state.templates.get(&found_id).cloned(),
+            }));
         }
 
         tracing::debug!("Could not match any mock to the following request: {:#?}", req);
@@ -235,6 +272,39 @@ fn validate_request_requirements(req: &RequestRequirements) -> Result<(), Error>
     {
         return Err(BodyMethodInvalid);
     }
+    Ok(())
+}
+
+fn validate_response_templates(response: &MockServerHttpResponse) -> Result<(), Error> {
+    if !response.has_templates() {
+        return Ok(());
+    }
+
+    // Keep the wire fields available without MiniJinja so disabled servers reject templates
+    // explicitly instead of deserializing them as unknown fields and serving a static response.
+    if !cfg!(feature = "template") {
+        return Err(Error::ValidationError(
+            "response templates require the 'template' Cargo feature on the server".to_string(),
+        ));
+    }
+
+    if response.respond_with.is_some() {
+        return Err(Error::ValidationError(
+            "response templates cannot be combined with respond_with".to_string(),
+        ));
+    }
+
+    if response.body_template.is_some() && response.body.is_some() {
+        return Err(Error::ValidationError(
+            "body_template cannot be combined with a static response body".to_string(),
+        ));
+    }
+
+    for (name, _) in response.header_templates.iter().flatten() {
+        name.parse::<http::HeaderName>()
+            .map_err(|error| Error::ValidationError(format!("invalid template header name '{name}': {error}")))?;
+    }
+
     Ok(())
 }
 
@@ -340,5 +410,52 @@ mod tests {
     fn default_history_limit_is_preserved() {
         let manager = Manager::default();
         assert_eq!(manager.state.lock().unwrap().history_limit, DEFAULT_HISTORY_LIMIT);
+    }
+
+    #[cfg(not(feature = "template"))]
+    #[test]
+    fn response_templates_require_the_cargo_feature() {
+        let manager = Manager::default();
+
+        // Keep accepting ordinary definitions, but reject template fields received over the wire
+        // when the binary has no engine. Silently ignoring them would produce incorrect responses.
+        for response in [
+            r#"{"body_template":"{{ request.path }}"}"#,
+            r#"{"header_templates":[["x-path","{{ request.path }}"]]}"#,
+        ] {
+            let definition = MockDefinition {
+                request: RequestRequirements::default(),
+                response: serde_json::from_str(response).unwrap(),
+            };
+            let error = manager.add_mock(definition, false).err().unwrap();
+            assert!(error.to_string().contains("'template' Cargo feature"));
+        }
+        assert!(manager.state.lock().unwrap().mocks.is_empty());
+    }
+
+    #[cfg(feature = "template")]
+    #[test]
+    fn compiled_templates_follow_mock_lifetime() {
+        let manager = Manager::default();
+        let definition = MockDefinition {
+            request: RequestRequirements::default(),
+            response: MockServerHttpResponse {
+                body_template: Some("{{ request.path }}".to_string()),
+                ..Default::default()
+            },
+        };
+        let static_mock = manager.add_mock(definition.clone(), true).unwrap();
+        let removed_mock = manager.add_mock(definition.clone(), false).unwrap();
+        manager.delete_mock(removed_mock.id).unwrap();
+        manager.add_mock(definition, false).unwrap();
+
+        // Reset removes mutable mocks and their compiled templates, while static mocks survive.
+        manager.reset();
+        let state = manager.state.lock().unwrap();
+        assert_eq!(state.mocks.keys().copied().collect::<Vec<_>>(), vec![static_mock.id]);
+        assert_eq!(
+            state.templates.keys().copied().collect::<Vec<_>>(),
+            vec![static_mock.id]
+        );
     }
 }

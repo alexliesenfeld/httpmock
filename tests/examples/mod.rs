@@ -17,6 +17,8 @@ mod proxy_tests;
 mod query_param_tests;
 mod record_and_playback_tests;
 mod reset_tests;
+#[cfg(feature = "template")]
+mod response_template_tests;
 mod showcase_tests;
 mod standalone_tests;
 mod string_body_tests;
