@@ -33,21 +33,11 @@ remains 1.88.
   state type is no longer available; code using the `MockServer` API is unaffected.
 - `server::HttpMockServer::new` is now crate-private
   ([#289](https://github.com/httpmock/httpmock/pull/289)). Use `HttpMockServerBuilder::build()` instead.
-- The conversion-error variants `Error::HeaderDeserializationError`, `Error::StaticMockConversionError`,
-  `Error::RequestConversionError` and `Error::ResponseConversionError` lost their `Error` suffix
-  ([#286](https://github.com/httpmock/httpmock/pull/286)). Update explicit variant construction and match patterns.
-- The internally unused conversion-error variants `Error::CookieParserError`, `Error::JSONConversionError`
-  and `Error::InvalidRequestData` were removed ([#286](https://github.com/httpmock/httpmock/pull/286)),
-  including the conversion from `serde_json::Error`. Callers constructing or matching these variants,
-  or using this error type to propagate JSON errors, must update their code.
-- The inner error of `server::Error::RouterError` no longer supports conversions from
-  `regex::Error` or `http::status::InvalidStatusCode` ([#286](https://github.com/httpmock/httpmock/pull/286)).
-  These conversions were unused internally; callers wrapping their own errors this way need another error type.
 - The empty `experimental` Cargo feature was removed. Remove it from your dependency's feature list;
   it did not enable any functionality.
 - The Docker image now uses a slim Debian runtime without the Rust toolchain or source tree.
-  The executable moved from `/usr/local/cargo/bin/httpmock` to `/usr/local/bin/httpmock`;
-  invoke `httpmock` through `PATH` instead of relying on its old absolute path.
+  The executable is now at `/usr/local/bin/httpmock`, with a compatibility symlink at
+  `/usr/local/cargo/bin/httpmock` so existing absolute paths continue to work.
 - `RecordingRuleBuilder::config` is now private
   ([#322](https://github.com/httpmock/httpmock/pull/322)). Its type was never nameable outside
   the crate; configure recordings through the builder's methods.
