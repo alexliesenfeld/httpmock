@@ -74,11 +74,22 @@ impl MockServerAdapter for LocalMockServerAdapter {
         Ok(())
     }
 
+    async fn set_up_to_n_times(&self, mock_id: usize, count: usize) -> Result<(), ServerAdapterError> {
+        let updated = self
+            .state
+            .set_up_to_n_times(mock_id, count)
+            .map_err(|e| UpstreamError(e.to_string()))?;
+        if !updated {
+            return Err(MockNotFound(mock_id));
+        }
+        Ok(())
+    }
+
     async fn verify(&self, mock_rr: &RequestRequirements) -> Result<Option<ClosestMatch>, ServerAdapterError> {
         let closest_match = self
             .state
             .verify(mock_rr)
-            .map_err(|e| UpstreamError(format!("Cannot delete mock: {:?}", e)))?;
+            .map_err(|e| UpstreamError(format!("Cannot verify mock: {:?}", e)))?;
         Ok(closest_match)
     }
 

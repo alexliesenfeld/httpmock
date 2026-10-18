@@ -60,6 +60,10 @@ feature.
 
 - Add `HttpMockResponse::to_http_response()` for converting to an HTTP response with a
   byte body. The method borrows the response and returns any conversion error.
+- [#108](https://github.com/httpmock/httpmock/pull/108): Mocks can be limited to a number of
+  calls with `Then::up_to_n_times` or `Mock::up_to_n_times`, after which they stop
+  matching requests. Static mock YAML files support the same limit as `up_to_n_times`
+  under `then`. (resolves [#96](https://github.com/httpmock/httpmock/issues/96))
 - Async mock, forwarding, proxy and recording setup futures implement `Send` when their
   inputs do, allowing registration inside `tokio::spawn`. Builders retain their owned API
   without new lifetime parameters ([#257](https://github.com/httpmock/httpmock/pull/257)).

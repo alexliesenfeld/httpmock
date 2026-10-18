@@ -326,6 +326,7 @@ impl MockServer {
     {
         let req = Arc::new(Mutex::new(RequestRequirements::default()));
         let res = Arc::new(Mutex::new(MockServerHttpResponse::default()));
+        let up_to_n_times = Arc::new(Mutex::new(None));
 
         spec_fn(
             When {
@@ -333,25 +334,35 @@ impl MockServer {
             },
             Then {
                 response_template: res.clone(),
+                up_to_n_times: up_to_n_times.clone(),
             },
         );
 
-        let response = self
-            .server_adapter
-            .as_ref()
-            .unwrap()
+        let up_to_n_times = take_from_mutex(&up_to_n_times);
+        let adapter = self.server_adapter.as_ref().unwrap();
+
+        let response = adapter
             .create_mock(&MockDefinition {
                 request: take_from_mutex(&req),
                 response: take_from_mutex(&res),
+                up_to_n_times,
             })
             .await
             .expect("Cannot deserialize mock server response");
+
+        // Servers that predate `up_to_n_times` ignore the field and would serve the mock without
+        // a limit. Remove the mock again before failing.
+        if up_to_n_times.is_some() && response.up_to_n_times.is_none() {
+            let _ = adapter.delete_mock(response.id).await;
+            panic!("The mock server does not support up_to_n_times. Upgrade the mock server to use it.");
+        }
 
         Mock::new(response.id, self)
     }
 
     /// Resets the mock server. More specifically, it deletes all [Mock](struct.Mock.html) objects
-    /// from the mock server and clears its request history.
+    /// from the mock server and clears its request history. Static mocks loaded from YAML files
+    /// are kept, but their call counters are cleared.
     ///
     /// # Example
     /// ```rust
@@ -378,7 +389,8 @@ impl MockServer {
     }
 
     /// Resets the mock server. More specifically, it deletes all [Mock](struct.Mock.html) objects
-    /// from the mock server and clears its request history.
+    /// from the mock server and clears its request history. Static mocks loaded from YAML files
+    /// are kept, but their call counters are cleared.
     ///
     /// # Example
     /// ```rust

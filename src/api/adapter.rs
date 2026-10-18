@@ -45,6 +45,7 @@ pub(super) trait MockServerAdapter {
     async fn create_mock(&self, mock: &MockDefinition) -> Result<ActiveMock, ServerAdapterError>;
     async fn fetch_mock(&self, mock_id: usize) -> Result<ActiveMock, ServerAdapterError>;
     async fn delete_mock(&self, mock_id: usize) -> Result<(), ServerAdapterError>;
+    async fn set_up_to_n_times(&self, mock_id: usize, count: usize) -> Result<(), ServerAdapterError>;
 
     async fn verify(&self, rr: &RequestRequirements) -> Result<Option<ClosestMatch>, ServerAdapterError>;
 

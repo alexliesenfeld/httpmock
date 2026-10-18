@@ -4458,6 +4458,7 @@ pub struct Then {
     // Arc lets setup and this owned builder share state without lifetime parameters.
     // Mutex allows mutation of that state while keeping the builder Send + Sync for spawned tasks.
     pub(crate) response_template: Arc<Mutex<MockServerHttpResponse>>,
+    pub(crate) up_to_n_times: Arc<Mutex<Option<usize>>>,
 }
 
 impl Then {
@@ -4858,6 +4859,66 @@ impl Then {
         self
     }
     // @docs-group: Network
+
+    /// Limits the mock to serving up to `n` calls.
+    ///
+    /// Once the mock has served `n` calls, it stops matching and later requests fall through to
+    /// other mocks. Mocks are matched in the order they were created, so create the limited mock
+    /// first. This is useful when the code under test retries a request on its own and you cannot
+    /// call [Mock::delete](struct.Mock.html#method.delete) between attempts.
+    ///
+    /// Serving fewer than `n` calls does not fail the test. The mock stays registered after it
+    /// stops matching, and [Mock::calls](struct.Mock.html#method.calls) and
+    /// [Mock::assert_calls](struct.Mock.html#method.assert_calls) still work.
+    ///
+    /// # Parameters
+    /// - `n`: The number of calls the mock serves before it stops matching. Must be greater than
+    ///   zero.
+    ///
+    /// # Returns
+    /// Returns `self` to allow chaining of method calls on the `Then` object.
+    ///
+    /// # Panics
+    /// Creating the mock panics if `n` is zero, or if the mock server is a remote server that
+    /// predates this method.
+    ///
+    /// # Example
+    /// Demonstrates an endpoint that fails twice before a second mock takes over.
+    ///
+    /// ```rust
+    /// use httpmock::prelude::*;
+    /// use reqwest::blocking::get;
+    ///
+    /// // Arrange
+    /// let server = MockServer::start();
+    ///
+    /// let failing = server.mock(|when, then| {
+    ///     when.path("/health");
+    ///     then.status(503).up_to_n_times(2);
+    /// });
+    ///
+    /// let healthy = server.mock(|when, then| {
+    ///     when.path("/health");
+    ///     then.status(200);
+    /// });
+    ///
+    /// // Act
+    /// let statuses: Vec<u16> = (0..3)
+    ///     .map(|_| get(server.url("/health")).unwrap().status().as_u16())
+    ///     .collect();
+    ///
+    /// // Assert
+    /// assert_eq!(statuses, vec![503, 503, 200]);
+    /// failing.assert_calls(2);
+    /// healthy.assert_calls(1);
+    /// ```
+    pub fn up_to_n_times(self, n: usize) -> Self {
+        update_mutex(&self.up_to_n_times, |limit| {
+            *limit = Some(n);
+        });
+        self
+    }
+    // @docs-group: Miscellaneous
 
     /// Applies a custom function to modify a `Then` instance, enhancing flexibility and readability
     /// in setting up mock server responses.
