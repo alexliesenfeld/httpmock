@@ -1,4 +1,5 @@
 name: Crates.io Release
+run-name: "Crates.io ${{ inputs.dry_run && 'DRY RUN' || 'PUBLISH' }} by @${{ github.actor }}"
 
 on:
   workflow_dispatch:
