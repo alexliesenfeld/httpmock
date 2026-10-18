@@ -85,7 +85,6 @@ feature.
 - Server TLS respects an application-installed rustls crypto provider. Ring is the
   explicit fallback when no provider is installed, avoiding ambiguous feature detection.
 - File, method and certificate panic diagnostics retain their underlying error causes.
-- Preserve the Docker image's `/httpmock` working directory in the final runtime stage.
 - [#229](https://github.com/httpmock/httpmock/pull/229): The `https` feature builds correctly
   again (hyper-rustls/ring is enabled) (thanks [@danieleades](https://github.com/danieleades))
 - [#242](https://github.com/httpmock/httpmock/pull/242): Server TLS uses an explicit ring
