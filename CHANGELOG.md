@@ -49,7 +49,7 @@ ID; reconstructing handles with `Mock::new(id, &server)` remains supported. Repl
 `body().is_blank()` with `body_ref().iter().all(u8::is_ascii_whitespace)` and use byte-slice
 operations for the removed `contains_*` helpers.
 
-`HttpMockRequest::to_http_request()` and `server::state::HttpMockStateManager` remain available.
+`HttpMockRequest::to_http_request()` remains available.
 Direct imports from `server::matchers` must be removed; use the `When` API to configure
 matchers instead.
 
@@ -82,7 +82,6 @@ feature.
 
 ### Bug fixes
 
-- Preserve the 0.8.3 request conversion helper and state manager name.
 - Server TLS respects an application-installed rustls crypto provider. Ring is the
   explicit fallback when no provider is installed, avoiding ambiguous feature detection.
 - File, method and certificate panic diagnostics retain their underlying error causes.
