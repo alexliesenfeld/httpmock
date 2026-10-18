@@ -226,8 +226,9 @@ then:
         let directory = TestDirectory::new();
         fs::write(directory.path().join("mock.yaml"), mock_yaml("up_to_n_times: 0")).unwrap();
 
-        let error = read_static_mock_definitions(directory.path().to_path_buf(), &state::Manager::default())
-            .expect_err("expected loading the mock to fail");
+        let error =
+            read_static_mock_definitions(directory.path().to_path_buf(), &state::HttpMockStateManager::default())
+                .expect_err("expected loading the mock to fail");
         assert!(error.to_string().contains("up_to_n_times must be greater than 0"));
     }
 

@@ -184,18 +184,16 @@ impl<'a> GeneratingCertificateResolver {
             p
         } else {
             // Otherwise, treat it as a DNS name
-            let p = CertificateParams::new(vec![hostname.to_owned()]).map_err(|err| {
-                GenerateCertificateError(format!(
-                    "Cannot generate Certificate (host: {}: error: {:?})",
-                    hostname, err
-                ))
-            })?;
-
             // When SNI is provided (DNS case), we intentionally do NOT add extra
             // SANs like localhost/loopbacks by default. If users need more SANs
             // here, they can still set HTTPMOCK_EXTRA_SANS explicitly; however the
             // requirement is to only add extras when there is no hostname.
-            p
+            CertificateParams::new(vec![hostname.to_owned()]).map_err(|err| {
+                GenerateCertificateError(format!(
+                    "Cannot generate Certificate (host: {}: error: {:?})",
+                    hostname, err
+                ))
+            })?
         };
 
         let key_pair = KeyPair::generate_for(&rcgen::PKCS_ECDSA_P256_SHA256).map_err(|err| {

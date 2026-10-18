@@ -394,7 +394,7 @@ mod tests {
 
     #[test]
     fn exhausted_mock_stops_matching_but_keeps_its_call_counter() {
-        let manager = Manager::default();
+        let manager = HttpMockStateManager::default();
         let id = manager.add_mock(limited_mock(Some(2)), false).unwrap().id;
 
         let served: Vec<bool> = (0..3)
@@ -407,7 +407,7 @@ mod tests {
 
     #[test]
     fn up_to_n_times_counts_calls_served_before_the_limit_was_set() {
-        let manager = Manager::default();
+        let manager = HttpMockStateManager::default();
         let id = manager.add_mock(limited_mock(None), false).unwrap().id;
         for _ in 0..3 {
             assert!(manager.serve_mock(&dummy_request()).unwrap().is_some());
@@ -421,7 +421,7 @@ mod tests {
 
     #[test]
     fn raising_up_to_n_times_lets_an_exhausted_mock_match_again() {
-        let manager = Manager::default();
+        let manager = HttpMockStateManager::default();
         let id = manager.add_mock(limited_mock(Some(1)), false).unwrap().id;
         assert!(manager.serve_mock(&dummy_request()).unwrap().is_some());
         assert!(manager.serve_mock(&dummy_request()).unwrap().is_none());
@@ -437,14 +437,14 @@ mod tests {
 
     #[test]
     fn up_to_n_times_on_unknown_mock_reports_not_found() {
-        let manager = Manager::default();
+        let manager = HttpMockStateManager::default();
 
         assert!(!manager.set_up_to_n_times(42, 1).unwrap());
     }
 
     #[test]
     fn up_to_n_times_on_static_mock_is_rejected() {
-        let manager = Manager::default();
+        let manager = HttpMockStateManager::default();
         let id = manager.add_mock(limited_mock(None), true).unwrap().id;
 
         assert!(matches!(manager.set_up_to_n_times(id, 1), Err(StaticMockError)));
@@ -452,7 +452,7 @@ mod tests {
 
     #[test]
     fn reset_lets_exhausted_static_mocks_match_again() {
-        let manager = Manager::default();
+        let manager = HttpMockStateManager::default();
         let id = manager.add_mock(limited_mock(Some(1)), true).unwrap().id;
         assert!(manager.serve_mock(&dummy_request()).unwrap().is_some());
         assert!(manager.serve_mock(&dummy_request()).unwrap().is_none());
@@ -465,7 +465,7 @@ mod tests {
 
     #[test]
     fn zero_up_to_n_times_is_rejected() {
-        let manager = Manager::default();
+        let manager = HttpMockStateManager::default();
 
         assert!(matches!(
             manager.add_mock(limited_mock(Some(0)), false),
@@ -479,7 +479,7 @@ mod tests {
 
     #[test]
     fn exhausted_mock_round_trips_through_serialization() {
-        let manager = Manager::default();
+        let manager = HttpMockStateManager::default();
         let id = manager.add_mock(limited_mock(Some(1)), false).unwrap().id;
         assert!(manager.serve_mock(&dummy_request()).unwrap().is_some());
 
