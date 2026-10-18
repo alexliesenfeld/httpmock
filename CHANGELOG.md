@@ -17,7 +17,7 @@ remains 1.88.
   for substring matching.
 - `HttpMockRequest::query_params_map()` was removed
   ([#246](https://github.com/httpmock/httpmock/pull/246)). Collect `query_params()` into a
-  `HashMap<String, String>` instead; see the [README migration example](README.md#upgrading-from-08).
+  `HashMap<String, String>` instead.
 - The `MockExt` trait was removed and `Mock`'s public `id` field is now private
   ([#285](https://github.com/httpmock/httpmock/pull/285)). Remove `MockExt` imports and
   replace direct `mock.id` field access with `mock.id()`. The inherent `Mock::new`
