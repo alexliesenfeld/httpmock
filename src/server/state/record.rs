@@ -148,14 +148,12 @@ fn build_mock_definition(
     // Request
     let mut headers = Vec::with_capacity(config.record_headers.len());
     for header_name in &config.record_headers {
-        let header_name_lowercase = header_name.to_lowercase();
-        for (key, value) in request.headers() {
-            if let Some(key) = key
-                && header_name_lowercase == key.to_string().to_lowercase()
-            {
-                let value = value.to_str().map_err(|err| DataConversionError(err.to_string()))?;
-                headers.push((header_name.to_string(), value.to_string()))
-            }
+        let Ok(name) = http::HeaderName::from_bytes(header_name.as_bytes()) else {
+            continue;
+        };
+        for value in request.headers().get_all(name) {
+            let value = value.to_str().map_err(|err| DataConversionError(err.to_string()))?;
+            headers.push((header_name.to_string(), value.to_string()))
         }
     }
 
