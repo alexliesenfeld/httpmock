@@ -140,21 +140,6 @@ pub async fn write_file<P: AsRef<Path>>(
     Ok(path)
 }
 
-// Checks if the executing thread is running in a Tokio runtime.
-
-#[cfg(test)]
-mod test {
-    use crate::common::util::{Join, with_retry};
-
-    #[test]
-    fn with_retry_error_test() {
-        let result: Result<(), &str> = with_retry(1, || async { Err("test error") }).join();
-
-        assert!(result.is_err());
-        assert_eq!(result.err().unwrap(), "test error")
-    }
-}
-
 /// A wrapper around `bytes::Bytes` providing utility methods for common operations.
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct HttpMockBytes(pub Bytes);
@@ -400,4 +385,17 @@ pub fn read_file<P: AsRef<Path>>(absolute_resource_path: P) -> Result<Vec<u8>, S
     );
 
     Ok(buffer)
+}
+
+#[cfg(test)]
+mod test {
+    use crate::common::util::{Join, with_retry};
+
+    #[test]
+    fn with_retry_error_test() {
+        let result: Result<(), &str> = with_retry(1, || async { Err("test error") }).join();
+
+        assert!(result.is_err());
+        assert_eq!(result.err().unwrap(), "test error")
+    }
 }
