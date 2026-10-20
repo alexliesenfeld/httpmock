@@ -134,7 +134,7 @@ feature.
 - [#263](https://github.com/httpmock/httpmock/pull/263): "style: enforce clippy::ptr_arg" (thanks [@danieleades](https://github.com/danieleades))
 - [#266](https://github.com/httpmock/httpmock/pull/266): "style: enforce clippy::new_without_default" (thanks [@danieleades](https://github.com/danieleades))
 - [#268](https://github.com/httpmock/httpmock/pull/268): "style: enforce clippy::doc_overindented_list_items" (thanks [@danieleades](https://github.com/danieleades))
-- [#271](https://github.com/httpmock/httpmock/pull/271): "Fix for code scanning alert no. 22: Workflow does not contain permissions" (thanks [@FalkWoldmann](https://github.com/FalkWoldmann))
+- [#271](https://github.com/httpmock/httpmock/pull/271): "Fix for code scanning alert no. 22: Workflow does not contain permissions"
 - [#282](https://github.com/httpmock/httpmock/pull/282): "style: enforce satisfied lints" (thanks [@danieleades](https://github.com/danieleades))
 - [#283](https://github.com/httpmock/httpmock/pull/283): "style: enforce clippy::type_complexity" (thanks [@danieleades](https://github.com/danieleades))
 - [#284](https://github.com/httpmock/httpmock/pull/284): "style: enforce clippy::module_inception" (thanks [@danieleades](https://github.com/danieleades))
@@ -144,18 +144,18 @@ feature.
 - [#289](https://github.com/httpmock/httpmock/pull/289): "breaking: remove the Handler and StateManager traits" (server internals; the `MockServerState` removal is listed under breaking changes) (thanks [@danieleades](https://github.com/danieleades))
 - [#290](https://github.com/httpmock/httpmock/pull/290): "refactor: align matcher names and regex argument order" (thanks [@danieleades](https://github.com/danieleades))
 - [#291](https://github.com/httpmock/httpmock/pull/291): "Remove unused code lint from allow list" (thanks [@danieleades](https://github.com/danieleades))
-- [#300](https://github.com/httpmock/httpmock/pull/300): "ci: deploy docs website on release instead of every master push" (thanks [@alexliesenfeld](https://github.com/alexliesenfeld))
-- [#301](https://github.com/httpmock/httpmock/pull/301): "chore: prepare 0.9.0 release" (thanks [@alexliesenfeld](https://github.com/alexliesenfeld))
+- [#300](https://github.com/httpmock/httpmock/pull/300): "ci: deploy docs website on release instead of every master push"
+- [#301](https://github.com/httpmock/httpmock/pull/301): "chore: prepare 0.9.0 release"
 - [#304](https://github.com/httpmock/httpmock/pull/304): "style: enable clippy::redundant_clone lint" (thanks [@danieleades](https://github.com/danieleades))
 - [#305](https://github.com/httpmock/httpmock/pull/305): "ci: check for rustdoc warnings" (thanks [@danieleades](https://github.com/danieleades))
 - [#311](https://github.com/httpmock/httpmock/pull/311): "refactor: use named module files in src" (thanks [@danieleades](https://github.com/danieleades))
 - [#312](https://github.com/httpmock/httpmock/pull/312): "breaking: make matcher and backend internals private" (thanks [@danieleades](https://github.com/danieleades))
-- [#315](https://github.com/httpmock/httpmock/pull/315): "refactor: drop the tab writer from mismatch output" (thanks [@FalkWoldmann](https://github.com/FalkWoldmann))
-- [#316](https://github.com/httpmock/httpmock/pull/316): "chore: remove redundant imports, extern crates and the experimental feature" (thanks [@FalkWoldmann](https://github.com/FalkWoldmann))
-- [#317](https://github.com/httpmock/httpmock/pull/317): "chore(tools): drop the unused httpmock dependency" (thanks [@FalkWoldmann](https://github.com/FalkWoldmann))
-- [#328](https://github.com/httpmock/httpmock/pull/328): "Add Claude Code GitHub Workflow" (thanks [@FalkWoldmann](https://github.com/FalkWoldmann))
-- [#329](https://github.com/httpmock/httpmock/pull/329): "Handle fork PRs in the Claude workflows" (thanks [@FalkWoldmann](https://github.com/FalkWoldmann))
-- [#331](https://github.com/httpmock/httpmock/pull/331): "Fix error message of local verify" (thanks [@FalkWoldmann](https://github.com/FalkWoldmann))
+- [#315](https://github.com/httpmock/httpmock/pull/315): "refactor: drop the tab writer from mismatch output"
+- [#316](https://github.com/httpmock/httpmock/pull/316): "chore: remove redundant imports, extern crates and the experimental feature"
+- [#317](https://github.com/httpmock/httpmock/pull/317): "chore(tools): drop the unused httpmock dependency"
+- [#328](https://github.com/httpmock/httpmock/pull/328): "Add Claude Code GitHub Workflow"
+- [#329](https://github.com/httpmock/httpmock/pull/329): "Handle fork PRs in the Claude workflows"
+- [#331](https://github.com/httpmock/httpmock/pull/331): "Fix error message of local verify"
 
 ### Dependency updates
 
