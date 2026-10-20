@@ -31,13 +31,12 @@ remains 1.88.
 - `server::state::MockServerState` is now crate-private
   ([#289](https://github.com/httpmock/httpmock/pull/289)). Direct construction of the raw
   state type is no longer available; code using the `MockServer` API is unaffected.
-- `server::HttpMockServer::new` is now crate-private
-  ([#289](https://github.com/httpmock/httpmock/pull/289)). Use `HttpMockServerBuilder::build()` instead.
 - The empty `experimental` Cargo feature was removed. Remove it from your dependency's feature list;
   it did not enable any functionality.
 - The Docker image now uses a slim Debian runtime without the Rust toolchain or source tree.
-  The executable is now at `/usr/local/bin/httpmock`, with a compatibility symlink at
-  `/usr/local/cargo/bin/httpmock` so existing absolute paths continue to work.
+  `curl` and `wget` are no longer installed, so container healthchecks that call them need
+  to be adjusted. The executable is now at `/usr/local/bin/httpmock`, with a compatibility
+  symlink at `/usr/local/cargo/bin/httpmock` so existing absolute paths continue to work.
 - `RecordingRuleBuilder::config` is now private
   ([#322](https://github.com/httpmock/httpmock/pull/322)). Its type was never nameable outside
   the crate; configure recordings through the builder's methods.
@@ -86,13 +85,12 @@ feature.
 
 ### Bug fixes
 
-- Server TLS respects an application-installed rustls crypto provider. Ring is the
-  explicit fallback when no provider is installed, avoiding ambiguous feature detection.
-- File, method and certificate panic diagnostics retain their underlying error causes.
 - [#229](https://github.com/httpmock/httpmock/pull/229): The `https` feature builds correctly
   again (hyper-rustls/ring is enabled) (thanks [@danieleades](https://github.com/danieleades))
-- [#242](https://github.com/httpmock/httpmock/pull/242): Server TLS uses an explicit ring
-  fallback when no crypto provider is installed (thanks [@danieleades](https://github.com/danieleades))
+- [#242](https://github.com/httpmock/httpmock/pull/242),
+  [#326](https://github.com/httpmock/httpmock/pull/326): Server TLS falls back to ring when no
+  rustls crypto provider is installed, instead of panicking when several providers are compiled
+  in (thanks [@danieleades](https://github.com/danieleades))
 - [#243](https://github.com/httpmock/httpmock/pull/243): `DELETE /recordings/:id` now deletes
   recordings instead of proxy rules (thanks [@danieleades](https://github.com/danieleades))
 - [#245](https://github.com/httpmock/httpmock/pull/245): The configured `history_limit` is
