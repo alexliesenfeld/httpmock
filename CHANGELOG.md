@@ -34,10 +34,10 @@ remains 1.88.
   include it. HTTPS via ALPN is unaffected, as `h2` was already only offered with the feature
   enabled. The crate also no longer enables `tokio/signal` or `hyper/http2` for other crates
   in the build, so a crate that relied on that has to enable them itself.
-- `server::state::MockServerState` is now crate-private
-  ([#289](https://github.com/httpmock/httpmock/pull/289),
-  [#326](https://github.com/httpmock/httpmock/pull/326)). Direct construction of the raw
-  state type is no longer available; code using the `MockServer` API is unaffected.
+- `server::state::MockServerState` and `server::state::HttpMockStateManager` are now
+  crate-private ([#289](https://github.com/httpmock/httpmock/pull/289),
+  [#326](https://github.com/httpmock/httpmock/pull/326)). Neither could be used from outside
+  the crate beyond constructing it; code using the `MockServer` API is unaffected.
 - The empty `experimental` Cargo feature was removed
   ([#316](https://github.com/httpmock/httpmock/pull/316)). Remove it from your dependency's
   feature list; it did not enable any functionality.

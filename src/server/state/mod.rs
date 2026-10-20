@@ -70,12 +70,12 @@ impl MockServerState {
 }
 
 /// Owns the mock server's state and serialises access to it.
-pub struct HttpMockStateManager {
+pub(crate) struct HttpMockStateManager {
     state: Mutex<MockServerState>,
 }
 
 impl HttpMockStateManager {
-    pub fn new(history_limit: usize) -> Self {
+    pub(crate) fn new(history_limit: usize) -> Self {
         Self {
             state: Mutex::new(MockServerState::new(history_limit)),
         }
