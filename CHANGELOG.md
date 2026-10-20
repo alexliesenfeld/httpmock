@@ -10,45 +10,59 @@ remains 1.88.
 - `server::matchers` is now crate-private
   ([#312](https://github.com/httpmock/httpmock/pull/312)). Its matcher, comparator and reader
   types are implementation details rather than a supported extension API; there is no
-  replacement public path.
+  replacement public path. Custom predicates remain possible with `When::is_true`.
 - The body helpers `is_blank`, `contains_str`, `contains_slice` and `contains_vec`
   were removed ([#246](https://github.com/httpmock/httpmock/pull/246)). Use
-  `request.body_ref()` to inspect the bytes directly, or `When::body_includes`
-  for substring matching.
+  `request.body_string().contains("..")`, which also works inside `respond_with`, or
+  `request.body_ref().windows(n).any(|w| w == b"..")` with a non-empty needle, and
+  `When::body_includes` when matching.
 - `HttpMockRequest::query_params_map()` was removed
-  ([#246](https://github.com/httpmock/httpmock/pull/246)). Collect `query_params()` into a
-  `HashMap<String, String>` instead.
+  ([#246](https://github.com/httpmock/httpmock/pull/246)). Collect `query_params()` instead:
+  `let params: HashMap<String, String> = request.query_params().into_iter().collect();`
+  keeps the last value for duplicate keys, as the removed method did. `query_params()` has
+  returned `Vec<(String, String)>` since 0.8.2.
 - The `MockExt` trait was removed and `Mock`'s public `id` field is now private
   ([#285](https://github.com/httpmock/httpmock/pull/285)). Remove `MockExt` imports and
-  replace direct `mock.id` field access with `mock.id()`.
-- The mock server only accepts HTTP/2 connections when the `http2` cargo feature is enabled
-  ([#297](https://github.com/httpmock/httpmock/pull/297)). Previously, cleartext HTTP/2 with
-  prior knowledge (e.g. gRPC clients) was accepted without it, because an internal dependency
-  enabled HTTP/2 unconditionally. This fails at runtime, not at compile time: enable the
-  `http2` feature to keep serving such clients. HTTPS is unaffected, as `h2` was already only
-  offered via ALPN with the feature enabled.
+  replace direct `mock.id` field access with `mock.id()`. `Mock::new(id, &server)` is
+  unchanged.
+- The mock server only accepts cleartext HTTP/2 connections (prior knowledge, as gRPC clients
+  send it) when the `http2` cargo feature is enabled
+  ([#297](https://github.com/httpmock/httpmock/pull/297)). Previously this worked without the
+  feature. It fails at runtime, not at compile time: the client sees the connection closed
+  after the preface and the server logs "invalid HTTP version parsed (found HTTP2 preface)".
+  Enable `http2` to keep serving such clients; `standalone` and the Docker image already
+  include it. HTTPS via ALPN is unaffected, as `h2` was already only offered with the feature
+  enabled. The crate also no longer enables `tokio/signal` or `hyper/http2` for other crates
+  in the build, so a crate that relied on that has to enable them itself.
 - `server::state::MockServerState` is now crate-private
-  ([#289](https://github.com/httpmock/httpmock/pull/289)). Direct construction of the raw
+  ([#289](https://github.com/httpmock/httpmock/pull/289),
+  [#326](https://github.com/httpmock/httpmock/pull/326)). Direct construction of the raw
   state type is no longer available; code using the `MockServer` API is unaffected.
 - The empty `experimental` Cargo feature was removed
   ([#316](https://github.com/httpmock/httpmock/pull/316)). Remove it from your dependency's
   feature list; it did not enable any functionality.
-- The Docker image now uses a slim Debian runtime without the Rust toolchain or source tree.
-  `curl` and `wget` are no longer installed, so container healthchecks that call them need
-  to be adjusted. The executable is now at `/usr/local/bin/httpmock`, with a compatibility
-  symlink at `/usr/local/cargo/bin/httpmock` so existing absolute paths continue to work.
-- The `tls-detect` cargo feature was removed. It only enabled an internal dependency that
-  `https` already pulled in; remove it from your feature list.
+- The Docker image now uses a slim Debian runtime without the Rust toolchain or source tree
+  ([#202](https://github.com/httpmock/httpmock/issues/202),
+  [1231c63](https://github.com/httpmock/httpmock/commit/1231c63)). `curl` and `wget` are no
+  longer installed, so healthchecks that call them need another probe: an `httpGet` probe
+  against `/__httpmock__/ping`, or from inside the container
+  `bash -c 'exec 3<>/dev/tcp/127.0.0.1/5050'`. The CA files are no longer in the image either;
+  use `certs/ca.pem` from the repository or `server::DEFAULT_CA_CERTIFICATE`. The executable
+  is now at `/usr/local/bin/httpmock`, with a compatibility symlink at
+  `/usr/local/cargo/bin/httpmock` so existing absolute paths continue to work.
+- The `tls-detect` cargo feature was removed
+  ([#333](https://github.com/httpmock/httpmock/pull/333)). It only enabled an internal
+  dependency that `https` already pulled in; remove it from your feature list.
 - `RecordingRuleBuilder::config` is now private
-  ([#322](https://github.com/httpmock/httpmock/pull/322)). Its type was never nameable outside
-  the crate; configure recordings through the builder's methods.
+  ([#322](https://github.com/httpmock/httpmock/pull/322)). Its type could only be used through
+  type inference; configure recordings through the builder's methods.
 
 #### Upgrading from 0.8
 
 Most code needs no changes. Remove `MockExt` imports and use `mock.id()` to read a mock's
-ID. Replace
-`body().is_blank()` with `body_ref().iter().all(u8::is_ascii_whitespace)` and use byte-slice
-operations for the removed `contains_*` helpers.
+ID. Replace `body().is_blank()` with `body_string().trim().is_empty()` and
+`body().contains_str("x")` with `body_string().contains("x")`. Replace `query_params_map()`
+with `query_params().into_iter().collect::<HashMap<_, _>>()`.
 
 Direct imports from `server::matchers` must be removed; use the `When` API to configure
 matchers instead.
@@ -64,18 +78,21 @@ feature.
 - [#108](https://github.com/httpmock/httpmock/pull/108): Mocks can be limited to a number of
   calls with `Then::up_to_n_times`, `Mock::up_to_n_times` or `Mock::up_to_n_times_async`,
   after which they stop matching requests. Static mock YAML files support the same limit as
-  `up_to_n_times` under `then`. (resolves [#96](https://github.com/httpmock/httpmock/issues/96))
+  `up_to_n_times` under `then`. `MockServer::reset()`, which `start()` and `connect()` call,
+  now also resets the call counters of static YAML mocks. (resolves
+  [#96](https://github.com/httpmock/httpmock/issues/96))
   (thanks [@wfchandler](https://github.com/wfchandler))
 - Async mock, forwarding, proxy and recording setup futures implement `Send` when their
   inputs do, allowing registration inside `tokio::spawn`
   ([#325](https://github.com/httpmock/httpmock/pull/325)).
 - `When`, `Then` and the forwarding, proxy and recording rule builders are now `Send` and
   `Sync` ([#322](https://github.com/httpmock/httpmock/pull/322)).
-- [#297](https://github.com/httpmock/httpmock/pull/297): The dependency tree is about 30% smaller
-  (74 to 52 crates without default features, 86 to 64 with them), resolving
+- [#297](https://github.com/httpmock/httpmock/pull/297): httpmock's own dependency tree is about
+  30% smaller (74 to 52 crates without default features, 86 to 64 with them), resolving
   [#46](https://github.com/httpmock/httpmock/issues/46)
-- `async-trait` and `tls-detect` are no longer dependencies. The server now tells TLS and
-  plain HTTP connections apart by the first byte the client sends.
+- [#333](https://github.com/httpmock/httpmock/pull/333): `async-trait` and `tls-detect` are no
+  longer dependencies. The server now tells TLS and plain HTTP connections apart by the first
+  byte the client sends.
 - [#275](https://github.com/httpmock/httpmock/pull/275): Owned HTTP request and response
   conversions avoid unnecessary body clones.
 - [#299](https://github.com/httpmock/httpmock/pull/299): Static mock YAML files now support
@@ -90,6 +107,12 @@ feature.
 
 ### Bug fixes
 
+- `HttpMockServerBuilder::build()` returns an error instead of panicking when the directory
+  of static mock files cannot be listed, and the YAML and file error messages were reworded
+  ([904fc03](https://github.com/httpmock/httpmock/commit/904fc03))
+- Two error messages of the admin API changed: static mocks now report "cannot be modified or
+  deleted" and failed state operations "state operation failed: ...". Only clients that match
+  on the response body of a failed request can notice
 - The `http2` feature now also enables HTTP/2 in the HTTPS client, so `remote`, `https` and
   `http2` compile together without `remote-https`
 - [#229](https://github.com/httpmock/httpmock/pull/229): The `https` feature builds correctly
@@ -114,6 +137,9 @@ feature.
 
 ### Internal improvements and CI
 
+- `[lints.rust]` in `Cargo.toml` denies warnings, replacing the old `#![allow(warnings)]`.
+  Cargo caps lints for registry and git dependencies, but a path dependency on httpmock builds
+  with them on; use `--cap-lints warn` there if a newer compiler adds a warning
 - [#210](https://github.com/httpmock/httpmock/pull/210): "style: remove unused imports" (thanks [@danieleades](https://github.com/danieleades))
 - [#216](https://github.com/httpmock/httpmock/pull/216): "address some more warnings" (thanks [@danieleades](https://github.com/danieleades))
 - [#217](https://github.com/httpmock/httpmock/pull/217): "update deprecated methods" (thanks [@danieleades](https://github.com/danieleades))
@@ -259,7 +285,7 @@ The following pull requests have been merged:
 - [Custom matcher functions](https://docs.rs/httpmock/latest/httpmock/struct.When.html#method.matches) are now closures rather than functions.
 - [When::json_body_partial](https://docs.rs/httpmock/0.7.0/httpmock/struct.When.html#method.json_body_partial) was renamed to `json_body_includes`.
 - [When::x_www_form_urlencoded_tuple](https://docs.rs/httpmock/0.7.0/httpmock/struct.When.html#method.x_www_form_urlencoded) was renamed to `form_urlencoded_tuple`.
-- [When::x_www_form_urlencoded_key_exists](https://docs.rs/httpmock/0.7.0/httpmock/struct.When.html#method.x_www_form_urlencoded) was renamed to `form_urlencoded_key_exists`.
+- [When::x_www_form_urlencoded_key_exists](https://docs.rs/httpmock/0.7.0/httpmock/struct.When.html#method.x_www_form_urlencoded) was renamed to `form_urlencoded_tuple_exists`.
 - Error message output has been changed for better readability (e.g., when calling `Mock::assert`).
 - Custom matcher function `When::matches` has been renamed to `When::is_true`.
 
