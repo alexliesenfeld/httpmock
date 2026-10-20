@@ -10,6 +10,7 @@ categories = ["development-tools::testing"]
 license = "MIT"
 repository = "https://github.com/httpmock/httpmock"
 rust-version = "1.88.0"
+exclude = [".github/", "assets/", "docs/", "scripts/", "codecov.yml", "funding.json", "tarpaulin*.toml"]
 
 [lints.rust]
 # Gate the `warnings` group at error level so new rustc warnings fail CI. The
