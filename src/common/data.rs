@@ -234,7 +234,6 @@ impl HttpMockRequest {
         self.body.as_ref()
     }
 
-    // Move all body functions to HttpMockBytes
     pub fn body_vec(&self) -> Vec<u8> {
         self.body.to_vec()
     }
