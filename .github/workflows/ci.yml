@@ -85,6 +85,10 @@ jobs:
       # integration tests and examples is checked as well.
       - run: cargo hack check --feature-powerset --depth 2 --all-targets
 
+      # Depth 2 cannot reach this triple: the HTTPS client only gets HTTP/2
+      # when http2 is combined with https but not remote-https.
+      - run: cargo check --no-default-features --features remote,https,http2
+
   msrv:
     name: MSRV
     runs-on: ubuntu-latest
