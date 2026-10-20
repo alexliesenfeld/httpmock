@@ -11,7 +11,7 @@
 //! * Custom request matchers.
 //! * Standalone mode with an accompanying [Docker image](https://hub.docker.com/r/httpmock/httpmock).
 //! * Helpful error messages
-//! * [Advanced verification and debugging support](https://httpmock.github.io/posts/mocking-http--services-in-rust/#creating-mocks) (including diff generation between actual and expected HTTP request values)
+//! * [Advanced verification and debugging support](https://httpmock.rs/server/debugging/) (including diff generation between actual and expected HTTP request values)
 //! * Parallel test execution.
 //! * Fully asynchronous core with synchronous and asynchronous APIs.
 //! * Support for [mock configuration using YAML files](https://httpmock.rs/server/standalone/).
@@ -77,15 +77,75 @@
 //!
 //! # Usage
 //!
-//! See the [official website](http://httpmock.rs) a for detailed
-//! API documentation.
+//! These pages are the API reference: every [`When`] and [`Then`] method documents itself with an
+//! example, and [`MockServer`], [`Mock`], [`HttpMockRequest`] and [`HttpMockResponse`] cover the
+//! rest. The guide lives on the [official website](https://httpmock.rs), which explains how the
+//! pieces fit together:
+//!
+//! * [Fundamentals](https://httpmock.rs/getting_started/fundamentals/): how mocks, matchers and
+//!   the server pool work.
+//! * [Standalone server and Docker](https://httpmock.rs/server/standalone/): running the server
+//!   outside your tests, including YAML mock files.
+//! * [HTTPS](https://httpmock.rs/server/https/): TLS support and certificates.
+//! * [Recording](https://httpmock.rs/record-and-playback/recording/) and
+//!   [playback](https://httpmock.rs/record-and-playback/playback/): capturing real traffic and
+//!   replaying it.
+//! * [Debugging](https://httpmock.rs/server/debugging/): reading assertion output and logs.
+//! * [FAQ](https://httpmock.rs/miscellaneous/faq/) and
+//!   [upgrading](https://httpmock.rs/miscellaneous/upgrading/).
 //!
 //! ## Examples
 //!
 //! You can find examples in the
 //! [`httpmock` test directory](https://github.com/httpmock/httpmock/blob/master/tests/).
-//! The [official website](http://httpmock.rs) and [reference docs](https://docs.rs/httpmock/)
-//! also contain _**a lot**_ of examples.
+//! The [official website](https://httpmock.rs) and the item docs here also contain a lot of examples.
+//!
+//! # Cargo features
+//!
+//! Only `cookies` is enabled by default. Items that need a feature carry a badge on docs.rs.
+//!
+//! * `cookies` (default): cookie matching on the server side for [`When::cookie`] and its
+//!   siblings. The methods exist without it, but the server only parses and matches cookies
+//!   with the feature on. Pulls in the `headers` crate.
+//! * `color`: colors the added and removed lines in the request diff that failed assertions print.
+//!   Pulls in the `colored` crate.
+//! * `remote`: connecting to a mock server running in standalone mode with
+//!   [`MockServer::connect`] and [`MockServer::connect_from_env`]. Enables the `hyper-util` client.
+//! * `remote-https`: the same connection over HTTPS, using `rustls` with the `ring` provider and
+//!   `hyper-rustls`. Implies `remote`.
+//! * `proxy`: forwarding and proxy rules, see [`MockServer::forward_to`] and
+//!   [`MockServer::proxy`]. Implies `remote-https`.
+//! * `record`: recording traffic with [`MockServer::record`] and reading mock specifications
+//!   from YAML files (`serde_yaml`). Implies `proxy`.
+//! * `https`: the mock server terminates TLS on the same port it serves plain HTTP on, generating
+//!   certificates with `rcgen`. Pulls in `rustls` with the `ring` provider, `tokio-rustls`,
+//!   `hyper-rustls`, `rustls-pki-types` and `if-addrs`.
+//! * `http2`: HTTP/2 support for the mock server (`hyper/http2`, `hyper-util/server-auto`) and,
+//!   when `hyper-rustls` is present, for the remote client.
+//! * `standalone`: builds the `httpmock` binary. Implies `record`, `http2`, `cookies`, `remote`
+//!   and `remote-https` and adds `clap`, `tokio/signal` and `tracing-subscriber`. `color` is not
+//!   implied, so enable it separately or use `--all-features`.
+//!
+//! # Environment variables
+//!
+//! The library reads these variables at runtime; each one falls back to the default when unset.
+//! Setting a variable to something that does not parse panics when the value is first used.
+//!
+//! * `HTTPMOCK_MAX_SERVERS` (default `25`): the size of the pool of local mock servers that
+//!   [`MockServer::start`] hands out. A test that asks for a server while all of them are in use
+//!   waits until one is returned.
+//! * `HTTPMOCK_HOST` (default `127.0.0.1`) and `HTTPMOCK_PORT` (default `5050`): the standalone
+//!   server that [`MockServer::connect_from_env`] connects to. Requires the `remote` feature.
+//! * `HTTPMOCK_HTTP_CLIENT_WORKER_THREADS` (default `1`) and
+//!   `HTTPMOCK_HTTP_CLIENT_MAX_BLOCKING_THREADS` (default `10`): the runtime threads of the HTTP
+//!   client that talks to a remote mock server. Requires the `remote` feature.
+//! * `HTTPMOCK_EXTRA_SANS`: a comma-separated list of extra DNS names or IP addresses added as
+//!   subject alternative names to the certificate the server generates when a client connects
+//!   without SNI. Unset by default. Requires the `https` feature.
+//!
+//! The variables the standalone binary reads (`HTTPMOCK_PORT`, `HTTPMOCK_EXPOSE`,
+//! `HTTPMOCK_MOCK_FILES_DIR`, `HTTPMOCK_DISABLE_ACCESS_LOG` and `HTTPMOCK_REQUEST_HISTORY_LIMIT`)
+//! are documented on the [standalone server page](https://httpmock.rs/server/standalone/).
 //!
 //! ## License
 //!
@@ -93,6 +153,7 @@
 //!
 //! This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
 //! warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the MIT Public License for more details.
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 mod common;
 
