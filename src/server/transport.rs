@@ -1,3 +1,5 @@
+#[cfg(feature = "record")]
+use std::time::Instant;
 use std::{future::pending, io, net::SocketAddr, pin::Pin, sync::Arc};
 
 use http::{Request, StatusCode};
@@ -21,9 +23,15 @@ use tokio::{
 #[cfg(feature = "https")]
 use tokio_rustls::TlsAcceptor;
 
-use crate::server::{
-    self, handler,
-    transport::Error::{BufferError, LocalSocketAddrError, PublishSocketAddrError, RouterError, SocketBindError},
+#[cfg(feature = "proxy")]
+use crate::common::http::{Error as HttpClientError, HttpMockHttpClient};
+use crate::{
+    common::runtime,
+    server::{
+        self,
+        handler::{self, Action, Reply},
+        transport::Error::{BufferError, LocalSocketAddrError, PublishSocketAddrError, SocketBindError},
+    },
 };
 
 #[derive(Error, Debug)]
@@ -44,6 +52,9 @@ pub enum Error {
     HTTPError(#[from] http::Error),
     #[error("cannot process request: {0}")]
     RouterError(#[from] server::handler::Error),
+    #[cfg(feature = "proxy")]
+    #[error("failed to send HTTP request: {0}")]
+    UpstreamError(#[from] HttpClientError),
     #[error("HTTPS error: {0}")]
     TlsError(String),
     #[error("Server configuration error: {0}")]
@@ -72,9 +83,15 @@ pub struct MockServerConfig {
 }
 
 /// The `HttpMockServer` struct represents a mock server that can handle incoming HTTP requests.
+///
+/// It is the I/O driver of the sans-IO `Handler`: it accepts connections, buffers
+/// requests, carries out the `Action` the handler decides on, and reports the outcome back
+/// for recording.
 pub struct HttpMockServer {
     handler: handler::Handler,
     config: MockServerConfig,
+    #[cfg(feature = "proxy")]
+    http_client: Arc<HttpMockHttpClient>,
 }
 
 impl HttpMockServer {
@@ -83,8 +100,18 @@ impl HttpMockServer {
     /// # Parameters
     /// - `handler`: The request handler.
     /// - `config`: The configuration settings for the mock server.
-    pub(crate) fn new(handler: handler::Handler, config: MockServerConfig) -> Self {
-        HttpMockServer { handler, config }
+    /// - `http_client`: The client used to send forwarded and proxied requests upstream.
+    pub(crate) fn new(
+        handler: handler::Handler,
+        config: MockServerConfig,
+        #[cfg(feature = "proxy")] http_client: Arc<HttpMockHttpClient>,
+    ) -> Self {
+        HttpMockServer {
+            handler,
+            config,
+            #[cfg(feature = "proxy")]
+            http_client,
+        }
     }
 
     /// Starts the mock server asynchronously.
@@ -240,9 +267,9 @@ impl HttpMockServer {
             .print_access_log
             .then_some((req.method().clone(), req.uri().clone()));
 
-        let resp = match self.handler.handle(req).await {
+        let resp = match self.handle(req).await {
             Ok(response) => to_service_response(response),
-            Err(err) => error_response(StatusCode::INTERNAL_SERVER_ERROR, RouterError(err)),
+            Err(err) => error_response(StatusCode::INTERNAL_SERVER_ERROR, err),
         };
 
         // print access log if enabled
@@ -253,6 +280,37 @@ impl HttpMockServer {
         }
 
         resp
+    }
+
+    /// Lets the handler decide what to do with the request and carries that out: waits for a
+    /// mock's delay, sends forwarded and proxied requests upstream, and records the outcome.
+    async fn handle(&self, req: Request<Bytes>) -> Result<Response<Bytes>, Error> {
+        let served = match self.handler.handle(req)? {
+            Action::Respond(response) => return Ok(response),
+            Action::Serve(served) => *served,
+        };
+
+        #[cfg(feature = "record")]
+        let start = Instant::now();
+        #[cfg(feature = "record")]
+        let is_proxied = served.reply.is_proxied();
+
+        let response = match served.reply {
+            Reply::Mock { delay, response } => {
+                if let Some(delay) = delay {
+                    runtime::sleep(delay).await;
+                }
+                response
+            }
+            #[cfg(feature = "proxy")]
+            Reply::Forward(upstream) | Reply::Proxy(upstream) => self.http_client.send(upstream).await?,
+        };
+
+        #[cfg(feature = "record")]
+        self.handler
+            .record(served.request, is_proxied, start.elapsed(), &response)?;
+
+        Ok(response)
     }
 
     async fn handle_tcp_stream(

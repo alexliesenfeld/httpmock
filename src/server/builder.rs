@@ -317,14 +317,8 @@ impl HttpMockServerBuilder {
             read_static_mock_definitions(dir, state.as_ref())?;
         }
 
-        let handler = handler::Handler::new(
-            state,
-            #[cfg(feature = "proxy")]
-            http_client,
-        );
-
         Ok(HttpMockServer::new(
-            handler,
+            handler::Handler::new(state),
             MockServerConfig {
                 static_port: self.port,
                 expose: self.expose.unwrap_or(false),
@@ -332,6 +326,8 @@ impl HttpMockServerBuilder {
                 #[cfg(feature = "https")]
                 https: self.https_config_builder.build()?,
             },
+            #[cfg(feature = "proxy")]
+            http_client,
         ))
     }
 }
