@@ -45,6 +45,11 @@ pub(super) trait MockServerAdapter {
     -> impl Future<Output = Result<ActiveMock, ServerAdapterError>> + Send;
     fn fetch_mock(&self, mock_id: usize) -> impl Future<Output = Result<ActiveMock, ServerAdapterError>> + Send;
     fn delete_mock(&self, mock_id: usize) -> impl Future<Output = Result<(), ServerAdapterError>> + Send;
+    fn set_up_to_n_times(
+        &self,
+        mock_id: usize,
+        count: usize,
+    ) -> impl Future<Output = Result<(), ServerAdapterError>> + Send;
 
     fn verify(
         &self,
@@ -130,6 +135,10 @@ impl ServerAdapter {
 
     pub(super) async fn delete_mock(&self, mock_id: usize) -> Result<(), ServerAdapterError> {
         dispatch!(self, adapter => adapter.delete_mock(mock_id).await)
+    }
+
+    pub(super) async fn set_up_to_n_times(&self, mock_id: usize, count: usize) -> Result<(), ServerAdapterError> {
+        dispatch!(self, adapter => adapter.set_up_to_n_times(mock_id, count).await)
     }
 
     pub(super) async fn verify(&self, rr: &RequestRequirements) -> Result<Option<ClosestMatch>, ServerAdapterError> {

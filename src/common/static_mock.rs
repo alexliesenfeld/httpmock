@@ -10,10 +10,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::common::{
-    data::{
-        Error, Error::StaticMockConversion, HttpMockRegex, Method, MockDefinition, MockServerHttpResponse,
-        RequestRequirements,
-    },
+    data::{Error, HttpMockRegex, Method, MockDefinition, MockServerHttpResponse, RequestRequirements},
     util::HttpMockBytes,
 };
 
@@ -263,6 +260,8 @@ pub struct StaticHTTPResponse {
     pub body_from_file: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub delay: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub up_to_n_times: Option<usize>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -285,7 +284,7 @@ impl TryInto<MockDefinition> for StaticMockDefinition {
 
     fn try_into(self) -> Result<MockDefinition, Self::Error> {
         if self.then.body_from_file.is_some() {
-            return Err(StaticMockConversion(
+            return Err(Error::StaticMockConversion(
                 "body_from_file is only supported when loading mocks from a static mock directory".to_string(),
             ));
         }
@@ -411,6 +410,7 @@ impl TryInto<MockDefinition> for StaticMockDefinition {
                 delay: self.then.delay,
                 respond_with: None,
             },
+            up_to_n_times: self.then.up_to_n_times,
         })
     }
 }
@@ -558,7 +558,7 @@ fn response_body_bytes(
         // definition files), so it is parsed rather than treated as a JSON string literal.
         let json_body = match json_body {
             Value::String(json) => {
-                serde_json::from_str::<Value>(&json).map_err(|err| StaticMockConversion(err.to_string()))?
+                serde_json::from_str::<Value>(&json).map_err(|err| Error::StaticMockConversion(err.to_string()))?
             }
             value => value,
         };
@@ -590,7 +590,7 @@ impl TryFrom<&MockDefinition> for StaticMockDefinition {
 
         let mut method = None;
         if let Some(method_str) = value.request.method {
-            method = Some(Method::from_str(&method_str).map_err(StaticMockConversion)?);
+            method = Some(Method::from_str(&method_str).map_err(Error::StaticMockConversion)?);
         }
 
         Ok(StaticMockDefinition {
@@ -729,6 +729,7 @@ impl TryFrom<&MockDefinition> for StaticMockDefinition {
                 // by 1000 and adding the milliseconds (also a u64), potentially
                 // exceeding the u64 limit.
                 delay: value.response.delay,
+                up_to_n_times: value.up_to_n_times,
             },
         })
     }

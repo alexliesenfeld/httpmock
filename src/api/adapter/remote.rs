@@ -16,7 +16,9 @@ use crate::{
         },
     },
     common::{
-        data::{ActiveMock, ClosestMatch, MockDefinition, MockServerHttpResponse, RequestRequirements},
+        data::{
+            ActiveMock, ClosestMatch, MockDefinition, MockServerHttpResponse, RequestRequirements, UpToNTimesConfig,
+        },
         http::HttpMockHttpClient,
     },
 };
@@ -192,6 +194,37 @@ impl MockServerAdapter for RemoteMockServerAdapter {
             "delete mock from the mock server",
         )
         .await
+    }
+
+    async fn set_up_to_n_times(&self, mock_id: usize, count: usize) -> Result<(), ServerAdapterError> {
+        let config = UpToNTimesConfig { up_to_n_times: count };
+        let json = serde_json::to_string(&config).map_err(JsonSerializationError)?;
+        let request = self.build_request("PUT", &format!("mocks/{}/up_to_n_times", mock_id), Some(json))?;
+        let (status, body) = self.do_request(request).await?;
+
+        // Servers that predate `up_to_n_times` have no route for this request and serve it like
+        // any other request. Check that the limit was stored, unless the server reported an error
+        // such as a zero limit.
+        if status != StatusCode::INTERNAL_SERVER_ERROR.as_u16()
+            && let Ok(mock) = self.fetch_mock(mock_id).await
+            && mock.up_to_n_times.is_none()
+        {
+            return Err(UpstreamError(
+                "The mock server does not support up_to_n_times. Upgrade the mock server to use it.".to_string(),
+            ));
+        }
+
+        if status != StatusCode::NO_CONTENT.as_u16() {
+            return Err(UpstreamError(format!(
+                "Could not set the up_to_n_times limit on the mock. Expected response status {} but was {} \
+                 (response body = '{}')",
+                StatusCode::NO_CONTENT.as_u16(),
+                status,
+                body
+            )));
+        }
+
+        Ok(())
     }
 
     async fn verify(&self, requirements: &RequestRequirements) -> Result<Option<ClosestMatch>, ServerAdapterError> {
