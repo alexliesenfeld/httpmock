@@ -11,7 +11,7 @@
 //! * Custom request matchers.
 //! * Standalone mode with an accompanying [Docker image](https://hub.docker.com/r/httpmock/httpmock).
 //! * Helpful error messages
-//! * [Advanced verification and debugging support](https://httpmock.github.io/posts/mocking-http--services-in-rust/#creating-mocks) (including diff generation between actual and expected HTTP request values)
+//! * [Advanced verification and debugging support](https://httpmock.rs/server/debugging/) (including diff generation between actual and expected HTTP request values)
 //! * Parallel test execution.
 //! * Fully asynchronous core with synchronous and asynchronous APIs.
 //! * Support for [mock configuration using YAML files](https://httpmock.rs/server/standalone/).
@@ -77,15 +77,27 @@
 //!
 //! # Usage
 //!
-//! See the [official website](http://httpmock.rs) a for detailed
-//! API documentation.
+//! These pages are the API reference: every [`When`] and [`Then`] method documents itself with an
+//! example, and [`MockServer`], [`Mock`], [`HttpMockRequest`] and [`HttpMockResponse`] cover the
+//! rest. The guide lives on the [official website](https://httpmock.rs), which explains how the
+//! pieces fit together:
+//!
+//! * [Fundamentals](https://httpmock.rs/getting_started/fundamentals/): how mocks, matchers and
+//!   the server pool work.
+//! * [Standalone server and Docker](https://httpmock.rs/server/standalone/): running the server
+//!   outside your tests, including YAML mock files.
+//! * [HTTPS](https://httpmock.rs/server/https/): TLS support and certificates.
+//! * [Recording](https://httpmock.rs/record-and-playback/recording/) and
+//!   [playback](https://httpmock.rs/record-and-playback/playback/): capturing real traffic and
+//!   replaying it.
+//! * [Debugging](https://httpmock.rs/server/debugging/): reading assertion output and logs.
+//! * [FAQ](https://httpmock.rs/miscellaneous/faq/).
 //!
 //! ## Examples
 //!
 //! You can find examples in the
 //! [`httpmock` test directory](https://github.com/httpmock/httpmock/blob/master/tests/).
-//! The [official website](http://httpmock.rs) and [reference docs](https://docs.rs/httpmock/)
-//! also contain _**a lot**_ of examples.
+//! The [official website](https://httpmock.rs) and the item docs here also contain a lot of examples.
 //!
 //! ## License
 //!
@@ -93,6 +105,7 @@
 //!
 //! This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
 //! warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the MIT Public License for more details.
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 mod common;
 
