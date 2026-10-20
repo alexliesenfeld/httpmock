@@ -10,6 +10,7 @@ categories = ["development-tools::testing"]
 license = "MIT"
 repository = "https://github.com/httpmock/httpmock"
 rust-version = "1.88.0"
+exclude = [".github/", "assets/", "docs/", "scripts/", "codecov.yml", "funding.json", "tarpaulin*.toml"]
 
 [lints.rust]
 # Gate the `warnings` group at error level so new rustc warnings fail CI. The
@@ -74,7 +75,7 @@ remote = ["hyper-util/client-legacy", "hyper-util/http2"] # allows to connect to
 remote-https = ["remote", "rustls", "rustls/ring", "hyper-rustls", "hyper-rustls/ring", "hyper-rustls/http2"] # allows to connect to remote mock servers via HTTPS
 proxy = ["remote-https", "hyper-util/client-legacy", "hyper-util/http2", "hyper-rustls", "hyper-rustls/http2"] # enables proxy functionality
 https = ["rustls", "rcgen", "tokio-rustls", "hyper-rustls", "rustls-pki-types", "rustls/ring", "hyper-rustls/ring", "if-addrs"] # enables httpmock server support for TLS/HTTPS
-http2 = ["hyper/http2", "hyper-util/http2", "hyper-util/server-auto"] # enables httpmocks server support for HTTP2
+http2 = ["hyper/http2", "hyper-util/http2", "hyper-util/server-auto", "hyper-rustls?/http2"] # enables httpmocks server support for HTTP2
 record = ["proxy", "serde_yaml"]
 
 [[bin]]

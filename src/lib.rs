@@ -14,14 +14,14 @@
 //! * [Advanced verification and debugging support](https://httpmock.github.io/posts/mocking-http--services-in-rust/#creating-mocks) (including diff generation between actual and expected HTTP request values)
 //! * Parallel test execution.
 //! * Fully asynchronous core with synchronous and asynchronous APIs.
-//! * Support for [mock configuration using YAML files](https://github.com/httpmock/httpmock/tree/master#file-based-mock-specification).
+//! * Support for [mock configuration using YAML files](https://httpmock.rs/server/standalone/).
 //!
 //! # Getting Started
 //! Add `httpmock` to `Cargo.toml`:
 //!
 //! ```toml
 //! [dev-dependencies]
-//! httpmock = "0.8.3"
+//! httpmock = "0.9.0"
 //! ```
 //!
 //! You can then use `httpmock` as follows:
@@ -72,7 +72,7 @@
 //!     1. word=hello
 //!
 //! Matcher:  query_param
-//! Docs:     https://docs.rs/httpmock/0.8.3/httpmock/struct.When.html#method.query_param
+//! Docs:     https://docs.rs/httpmock/latest/httpmock/struct.When.html#method.query_param
 //! ```
 //!
 //! # Usage

@@ -7,10 +7,10 @@ remains 1.88.
 
 ### Breaking changes
 
-- `server::matchers` is now crate-private. Its matcher, comparator and reader types
-  are implementation details rather than a supported extension API; there is no
+- `server::matchers` is now crate-private
+  ([#312](https://github.com/httpmock/httpmock/pull/312)). Its matcher, comparator and reader
+  types are implementation details rather than a supported extension API; there is no
   replacement public path.
-
 - The body helpers `is_blank`, `contains_str`, `contains_slice` and `contains_vec`
   were removed ([#246](https://github.com/httpmock/httpmock/pull/246)). Use
   `request.body_ref()` to inspect the bytes directly, or `When::body_includes`
@@ -20,8 +20,7 @@ remains 1.88.
   `HashMap<String, String>` instead.
 - The `MockExt` trait was removed and `Mock`'s public `id` field is now private
   ([#285](https://github.com/httpmock/httpmock/pull/285)). Remove `MockExt` imports and
-  replace direct `mock.id` field access with `mock.id()`. The inherent `Mock::new`
-  constructor remains available.
+  replace direct `mock.id` field access with `mock.id()`.
 - The mock server only accepts HTTP/2 connections when the `http2` cargo feature is enabled
   ([#297](https://github.com/httpmock/httpmock/pull/297)). Previously, cleartext HTTP/2 with
   prior knowledge (e.g. gRPC clients) was accepted without it, because an internal dependency
@@ -31,8 +30,9 @@ remains 1.88.
 - `server::state::MockServerState` is now crate-private
   ([#289](https://github.com/httpmock/httpmock/pull/289)). Direct construction of the raw
   state type is no longer available; code using the `MockServer` API is unaffected.
-- The empty `experimental` Cargo feature was removed. Remove it from your dependency's feature list;
-  it did not enable any functionality.
+- The empty `experimental` Cargo feature was removed
+  ([#316](https://github.com/httpmock/httpmock/pull/316)). Remove it from your dependency's
+  feature list; it did not enable any functionality.
 - The Docker image now uses a slim Debian runtime without the Rust toolchain or source tree.
   `curl` and `wget` are no longer installed, so container healthchecks that call them need
   to be adjusted. The executable is now at `/usr/local/bin/httpmock`, with a compatibility
@@ -46,11 +46,10 @@ remains 1.88.
 #### Upgrading from 0.8
 
 Most code needs no changes. Remove `MockExt` imports and use `mock.id()` to read a mock's
-ID; reconstructing handles with `Mock::new(id, &server)` remains supported. Replace
+ID. Replace
 `body().is_blank()` with `body_ref().iter().all(u8::is_ascii_whitespace)` and use byte-slice
 operations for the removed `contains_*` helpers.
 
-`HttpMockRequest::to_http_request()` remains available.
 Direct imports from `server::matchers` must be removed; use the `When` API to configure
 matchers instead.
 
@@ -59,15 +58,17 @@ feature.
 
 ### Improvements
 
-- Add `HttpMockResponse::to_http_response()` for converting to an HTTP response with a
-  byte body. The method borrows the response and returns any conversion error.
+- [#326](https://github.com/httpmock/httpmock/pull/326): Add `HttpMockResponse::to_http_response()`
+  for converting to an HTTP response with a byte body. The method borrows the response and
+  returns any conversion error.
 - [#108](https://github.com/httpmock/httpmock/pull/108): Mocks can be limited to a number of
-  calls with `Then::up_to_n_times` or `Mock::up_to_n_times`, after which they stop
-  matching requests. Static mock YAML files support the same limit as `up_to_n_times`
-  under `then`. (resolves [#96](https://github.com/httpmock/httpmock/issues/96))
+  calls with `Then::up_to_n_times`, `Mock::up_to_n_times` or `Mock::up_to_n_times_async`,
+  after which they stop matching requests. Static mock YAML files support the same limit as
+  `up_to_n_times` under `then`. (resolves [#96](https://github.com/httpmock/httpmock/issues/96))
+  (thanks [@wfchandler](https://github.com/wfchandler))
 - Async mock, forwarding, proxy and recording setup futures implement `Send` when their
-  inputs do, allowing registration inside `tokio::spawn`. Builders retain their owned API
-  without new lifetime parameters ([#257](https://github.com/httpmock/httpmock/pull/257)).
+  inputs do, allowing registration inside `tokio::spawn`
+  ([#325](https://github.com/httpmock/httpmock/pull/325)).
 - `When`, `Then` and the forwarding, proxy and recording rule builders are now `Send` and
   `Sync` ([#322](https://github.com/httpmock/httpmock/pull/322)).
 - [#297](https://github.com/httpmock/httpmock/pull/297): The dependency tree is about 30% smaller
@@ -76,19 +77,21 @@ feature.
 - `async-trait` and `tls-detect` are no longer dependencies. The server now tells TLS and
   plain HTTP connections apart by the first byte the client sends.
 - [#275](https://github.com/httpmock/httpmock/pull/275): Owned HTTP request and response
-  conversions avoid unnecessary body clones. Boxed byte bodies remain supported for both
-  owned and borrowed conversions; borrowed conversions retain the caller's original body.
+  conversions avoid unnecessary body clones.
 - [#299](https://github.com/httpmock/httpmock/pull/299): Static mock YAML files now support
   `json_body` and `body_from_file` (resolves issues
   [#118](https://github.com/httpmock/httpmock/issues/118) and
   [#185](https://github.com/httpmock/httpmock/issues/185))
-- [#251](https://github.com/httpmock/httpmock/pull/251): Default certificates and keys are
-  exposed for testing (thanks [@ErikMcClure](https://github.com/ErikMcClure))
+- [#251](https://github.com/httpmock/httpmock/pull/251): The default CA certificate and key are
+  exposed for testing as `server::DEFAULT_CA_CERTIFICATE` and `server::DEFAULT_CA_PRIVATE_KEY`
+  (`https` feature) (thanks [@ErikMcClure](https://github.com/ErikMcClure))
 - [#298](https://github.com/httpmock/httpmock/pull/298): The case-sensitive body matching
   introduced in v0.8.0 is now documented
 
 ### Bug fixes
 
+- The `http2` feature now also enables HTTP/2 in the HTTPS client, so `remote`, `https` and
+  `http2` compile together without `remote-https`
 - [#229](https://github.com/httpmock/httpmock/pull/229): The `https` feature builds correctly
   again (hyper-rustls/ring is enabled) (thanks [@danieleades](https://github.com/danieleades))
 - [#242](https://github.com/httpmock/httpmock/pull/242),
@@ -101,10 +104,12 @@ feature.
   honored instead of a hardcoded cap (thanks [@danieleades](https://github.com/danieleades))
 - The `*_prefix` and `*_suffix` matchers no longer panic with a char-boundary error when
   building a mismatch report for a request value containing multi-byte UTF-8 characters
-- Mismatch reports print request and mock values containing tab characters (e.g. TSV bodies)
-  verbatim instead of re-aligning them into columns
-- `Recording::save` and `save_to` no longer overwrite a recording saved under the same
-  scenario name in the same second; the second file gets a counter suffix
+- [#315](https://github.com/httpmock/httpmock/pull/315): Mismatch reports print request and mock
+  values containing tab characters (e.g. TSV bodies) verbatim instead of re-aligning them into
+  columns
+- [#318](https://github.com/httpmock/httpmock/pull/318): `Recording::save` and `save_to` no longer
+  overwrite a recording saved under the same scenario name in the same second; the second file
+  gets a counter suffix
   (`<scenario>_<timestamp>_1.yaml`)
 
 ### Internal improvements and CI
@@ -122,8 +127,10 @@ feature.
 - [#246](https://github.com/httpmock/httpmock/pull/246): "refactor: remove dead code and drop the url dependency" (thanks [@danieleades](https://github.com/danieleades))
 - [#247](https://github.com/httpmock/httpmock/pull/247): "refactor: derive Default for RequestRequirements" (thanks [@danieleades](https://github.com/danieleades))
 - [#248](https://github.com/httpmock/httpmock/pull/248): "refactor: deduplicate remote adapter request handling" (thanks [@danieleades](https://github.com/danieleades))
+- [#249](https://github.com/httpmock/httpmock/pull/249): "refactor: deduplicate matcher comparison logic" (thanks [@danieleades](https://github.com/danieleades))
 - [#250](https://github.com/httpmock/httpmock/pull/250): "refactor: deduplicate list-append builder boilerplate in spec.rs" (thanks [@danieleades](https://github.com/danieleades))
 - [#258](https://github.com/httpmock/httpmock/pull/258): "Fix CI failures on master" (thanks [@danieleades](https://github.com/danieleades))
+- [#261](https://github.com/httpmock/httpmock/pull/261): "refactor: remove redundant data constructors" (thanks [@danieleades](https://github.com/danieleades))
 - [#263](https://github.com/httpmock/httpmock/pull/263): "style: enforce clippy::ptr_arg" (thanks [@danieleades](https://github.com/danieleades))
 - [#266](https://github.com/httpmock/httpmock/pull/266): "style: enforce clippy::new_without_default" (thanks [@danieleades](https://github.com/danieleades))
 - [#268](https://github.com/httpmock/httpmock/pull/268): "style: enforce clippy::doc_overindented_list_items" (thanks [@danieleades](https://github.com/danieleades))
@@ -134,7 +141,21 @@ feature.
 - [#286](https://github.com/httpmock/httpmock/pull/286): "style: simplify internal error variants" (thanks [@danieleades](https://github.com/danieleades))
 - [#287](https://github.com/httpmock/httpmock/pull/287): "style: enforce unused_variables" (thanks [@danieleades](https://github.com/danieleades))
 - [#288](https://github.com/httpmock/httpmock/pull/288): "style: enforce unused_imports" (thanks [@danieleades](https://github.com/danieleades))
-- [#289](https://github.com/httpmock/httpmock/pull/289): "breaking: remove the Handler and StateManager traits" (server internals, no impact on the public mocking API) (thanks [@danieleades](https://github.com/danieleades))
+- [#289](https://github.com/httpmock/httpmock/pull/289): "breaking: remove the Handler and StateManager traits" (server internals; the `MockServerState` removal is listed under breaking changes) (thanks [@danieleades](https://github.com/danieleades))
+- [#290](https://github.com/httpmock/httpmock/pull/290): "refactor: align matcher names and regex argument order" (thanks [@danieleades](https://github.com/danieleades))
+- [#291](https://github.com/httpmock/httpmock/pull/291): "Remove unused code lint from allow list" (thanks [@danieleades](https://github.com/danieleades))
+- [#300](https://github.com/httpmock/httpmock/pull/300): "ci: deploy docs website on release instead of every master push" (thanks [@alexliesenfeld](https://github.com/alexliesenfeld))
+- [#301](https://github.com/httpmock/httpmock/pull/301): "chore: prepare 0.9.0 release" (thanks [@alexliesenfeld](https://github.com/alexliesenfeld))
+- [#304](https://github.com/httpmock/httpmock/pull/304): "style: enable clippy::redundant_clone lint" (thanks [@danieleades](https://github.com/danieleades))
+- [#305](https://github.com/httpmock/httpmock/pull/305): "ci: check for rustdoc warnings" (thanks [@danieleades](https://github.com/danieleades))
+- [#311](https://github.com/httpmock/httpmock/pull/311): "refactor: use named module files in src" (thanks [@danieleades](https://github.com/danieleades))
+- [#312](https://github.com/httpmock/httpmock/pull/312): "breaking: make matcher and backend internals private" (thanks [@danieleades](https://github.com/danieleades))
+- [#315](https://github.com/httpmock/httpmock/pull/315): "refactor: drop the tab writer from mismatch output" (thanks [@FalkWoldmann](https://github.com/FalkWoldmann))
+- [#316](https://github.com/httpmock/httpmock/pull/316): "chore: remove redundant imports, extern crates and the experimental feature" (thanks [@FalkWoldmann](https://github.com/FalkWoldmann))
+- [#317](https://github.com/httpmock/httpmock/pull/317): "chore(tools): drop the unused httpmock dependency" (thanks [@FalkWoldmann](https://github.com/FalkWoldmann))
+- [#328](https://github.com/httpmock/httpmock/pull/328): "Add Claude Code GitHub Workflow" (thanks [@FalkWoldmann](https://github.com/FalkWoldmann))
+- [#329](https://github.com/httpmock/httpmock/pull/329): "Handle fork PRs in the Claude workflows" (thanks [@FalkWoldmann](https://github.com/FalkWoldmann))
+- [#331](https://github.com/httpmock/httpmock/pull/331): "Fix error message of local verify" (thanks [@FalkWoldmann](https://github.com/FalkWoldmann))
 
 ### Dependency updates
 
@@ -150,6 +171,17 @@ feature.
 - [#256](https://github.com/httpmock/httpmock/pull/256): "ci(deps): bump the npm_and_yarn group across 1 directory with 3 updates"
 - [#272](https://github.com/httpmock/httpmock/pull/272): "ci(deps): bump js-yaml from 4.3.0 to 4.3.1 in /docs/website"
 - [#294](https://github.com/httpmock/httpmock/pull/294): "ci(deps): bump taiki-e/install-action from 2.85.5 to 2.86.5"
+- [#295](https://github.com/httpmock/httpmock/pull/295): "ci(deps): bump taiki-e/install-action from 2.86.5 to 2.87.0"
+- [#302](https://github.com/httpmock/httpmock/pull/302): "ci(deps): bump fast-uri from 3.1.5 to 3.1.7 in /docs/website"
+- [#307](https://github.com/httpmock/httpmock/pull/307): "ci(deps): bump svgo from 4.0.2 to 4.1.0 in /docs/website"
+- [#308](https://github.com/httpmock/httpmock/pull/308): "ci(deps): bump taiki-e/install-action from 2.87.0 to 2.87.11"
+- [#309](https://github.com/httpmock/httpmock/pull/309): "ci(deps): bump actions-rust-lang/setup-rust-toolchain from 1 to 2"
+- [#310](https://github.com/httpmock/httpmock/pull/310): "ci(deps): bump the npm_and_yarn group across 1 directory with 5 updates"
+- [#313](https://github.com/httpmock/httpmock/pull/313): "ci(deps): bump actions-rust-lang/setup-rust-toolchain from 1 to 2"
+- [#314](https://github.com/httpmock/httpmock/pull/314): "ci(deps): bump taiki-e/install-action from 2.87.11 to 2.87.15"
+- [#319](https://github.com/httpmock/httpmock/pull/319): "ci(deps): bump taiki-e/install-action from 2.87.15 to 2.87.20"
+- [#327](https://github.com/httpmock/httpmock/pull/327): "ci(deps): bump taiki-e/install-action from 2.87.20 to 2.87.22"
+- [#330](https://github.com/httpmock/httpmock/pull/330): "ci(deps): bump the npm_and_yarn group across 1 directory with 2 updates"
 
 ## Version 0.8.3
 
