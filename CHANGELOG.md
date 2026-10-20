@@ -1,6 +1,6 @@
 # Changelog
 
-## Version 0.9.0 (unreleased)
+## Version 0.9.0
 
 The crate was upgraded to the Rust 2024 edition. The minimum supported Rust version
 remains 1.88.
