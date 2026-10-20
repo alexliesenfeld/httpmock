@@ -37,11 +37,7 @@ pub(crate) fn take_from_mutex<T: Default>(mutex: &Mutex<T>) -> T {
 // Retry
 // ===============================================================================================
 #[doc(hidden)]
-pub(crate) async fn with_retry<T, U, F, Fut>(retries: usize, f: F) -> Result<T, U>
-where
-    F: Fn() -> Fut,
-    Fut: Future<Output = Result<T, U>>,
-{
+pub(crate) async fn with_retry<T, U>(retries: usize, f: impl AsyncFn() -> Result<T, U>) -> Result<T, U> {
     let mut result = (f)().await;
     for i in 1..=retries {
         if result.is_ok() {
