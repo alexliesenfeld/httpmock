@@ -49,7 +49,7 @@
 * [Advanced verification and debugging support](https://alexliesenfeld.github.io/posts/mocking-http--services-in-rust/#creating-mocks) (including diff generation between actual and expected HTTP request values)
 * Parallel test execution.
 * Fully asynchronous core with synchronous and asynchronous APIs.
-* Support for [mock configuration using YAML files](https://github.com/httpmock/httpmock/tree/master#file-based-mock-specification).
+* Support for [mock configuration using YAML files](https://httpmock.rs/server/standalone/).
 
 ## Getting Started
 
