@@ -13,12 +13,18 @@ RUN cargo install --all-features --path .
 
 FROM debian:trixie-slim
 
+WORKDIR /httpmock
+
 # hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /usr/local/cargo/bin/httpmock /usr/local/bin/httpmock
+# In 0.9, the binary moved from /usr/local/cargo/bin/httpmock (used in 0.8.3)
+# to /usr/local/bin/httpmock. Keep the deprecated path working for existing
+# configurations using the old absolute path. Remove in a future release.
+RUN mkdir -p /usr/local/cargo/bin && ln -s /usr/local/bin/httpmock /usr/local/cargo/bin/httpmock
 
 # Log level (refer to env_logger crate for more information)
 ENV RUST_LOG=httpmock=info

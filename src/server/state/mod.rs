@@ -41,7 +41,7 @@ pub(crate) const DEFAULT_HISTORY_LIMIT: usize = 100;
 
 /// The mock server's mutable state: the registered mocks, the request history,
 /// and the active forwarding, proxy and recording rules.
-pub(crate) struct Inner {
+pub(crate) struct MockServerState {
     next_mock_id: usize,
     history_limit: usize,
     pub mocks: BTreeMap<usize, ActiveMock>,
@@ -53,9 +53,9 @@ pub(crate) struct Inner {
     recording: record::State,
 }
 
-impl Inner {
+impl MockServerState {
     pub fn new(history_limit: usize) -> Self {
-        Inner {
+        MockServerState {
             mocks: BTreeMap::new(),
             #[cfg(feature = "proxy")]
             proxy: Default::default(),
@@ -70,14 +70,14 @@ impl Inner {
 }
 
 /// Owns the mock server's state and serialises access to it.
-pub struct Manager {
-    state: Mutex<Inner>,
+pub struct HttpMockStateManager {
+    state: Mutex<MockServerState>,
 }
 
-impl Manager {
+impl HttpMockStateManager {
     pub fn new(history_limit: usize) -> Self {
         Self {
-            state: Mutex::new(Inner::new(history_limit)),
+            state: Mutex::new(MockServerState::new(history_limit)),
         }
     }
 
@@ -264,9 +264,9 @@ impl Manager {
     }
 }
 
-impl Default for Manager {
+impl Default for HttpMockStateManager {
     fn default() -> Self {
-        Manager::new(DEFAULT_HISTORY_LIMIT)
+        HttpMockStateManager::new(DEFAULT_HISTORY_LIMIT)
     }
 }
 
@@ -363,7 +363,7 @@ mod tests {
     #[test]
     fn history_is_capped_at_configured_limit() {
         let history_limit = 3;
-        let manager = Manager::new(history_limit);
+        let manager = HttpMockStateManager::new(history_limit);
 
         // Serve more requests than the configured limit.
         for _ in 0..10 {
@@ -394,7 +394,7 @@ mod tests {
 
     #[test]
     fn exhausted_mock_stops_matching_but_keeps_its_call_counter() {
-        let manager = Manager::default();
+        let manager = HttpMockStateManager::default();
         let id = manager.add_mock(limited_mock(Some(2)), false).unwrap().id;
 
         let served: Vec<bool> = (0..3)
@@ -407,7 +407,7 @@ mod tests {
 
     #[test]
     fn up_to_n_times_counts_calls_served_before_the_limit_was_set() {
-        let manager = Manager::default();
+        let manager = HttpMockStateManager::default();
         let id = manager.add_mock(limited_mock(None), false).unwrap().id;
         for _ in 0..3 {
             assert!(manager.serve_mock(&dummy_request()).unwrap().is_some());
@@ -421,7 +421,7 @@ mod tests {
 
     #[test]
     fn raising_up_to_n_times_lets_an_exhausted_mock_match_again() {
-        let manager = Manager::default();
+        let manager = HttpMockStateManager::default();
         let id = manager.add_mock(limited_mock(Some(1)), false).unwrap().id;
         assert!(manager.serve_mock(&dummy_request()).unwrap().is_some());
         assert!(manager.serve_mock(&dummy_request()).unwrap().is_none());
@@ -437,14 +437,14 @@ mod tests {
 
     #[test]
     fn up_to_n_times_on_unknown_mock_reports_not_found() {
-        let manager = Manager::default();
+        let manager = HttpMockStateManager::default();
 
         assert!(!manager.set_up_to_n_times(42, 1).unwrap());
     }
 
     #[test]
     fn up_to_n_times_on_static_mock_is_rejected() {
-        let manager = Manager::default();
+        let manager = HttpMockStateManager::default();
         let id = manager.add_mock(limited_mock(None), true).unwrap().id;
 
         assert!(matches!(manager.set_up_to_n_times(id, 1), Err(StaticMockError)));
@@ -452,7 +452,7 @@ mod tests {
 
     #[test]
     fn reset_lets_exhausted_static_mocks_match_again() {
-        let manager = Manager::default();
+        let manager = HttpMockStateManager::default();
         let id = manager.add_mock(limited_mock(Some(1)), true).unwrap().id;
         assert!(manager.serve_mock(&dummy_request()).unwrap().is_some());
         assert!(manager.serve_mock(&dummy_request()).unwrap().is_none());
@@ -465,7 +465,7 @@ mod tests {
 
     #[test]
     fn zero_up_to_n_times_is_rejected() {
-        let manager = Manager::default();
+        let manager = HttpMockStateManager::default();
 
         assert!(matches!(
             manager.add_mock(limited_mock(Some(0)), false),
@@ -479,7 +479,7 @@ mod tests {
 
     #[test]
     fn exhausted_mock_round_trips_through_serialization() {
-        let manager = Manager::default();
+        let manager = HttpMockStateManager::default();
         let id = manager.add_mock(limited_mock(Some(1)), false).unwrap().id;
         assert!(manager.serve_mock(&dummy_request()).unwrap().is_some());
 
@@ -493,7 +493,7 @@ mod tests {
 
     #[test]
     fn default_history_limit_is_preserved() {
-        let manager = Manager::default();
+        let manager = HttpMockStateManager::default();
         assert_eq!(manager.state.lock().unwrap().history_limit, DEFAULT_HISTORY_LIMIT);
     }
 }
