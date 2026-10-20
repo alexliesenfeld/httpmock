@@ -160,7 +160,7 @@ impl<'a> GeneratingCertificateResolver {
             // If this call originated from a no-SNI fallback, hostname equals the
             // local TCP address of this resolver. In that case, enrich the cert
             // with local-friendly SANs and any extras from HTTPMOCK_EXTRA_SANS.
-            if self.authority.is_none() || self.authority_ip().map(|a| a == ip).unwrap_or(false) {
+            if self.authority.is_none() || self.authority_ip().is_some_and(|a| a == ip) {
                 // No-SNI fallback or no authority: add localhost variants, all local IPs, and extras from env
                 if let Ok(localhost_dns) =
                     <rcgen::string::Ia5String as std::convert::TryFrom<&str>>::try_from("localhost")
