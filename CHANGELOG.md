@@ -53,6 +53,11 @@ remains 1.88.
 - The `tls-detect` cargo feature was removed
   ([#333](https://github.com/httpmock/httpmock/pull/333)). It only enabled an internal
   dependency that `https` already pulled in; remove it from your feature list.
+- Optional dependencies no longer double as cargo features: `clap`, `colored`, `headers`,
+  `hyper-rustls`, `if-addrs`, `rcgen`, `rustls`, `rustls-pki-types`, `serde_yaml`,
+  `tokio-rustls` and `tracing-subscriber` are enabled through the documented features only.
+  Replace any of these names in your feature list with the feature that needs them, such as
+  `https` or `standalone`.
 - `RecordingRuleBuilder::config` is now private
   ([#322](https://github.com/httpmock/httpmock/pull/322)). Its type could only be used through
   type inference; configure recordings through the builder's methods.
@@ -69,6 +74,9 @@ matchers instead.
 
 Tests whose clients speak cleartext HTTP/2 to the mock server additionally need the `http2`
 feature.
+
+The methods deprecated since 0.8.0 (`Mock::hits`, `hits_async`, `assert_hits`,
+`assert_hits_async` and `When::matches`) are still available and will be removed in 1.0.
 
 ### Improvements
 
