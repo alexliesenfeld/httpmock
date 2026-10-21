@@ -284,7 +284,7 @@ impl HttpMockServer {
     /// mock's delay, sends forwarded and proxied requests upstream, and hands the outcome back
     /// to the handler, which records it.
     async fn handle(&self, req: Request<Bytes>) -> Result<Finished, Error> {
-        let (reply, pending) = match self.handler.handle(req)? {
+        let (reply, served) = match self.handler.handle(req)? {
             Action::Respond(finished) => return Ok(finished),
             Action::Serve { reply, pending } => (reply, pending),
         };
@@ -301,7 +301,7 @@ impl HttpMockServer {
             Reply::Forward(upstream) | Reply::Proxy(upstream) => self.http_client.send(upstream).await?,
         };
 
-        Ok(self.handler.finish(pending, start.elapsed(), response)?)
+        Ok(self.handler.finish(served, start.elapsed(), response)?)
     }
 
     async fn handle_tcp_stream(
