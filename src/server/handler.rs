@@ -12,7 +12,7 @@
 //! | nothing matches, including a management path with another method | `Serve` with a 404 `Reply::Mock` | request appended to the history |
 //!
 //! After an `Action::Serve` the transport passes the response and the time it took to
-//! [`Handler::record`], which turns them into mock definitions for every recording whose rule
+//! [`Handler::finish`], which turns them into mock definitions for every recording whose rule
 //! matches the request.
 
 use std::{
@@ -80,17 +80,28 @@ pub(crate) enum Action {
     /// Send the response to a management API request. Management responses are not recorded.
     Respond(Response<Bytes>),
     /// Serve a request that is not for the management API: mock it, forward it or proxy it, then
-    /// hand the outcome to [`Handler::record`]. Boxed because the recorded request makes it
+    /// hand the outcome to [`Handler::finish`]. Boxed because the recorded request makes it
     /// several times the size of a management response.
     Serve(Box<Served>),
 }
 
 /// A request that is not for the management API, together with the reply decided for it.
 pub(crate) struct Served {
-    /// The request as the matchers saw it, kept for recording.
-    #[cfg(feature = "record")]
-    pub request: HttpMockRequest,
     pub reply: Reply,
+    /// Goes back to [`Handler::finish`] together with the response that was sent.
+    pub pending: Pending,
+}
+
+/// A served request whose outcome has not been reported yet. Its fields are private and
+/// [`Handler::finish`] is the only consumer, so a driver cannot send a reply and forget to let the
+/// recordings see it.
+#[must_use = "pass it to Handler::finish with the response that was sent, or recordings miss it"]
+pub(crate) struct Pending {
+    /// The request as the matchers saw it.
+    #[cfg(feature = "record")]
+    request: HttpMockRequest,
+    #[cfg(feature = "record")]
+    is_proxied: bool,
 }
 
 /// How a served request is answered.
@@ -107,19 +118,6 @@ pub(crate) enum Reply {
     /// reply.
     #[cfg(feature = "proxy")]
     Proxy(Request<Bytes>),
-}
-
-#[cfg(feature = "record")]
-impl Reply {
-    pub(crate) fn is_proxied(&self) -> bool {
-        match self {
-            Reply::Mock { .. } => false,
-            #[cfg(feature = "proxy")]
-            Reply::Forward(_) => false,
-            #[cfg(feature = "proxy")]
-            Reply::Proxy(_) => true,
-        }
-    }
 }
 
 enum RoutePath {
@@ -241,17 +239,14 @@ impl Handler {
         Some(response)
     }
 
-    /// Records the outcome of an [`Action::Serve`] for the recordings whose rules match the
-    /// request. `elapsed` is the time the transport took to produce the response.
-    #[cfg(feature = "record")]
-    pub(crate) fn record(
-        &self,
-        request: HttpMockRequest,
-        is_proxied: bool,
-        elapsed: Duration,
-        response: &Response<Bytes>,
-    ) -> Result<(), Error> {
-        self.state.record(is_proxied, elapsed, request, response)?;
+    /// Completes an [`Action::Serve`]: records the response for every recording whose rule
+    /// matches the request. `elapsed` is the time the driver took to produce the response.
+    pub(crate) fn finish(&self, pending: Pending, elapsed: Duration, response: &Response<Bytes>) -> Result<(), Error> {
+        #[cfg(feature = "record")]
+        self.state
+            .record(pending.is_proxied, elapsed, pending.request, response)?;
+        #[cfg(not(feature = "record"))]
+        let _ = (pending, elapsed, response);
         Ok(())
     }
 
@@ -333,11 +328,14 @@ impl Handler {
         #[cfg(not(feature = "proxy"))]
         let reply = self.mock_reply(&request)?;
 
-        Ok(Action::Serve(Box::new(Served {
+        let pending = Pending {
+            #[cfg(feature = "record")]
+            is_proxied: matches!(reply, Reply::Proxy(_)),
             #[cfg(feature = "record")]
             request,
-            reply,
-        })))
+        };
+
+        Ok(Action::Serve(Box::new(Served { reply, pending })))
     }
 
     /// Matches the request against the mocks and builds the reply, a 404 when none matched.
@@ -777,7 +775,7 @@ mod tests {
                 panic!("expected a mock reply");
             };
             handler
-                .record(served.request, false, Duration::from_millis(40), &response)
+                .finish(served.pending, Duration::from_millis(40), &response)
                 .unwrap();
 
             let yaml = handler.state.export_recording(recording.id).unwrap().unwrap();

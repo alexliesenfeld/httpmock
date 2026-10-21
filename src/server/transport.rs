@@ -1,6 +1,4 @@
-#[cfg(feature = "record")]
-use std::time::Instant;
-use std::{future::pending, io, net::SocketAddr, pin::Pin, sync::Arc};
+use std::{future::pending, io, net::SocketAddr, pin::Pin, sync::Arc, time::Instant};
 
 use http::{Request, StatusCode};
 use http_body_util::{BodyExt, Empty, Full, combinators::BoxBody};
@@ -29,7 +27,7 @@ use crate::{
     common::runtime,
     server::{
         self,
-        handler::{self, Action, Reply},
+        handler::{self, Action, Reply, Served},
         transport::Error::{BufferError, LocalSocketAddrError, PublishSocketAddrError, SocketBindError},
     },
 };
@@ -285,17 +283,13 @@ impl HttpMockServer {
     /// Lets the handler decide what to do with the request and carries that out: waits for a
     /// mock's delay, sends forwarded and proxied requests upstream, and records the outcome.
     async fn handle(&self, req: Request<Bytes>) -> Result<Response<Bytes>, Error> {
-        let served = match self.handler.handle(req)? {
+        let Served { reply, pending } = match self.handler.handle(req)? {
             Action::Respond(response) => return Ok(response),
             Action::Serve(served) => *served,
         };
 
-        #[cfg(feature = "record")]
         let start = Instant::now();
-        #[cfg(feature = "record")]
-        let is_proxied = served.reply.is_proxied();
-
-        let response = match served.reply {
+        let response = match reply {
             Reply::Mock { delay, response } => {
                 if let Some(delay) = delay {
                     runtime::sleep(delay).await;
@@ -306,9 +300,7 @@ impl HttpMockServer {
             Reply::Forward(upstream) | Reply::Proxy(upstream) => self.http_client.send(upstream).await?,
         };
 
-        #[cfg(feature = "record")]
-        self.handler
-            .record(served.request, is_proxied, start.elapsed(), &response)?;
+        self.handler.finish(pending, start.elapsed(), &response)?;
 
         Ok(response)
     }
