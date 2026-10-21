@@ -125,11 +125,7 @@ impl HttpMockStateManager {
     pub(crate) fn read_mock(&self, id: usize) -> Result<Option<ActiveMock>, Error> {
         let state = self.state.lock().unwrap();
 
-        let result = state.mocks.get(&id);
-        match result {
-            Some(found) => Ok(Some(found.clone())),
-            None => Ok(None),
-        }
+        Ok(state.mocks.get(&id).cloned())
     }
 
     pub(crate) fn delete_mock(&self, id: usize) -> Result<bool, Error> {
@@ -171,16 +167,7 @@ impl HttpMockStateManager {
     pub(crate) fn delete_all_mocks(&self) {
         let mut state = self.state.lock().unwrap();
 
-        let ids: Vec<usize> = state
-            .mocks
-            .iter()
-            .filter(|(_k, v)| !v.is_static)
-            .map(|(k, _v)| *k)
-            .collect();
-
-        ids.iter().for_each(|k| {
-            state.mocks.remove(k);
-        });
+        state.mocks.retain(|_, mock| mock.is_static);
 
         tracing::trace!("Deleted all mocks");
     }
@@ -217,17 +204,16 @@ impl HttpMockStateManager {
         let request_distances = get_distances(&non_matching_requests, &state.matchers, requirements);
         let best_matches = get_min_distance_requests(&request_distances);
 
-        let closes_match_request_idx = match best_matches.first() {
-            None => return Ok(None),
-            Some(idx) => *idx,
+        let Some(&closest_match_request_idx) = best_matches.first() else {
+            return Ok(None);
         };
 
-        let req = non_matching_requests.get(closes_match_request_idx).unwrap();
+        let req = non_matching_requests.get(closest_match_request_idx).unwrap();
         let mismatches = get_request_mismatches(req, requirements, &state.matchers);
 
         Ok(Some(ClosestMatch {
             request: HttpMockRequest::clone(req),
-            request_index: closes_match_request_idx,
+            request_index: closest_match_request_idx,
             mismatches,
         }))
     }
@@ -319,19 +305,14 @@ fn get_request_distance(
 }
 
 fn get_min_distance_requests(request_distances: &BTreeMap<usize, usize>) -> Vec<usize> {
-    // Find the element with the maximum matches
-    let min_elem = request_distances
-        .iter()
-        .min_by(|(_idx1, d1), (_idx2, d2)| (**d1).cmp(d2));
-
-    let max = match min_elem {
-        None => return Vec::new(),
-        Some((_, n)) => *n,
+    // The requests with the smallest distance, in history order.
+    let Some(&min_distance) = request_distances.values().min() else {
+        return Vec::new();
     };
 
     request_distances
         .iter()
-        .filter(|(_idx, distance)| **distance == max)
+        .filter(|(_idx, distance)| **distance == min_distance)
         .map(|(idx, _)| *idx)
         .collect()
 }
