@@ -76,20 +76,17 @@ pub enum Error {
 
 /// What the transport has to do for a request. The [`Handler`] decides this without doing any
 /// I/O, so the transport is the only place that sleeps or talks to upstream servers.
+///
+/// `Serve` is several times the size of `Respond` because of the request kept for recording. An
+/// action is built and consumed within one request, never stored, so that stack space is cheaper
+/// than boxing the variant on every served request.
+#[allow(clippy::large_enum_variant)]
 pub(crate) enum Action {
     /// Send the response to a management API request. Management responses are not recorded.
     Respond(Finished),
     /// Serve a request that is not for the management API: mock it, forward it or proxy it, then
-    /// hand the outcome to [`Handler::finish`]. Boxed because the recorded request makes it
-    /// several times the size of a management response.
-    Serve(Box<Served>),
-}
-
-/// A request that is not for the management API, together with the reply decided for it.
-pub(crate) struct Served {
-    pub reply: Reply,
-    /// Goes back to [`Handler::finish`] together with the response that was sent.
-    pub pending: Pending,
+    /// give `pending` back to [`Handler::finish`] together with the response that was sent.
+    Serve { reply: Reply, pending: Pending },
 }
 
 /// A served request whose outcome has not been reported yet. Its fields are private and
@@ -351,7 +348,7 @@ impl Handler {
             request,
         };
 
-        Ok(Action::Serve(Box::new(Served { reply, pending })))
+        Ok(Action::Serve { reply, pending })
     }
 
     /// Matches the request against the mocks and builds the reply, a 404 when none matched.
@@ -651,7 +648,7 @@ mod tests {
 
     fn expect_mock_reply(action: Action) -> (Option<Duration>, Response<Bytes>) {
         match action {
-            Action::Serve(served) => match served.reply {
+            Action::Serve { reply, .. } => match reply {
                 Reply::Mock { delay, response } => (delay, response),
                 #[cfg(feature = "proxy")]
                 _ => panic!("expected a mock reply"),
@@ -743,7 +740,7 @@ mod tests {
 
         fn upstream_request(action: Action) -> (bool, Request<Bytes>) {
             match action {
-                Action::Serve(served) => match served.reply {
+                Action::Serve { reply, .. } => match reply {
                     Reply::Forward(req) => (false, req),
                     Reply::Proxy(req) => (true, req),
                     Reply::Mock { .. } => panic!("expected an upstream request"),
@@ -831,15 +828,14 @@ mod tests {
             });
             handler.state.add_mock(mock("/recorded", 201, None), false).unwrap();
 
-            let Action::Serve(served) = handler.handle(request("GET", "http://localhost/recorded")).unwrap() else {
+            let Action::Serve { reply, pending } = handler.handle(request("GET", "http://localhost/recorded")).unwrap()
+            else {
                 panic!("expected a served request");
             };
-            let Reply::Mock { response, .. } = served.reply else {
+            let Reply::Mock { response, .. } = reply else {
                 panic!("expected a mock reply");
             };
-            let finished = handler
-                .finish(served.pending, Duration::from_millis(40), response)
-                .unwrap();
+            let finished = handler.finish(pending, Duration::from_millis(40), response).unwrap();
             assert_eq!(finished.into_response().status(), 201);
 
             let yaml = handler.state.export_recording(recording.id).unwrap().unwrap();
@@ -861,13 +857,15 @@ mod tests {
                 record_response_delays: false,
             });
 
-            let Action::Serve(served) = handler.handle(request("GET", "http://localhost/unrecorded")).unwrap() else {
+            let Action::Serve { reply, pending } =
+                handler.handle(request("GET", "http://localhost/unrecorded")).unwrap()
+            else {
                 panic!("expected a served request");
             };
-            let Reply::Mock { response, .. } = served.reply else {
+            let Reply::Mock { response, .. } = reply else {
                 panic!("expected a mock reply");
             };
-            handler.finish(served.pending, Duration::ZERO, response).unwrap();
+            handler.finish(pending, Duration::ZERO, response).unwrap();
 
             let yaml = handler.state.export_recording(recording.id).unwrap().unwrap();
             assert!(yaml.is_empty(), "{}", std::str::from_utf8(&yaml).unwrap());

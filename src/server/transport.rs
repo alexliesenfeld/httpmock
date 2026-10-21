@@ -27,7 +27,7 @@ use crate::{
     common::runtime,
     server::{
         self,
-        handler::{self, Action, Finished, Reply, Served},
+        handler::{self, Action, Finished, Reply},
         transport::Error::{BufferError, LocalSocketAddrError, PublishSocketAddrError, SocketBindError},
     },
 };
@@ -284,9 +284,9 @@ impl HttpMockServer {
     /// mock's delay, sends forwarded and proxied requests upstream, and hands the outcome back
     /// to the handler, which records it.
     async fn handle(&self, req: Request<Bytes>) -> Result<Finished, Error> {
-        let Served { reply, pending } = match self.handler.handle(req)? {
+        let (reply, pending) = match self.handler.handle(req)? {
             Action::Respond(finished) => return Ok(finished),
-            Action::Serve(served) => *served,
+            Action::Serve { reply, pending } => (reply, pending),
         };
 
         let start = Instant::now();
