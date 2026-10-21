@@ -204,16 +204,17 @@ impl HttpMockStateManager {
         let request_distances = get_distances(&non_matching_requests, &state.matchers, requirements);
         let best_matches = get_min_distance_requests(&request_distances);
 
-        let Some(&closest_match_request_idx) = best_matches.first() else {
-            return Ok(None);
+        let closes_match_request_idx = match best_matches.first() {
+            None => return Ok(None),
+            Some(idx) => *idx,
         };
 
-        let req = non_matching_requests.get(closest_match_request_idx).unwrap();
+        let req = non_matching_requests.get(closes_match_request_idx).unwrap();
         let mismatches = get_request_mismatches(req, requirements, &state.matchers);
 
         Ok(Some(ClosestMatch {
             request: HttpMockRequest::clone(req),
-            request_index: closest_match_request_idx,
+            request_index: closes_match_request_idx,
             mismatches,
         }))
     }
@@ -305,14 +306,19 @@ fn get_request_distance(
 }
 
 fn get_min_distance_requests(request_distances: &BTreeMap<usize, usize>) -> Vec<usize> {
-    // The requests with the smallest distance, in history order.
-    let Some(&min_distance) = request_distances.values().min() else {
-        return Vec::new();
+    // Find the element with the maximum matches
+    let min_elem = request_distances
+        .iter()
+        .min_by(|(_idx1, d1), (_idx2, d2)| (**d1).cmp(d2));
+
+    let max = match min_elem {
+        None => return Vec::new(),
+        Some((_, n)) => *n,
     };
 
     request_distances
         .iter()
-        .filter(|(_idx, distance)| **distance == min_distance)
+        .filter(|(_idx, distance)| **distance == max)
         .map(|(idx, _)| *idx)
         .collect()
 }
