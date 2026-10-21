@@ -27,7 +27,7 @@ use crate::{
     common::runtime,
     server::{
         self,
-        handler::{self, Action, Reply, Served},
+        handler::{self, Action, Finished, Reply, Served},
         transport::Error::{BufferError, LocalSocketAddrError, PublishSocketAddrError, SocketBindError},
     },
 };
@@ -266,7 +266,7 @@ impl HttpMockServer {
             .then_some((req.method().clone(), req.uri().clone()));
 
         let resp = match self.handle(req).await {
-            Ok(response) => to_service_response(response),
+            Ok(finished) => to_service_response(finished.into_response()),
             Err(err) => error_response(StatusCode::INTERNAL_SERVER_ERROR, err),
         };
 
@@ -281,10 +281,11 @@ impl HttpMockServer {
     }
 
     /// Lets the handler decide what to do with the request and carries that out: waits for a
-    /// mock's delay, sends forwarded and proxied requests upstream, and records the outcome.
-    async fn handle(&self, req: Request<Bytes>) -> Result<Response<Bytes>, Error> {
+    /// mock's delay, sends forwarded and proxied requests upstream, and hands the outcome back
+    /// to the handler, which records it.
+    async fn handle(&self, req: Request<Bytes>) -> Result<Finished, Error> {
         let Served { reply, pending } = match self.handler.handle(req)? {
-            Action::Respond(response) => return Ok(response),
+            Action::Respond(finished) => return Ok(finished),
             Action::Serve(served) => *served,
         };
 
@@ -300,9 +301,7 @@ impl HttpMockServer {
             Reply::Forward(upstream) | Reply::Proxy(upstream) => self.http_client.send(upstream).await?,
         };
 
-        self.handler.finish(pending, start.elapsed(), &response)?;
-
-        Ok(response)
+        Ok(self.handler.finish(pending, start.elapsed(), response)?)
     }
 
     async fn handle_tcp_stream(

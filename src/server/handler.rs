@@ -78,7 +78,7 @@ pub enum Error {
 /// I/O, so the transport is the only place that sleeps or talks to upstream servers.
 pub(crate) enum Action {
     /// Send the response to a management API request. Management responses are not recorded.
-    Respond(Response<Bytes>),
+    Respond(Finished),
     /// Serve a request that is not for the management API: mock it, forward it or proxy it, then
     /// hand the outcome to [`Handler::finish`]. Boxed because the recorded request makes it
     /// several times the size of a management response.
@@ -93,8 +93,7 @@ pub(crate) struct Served {
 }
 
 /// A served request whose outcome has not been reported yet. Its fields are private and
-/// [`Handler::finish`] is the only consumer, so a driver cannot send a reply and forget to let the
-/// recordings see it.
+/// [`Handler::finish`] is the only consumer.
 #[must_use = "pass it to Handler::finish with the response that was sent, or recordings miss it"]
 pub(crate) struct Pending {
     /// The request as the matchers saw it.
@@ -102,6 +101,17 @@ pub(crate) struct Pending {
     request: HttpMockRequest,
     #[cfg(feature = "record")]
     is_proxied: bool,
+}
+
+/// A response that is ready to go out. The only ways to get one are [`Action::Respond`] and
+/// [`Handler::finish`], so a driver that returns `Finished` cannot send a served request's
+/// response without letting the recordings see it first.
+pub(crate) struct Finished(Response<Bytes>);
+
+impl Finished {
+    pub(crate) fn into_response(self) -> Response<Bytes> {
+        self.0
+    }
 }
 
 /// How a served request is answered.
@@ -192,7 +202,7 @@ impl Handler {
         if let Some((route, params)) = self.path_tree.find(req.uri().path())
             && let Some(response) = self.manage(route, params, &req)
         {
-            return response.map(Action::Respond);
+            return response.map(|response| Action::Respond(Finished(response)));
         }
 
         self.catch_all(req)
@@ -240,14 +250,20 @@ impl Handler {
     }
 
     /// Completes an [`Action::Serve`]: records the response for every recording whose rule
-    /// matches the request. `elapsed` is the time the driver took to produce the response.
-    pub(crate) fn finish(&self, pending: Pending, elapsed: Duration, response: &Response<Bytes>) -> Result<(), Error> {
+    /// matches the request and releases it for sending. `elapsed` is the time the driver took to
+    /// produce the response.
+    pub(crate) fn finish(
+        &self,
+        pending: Pending,
+        elapsed: Duration,
+        response: Response<Bytes>,
+    ) -> Result<Finished, Error> {
         #[cfg(feature = "record")]
         self.state
-            .record(pending.is_proxied, elapsed, pending.request, response)?;
+            .record(pending.is_proxied, elapsed, pending.request, &response)?;
         #[cfg(not(feature = "record"))]
-        let _ = (pending, elapsed, response);
-        Ok(())
+        let _ = (pending, elapsed);
+        Ok(Finished(response))
     }
 
     fn handle_ping(&self) -> Result<Response<Bytes>, Error> {
@@ -646,14 +662,14 @@ mod tests {
 
     #[test]
     fn management_route_is_answered_directly() {
-        let Action::Respond(response) = handler()
+        let Action::Respond(finished) = handler()
             .handle(request("GET", "http://localhost/__httpmock__/ping"))
             .unwrap()
         else {
             panic!("expected a management response");
         };
 
-        assert_eq!(response.status(), 200);
+        assert_eq!(finished.into_response().status(), 200);
     }
 
     #[test]
@@ -774,9 +790,10 @@ mod tests {
             let Reply::Mock { response, .. } = served.reply else {
                 panic!("expected a mock reply");
             };
-            handler
-                .finish(served.pending, Duration::from_millis(40), &response)
+            let finished = handler
+                .finish(served.pending, Duration::from_millis(40), response)
                 .unwrap();
+            assert_eq!(finished.into_response().status(), 201);
 
             let yaml = handler.state.export_recording(recording.id).unwrap().unwrap();
             let yaml = std::str::from_utf8(&yaml).unwrap();
