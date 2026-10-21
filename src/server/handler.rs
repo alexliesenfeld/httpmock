@@ -702,6 +702,40 @@ mod tests {
         assert_eq!(response.status(), 202);
     }
 
+    #[test]
+    fn serving_a_mock_counts_the_call_and_appends_the_request_to_the_history() {
+        let handler = handler();
+        let id = handler.state.add_mock(mock("/hello", 200, None), false).unwrap().id;
+
+        handler.handle(request("GET", "http://localhost/hello")).unwrap();
+
+        assert_eq!(handler.state.read_mock(id).unwrap().unwrap().call_counter, 1);
+        let unmatched = RequestRequirements {
+            path: Some("/other".to_string()),
+            ..Default::default()
+        };
+        let closest = handler
+            .state
+            .verify(&unmatched)
+            .unwrap()
+            .expect("the history holds the request");
+        assert_eq!(closest.request.uri().path(), "/hello");
+    }
+
+    #[test]
+    fn exhausted_mock_falls_through_to_404() {
+        let handler = handler();
+        let mut definition = mock("/once", 200, None);
+        definition.up_to_n_times = Some(1);
+        handler.state.add_mock(definition, false).unwrap();
+
+        let first = expect_mock_reply(handler.handle(request("GET", "http://localhost/once")).unwrap());
+        let second = expect_mock_reply(handler.handle(request("GET", "http://localhost/once")).unwrap());
+
+        assert_eq!(first.1.status(), 200);
+        assert_eq!(second.1.status(), 404);
+    }
+
     #[cfg(feature = "proxy")]
     mod proxy {
         use super::*;
@@ -767,6 +801,19 @@ mod tests {
 
             assert!(!proxied);
         }
+
+        #[test]
+        fn invalid_rule_header_is_an_error() {
+            let handler = handler();
+            handler.state.create_proxy_rule(ProxyRuleConfig {
+                request_header: vec![("not a header name".to_string(), "1".to_string())],
+                ..Default::default()
+            });
+
+            let result = handler.handle(request("GET", "http://origin.test/path"));
+
+            assert!(matches!(result, Err(super::super::Error::InvalidHeader(_))));
+        }
     }
 
     #[cfg(feature = "record")]
@@ -800,6 +847,30 @@ mod tests {
             assert!(yaml.contains("path: /recorded"), "{yaml}");
             assert!(yaml.contains("status: 201"), "{yaml}");
             assert!(yaml.contains("delay: 40"), "{yaml}");
+        }
+
+        #[test]
+        fn outcome_is_not_recorded_when_no_recording_rule_matches() {
+            let handler = handler();
+            let recording = handler.state.create_recording(RecordingRuleConfig {
+                request_requirements: RequestRequirements {
+                    path: Some("/other".to_string()),
+                    ..Default::default()
+                },
+                record_headers: Vec::new(),
+                record_response_delays: false,
+            });
+
+            let Action::Serve(served) = handler.handle(request("GET", "http://localhost/unrecorded")).unwrap() else {
+                panic!("expected a served request");
+            };
+            let Reply::Mock { response, .. } = served.reply else {
+                panic!("expected a mock reply");
+            };
+            handler.finish(served.pending, Duration::ZERO, response).unwrap();
+
+            let yaml = handler.state.export_recording(recording.id).unwrap().unwrap();
+            assert!(yaml.is_empty(), "{}", std::str::from_utf8(&yaml).unwrap());
         }
     }
 }

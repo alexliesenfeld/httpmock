@@ -7,7 +7,8 @@
 - The server's request handling is now sans-IO: the handler decides what to do with a request
   and returns it as an action, and only the transport sleeps, sends forwarded and proxied
   requests upstream and records the outcome. The one observable difference is that a
-  `respond_with` closure now runs before the mock's configured delay instead of after it.
+  `respond_with` closure now runs before the mock's configured delay instead of after it, and
+  its own runtime no longer counts towards the delay a recording stores for the response.
 
 ## Version 0.9.0
 
