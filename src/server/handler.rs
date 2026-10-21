@@ -174,87 +174,54 @@ impl Handler {
     pub(crate) fn handle(&self, req: Request<Bytes>) -> Result<Action, Error> {
         tracing::trace!("Routing incoming request: {:?}", req);
 
-        let method = req.method().clone();
-        let path = req.uri().path().to_string();
-
-        if let Some((matched_path, params)) = self.path_tree.find(&path) {
-            match matched_path {
-                RoutePath::Ping => {
-                    if method == Method::GET {
-                        return self.handle_ping().map(Action::Respond);
-                    }
-                }
-                RoutePath::Reset => {
-                    if method == Method::DELETE {
-                        return self.handle_reset().map(Action::Respond);
-                    }
-                }
-                RoutePath::SingleMock => match method {
-                    Method::GET => return self.handle_read_mock(params).map(Action::Respond),
-                    Method::DELETE => return self.handle_delete_mock(params).map(Action::Respond),
-                    _ => {}
-                },
-                RoutePath::SingleMockUpToNTimes => {
-                    if method == Method::PUT {
-                        return self.handle_set_up_to_n_times(params, req).map(Action::Respond);
-                    }
-                }
-                RoutePath::MockCollection => match method {
-                    Method::POST => return self.handle_add_mock(req).map(Action::Respond),
-                    Method::DELETE => return self.handle_delete_all_mocks().map(Action::Respond),
-                    _ => {}
-                },
-                RoutePath::History => {
-                    if method == Method::DELETE {
-                        return self.handle_delete_history().map(Action::Respond);
-                    }
-                }
-                RoutePath::Verify => {
-                    if method == Method::POST {
-                        return self.handle_verify(req).map(Action::Respond);
-                    }
-                }
-                #[cfg(feature = "proxy")]
-                RoutePath::ForwardingRuleCollection => match method {
-                    Method::POST => return self.handle_add_forwarding_rule(req).map(Action::Respond),
-                    Method::DELETE => return self.handle_delete_all_forwarding_rules().map(Action::Respond),
-                    _ => {}
-                },
-                #[cfg(feature = "proxy")]
-                RoutePath::SingleForwardingRule => {
-                    if method == Method::DELETE {
-                        return self.handle_delete_forwarding_rule(params).map(Action::Respond);
-                    }
-                }
-                #[cfg(feature = "proxy")]
-                RoutePath::ProxyRuleCollection => match method {
-                    Method::POST => return self.handle_add_proxy_rule(req).map(Action::Respond),
-                    Method::DELETE => return self.handle_delete_all_proxy_rules().map(Action::Respond),
-                    _ => {}
-                },
-                #[cfg(feature = "proxy")]
-                RoutePath::SingleProxyRule => {
-                    if method == Method::DELETE {
-                        return self.handle_delete_proxy_rule(params).map(Action::Respond);
-                    }
-                }
-                #[cfg(feature = "record")]
-                RoutePath::RecordingCollection => match method {
-                    Method::POST => return self.handle_add_recording_matcher(req).map(Action::Respond),
-                    Method::DELETE => return self.handle_delete_all_recording_matchers().map(Action::Respond),
-                    _ => {}
-                },
-                #[cfg(feature = "record")]
-                RoutePath::SingleRecording => match method {
-                    Method::GET => return self.handle_read_recording(params).map(Action::Respond),
-                    Method::DELETE => return self.handle_delete_recording(params).map(Action::Respond),
-                    Method::POST => return self.handle_load_recording(req).map(Action::Respond),
-                    _ => {}
-                },
-            }
+        if let Some((route, params)) = self.path_tree.find(req.uri().path())
+            && let Some(response) = self.manage(route, params, &req)
+        {
+            return response.map(Action::Respond);
         }
 
         self.catch_all(req)
+    }
+
+    /// Answers a management API request, or returns `None` when the route does not support the
+    /// request's method, in which case the request is served like any other.
+    fn manage(&self, route: &RoutePath, params: Path, req: &Request<Bytes>) -> Option<Result<Response<Bytes>, Error>> {
+        let response = match (route, req.method()) {
+            (RoutePath::Ping, &Method::GET) => self.handle_ping(),
+            (RoutePath::Reset, &Method::DELETE) => self.handle_reset(),
+            (RoutePath::MockCollection, &Method::POST) => self.handle_add_mock(req),
+            (RoutePath::MockCollection, &Method::DELETE) => self.handle_delete_all_mocks(),
+            (RoutePath::SingleMock, &Method::GET) => self.handle_read_mock(params),
+            (RoutePath::SingleMock, &Method::DELETE) => self.handle_delete_mock(params),
+            (RoutePath::SingleMockUpToNTimes, &Method::PUT) => self.handle_set_up_to_n_times(params, req),
+            (RoutePath::History, &Method::DELETE) => self.handle_delete_history(),
+            (RoutePath::Verify, &Method::POST) => self.handle_verify(req),
+            #[cfg(feature = "proxy")]
+            (RoutePath::ForwardingRuleCollection, &Method::POST) => self.handle_add_forwarding_rule(req),
+            #[cfg(feature = "proxy")]
+            (RoutePath::ForwardingRuleCollection, &Method::DELETE) => self.handle_delete_all_forwarding_rules(),
+            #[cfg(feature = "proxy")]
+            (RoutePath::SingleForwardingRule, &Method::DELETE) => self.handle_delete_forwarding_rule(params),
+            #[cfg(feature = "proxy")]
+            (RoutePath::ProxyRuleCollection, &Method::POST) => self.handle_add_proxy_rule(req),
+            #[cfg(feature = "proxy")]
+            (RoutePath::ProxyRuleCollection, &Method::DELETE) => self.handle_delete_all_proxy_rules(),
+            #[cfg(feature = "proxy")]
+            (RoutePath::SingleProxyRule, &Method::DELETE) => self.handle_delete_proxy_rule(params),
+            #[cfg(feature = "record")]
+            (RoutePath::RecordingCollection, &Method::POST) => self.handle_add_recording_matcher(req),
+            #[cfg(feature = "record")]
+            (RoutePath::RecordingCollection, &Method::DELETE) => self.handle_delete_all_recording_matchers(),
+            #[cfg(feature = "record")]
+            (RoutePath::SingleRecording, &Method::GET) => self.handle_read_recording(params),
+            #[cfg(feature = "record")]
+            (RoutePath::SingleRecording, &Method::DELETE) => self.handle_delete_recording(params),
+            #[cfg(feature = "record")]
+            (RoutePath::SingleRecording, &Method::POST) => self.handle_load_recording(req),
+            _ => return None,
+        };
+
+        Some(response)
     }
 
     /// Records the outcome of an [`Action::Serve`] for the recordings whose rules match the
@@ -280,7 +247,7 @@ impl Handler {
         response::<()>(StatusCode::NO_CONTENT, None)
     }
 
-    fn handle_add_mock(&self, req: Request<Bytes>) -> Result<Response<Bytes>, Error> {
+    fn handle_add_mock(&self, req: &Request<Bytes>) -> Result<Response<Bytes>, Error> {
         let definition: MockDefinition = parse_json_body(req)?;
         let active_mock = self.state.add_mock(definition, false)?;
         response(StatusCode::CREATED, Some(active_mock))
@@ -302,7 +269,7 @@ impl Handler {
         response::<()>(status_code, None)
     }
 
-    fn handle_set_up_to_n_times(&self, params: Path, req: Request<Bytes>) -> Result<Response<Bytes>, Error> {
+    fn handle_set_up_to_n_times(&self, params: Path, req: &Request<Bytes>) -> Result<Response<Bytes>, Error> {
         let config: UpToNTimesConfig = parse_json_body(req)?;
         let updated = self
             .state
@@ -325,7 +292,7 @@ impl Handler {
         response::<()>(StatusCode::NO_CONTENT, None)
     }
 
-    fn handle_verify(&self, req: Request<Bytes>) -> Result<Response<Bytes>, Error> {
+    fn handle_verify(&self, req: &Request<Bytes>) -> Result<Response<Bytes>, Error> {
         let requirements: RequestRequirements = parse_json_body(req)?;
         let closest_match = self.state.verify(&requirements)?;
         let status_code = closest_match.as_ref().map_or(StatusCode::NOT_FOUND, |_| StatusCode::OK);
@@ -387,7 +354,7 @@ impl Handler {
 
 #[cfg(feature = "proxy")]
 impl Handler {
-    fn handle_add_forwarding_rule(&self, req: Request<Bytes>) -> Result<Response<Bytes>, Error> {
+    fn handle_add_forwarding_rule(&self, req: &Request<Bytes>) -> Result<Response<Bytes>, Error> {
         let config: ForwardingRuleConfig = parse_json_body(req)?;
         let active_forwarding_rule = self.state.create_forwarding_rule(config);
         response(StatusCode::CREATED, Some(active_forwarding_rule))
@@ -408,7 +375,7 @@ impl Handler {
         response::<()>(StatusCode::NO_CONTENT, None)
     }
 
-    fn handle_add_proxy_rule(&self, req: Request<Bytes>) -> Result<Response<Bytes>, Error> {
+    fn handle_add_proxy_rule(&self, req: &Request<Bytes>) -> Result<Response<Bytes>, Error> {
         let config: ProxyRuleConfig = parse_json_body(req)?;
         let active_proxy_rule = self.state.create_proxy_rule(config);
         response(StatusCode::CREATED, Some(active_proxy_rule))
@@ -501,7 +468,7 @@ fn proxy_request(rule: ActiveProxyRule, mut req: Request<Bytes>) -> Result<Reque
 
 #[cfg(feature = "record")]
 impl Handler {
-    fn handle_add_recording_matcher(&self, req: Request<Bytes>) -> Result<Response<Bytes>, Error> {
+    fn handle_add_recording_matcher(&self, req: &Request<Bytes>) -> Result<Response<Bytes>, Error> {
         let req_req: RecordingRuleConfig = parse_json_body(req)?;
         let active_recording = self.state.create_recording(req_req);
         response(StatusCode::CREATED, Some(active_recording))
@@ -528,7 +495,7 @@ impl Handler {
         response(status_code, rec)
     }
 
-    fn handle_load_recording(&self, req: Request<Bytes>) -> Result<Response<Bytes>, Error> {
+    fn handle_load_recording(&self, req: &Request<Bytes>) -> Result<Response<Bytes>, Error> {
         let recording_file_content =
             std::str::from_utf8(req.body()).map_err(|err| RequestConversion(err.to_string()))?;
 
@@ -570,7 +537,7 @@ where
     builder.body(Bytes::new()).map_err(ResponseBodyConstruction)
 }
 
-fn parse_json_body<T>(req: Request<Bytes>) -> Result<T, Error>
+fn parse_json_body<T>(req: &Request<Bytes>) -> Result<T, Error>
 where
     T: DeserializeOwned,
 {
