@@ -310,11 +310,11 @@ impl Handler {
         } else if let Some(rule) = self.state.find_proxy_rule(&request)? {
             Reply::Proxy(proxy_request(rule, req)?)
         } else {
-            self.serve_mock(&request)?
+            self.mock_reply(&request)?
         };
 
         #[cfg(not(feature = "proxy"))]
-        let reply = self.serve_mock(&request)?;
+        let reply = self.mock_reply(&request)?;
 
         Ok(Action::Serve(Box::new(Served {
             #[cfg(feature = "record")]
@@ -323,7 +323,8 @@ impl Handler {
         })))
     }
 
-    fn serve_mock(&self, req: &HttpMockRequest) -> Result<Reply, Error> {
+    /// Matches the request against the mocks and builds the reply, a 404 when none matched.
+    fn mock_reply(&self, req: &HttpMockRequest) -> Result<Reply, Error> {
         let Some(definition) = self.state.serve_mock(req)? else {
             return Ok(Reply::Mock {
                 delay: None,
@@ -617,7 +618,7 @@ mod tests {
         }
     }
 
-    fn mock_reply(action: Action) -> (Option<Duration>, Response<Bytes>) {
+    fn expect_mock_reply(action: Action) -> (Option<Duration>, Response<Bytes>) {
         match action {
             Action::Serve(served) => match served.reply {
                 Reply::Mock { delay, response } => (delay, response),
@@ -642,7 +643,7 @@ mod tests {
 
     #[test]
     fn management_path_with_other_method_falls_through_to_mocks() {
-        let (_, response) = mock_reply(
+        let (_, response) = expect_mock_reply(
             handler()
                 .handle(request("POST", "http://localhost/__httpmock__/ping"))
                 .unwrap(),
@@ -653,7 +654,7 @@ mod tests {
 
     #[test]
     fn unmatched_request_is_a_404_without_delay() {
-        let (delay, response) = mock_reply(handler().handle(request("GET", "http://localhost/nope")).unwrap());
+        let (delay, response) = expect_mock_reply(handler().handle(request("GET", "http://localhost/nope")).unwrap());
 
         assert_eq!(delay, None);
         assert_eq!(response.status(), 404);
@@ -664,7 +665,7 @@ mod tests {
         let handler = handler();
         handler.state.add_mock(mock("/hello", 202, Some(150)), false).unwrap();
 
-        let (delay, response) = mock_reply(handler.handle(request("GET", "http://localhost/hello")).unwrap());
+        let (delay, response) = expect_mock_reply(handler.handle(request("GET", "http://localhost/hello")).unwrap());
 
         assert_eq!(delay, Some(Duration::from_millis(150)));
         assert_eq!(response.status(), 202);
