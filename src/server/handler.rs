@@ -102,7 +102,9 @@ pub(crate) struct Pending {
 
 /// A response that is ready to go out. The only ways to get one are [`Action::Respond`] and
 /// [`Handler::finish`], so a driver that returns `Finished` cannot send a served request's
-/// response without letting the recordings see it first.
+/// response without letting the recordings see it first. A driver that fails to produce a
+/// response, because the upstream request failed, answers with its own error response instead
+/// and drops the [`Pending`]; such failures are not recorded.
 pub(crate) struct Finished(Response<Bytes>);
 
 impl Finished {
