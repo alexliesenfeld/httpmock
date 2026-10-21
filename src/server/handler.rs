@@ -35,7 +35,7 @@ use crate::common::data::RecordingRuleConfig;
 #[cfg(feature = "proxy")]
 use crate::{
     common::data::{ActiveForwardingRule, ActiveProxyRule, ForwardingRuleConfig, ProxyRuleConfig},
-    server::handler::Error::InvalidHeader,
+    server::handler::Error::{InvalidForwardingTarget, InvalidHeader},
 };
 use crate::{
     common::{
@@ -72,6 +72,9 @@ pub enum Error {
     RequestConversion(String),
     #[error("invalid header: {0}")]
     InvalidHeader(String),
+    #[cfg(feature = "proxy")]
+    #[error("invalid forwarding target '{target}': {reason}")]
+    InvalidForwardingTarget { target: String, reason: String },
 }
 
 /// What the transport has to do for a request. The [`Handler`] decides this without doing any
@@ -429,7 +432,18 @@ impl Handler {
 /// Rewrites a request for the target of the forwarding rule that matched it.
 #[cfg(feature = "proxy")]
 fn forward_request(rule: ActiveForwardingRule, req: Request<Bytes>) -> Result<Request<Bytes>, Error> {
-    let to_base_uri: Uri = rule.config.target_base_url.parse().unwrap();
+    let target = &rule.config.target_base_url;
+    let invalid_target = |reason: String| InvalidForwardingTarget {
+        target: target.clone(),
+        reason,
+    };
+
+    let to_base_uri: Uri = target
+        .parse()
+        .map_err(|err: http::uri::InvalidUri| invalid_target(err.to_string()))?;
+    let authority = to_base_uri
+        .authority()
+        .ok_or_else(|| invalid_target("it has no host".to_string()))?;
 
     let (mut req_parts, body) = req.into_parts();
 
@@ -437,9 +451,9 @@ fn forward_request(rule: ActiveForwardingRule, req: Request<Bytes>) -> Result<Re
     req_parts.headers.remove(http::header::HOST);
 
     let mut uri_parts = req_parts.uri.into_parts();
-    uri_parts.authority = Some(to_base_uri.authority().unwrap().clone());
+    uri_parts.authority = Some(authority.clone());
     uri_parts.scheme = to_base_uri.scheme().cloned().or(uri_parts.scheme);
-    req_parts.uri = Uri::from_parts(uri_parts).unwrap();
+    req_parts.uri = Uri::from_parts(uri_parts).map_err(|err| invalid_target(err.to_string()))?;
 
     // Record the upstream scheme (http/https) so the HttpClient can reconstruct
     // an absolute target URI after converting to origin-form.
@@ -797,6 +811,44 @@ mod tests {
             let (proxied, _) = upstream_request(handler.handle(request("GET", "http://origin.test/")).unwrap());
 
             assert!(!proxied);
+        }
+
+        #[test]
+        fn unparsable_forwarding_target_is_an_error() {
+            let handler = handler();
+            handler.state.create_forwarding_rule(ForwardingRuleConfig {
+                target_base_url: "http://not a host".to_string(),
+                ..Default::default()
+            });
+
+            let err = handler
+                .handle(request("GET", "http://localhost/api"))
+                .err()
+                .expect("an error");
+
+            assert!(
+                matches!(err, super::super::Error::InvalidForwardingTarget { .. }),
+                "{err}"
+            );
+        }
+
+        #[test]
+        fn forwarding_target_without_a_host_is_an_error() {
+            let handler = handler();
+            handler.state.create_forwarding_rule(ForwardingRuleConfig {
+                target_base_url: "/just/a/path".to_string(),
+                ..Default::default()
+            });
+
+            let err = handler
+                .handle(request("GET", "http://localhost/api"))
+                .err()
+                .expect("an error");
+
+            assert!(
+                matches!(err, super::super::Error::InvalidForwardingTarget { .. }),
+                "{err}"
+            );
         }
 
         #[test]
