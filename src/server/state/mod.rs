@@ -125,11 +125,7 @@ impl HttpMockStateManager {
     pub(crate) fn read_mock(&self, id: usize) -> Result<Option<ActiveMock>, Error> {
         let state = self.state.lock().unwrap();
 
-        let result = state.mocks.get(&id);
-        match result {
-            Some(found) => Ok(Some(found.clone())),
-            None => Ok(None),
-        }
+        Ok(state.mocks.get(&id).cloned())
     }
 
     pub(crate) fn delete_mock(&self, id: usize) -> Result<bool, Error> {
@@ -171,16 +167,7 @@ impl HttpMockStateManager {
     pub(crate) fn delete_all_mocks(&self) {
         let mut state = self.state.lock().unwrap();
 
-        let ids: Vec<usize> = state
-            .mocks
-            .iter()
-            .filter(|(_k, v)| !v.is_static)
-            .map(|(k, _v)| *k)
-            .collect();
-
-        ids.iter().for_each(|k| {
-            state.mocks.remove(k);
-        });
+        state.mocks.retain(|_, mock| mock.is_static);
 
         tracing::trace!("Deleted all mocks");
     }
