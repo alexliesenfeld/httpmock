@@ -1,3 +1,20 @@
+//! The mock server's sans-IO core.
+//!
+//! [`Handler::handle`] takes a buffered request in absolute-form and returns an [`Action`]
+//! without doing any I/O; the transport carries it out. What happens to a request:
+//!
+//! | Request | Action | State change |
+//! | --- | --- | --- |
+//! | management route with a supported method | `Respond` | per route: mocks, rules, recordings, history |
+//! | a forwarding rule matches | `Serve` with `Reply::Forward` | none |
+//! | a proxy rule matches and no forwarding rule does | `Serve` with `Reply::Proxy` | none |
+//! | a mock matches and is not exhausted | `Serve` with `Reply::Mock` and the mock's delay | request appended to the history, call counter incremented |
+//! | nothing matches, including a management path with another method | `Serve` with a 404 `Reply::Mock` | request appended to the history |
+//!
+//! After an `Action::Serve` the transport passes the response and the time it took to
+//! [`Handler::record`], which turns them into mock definitions for every recording whose rule
+//! matches the request.
+
 use std::{
     fmt::{Debug, Display},
     str::FromStr,
