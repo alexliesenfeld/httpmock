@@ -22,7 +22,7 @@ use tokio::{
 use tokio_rustls::TlsAcceptor;
 
 #[cfg(feature = "proxy")]
-use crate::common::http::{Error as HttpClientError, HttpMockHttpClient};
+use crate::common::http_client;
 use crate::{
     common::runtime,
     server::{
@@ -52,7 +52,7 @@ pub enum Error {
     RouterError(#[from] server::handler::Error),
     #[cfg(feature = "proxy")]
     #[error("failed to send HTTP request: {0}")]
-    UpstreamError(#[from] HttpClientError),
+    UpstreamError(#[from] http_client::Error),
     #[error("HTTPS error: {0}")]
     TlsError(String),
     #[error("Server configuration error: {0}")]
@@ -89,7 +89,7 @@ pub struct HttpMockServer {
     handler: handler::Handler,
     config: MockServerConfig,
     #[cfg(feature = "proxy")]
-    http_client: Arc<HttpMockHttpClient>,
+    client: Arc<http_client::Client>,
 }
 
 impl HttpMockServer {
@@ -98,17 +98,17 @@ impl HttpMockServer {
     /// # Parameters
     /// - `handler`: The request handler.
     /// - `config`: The configuration settings for the mock server.
-    /// - `http_client`: The client used to send forwarded and proxied requests upstream.
+    /// - `client`: The client used to send forwarded and proxied requests upstream.
     pub(crate) fn new(
         handler: handler::Handler,
         config: MockServerConfig,
-        #[cfg(feature = "proxy")] http_client: Arc<HttpMockHttpClient>,
+        #[cfg(feature = "proxy")] client: Arc<http_client::Client>,
     ) -> Self {
         HttpMockServer {
             handler,
             config,
             #[cfg(feature = "proxy")]
-            http_client,
+            client,
         }
     }
 
@@ -298,7 +298,7 @@ impl HttpMockServer {
                 response
             }
             #[cfg(feature = "proxy")]
-            Reply::Forward(upstream) | Reply::Proxy(upstream) => self.http_client.send(upstream).await?,
+            Reply::Forward(upstream) | Reply::Proxy(upstream) => self.client.send(upstream).await?,
         };
 
         Ok(self.handler.finish(served, start.elapsed(), response)?)

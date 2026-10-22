@@ -443,7 +443,7 @@ fn forward_request(rule: ActiveForwardingRule, req: Request<Bytes>) -> Result<Re
     uri_parts.scheme = to_base_uri.scheme().cloned().or(uri_parts.scheme);
     req_parts.uri = Uri::from_parts(uri_parts).unwrap();
 
-    // Record the upstream scheme (http/https) so the HttpClient can reconstruct
+    // Record the upstream scheme (http/https) so the client can reconstruct
     // an absolute target URI after converting to origin-form.
     let upstream_scheme: &'static str = match to_base_uri.scheme_str() {
         Some("https") => "https",
