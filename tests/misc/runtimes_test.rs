@@ -5,10 +5,7 @@ fn all_runtimes_test() {
     with_standalone_server();
 
     // Tokio
-    assert_eq!(
-        tokio::runtime::Runtime::new().unwrap().block_on(test_fn()),
-        202
-    );
+    assert_eq!(tokio::runtime::Runtime::new().unwrap().block_on(test_fn()), 202);
 
     // Actix
     assert_eq!(actix_rt::Runtime::new().unwrap().block_on(test_fn()), 202);
@@ -19,8 +16,9 @@ fn all_runtimes_test() {
 
 #[cfg(all(feature = "proxy", feature = "https"))]
 async fn test_fn() -> u16 {
-    use crate::utils::http::get_request;
     use httpmock::prelude::*;
+
+    use crate::utils::http::get_request;
 
     // Proxy forwarder
     let server2 = MockServer::connect_async("localhost:5050").await;
@@ -42,13 +40,9 @@ async fn test_fn() -> u16 {
         .await;
 
     // Through proxy to server2
-    let (status_code, body) = get_request(
-        &server2.url("/get"),
-        None,
-        Some(server1.base_url().as_str()),
-    )
-    .await
-    .expect("proxy to server2 failed");
+    let (status_code, body) = get_request(&server2.url("/get"), None, Some(server1.base_url().as_str()))
+        .await
+        .expect("proxy to server2 failed");
 
     assert_eq!("Hi from fake GitHub!", body);
     assert_eq!(202, status_code);
@@ -58,8 +52,9 @@ async fn test_fn() -> u16 {
 
 #[cfg(all(feature = "proxy", not(any(feature = "https", feature = "standalone"))))]
 async fn test_fn() -> u16 {
-    use crate::utils::http::get_request;
     use httpmock::prelude::*;
+
+    use crate::utils::http::get_request;
 
     // Proxy forwarder
     let server2 = MockServer::connect_async("localhost:5050").await;
@@ -85,11 +80,7 @@ async fn test_fn() -> u16 {
     let (status_code, body) = get_request(
         &server2.url("/get"),
         // httpbingo requires a User-Agent header
-        Some(
-            [("User-Agent".into(), "MyTestClient/1.0".into())]
-                .into_iter()
-                .collect(),
-        ),
+        Some([("User-Agent".into(), "MyTestClient/1.0".into())].into_iter().collect()),
         Some(server1.base_url().as_str()),
     )
     .await
@@ -103,8 +94,9 @@ async fn test_fn() -> u16 {
 
 #[cfg(all(feature = "proxy", feature = "standalone", not(feature = "https")))]
 async fn test_fn() -> u16 {
-    use crate::utils::http::get_request;
     use httpmock::prelude::*;
+
+    use crate::utils::http::get_request;
 
     // Fake GitHub target
     let target_server = MockServer::connect_async("localhost:5050").await;
@@ -126,13 +118,9 @@ async fn test_fn() -> u16 {
         .await;
 
     // Through proxy to server2
-    let (status_code, body) = get_request(
-        &target_server.url("/get"),
-        None,
-        Some(proxy_server.base_url().as_str()),
-    )
-    .await
-    .expect("proxy to server2 failed");
+    let (status_code, body) = get_request(&target_server.url("/get"), None, Some(proxy_server.base_url().as_str()))
+        .await
+        .expect("proxy to server2 failed");
 
     assert_eq!("Hi from fake GitHub!", body);
     assert_eq!(202, status_code);
@@ -142,8 +130,9 @@ async fn test_fn() -> u16 {
 
 #[cfg(not(any(feature = "proxy")))]
 async fn test_fn() -> u16 {
-    use crate::utils::http::get_request;
     use httpmock::prelude::*;
+
+    use crate::utils::http::get_request;
 
     let server = MockServer::start_async().await;
     let mock = server

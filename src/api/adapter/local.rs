@@ -1,30 +1,28 @@
-use async_trait::async_trait;
+use std::{net::SocketAddr, sync::Arc};
+
+#[cfg(feature = "proxy")]
+use crate::common::data::{ActiveForwardingRule, ActiveProxyRule, ForwardingRuleConfig, ProxyRuleConfig};
+#[cfg(feature = "record")]
+use crate::common::data::{ActiveRecording, RecordingRuleConfig};
+#[cfg(feature = "record")]
 use bytes::Bytes;
-use std::{borrow::Borrow, fmt::Debug, net::SocketAddr, sync::Arc};
-
-use futures_util::TryFutureExt;
-
-use crate::api::adapter::{MockServerAdapter, ServerAdapterError};
 
 use crate::{
-    api::adapter::ServerAdapterError::{MockNotFound, UpstreamError},
-    server::state::{HttpMockStateManager, StateManager},
+    api::adapter::{
+        MockServerAdapter, ServerAdapterError,
+        ServerAdapterError::{MockNotFound, UpstreamError},
+    },
+    common::data::{ActiveMock, ClosestMatch, MockDefinition, RequestRequirements},
+    server::state,
 };
 
-use crate::common::data::{ActiveForwardingRule, ActiveMock, ActiveProxyRule, ActiveRecording};
-
-use crate::common::data::{
-    ClosestMatch, ForwardingRuleConfig, MockDefinition, ProxyRuleConfig, RecordingRuleConfig,
-    RequestRequirements,
-};
-
-pub struct LocalMockServerAdapter {
-    pub addr: SocketAddr,
-    state: Arc<HttpMockStateManager>,
+pub(in crate::api) struct LocalMockServerAdapter {
+    pub(in crate::api) addr: SocketAddr,
+    state: Arc<state::HttpMockStateManager>,
 }
 
 impl LocalMockServerAdapter {
-    pub fn new(addr: SocketAddr, local_state: Arc<HttpMockStateManager>) -> Self {
+    pub(in crate::api) fn new(addr: SocketAddr, local_state: Arc<state::HttpMockStateManager>) -> Self {
         LocalMockServerAdapter {
             addr,
             state: local_state,
@@ -32,7 +30,6 @@ impl LocalMockServerAdapter {
     }
 }
 
-#[async_trait]
 impl MockServerAdapter for LocalMockServerAdapter {
     fn host(&self) -> String {
         self.addr.ip().to_string()
@@ -64,7 +61,7 @@ impl MockServerAdapter for LocalMockServerAdapter {
             .state
             .read_mock(mock_id)
             .map_err(|e| UpstreamError(e.to_string()))?
-            .ok_or_else(|| MockNotFound(mock_id))?;
+            .ok_or(MockNotFound(mock_id))?;
         Ok(mock)
     }
 
@@ -75,17 +72,26 @@ impl MockServerAdapter for LocalMockServerAdapter {
         Ok(())
     }
 
-    async fn verify(
-        &self,
-        mock_rr: &RequestRequirements,
-    ) -> Result<Option<ClosestMatch>, ServerAdapterError> {
+    async fn set_up_to_n_times(&self, mock_id: usize, count: usize) -> Result<(), ServerAdapterError> {
+        let updated = self
+            .state
+            .set_up_to_n_times(mock_id, count)
+            .map_err(|e| UpstreamError(e.to_string()))?;
+        if !updated {
+            return Err(MockNotFound(mock_id));
+        }
+        Ok(())
+    }
+
+    async fn verify(&self, mock_rr: &RequestRequirements) -> Result<Option<ClosestMatch>, ServerAdapterError> {
         let closest_match = self
             .state
             .verify(mock_rr)
-            .map_err(|e| UpstreamError(format!("Cannot delete mock: {:?}", e)))?;
+            .map_err(|e| UpstreamError(format!("Cannot verify mock: {:?}", e)))?;
         Ok(closest_match)
     }
 
+    #[cfg(feature = "proxy")]
     async fn create_forwarding_rule(
         &self,
         config: ForwardingRuleConfig,
@@ -93,30 +99,29 @@ impl MockServerAdapter for LocalMockServerAdapter {
         Ok(self.state.create_forwarding_rule(config))
     }
 
+    #[cfg(feature = "proxy")]
     async fn delete_forwarding_rule(&self, id: usize) -> Result<(), ServerAdapterError> {
         self.state.delete_forwarding_rule(id);
         Ok(())
     }
 
-    async fn create_proxy_rule(
-        &self,
-        config: ProxyRuleConfig,
-    ) -> Result<ActiveProxyRule, ServerAdapterError> {
+    #[cfg(feature = "proxy")]
+    async fn create_proxy_rule(&self, config: ProxyRuleConfig) -> Result<ActiveProxyRule, ServerAdapterError> {
         Ok(self.state.create_proxy_rule(config))
     }
 
+    #[cfg(feature = "proxy")]
     async fn delete_proxy_rule(&self, id: usize) -> Result<(), ServerAdapterError> {
         self.state.delete_proxy_rule(id);
         Ok(())
     }
 
-    async fn create_recording(
-        &self,
-        config: RecordingRuleConfig,
-    ) -> Result<ActiveRecording, ServerAdapterError> {
+    #[cfg(feature = "record")]
+    async fn create_recording(&self, config: RecordingRuleConfig) -> Result<ActiveRecording, ServerAdapterError> {
         Ok(self.state.create_recording(config))
     }
 
+    #[cfg(feature = "record")]
     async fn delete_recording(&self, id: usize) -> Result<(), ServerAdapterError> {
         self.state.delete_recording(id);
         Ok(())
@@ -124,20 +129,18 @@ impl MockServerAdapter for LocalMockServerAdapter {
 
     #[cfg(feature = "record")]
     async fn export_recording(&self, id: usize) -> Result<Option<Bytes>, ServerAdapterError> {
-        Ok(self
-            .state
+        self.state
             .export_recording(id)
-            .map_err(|err| UpstreamError(err.to_string()))?)
+            .map_err(|err| UpstreamError(err.to_string()))
     }
 
     #[cfg(feature = "record")]
-    async fn create_mocks_from_recording<'a>(
+    async fn create_mocks_from_recording(
         &self,
-        recording_file_content: &'a str,
+        recording_file_content: &str,
     ) -> Result<Vec<usize>, ServerAdapterError> {
-        Ok(self
-            .state
+        self.state
             .load_mocks_from_recording(recording_file_content)
-            .map_err(|err| UpstreamError(err.to_string()))?)
+            .map_err(|err| UpstreamError(err.to_string()))
     }
 }

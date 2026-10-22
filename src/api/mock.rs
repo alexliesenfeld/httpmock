@@ -1,14 +1,9 @@
-use std::{io::Write, net::SocketAddr};
-use tabwriter::TabWriter;
+use std::net::SocketAddr;
 
-use crate::api::output;
-#[cfg(feature = "color")]
-use colored::*;
-use serde::{Deserialize, Serialize};
-
-use crate::api::server::MockServer;
-
-use crate::common::util::Join;
+use crate::{
+    api::{output, server::MockServer},
+    common::util::Join,
+};
 
 /// Provides a reference to a mock configuration stored on a [MockServer](struct.MockServer.html).
 /// This structure is used for interacting with, monitoring, and managing a specific mock's lifecycle,
@@ -47,15 +42,41 @@ use crate::common::util::Join;
 /// assert_eq!(response2.status(), 404); // Expect a 404 status after the mock is deleted
 /// ```
 pub struct Mock<'a> {
-    // Please find the reason why id is public in
-    // https://github.com/httpmock/httpmock/issues/26.
-    pub id: usize,
+    id: usize,
     pub(crate) server: &'a MockServer,
 }
 
 impl<'a> Mock<'a> {
+    /// Creates a reference to an existing mock on `server`.
+    ///
+    /// This is useful when a mock's ID was retained after its original [`Mock`] handle was dropped.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use httpmock::{Mock, MockServer};
+    ///
+    /// let server = MockServer::start();
+    /// let original = server.mock(|when, then| {
+    ///     when.path("/test");
+    ///     then.status(202);
+    /// });
+    /// let mock_id = original.id();
+    /// drop(original);
+    ///
+    /// let recreated = Mock::new(mock_id, &server);
+    /// recreated.assert_calls(0);
+    /// ```
     pub fn new(id: usize, server: &'a MockServer) -> Self {
         Self { id, server }
+    }
+
+    /// Returns the identifier assigned to this mock by its server.
+    ///
+    /// The identifier can be retained and later passed to [`Mock::new`] to recreate a handle to
+    /// the same server-side mock.
+    pub fn id(&self) -> usize {
+        self.id
     }
 
     /// Verifies that the mock server received exactly one HTTP request matching all specified
@@ -109,7 +130,6 @@ impl<'a> Mock<'a> {
     /// ```rust
     /// use httpmock::prelude::*;
     /// use reqwest::get;
-    /// use syn::token;
     ///
     /// let rt = tokio::runtime::Runtime::new().unwrap();
     /// rt.block_on(async {
@@ -132,7 +152,7 @@ impl<'a> Mock<'a> {
     /// This method will panic if the mock server did not receive exactly one matching request or if
     /// there are issues with the mock server's availability.
     pub async fn assert_async(&self) {
-        self.assert_hits_async(1).await
+        self.assert_calls_async(1).await
     }
 
     /// Verifies that the mock server received the specified number of HTTP requests matching all
@@ -314,6 +334,18 @@ impl<'a> Mock<'a> {
                 active_mock.call_counter, hits,
                 "The number of matching requests was higher than expected (expected {} but was {})",
                 hits, active_mock.call_counter
+            )
+        }
+
+        // Once exhausted, mocks ignore matching requests.
+        if let Some(limit) = active_mock.up_to_n_times
+            && active_mock.is_exhausted()
+        {
+            assert_eq!(
+                active_mock.call_counter, hits,
+                "The number of matching requests was lower than expected (expected {} but was {}). The mock stopped \
+                 matching after reaching its up_to_n_times limit of {}",
+                hits, active_mock.call_counter, limit
             )
         }
 
@@ -577,6 +609,113 @@ impl<'a> Mock<'a> {
             .expect("could not delete mock from server");
     }
 
+    /// Limits this mock to serving up to `n` calls in total, counting calls it has already served.
+    ///
+    /// Once the limit is reached, the mock stops matching and later requests fall through to
+    /// mocks created after it. Serving fewer than `n` calls does not fail the test, and
+    /// [Mock::calls](struct.Mock.html#method.calls) and
+    /// [Mock::assert_calls](struct.Mock.html#method.assert_calls) still work.
+    ///
+    /// The limit is set in a separate request after the mock was created. If the code under test
+    /// may already be sending requests, use
+    /// [Then::up_to_n_times](struct.Then.html#method.up_to_n_times) instead.
+    ///
+    /// # Example
+    /// Demonstrates limiting a mock to one call, after which a second mock takes over.
+    ///
+    /// ```rust
+    /// use httpmock::prelude::*;
+    /// use reqwest::blocking::get;
+    ///
+    /// // Arrange: Start a mock server and set up two mocks for the same path
+    /// let server = MockServer::start();
+    /// let first = server.mock(|when, then| {
+    ///    when.path("/test");
+    ///    then.status(202);
+    /// });
+    /// let second = server.mock(|when, then| {
+    ///    when.path("/test");
+    ///    then.status(302);
+    /// });
+    ///
+    /// // Limit the first mock to a single call
+    /// first.up_to_n_times(1);
+    ///
+    /// // Act: The first request is served by the first mock, the second one by the second mock
+    /// let response1 = get(&server.url("/test")).unwrap();
+    /// let response2 = get(&server.url("/test")).unwrap();
+    ///
+    /// // Assert
+    /// assert_eq!(response1.status(), 202);
+    /// assert_eq!(response2.status(), 302);
+    /// first.assert_calls(1);
+    /// second.assert_calls(1);
+    /// ```
+    ///
+    /// # Panics
+    /// This method will panic if `n` is zero, if the mock no longer exists on the server, if the
+    /// mock server is a remote server that predates this method, or if there are issues with the
+    /// mock server's availability.
+    pub fn up_to_n_times(&self, n: usize) {
+        self.up_to_n_times_async(n).join();
+    }
+
+    /// Asynchronously limits this mock to serving up to `n` calls in total. This method is the
+    /// asynchronous equivalent of [Mock::up_to_n_times](struct.Mock.html#method.up_to_n_times).
+    ///
+    /// # Example
+    /// Demonstrates limiting a mock to one call, after which a second mock takes over.
+    ///
+    /// ```rust
+    /// use httpmock::prelude::*;
+    /// use reqwest::get;
+    ///
+    /// let rt = tokio::runtime::Runtime::new().unwrap();
+    /// rt.block_on(async {
+    ///     // Arrange: Start an asynchronous mock server and set up two mocks for the same path
+    ///     let server = MockServer::start_async().await;
+    ///     let first = server
+    ///         .mock_async(|when, then| {
+    ///             when.path("/test");
+    ///             then.status(202);
+    ///         })
+    ///         .await;
+    ///     let second = server
+    ///         .mock_async(|when, then| {
+    ///             when.path("/test");
+    ///             then.status(302);
+    ///         })
+    ///         .await;
+    ///
+    ///     // Limit the first mock to a single call
+    ///     first.up_to_n_times_async(1).await;
+    ///
+    ///     // Act: The first request is served by the first mock, the second one by the second mock
+    ///     let response1 = get(&server.url("/test")).await.unwrap();
+    ///     let response2 = get(&server.url("/test")).await.unwrap();
+    ///
+    ///     // Assert
+    ///     assert_eq!(response1.status(), 202);
+    ///     assert_eq!(response2.status(), 302);
+    ///     first.assert_calls_async(1).await;
+    ///     second.assert_calls_async(1).await;
+    /// });
+    /// ```
+    ///
+    /// # Panics
+    /// This method will panic if `n` is zero, if the mock no longer exists on the server, if the
+    /// mock server is a remote server that predates this method, or if there are issues with the
+    /// mock server's availability.
+    pub async fn up_to_n_times_async(&self, n: usize) {
+        self.server
+            .server_adapter
+            .as_ref()
+            .unwrap()
+            .set_up_to_n_times(self.id, n)
+            .await
+            .expect("could not set the up_to_n_times limit on mock");
+    }
+
     /// Returns the network address of the mock server where the associated mock object is stored.
     ///
     /// This method provides access to the IP address and port number of the mock server, useful for
@@ -602,104 +741,14 @@ impl<'a> Mock<'a> {
     }
 }
 
-/// The [MockExt](trait.MockExt.html) trait extends the [Mock](struct.Mock.html)
-/// structure with some additional functionality, that is usually not required.
-pub trait MockExt<'a> {
-    /// Creates a new [Mock](struct.Mock.html) instance that references an already existing
-    /// mock on a [MockServer](struct.MockServer.html). This method is typically used in advanced scenarios
-    /// where you need to re-establish a reference to a mock after its original instance has been dropped
-    /// or lost.
-    ///
-    /// # Parameters
-    /// * `id` - The ID of the existing mock on the [MockServer](struct.MockServer.html).
-    /// * `mock_server` - A reference to the [MockServer](struct.MockServer.html) where the mock is hosted.
-    ///
-    /// # Example
-    /// Demonstrates how to recreate a [Mock](struct.Mock.html) instance from a mock ID to verify
-    /// assertions or perform further actions after the original [Mock](struct.Mock.html) reference
-    /// has been discarded.
-    ///
-    /// ```rust
-    /// use httpmock::{MockServer, Mock, MockExt};
-    /// use reqwest::blocking::get;
-    ///
-    /// // Arrange
-    /// let server = MockServer::start();
-    /// let initial_mock = server.mock(|when, then| {
-    ///     when.path("/test");
-    ///     then.status(202);
-    /// });
-    ///
-    /// // Store away the mock ID and drop the initial Mock instance
-    /// let mock_id = initial_mock.id();
-    /// drop(initial_mock);
-    ///
-    /// // Act: Send an HTTP request to the mock endpoint
-    /// let response = get(&server.url("/test")).unwrap();
-    ///
-    /// // Recreate the Mock instance using the stored ID
-    /// let recreated_mock = Mock::new(mock_id, &server);
-    ///
-    /// // Assert: Use the recreated Mock to check assertions
-    /// recreated_mock.assert();
-    /// assert_eq!(response.status(), 202);
-    /// ```
-    /// For more detailed use cases, see [`Issue 26`](https://github.com/httpmock/httpmock/issues/26) on GitHub.
-    fn new(id: usize, mock_server: &'a MockServer) -> Mock<'a>;
-
-    /// Returns the unique identifier (ID) assigned to the mock on the [MockServer](struct.MockServer.html).
-    /// This ID is used internally by the mock server to track and manage the mock throughout its lifecycle.
-    ///
-    /// The ID can be particularly useful in advanced testing scenarios where mocks need to be referenced or manipulated
-    /// programmatically after their creation.
-    ///
-    /// # Returns
-    /// Returns the ID of the mock as a `usize`.
-    ///
-    /// # Example
-    /// Demonstrates how to retrieve the ID of a mock for later reference or manipulation.
-    ///
-    /// ```rust
-    /// use httpmock::MockExt;
-    /// use httpmock::prelude::*;
-    ///
-    /// // Arrange: Start a mock server and create a mock
-    /// let server = MockServer::start();
-    /// let mock = server.mock(|when, then| {
-    ///     when.path("/example");
-    ///     then.status(200);
-    /// });
-    ///
-    /// // Act: Retrieve the ID of the mock
-    /// let mock_id = mock.id();
-    ///
-    /// // The mock_id can now be used to reference or manipulate this specific mock in subsequent operations
-    /// println!("Mock ID: {}", mock_id);
-    /// ```
-    ///
-    /// This method is particularly useful when dealing with multiple mocks and needing to assert or modify
-    /// specific mocks based on their identifiers.
-    fn id(&self) -> usize;
-}
-
-impl<'a> MockExt<'a> for Mock<'a> {
-    fn new(id: usize, mock_server: &'a MockServer) -> Mock<'a> {
-        Mock {
-            id,
-            server: mock_server,
-        }
-    }
-
-    fn id(&self) -> usize {
-        self.id
-    }
-}
-
+/// A set of mocks created from a recording.
+#[cfg(feature = "record")]
 pub struct MockSet<'a> {
     pub ids: Vec<usize>,
     pub(crate) server: &'a MockServer,
 }
 
+#[cfg(feature = "record")]
 impl<'a> MockSet<'a> {
     pub fn delete(&mut self) {
         self.delete_async().join();

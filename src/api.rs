@@ -1,29 +1,23 @@
-// TODO: Remove this at some point
-#![allow(clippy::needless_lifetimes)]
-
-pub use adapter::{local::LocalMockServerAdapter, MockServerAdapter};
-
-use serde::{Deserialize, Serialize};
-use std::str::FromStr;
-
 #[cfg(feature = "remote")]
-pub use adapter::remote::RemoteMockServerAdapter;
-
-#[cfg(feature = "record")]
-pub use proxy::{Recording, RecordingRuleBuilder};
-
+use adapter::remote::RemoteMockServerAdapter;
+use adapter::{ServerAdapter, local::LocalMockServerAdapter};
+pub use mock::Mock;
 #[cfg(feature = "proxy")]
 pub use proxy::{ForwardingRule, ForwardingRuleBuilder, ProxyRule, ProxyRuleBuilder};
-
-use crate::common;
-pub use mock::{Mock, MockExt};
+#[cfg(feature = "record")]
+pub use record::{Recording, RecordingRuleBuilder};
 pub use server::MockServer;
 pub use spec::{Then, When};
+
+use crate::common;
 
 mod adapter;
 mod mock;
 mod output;
+#[cfg(feature = "proxy")]
 mod proxy;
+#[cfg(feature = "record")]
+mod record;
 mod server;
 pub mod spec;
 

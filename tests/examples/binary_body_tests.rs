@@ -1,5 +1,6 @@
-use httpmock::prelude::*;
 use std::io::Read;
+
+use httpmock::prelude::*;
 
 #[test]
 fn binary_body_test() {
@@ -24,8 +25,6 @@ fn binary_body_test() {
 
 fn body_to_vec(response: &mut reqwest::blocking::Response) -> Vec<u8> {
     let mut buf: Vec<u8> = Vec::new();
-    response
-        .read_to_end(&mut buf)
-        .expect("Cannot read from body");
+    response.read_to_end(&mut buf).expect("Cannot read from body");
     buf
 }

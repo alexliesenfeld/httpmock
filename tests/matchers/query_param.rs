@@ -1,5 +1,6 @@
-use crate::matchers::{expect_fails_with2, to_urlencoded_query_string, MultiValueMatcherTestSet};
 use httpmock::{MockServer, When};
+
+use crate::matchers::{MultiValueMatcherTestSet, expect_fails_with2, to_urlencoded_query_string};
 
 #[test]
 fn query_param() {
@@ -83,6 +84,18 @@ fn query_param_prefix() {
             data.failure_msg.clone(),
         )
     }
+}
+
+#[test]
+fn query_param_prefix_mismatch_with_multibyte_value_reports_instead_of_panicking() {
+    // A 1-byte expected prefix used to slice into the middle of the 2-byte 'é' while building
+    // the mismatch report, panicking with a char-boundary error instead of a mismatch diff.
+    run_test(
+        "Multi-byte request value with shorter expected prefix",
+        |when| when.query_param_prefix("word", "a"),
+        vec![("word", "é")],
+        Some(vec!["Query Parameter Mismatch"]),
+    )
 }
 
 #[test]

@@ -1,39 +1,36 @@
-use futures_util::{stream::StreamExt, FutureExt};
+use std::{future::pending, io, net::SocketAddr, pin::Pin, sync::Arc, time::Instant};
+
 use http::{Request, StatusCode};
-use http_body_util::{combinators::BoxBody, BodyExt, Empty, Full};
-use hyper::body::{Bytes, Incoming};
-use std::{
-    future::{pending, Future},
-    net::SocketAddr,
-    path::PathBuf,
-    sync::Arc,
+use http_body_util::{BodyExt, Empty, Full, combinators::BoxBody};
+use hyper::{
+    Method, Response,
+    body::{Bytes, Incoming},
+    service::service_fn,
 };
-
-use hyper_util::server::conn::auto::Builder as ServerBuilder;
-
-use crate::server;
-use hyper::{http, service::service_fn, upgrade::on as upgrade_on, Method, Response};
 use hyper_util::rt::tokio::TokioIo;
+#[cfg(feature = "http2")]
+use hyper_util::server::conn::auto::Builder as ServerBuilder;
+#[cfg(feature = "https")]
+use rustls::ServerConfig;
 use thiserror::Error;
 use tokio::{
     net::{TcpListener, TcpStream},
     sync::oneshot::Sender,
     task::spawn,
 };
-
-use crate::server::{
-    handler::Handler,
-    server::Error::{
-        BufferError, LocalSocketAddrError, PublishSocketAddrError, RouterError, SocketBindError,
-    },
-};
-
-use std::io;
-
-#[cfg(feature = "https")]
-use rustls::ServerConfig;
 #[cfg(feature = "https")]
 use tokio_rustls::TlsAcceptor;
+
+#[cfg(feature = "proxy")]
+use crate::common::http::{Error as HttpClientError, HttpMockHttpClient};
+use crate::{
+    common::runtime,
+    server::{
+        self,
+        handler::{self, Action, Finished, Reply},
+        transport::Error::{BufferError, LocalSocketAddrError, PublishSocketAddrError, SocketBindError},
+    },
+};
 
 #[derive(Error, Debug)]
 pub enum Error {
@@ -53,6 +50,9 @@ pub enum Error {
     HTTPError(#[from] http::Error),
     #[error("cannot process request: {0}")]
     RouterError(#[from] server::handler::Error),
+    #[cfg(feature = "proxy")]
+    #[error("failed to send HTTP request: {0}")]
+    UpstreamError(#[from] HttpClientError),
     #[error("HTTPS error: {0}")]
     TlsError(String),
     #[error("Server configuration error: {0}")]
@@ -80,29 +80,36 @@ pub struct MockServerConfig {
     pub https: MockServerHttpsConfig,
 }
 
-/// The `MockServer` struct represents a mock server that can handle incoming HTTP requests.
-pub struct MockServer<H>
-where
-    H: Handler + Send + Sync + 'static,
-{
-    handler: Box<H>,
+/// The `HttpMockServer` struct represents a mock server that can handle incoming HTTP requests.
+///
+/// It is the I/O driver of the sans-IO `Handler`: it accepts connections, buffers
+/// requests, carries out the `Action` the handler decides on, and reports the outcome back
+/// for recording.
+pub struct HttpMockServer {
+    handler: handler::Handler,
     config: MockServerConfig,
+    #[cfg(feature = "proxy")]
+    http_client: Arc<HttpMockHttpClient>,
 }
 
-impl<H> MockServer<H>
-where
-    H: Handler + Send + Sync + 'static,
-{
-    /// Creates a new `MockServer` instance with the given handler and configuration.
+impl HttpMockServer {
+    /// Creates a new `HttpMockServer` instance with the given handler and configuration.
     ///
     /// # Parameters
-    /// - `handler`: A boxed handler that implements the `Handler` trait.
+    /// - `handler`: The request handler.
     /// - `config`: The configuration settings for the mock server.
-    ///
-    /// # Returns
-    /// A `Result` containing the new `MockServer` instance or an `Error` if creation fails.
-    pub fn new(handler: Box<H>, config: MockServerConfig) -> Result<Self, Error> {
-        Ok(MockServer { handler, config })
+    /// - `http_client`: The client used to send forwarded and proxied requests upstream.
+    pub(crate) fn new(
+        handler: handler::Handler,
+        config: MockServerConfig,
+        #[cfg(feature = "proxy")] http_client: Arc<HttpMockHttpClient>,
+    ) -> Self {
+        HttpMockServer {
+            handler,
+            config,
+            #[cfg(feature = "proxy")]
+            http_client,
+        }
     }
 
     /// Starts the mock server asynchronously.
@@ -124,22 +131,13 @@ where
     where
         F: Future<Output = ()>,
     {
-        let host = if self.config.expose {
-            "0.0.0.0"
-        } else {
-            "127.0.0.1"
-        };
-        let addr: SocketAddr =
-            format!("{}:{}", host, self.config.static_port.unwrap_or(0)).parse()?;
-        let listener = TcpListener::bind(addr)
-            .await
-            .map_err(|e| SocketBindError(addr, e))?;
+        let host = if self.config.expose { "0.0.0.0" } else { "127.0.0.1" };
+        let addr: SocketAddr = format!("{}:{}", host, self.config.static_port.unwrap_or(0)).parse()?;
+        let listener = TcpListener::bind(addr).await.map_err(|e| SocketBindError(addr, e))?;
 
         if let Some(sender) = socket_addr_sender {
-            let addr = listener.local_addr().map_err(|e| LocalSocketAddrError(e))?;
-            sender
-                .send(addr)
-                .map_err(|addr| PublishSocketAddrError(addr))?;
+            let addr = listener.local_addr().map_err(LocalSocketAddrError)?;
+            sender.send(addr).map_err(PublishSocketAddrError)?;
         }
 
         // ****************************************************************************************
@@ -152,7 +150,7 @@ where
     where
         F: Future<Output = ()>,
     {
-        let shutdown = shutdown.shared();
+        let mut shutdown = std::pin::pin!(shutdown);
         let server = Arc::new(self);
 
         loop {
@@ -172,7 +170,7 @@ where
                         },
                     };
                 }
-                _ = shutdown.clone() => {
+                _ = &mut shutdown => {
                     break;
                 }
             }
@@ -181,10 +179,7 @@ where
         Ok(())
     }
 
-    async fn service(
-        self: Arc<Self>,
-        req: Request<Incoming>,
-    ) -> Result<Response<BoxBody<Bytes, hyper::Error>>, Error> {
+    async fn service(self: Arc<Self>, req: Request<Incoming>) -> Result<Response<BoxBody<Bytes, hyper::Error>>, Error> {
         tracing::trace!("New HTTP request received: {}", req.uri());
 
         if req.method() == Method::CONNECT {
@@ -214,25 +209,19 @@ where
                 // body) to let Hyper proceed with the upgrade.
 
                 let authority = req.uri().authority().map(|a| a.to_string());
-                let on_upgrade = upgrade_on(req);
+                let on_upgrade = hyper::upgrade::on(req);
                 let server = self.clone();
 
                 spawn(async move {
                     match on_upgrade.await {
                         Ok(upgraded) => {
-                            spawn(async move {
-                                let io = TokioIo::new(upgraded);
-                                if let Err(e) = serve_tls_connection(server, io, authority).await {
-                                    tracing::warn!(
-                                        "failed to serve upgraded TLS connection: {:?}",
-                                        e
-                                    );
-                                }
-                            });
+                            let io = TokioIo::new(upgraded);
+                            if let Err(e) = serve_tls_connection(server, io, authority).await {
+                                tracing::warn!("failed to serve upgraded TLS connection: {:?}", e);
+                            }
                         }
                         Err(err) => {
-                            let e =
-                                crate::server::server::Error::ServerConnectionError(Box::new(err));
+                            let e = Error::ServerConnectionError(Box::new(err));
                             tracing::warn!("CONNECT upgraded handling failed: {:?}", e);
                         }
                     }
@@ -276,19 +265,43 @@ where
             .print_access_log
             .then_some((req.method().clone(), req.uri().clone()));
 
-        let resp = match self.handler.handle(req).await {
-            Ok(response) => to_service_response(response),
-            Err(err) => error_response(StatusCode::INTERNAL_SERVER_ERROR, RouterError(err)),
+        let resp = match self.handle(req).await {
+            Ok(finished) => to_service_response(finished.into_response()),
+            Err(err) => error_response(StatusCode::INTERNAL_SERVER_ERROR, err),
         };
 
         // print access log if enabled
-        if let Some((method, uri)) = access_log_req_data {
-            if let Ok(resp) = &resp {
-                tracing::info!("{} {} -> {}", method, uri, resp.status());
-            }
+        if let Some((method, uri)) = access_log_req_data
+            && let Ok(resp) = &resp
+        {
+            tracing::info!("{} {} -> {}", method, uri, resp.status());
         }
 
         resp
+    }
+
+    /// Lets the handler decide what to do with the request and carries that out: waits for a
+    /// mock's delay, sends forwarded and proxied requests upstream, and hands the outcome back
+    /// to the handler, which records it.
+    async fn handle(&self, req: Request<Bytes>) -> Result<Finished, Error> {
+        let (reply, served) = match self.handler.handle(req)? {
+            Action::Respond(finished) => return Ok(finished),
+            Action::Serve { reply, pending } => (reply, pending),
+        };
+
+        let start = Instant::now();
+        let response = match reply {
+            Reply::Mock { delay, response } => {
+                if let Some(delay) = delay {
+                    runtime::sleep(delay).await;
+                }
+                response
+            }
+            #[cfg(feature = "proxy")]
+            Reply::Forward(upstream) | Reply::Proxy(upstream) => self.http_client.send(upstream).await?,
+        };
+
+        Ok(self.handler.finish(served, start.elapsed(), response)?)
     }
 
     async fn handle_tcp_stream(
@@ -300,25 +313,26 @@ where
 
         #[cfg(feature = "https")]
         {
-            let mut peek_buffer = TcpStreamPeekBuffer::new(&tcp_stream);
-            if is_encrypted(&mut peek_buffer, 0).await {
+            let is_tls = match starts_with_tls_handshake(&tcp_stream).await {
+                Ok(is_tls) => is_tls,
+                // The connection broke before the client sent anything, so there is nothing to
+                // serve. This is usually a client that resets right away, like a health check or
+                // a port scanner, which isn't worth an error.
+                Err(err) => {
+                    tracing::debug!("TCP connection failed before the client sent any data: {:?}", err);
+                    return Ok(());
+                }
+            };
+
+            if is_tls {
                 tracing::trace!("TCP connection seems to be TLS encrypted");
 
                 // Since we get a request via HTTPS, the target host for this request is this server.
                 // This is important for SNI and selecting the right certificate.
                 // We are not yet in the tunneling case here, so we need to use the servers
                 // local address. The tunneling case is handled in the CONNECT branch of `service()`.
-                let tcp_address = tcp_stream.local_addr().map_err(|err| IOError(err))?;
+                let tcp_address = tcp_stream.local_addr().map_err(Error::IOError)?;
                 return serve_tls_connection(self, tcp_stream, Some(tcp_address.to_string())).await;
-            }
-
-            if tracing::log::max_level() >= tracing::log::LevelFilter::Trace {
-                let peeked_str =
-                    String::from_utf8_lossy(&peek_buffer.buffer().to_vec()).to_string();
-                tracing::trace!(
-                    "TCP connection seems NOT to be TLS encrypted (based on peeked data: {}",
-                    peeked_str
-                );
             }
         }
 
@@ -328,18 +342,24 @@ where
 }
 
 #[cfg(feature = "https")]
-async fn serve_tls_connection<H, S>(
-    server: Arc<MockServer<H>>,
+async fn serve_tls_connection<S>(
+    server: Arc<HttpMockServer>,
     stream: S,
     authority: Option<String>, // The target host:port for SNI and cert selection
 ) -> Result<(), Error>
 where
-    H: Handler + Send + Sync + 'static,
     S: AsyncRead + AsyncWrite + Unpin + Send + 'static,
 {
-    // Build TLS acceptor inline for this connection
+    // Build the TLS acceptor for this connection.
     let cert_resolver = server.config.https.cert_resolver_factory.build(authority);
-    let mut server_config = ServerConfig::builder()
+    // Respect the application's provider. An explicit fallback avoids ambiguous
+    // crate-feature auto-detection when both ring and aws-lc-rs are enabled.
+    let provider = rustls::crypto::CryptoProvider::get_default()
+        .cloned()
+        .unwrap_or_else(|| Arc::new(rustls::crypto::ring::default_provider()));
+    let mut server_config = ServerConfig::builder_with_provider(provider)
+        .with_safe_default_protocol_versions()
+        .map_err(|e| Error::TlsError(format!("cannot build TLS server config: {:?}", e)))?
         .with_no_client_auth()
         .with_cert_resolver(cert_resolver);
 
@@ -354,41 +374,66 @@ where
     let tls_stream = tls_acceptor
         .accept(stream)
         .await
-        .map_err(|e| TlsError(format!("TLS accept failed: {:?}", e)))?;
+        .map_err(|e| Error::TlsError(format!("TLS accept failed: {:?}", e)))?;
 
     serve_connection(server, tls_stream, "https").await
 }
 
-fn serve_connection<H, S>(
-    server: Arc<MockServer<H>>,
+// `serve_connection` cannot be a plain `async fn` (nor return an implicit/explicit
+// `impl Future`): `service_fn`'s closure below calls `HttpMockServer::service`, which can spawn a
+// task that calls `serve_tls_connection` -> `serve_connection` again for CONNECT/upgrade
+// tunneling. Any opaque `impl Future` return type here would need to resolve itself through
+// that indirect cycle, which rustc cannot do ("cycle detected when computing type of opaque
+// type"), surfacing as cascading bogus "is not Send" errors. Returning a boxed future erases
+// the concrete type and breaks the cycle. This runs once per TCP connection (not per
+// request, unlike `service`), so the extra heap allocation is negligible.
+fn serve_connection<S>(
+    server: Arc<HttpMockServer>,
     stream: S,
     scheme: &'static str,
-) -> impl Future<Output = Result<(), Error>> + Send + 'static
+) -> Pin<Box<dyn Future<Output = Result<(), Error>> + Send + 'static>>
 where
-    H: Handler + Send + Sync + 'static,
     S: AsyncRead + AsyncWrite + Unpin + Send + 'static,
 {
-    async move {
-        let mut server_builder = ServerBuilder::new(TokioExecutor::new());
+    Box::pin(async move {
+        let service = service_fn(|mut req| {
+            // We pass authority None here since we don't know it for non-CONNECT requests
+            // yet. We only know it when the full request has been buffered in `service()`.
+            // Here, we only the scheme is known from the connection type.
+            req.extensions_mut().insert(RequestMetadata::new(scheme));
+            server.clone().service(req)
+        });
 
-        server_builder.http1().preserve_header_case(true);
-        server_builder.http2();
-        //.enable_connect_protocol();
+        #[cfg(feature = "http2")]
+        {
+            let mut server_builder = ServerBuilder::new(TokioExecutor::new());
 
-        server_builder
-            .serve_connection_with_upgrades(
-                TokioIo::new(stream),
-                service_fn(|mut req| {
-                    // We pass authority None here since we don't know it for non-CONNECT requests
-                    // yet. We only know it when the full request has been buffered in `service()`.
-                    // Here, we only the scheme is known from the connection type.
-                    req.extensions_mut().insert(RequestMetadata::new(scheme));
-                    server.clone().service(req)
-                }),
-            )
-            .await
-            .map_err(ServerConnectionError)
-    }
+            server_builder.http1().preserve_header_case(true);
+            server_builder.http2();
+
+            server_builder
+                .serve_connection_with_upgrades(TokioIo::new(stream), service)
+                .await
+                .map_err(ServerConnectionError)
+        }
+
+        #[cfg(not(feature = "http2"))]
+        {
+            // Without the `http2` feature we use hyper's plain HTTP/1 connection builder
+            // instead of hyper-util's `auto` builder: `hyper-util/server-auto`
+            // unconditionally enables `hyper/http2`, which would pull the `h2` dependency
+            // subtree into builds that opted out of HTTP/2.
+            let mut server_builder = hyper::server::conn::http1::Builder::new();
+
+            server_builder.preserve_header_case(true);
+
+            server_builder
+                .serve_connection(TokioIo::new(stream), service)
+                .with_upgrades()
+                .await
+                .map_err(|e| ServerConnectionError(Box::new(e)))
+        }
+    })
 }
 
 async fn buffer_request(req: Request<Incoming>) -> Result<Request<Bytes>, hyper::Error> {
@@ -398,50 +443,30 @@ async fn buffer_request(req: Request<Incoming>) -> Result<Request<Bytes>, hyper:
 }
 
 fn full<T: Into<Bytes>>(chunk: T) -> BoxBody<Bytes, hyper::Error> {
-    Full::new(chunk.into())
-        .map_err(|never| match never {})
-        .boxed()
+    Full::new(chunk.into()).map_err(|never| match never {}).boxed()
 }
 
 fn empty() -> BoxBody<Bytes, hyper::Error> {
-    Empty::<Bytes>::new()
-        .map_err(|never| match never {})
-        .boxed()
+    Empty::<Bytes>::new().map_err(|never| match never {}).boxed()
 }
 
-fn error_response(
-    code: StatusCode,
-    err: Error,
-) -> Result<Response<BoxBody<Bytes, hyper::Error>>, Error> {
+fn error_response(code: StatusCode, err: Error) -> Result<Response<BoxBody<Bytes, hyper::Error>>, Error> {
     tracing::error!("failed to process request: {}", err.to_string());
-    Ok(Response::builder()
-        .status(code)
-        .body(full(err.to_string()))?)
+    Ok(Response::builder().status(code).body(full(err.to_string()))?)
 }
 
-fn to_service_response(
-    response: Response<Bytes>,
-) -> Result<Response<BoxBody<Bytes, hyper::Error>>, Error> {
+fn to_service_response(response: Response<Bytes>) -> Result<Response<BoxBody<Bytes, hyper::Error>>, Error> {
     let (parts, body) = response.into_parts();
     Ok(Response::from_parts(parts, full(body)))
 }
 
-use crate::server::Error::{IOError, ServerConnectionError, ServerError, TlsError, Unknown};
-use async_trait::async_trait;
-use bytes::BytesMut;
+#[cfg(feature = "http2")]
 use hyper_util::rt::TokioExecutor;
-use std::{
-    pin::Pin,
-    task::{Context, Poll},
-};
+use tokio::io::{AsyncRead, AsyncWrite};
 
 #[cfg(feature = "https")]
-use crate::server::tls::{CertificateResolverFactory, TcpStreamPeekBuffer};
-
-use crate::server::RequestMetadata;
-#[cfg(feature = "https")]
-use tls_detect::is_encrypted;
-use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
+use crate::server::tls::{CertificateResolverFactory, starts_with_tls_handshake};
+use crate::server::{Error::ServerConnectionError, RequestMetadata};
 
 fn to_absolute_form_uri(req: &mut Request<Bytes>) -> Result<(), Error> {
     let default_scheme = req
@@ -461,20 +486,46 @@ fn to_absolute_form_uri(req: &mut Request<Bytes>) -> Result<(), Error> {
         .headers()
         .get(http::header::HOST)
         .and_then(|v| v.to_str().ok())
-        .ok_or_else(|| {
-            Error::ConfigurationError("Missing Host header on origin-form request".into())
-        })?;
+        .ok_or_else(|| Error::ConfigurationError("Missing Host header on origin-form request".into()))?;
 
     let path_and_query = uri.path_and_query().map(|pq| pq.as_str()).unwrap_or("/");
 
     let abs = format!("{}://{}{}", default_scheme, host, path_and_query);
-    let new_uri: http::Uri = abs.parse().map_err(|e| {
-        Error::ConfigurationError(format!(
-            "Invalid absolute URI constructed from Host+path: {}",
-            e
-        ))
-    })?;
+    let new_uri: http::Uri = abs
+        .parse()
+        .map_err(|e| Error::ConfigurationError(format!("Invalid absolute URI constructed from Host+path: {}", e)))?;
 
     *req.uri_mut() = new_uri;
     Ok(())
+}
+
+#[cfg(all(test, feature = "https"))]
+mod tests {
+    use std::{sync::Arc, time::Duration};
+
+    use tokio::{
+        net::{TcpListener, TcpStream},
+        time::timeout,
+    };
+
+    use crate::server::builder::HttpMockServerBuilder;
+
+    #[tokio::test]
+    async fn connection_reset_before_any_data_is_not_an_error() {
+        let server = Arc::new(HttpMockServerBuilder::new().build().unwrap());
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let client = TcpStream::connect(listener.local_addr().unwrap()).await.unwrap();
+        let (tcp_stream, remote_address) = listener.accept().await.unwrap();
+
+        // With a zero linger timeout, closing the socket resets the connection, as health checks
+        // and port scanners often do.
+        client.set_zero_linger().unwrap();
+        drop(client);
+
+        let handling = server.handle_tcp_stream(tcp_stream, remote_address);
+        timeout(Duration::from_secs(5), handling)
+            .await
+            .expect("the reset connection should be handled right away")
+            .unwrap();
+    }
 }

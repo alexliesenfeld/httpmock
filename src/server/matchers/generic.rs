@@ -1,22 +1,27 @@
+use std::{collections::HashSet, fmt::Display};
+
 use serde::{Deserialize, Serialize};
 use similar::{ChangeTag, TextDiff};
-use std::{collections::HashSet, fmt::Display};
 
 use crate::{
     common::{
         data::{
-            Diff, DiffResult, FunctionComparison, HttpMockRequest, KeyValueComparison,
-            KeyValueComparisonAttribute, KeyValueComparisonKeyValuePair, Mismatch,
-            RequestRequirements, SingleValueComparison, Tokenizer,
+            Diff, DiffResult, FunctionComparison, HttpMockRequest, KeyValueComparison, KeyValueComparisonAttribute,
+            KeyValueComparisonKeyValuePair, Mismatch, RequestRequirements, SingleValueComparison, Tokenizer,
         },
         util::is_none_or_empty,
     },
-    server::matchers::{comparators::ValueComparator, Matcher},
+    server::matchers::{Matcher, comparators::ValueComparator},
 };
 
 // ************************************************************************************************
 // SingleValueMatcher
 // ************************************************************************************************
+type SingleValueExpectation<S> = for<'a> fn(&'a RequestRequirements) -> Option<Vec<&'a S>>;
+
+type MultiValueExpectation<EK, EV> = for<'a> fn(&'a RequestRequirements) -> Option<Vec<(&'a EK, Option<&'a EV>)>>;
+type MultiValueRequest<RK, RV> = fn(&HttpMockRequest) -> Option<Vec<(RK, Option<RV>)>>;
+
 pub(crate) struct SingleValueMatcher<S, T>
 where
     S: Display,
@@ -25,7 +30,7 @@ where
     pub entity_name: &'static str,
     pub matcher_method: &'static str,
     pub matching_strategy: MatchingStrategy,
-    pub expectation: for<'a> fn(&'a RequestRequirements) -> Option<Vec<&'a S>>,
+    pub expectation: SingleValueExpectation<S>,
     pub request_value: fn(&HttpMockRequest) -> Option<T>,
     pub comparator: Box<dyn ValueComparator<S, T> + Send + Sync>,
     pub diff_with: Option<Tokenizer>,
@@ -37,11 +42,7 @@ where
     S: Display,
     T: Display,
 {
-    fn find_unmatched<'a>(
-        &self,
-        req_value: &Option<T>,
-        mock_values: &Option<Vec<&'a S>>,
-    ) -> Vec<&'a S> {
+    fn find_unmatched<'a>(&self, req_value: &Option<T>, mock_values: &Option<Vec<&'a S>>) -> Vec<&'a S> {
         let mock_values = match mock_values {
             None => return Vec::new(),
             Some(mv) => mv.to_vec(),
@@ -115,11 +116,8 @@ where
 }
 
 pub enum KeyValueOperator {
-    AND,
-    NAND,
-    NOR,
-    OR,
-    IMPLICATION,
+    And,
+    Implication,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -141,8 +139,8 @@ where
     pub entity_name: &'static str,
     pub matcher_method: &'static str,
     pub operator: KeyValueOperator,
-    pub expectation: for<'a> fn(&'a RequestRequirements) -> Option<Vec<(&'a EK, Option<&'a EV>)>>,
-    pub request_value: fn(&HttpMockRequest) -> Option<Vec<(RK, Option<RV>)>>,
+    pub expectation: MultiValueExpectation<EK, EV>,
+    pub request_value: MultiValueRequest<RK, RV>,
     pub matching_strategy: MatchingStrategy,
     pub key_required: bool,
     pub key_comparator: Box<dyn ValueComparator<EK, RK> + Send + Sync>,
@@ -159,16 +157,16 @@ where
 {
     fn find_unmatched<'a>(
         &self,
-        req_values: &Vec<(RK, Option<RV>)>,
+        req_values: &[(RK, Option<RV>)],
         mock_values: &'a Vec<(&'a EK, Option<&'a EV>)>,
     ) -> Vec<&'a (&'a EK, Option<&'a EV>)> {
-        return mock_values
+        mock_values
             .iter()
             .filter(|(ek, ev)| {
                 if self.key_required {
-                    let key_present = req_values.iter().any(|(rk, _): &(RK, Option<RV>)| {
-                        self.key_comparator.matches(&Some(ek), &Some(rk))
-                    });
+                    let key_present = req_values
+                        .iter()
+                        .any(|(rk, _): &(RK, Option<RV>)| self.key_comparator.matches(&Some(ek), &Some(rk)));
 
                     if !key_present {
                         // We negate here, since we are filtering for "unmatched" expectations -> true = unmatched
@@ -184,13 +182,10 @@ where
                         _ => true,
                     };
 
-                    return match self.operator {
-                        KeyValueOperator::NAND => !(key_matches && value_matches),
-                        KeyValueOperator::AND => key_matches && value_matches,
-                        KeyValueOperator::NOR => !(key_matches || value_matches),
-                        KeyValueOperator::OR => key_matches || value_matches,
-                        KeyValueOperator::IMPLICATION => !key_matches || value_matches,
-                    };
+                    match self.operator {
+                        KeyValueOperator::And => key_matches && value_matches,
+                        KeyValueOperator::Implication => !key_matches || value_matches,
+                    }
                 };
 
                 let is_match = match self.matching_strategy {
@@ -199,9 +194,9 @@ where
                 };
 
                 // We negate here, since we are filtering for "unmatched" expectations -> true = unmatched
-                return !is_match;
+                !is_match
             })
-            .collect();
+            .collect()
     }
 
     fn find_best_match<'a>(
@@ -214,10 +209,7 @@ where
             return None;
         }
 
-        if let Some((fk, fv)) = req_values
-            .iter()
-            .find(|(k, _)| k.to_string() == sk.to_string())
-        {
+        if let Some((fk, fv)) = req_values.iter().find(|(k, _)| k.to_string() == sk.to_string()) {
             return Some((fk, fv));
         }
 
@@ -241,12 +233,12 @@ where
     RV: Display,
 {
     fn matches(&self, req: &HttpMockRequest, mock: &RequestRequirements) -> bool {
-        let mock_values = (self.expectation)(mock).unwrap_or(Vec::new());
+        let mock_values = (self.expectation)(mock).unwrap_or_default();
         if mock_values.is_empty() {
             return true;
         }
 
-        let req_values = (self.request_value)(req).unwrap_or(Vec::new());
+        let req_values = (self.request_value)(req).unwrap_or_default();
         self.find_unmatched(&req_values, &mock_values).is_empty()
     }
 
@@ -260,10 +252,7 @@ where
         self.find_unmatched(&req_values, &mock_values)
             .iter()
             .map(|(k, v)| match self.find_best_match(k, v, &req_values) {
-                None => {
-                    self.key_comparator.distance(&Some(k), &None)
-                        + self.value_comparator.distance(v, &None)
-                }
+                None => self.key_comparator.distance(&Some(k), &None) + self.value_comparator.distance(v, &None),
                 Some((bmk, bmv)) => {
                     self.key_comparator.distance(&Some(k), &Some(bmk))
                         + self.value_comparator.distance(v, &bmv.as_ref())
@@ -299,13 +288,12 @@ where
                         value: v.map(|v| KeyValueComparisonAttribute {
                             operator: self.value_comparator.name().to_string(),
                             expected: v.to_string(),
-                            actual: best_match
-                                .and_then(|(_, bmv)| bmv.as_ref().map(|bmv| bmv.to_string())),
+                            actual: best_match.and_then(|(_, bmv)| bmv.as_ref().map(|bmv| bmv.to_string())),
                         }),
                         expected_count: None,
                         actual_count: None,
-                        all: (&req_values)
-                            .into_iter()
+                        all: (req_values)
+                            .iter()
                             .map(|(key, value)| KeyValueComparisonKeyValuePair {
                                 key: key.to_string(),
                                 value: value.as_ref().map(|v| v.to_string()),
@@ -324,6 +312,9 @@ where
 // ************************************************************************************************
 // MultiValueCountMatcher
 // ************************************************************************************************
+type MultiValueCountExpectation<EK, EV> =
+    for<'a> fn(&'a RequestRequirements) -> Option<Vec<(Option<&'a EK>, Option<&'a EV>, usize)>>;
+
 pub(crate) struct MultiValueCountMatcher<EK, EV, RK, RV>
 where
     EK: Display,
@@ -333,9 +324,8 @@ where
 {
     pub entity_name: &'static str,
     pub matcher_method: &'static str,
-    pub expectation:
-        for<'a> fn(&'a RequestRequirements) -> Option<Vec<(Option<&'a EK>, Option<&'a EV>, usize)>>,
-    pub request_value: fn(&HttpMockRequest) -> Option<Vec<(RK, Option<RV>)>>,
+    pub expectation: MultiValueCountExpectation<EK, EV>,
+    pub request_value: MultiValueRequest<RK, RV>,
     pub key_comparator: Box<dyn ValueComparator<EK, RK> + Send + Sync>,
     pub value_comparator: Box<dyn ValueComparator<EV, RV> + Send + Sync>,
     pub weight: usize,
@@ -374,12 +364,7 @@ where
         matched_idx
     }
 
-    fn count_matching_req_values(
-        &self,
-        req_values: &[(RK, Option<RV>)],
-        ek: &Option<&EK>,
-        ev: &Option<&EV>,
-    ) -> usize {
+    fn count_matching_req_values(&self, req_values: &[(RK, Option<RV>)], ek: &Option<&EK>, ev: &Option<&EV>) -> usize {
         req_values
             .iter()
             .filter(|(rk, rv)| {
@@ -426,7 +411,7 @@ where
             return true;
         }
 
-        let req_values = (self.request_value)(req).unwrap_or(Vec::new());
+        let req_values = (self.request_value)(req).unwrap_or_default();
         self.find_unmatched(&req_values, &mock_values).is_empty()
     }
 
@@ -475,8 +460,8 @@ where
                         }),
                         expected_count: Some(*expected_count),
                         actual_count: Some(actual_count),
-                        all: (&req_values)
-                            .into_iter()
+                        all: (req_values)
+                            .iter()
                             .map(|(key, value)| KeyValueComparisonKeyValuePair {
                                 key: key.to_string(),
                                 value: value.as_ref().map(|v| v.to_string()),
@@ -499,37 +484,29 @@ where
 pub(crate) struct FunctionValueMatcher<S, T> {
     pub entity_name: &'static str,
     pub matcher_function: &'static str,
-    pub expectation: for<'a> fn(&'a RequestRequirements) -> Option<Vec<&'a S>>,
+    pub expectation: SingleValueExpectation<S>,
     pub request_value: for<'a> fn(&'a HttpMockRequest) -> Option<&'a T>,
     pub comparator: Box<dyn ValueComparator<S, T> + Send + Sync>,
     pub weight: usize,
 }
 
 impl<S, T> FunctionValueMatcher<S, T> {
-    fn get_unmatched<'a>(
-        &self,
-        req_value: &Option<&T>,
-        mock_values: &Option<Vec<&'a S>>,
-    ) -> Vec<usize> {
+    fn get_unmatched(&self, req_value: &Option<&T>, mock_values: &Option<Vec<&S>>) -> Vec<usize> {
         let mock_values = match mock_values {
             None => return Vec::new(),
             Some(mv) => mv.to_vec(),
         };
         let req_value = match req_value {
             None => {
-                return mock_values
-                    .into_iter()
-                    .enumerate()
-                    .map(|(idx, _)| idx)
-                    .collect()
+                return mock_values.into_iter().enumerate().map(|(idx, _)| idx).collect();
             }
             Some(rv) => rv,
         };
         mock_values
             .into_iter()
             .enumerate()
-            .filter(|(idx, e)| !self.comparator.matches(&Some(e), &Some(req_value)))
-            .map(|(idx, e)| (idx))
+            .filter(|(_idx, e)| !self.comparator.matches(&Some(e), &Some(req_value)))
+            .map(|(idx, _e)| idx)
             .collect()
     }
 }
@@ -578,8 +555,6 @@ impl<S, T> Matcher for FunctionValueMatcher<S, T> {
     }
 }
 
-#[inline]
-#[inline]
 #[inline]
 pub fn diff_str(base: &str, edit: &str, tokenizer: Tokenizer) -> DiffResult {
     let changes = match tokenizer {

@@ -1,47 +1,45 @@
-use crate::api::spec::{Then, When};
-#[cfg(feature = "remote")]
-use crate::api::RemoteMockServerAdapter;
-#[cfg(feature = "remote")]
-use crate::common::http::HttpMockHttpClient;
-
-use crate::{
-    api::{LocalMockServerAdapter, MockServerAdapter},
-    common::{
-        data::{MockDefinition, MockServerHttpResponse, RequestRequirements},
-        runtime,
-        util::{read_env, with_retry, Join},
-    },
+#[cfg(feature = "record")]
+use std::path::PathBuf;
+use std::{
+    any::Any,
+    future::pending,
+    marker::PhantomData,
+    net::SocketAddr,
+    sync::{Arc, LazyLock, Mutex},
+    thread,
 };
 
+use tokio::sync::oneshot::channel;
+
+#[cfg(feature = "remote")]
+use crate::api::RemoteMockServerAdapter;
+#[cfg(feature = "record")]
+use crate::api::{
+    common::data::RecordingRuleConfig,
+    mock::MockSet,
+    record::{Recording, RecordingRuleBuilder},
+};
+#[cfg(feature = "remote")]
+use crate::common::http::HttpMockHttpClient;
+use crate::{
+    Mock,
+    api::{
+        LocalMockServerAdapter, ServerAdapter,
+        spec::{Then, When},
+    },
+    common::{
+        data::{MockDefinition, MockServerHttpResponse, RequestRequirements},
+        pool::Pool,
+        runtime,
+        util::{Join, read_env, take_from_mutex, with_retry},
+    },
+    server::{HttpMockServerBuilder, state},
+};
 #[cfg(feature = "proxy")]
 use crate::{
     api::proxy::{ForwardingRule, ForwardingRuleBuilder, ProxyRule, ProxyRuleBuilder},
     common::data::{ForwardingRuleConfig, ProxyRuleConfig},
 };
-
-#[cfg(feature = "record")]
-use crate::api::{
-    common::data::RecordingRuleConfig,
-    mock::MockSet,
-    proxy::{Recording, RecordingRuleBuilder},
-};
-
-#[cfg(feature = "record")]
-use std::path::PathBuf;
-
-use crate::server::{state::HttpMockStateManager, HttpMockServerBuilder};
-
-use crate::Mock;
-use async_object_pool::Pool;
-use std::{
-    cell::Cell,
-    future::pending,
-    net::{SocketAddr, ToSocketAddrs},
-    rc::Rc,
-    sync::{Arc, LazyLock},
-    thread,
-};
-use tokio::sync::oneshot::channel;
 
 /// Represents a mock server designed to simulate HTTP server behaviors for testing purposes.
 /// This server intercepts HTTP requests and can be configured to return predetermined responses.
@@ -54,117 +52,25 @@ use tokio::sync::oneshot::channel;
 /// - Monitor and verify that the expected requests are made by the client under test.
 /// - Simulate various network conditions and server responses, including errors and latencies.
 pub struct MockServer {
-    pub(crate) server_adapter: Option<Arc<dyn MockServerAdapter + Send + Sync>>,
-    pool: Arc<Pool<Arc<dyn MockServerAdapter + Send + Sync>>>,
+    pub(in crate::api) server_adapter: Option<ServerAdapter>,
+    pool: Arc<Pool<ServerAdapter>>,
+    // Keeps `MockServer` (and `Mock` etc., which borrow it) `!UnwindSafe` and `!RefUnwindSafe`
+    // in every feature set, as it was while the adapter was a `dyn` trait object. Without it,
+    // these auto traits would depend on whether the `remote` adapter variant is compiled in.
+    _not_unwind_safe: PhantomData<Arc<dyn Any + Send + Sync>>,
 }
 
 impl MockServer {
-    async fn from(
-        server_adapter: Arc<dyn MockServerAdapter + Send + Sync>,
-        pool: Arc<Pool<Arc<dyn MockServerAdapter + Send + Sync>>>,
-    ) -> Self {
+    async fn from(server_adapter: ServerAdapter, pool: Arc<Pool<ServerAdapter>>) -> Self {
         let server = Self {
             server_adapter: Some(server_adapter),
             pool,
+            _not_unwind_safe: PhantomData,
         };
 
         server.reset_async().await;
 
-        return server;
-    }
-
-    /// Asynchronously connects to a remote mock server running in standalone mode.
-    ///
-    /// # Arguments
-    /// * `address` - A string slice representing the address in the format "<host>:<port>", e.g., "127.0.0.1:8080".
-    ///
-    /// # Returns
-    /// An instance of `Self` representing the connected mock server.
-    ///
-    /// # Panics
-    /// This method will panic if the address cannot be parsed, resolved to an IPv4 address, or if the mock server is unreachable.
-    ///
-    /// # Note
-    /// This method requires the `remote` feature to be enabled.
-    #[cfg(feature = "remote")]
-    pub async fn connect_async(address: &str) -> Self {
-        let addr = address
-            .to_socket_addrs()
-            .expect("Cannot parse address")
-            .find(|addr| addr.is_ipv4())
-            .expect("Not able to resolve the provided host name to an IPv4 address");
-
-        let adapter = REMOTE_SERVER_POOL_REF
-            .take_or_create(|| {
-                Arc::new(RemoteMockServerAdapter::new(
-                    addr,
-                    REMOTE_SERVER_CLIENT.clone(),
-                ))
-            })
-            .await;
-        Self::from(adapter, REMOTE_SERVER_POOL_REF.clone()).await
-    }
-
-    /// Synchronously connects to a remote mock server running in standalone mode.
-    ///
-    /// # Arguments
-    /// * `address` - A string slice representing the address in the format "<host>:<port>", e.g., "127.0.0.1:8080".
-    ///
-    /// # Returns
-    /// An instance of `Self` representing the connected mock server.
-    ///
-    /// # Panics
-    /// This method will panic if the address cannot be parsed, resolved to an IPv4 address, or if the mock server is unreachable.
-    ///
-    /// # Note
-    /// This method requires the `remote` feature to be enabled.
-    #[cfg(feature = "remote")]
-    pub fn connect(address: &str) -> Self {
-        Self::connect_async(address).join()
-    }
-
-    /// Asynchronously connects to a remote mock server running in standalone mode
-    /// using connection parameters stored in the `HTTPMOCK_HOST` and `HTTPMOCK_PORT`
-    /// environment variables.
-    ///
-    /// # Returns
-    /// An instance of `Self` representing the connected mock server.
-    ///
-    /// # Panics
-    /// This method will panic if the `HTTPMOCK_PORT` environment variable cannot be
-    /// parsed to an integer or if the connection fails.
-    ///
-    /// # Note
-    /// This method requires the `remote` feature to be enabled.
-    ///
-    /// # Environment Variables
-    /// * `HTTPMOCK_HOST` - The hostname or IP address of the mock server (default: "127.0.0.1").
-    /// * `HTTPMOCK_PORT` - The port number of the mock server (default: "5050").
-    #[cfg(feature = "remote")]
-    pub async fn connect_from_env_async() -> Self {
-        let host = read_env("HTTPMOCK_HOST", "127.0.0.1");
-        let port = read_env("HTTPMOCK_PORT", "5050")
-            .parse::<u16>()
-            .expect("Cannot parse environment variable HTTPMOCK_PORT to an integer");
-        Self::connect_async(&format!("{}:{}", host, port)).await
-    }
-
-    /// Synchronously connects to a remote mock server running in standalone mode
-    /// using connection parameters stored in the `HTTPMOCK_HOST` and `HTTPMOCK_PORT`
-    /// environment variables.
-    ///
-    /// # Returns
-    /// An instance of `Self` representing the connected mock server.
-    ///
-    /// # Panics
-    /// This method will panic if the `HTTPMOCK_PORT` environment variable cannot be
-    /// parsed to an integer or if the connection fails.
-    ///
-    /// # Note
-    /// This method requires the `remote` feature to be enabled.
-    #[cfg(feature = "remote")]
-    pub fn connect_from_env() -> Self {
-        Self::connect_from_env_async().join()
+        server
     }
 
     /// Starts a new `MockServer` asynchronously.
@@ -185,7 +91,6 @@ impl MockServer {
     ///
     /// # Returns
     /// An instance of `Self` representing the started mock server.
-    /// ```
     pub async fn start_async() -> Self {
         let adapter = LOCAL_SERVER_POOL_REF
             .take_or_create(LOCAL_SERVER_ADAPTER_GENERATOR)
@@ -295,7 +200,7 @@ impl MockServer {
     /// ```
     #[cfg(feature = "https")]
     pub fn url<S: Into<String>>(&self, path: S) -> String {
-        return format!("https://{}{}", self.address(), path.into());
+        format!("https://{}{}", self.address(), path.into())
     }
 
     /// Builds the URL for a specific path on the mock server.
@@ -323,7 +228,7 @@ impl MockServer {
     /// ```
     #[cfg(not(feature = "https"))]
     pub fn url<S: Into<String>>(&self, path: S) -> String {
-        return format!("http://{}{}", self.address(), path.into());
+        format!("http://{}{}", self.address(), path.into())
     }
 
     /// Builds the base URL for the mock server.
@@ -383,7 +288,7 @@ impl MockServer {
     /// // Ensure the mock was called as expected.
     /// mock.assert();
     /// ```
-    pub fn mock<F>(&self, config_fn: F) -> Mock
+    pub fn mock<F>(&self, config_fn: F) -> Mock<'_>
     where
         F: FnOnce(When, Then),
     {
@@ -423,8 +328,9 @@ impl MockServer {
     where
         SpecFn: FnOnce(When, Then),
     {
-        let mut req = Rc::new(Cell::new(RequestRequirements::new()));
-        let mut res = Rc::new(Cell::new(MockServerHttpResponse::new()));
+        let req = Arc::new(Mutex::new(RequestRequirements::default()));
+        let res = Arc::new(Mutex::new(MockServerHttpResponse::default()));
+        let up_to_n_times = Arc::new(Mutex::new(None));
 
         spec_fn(
             When {
@@ -432,28 +338,35 @@ impl MockServer {
             },
             Then {
                 response_template: res.clone(),
+                up_to_n_times: up_to_n_times.clone(),
             },
         );
 
-        let response = self
-            .server_adapter
-            .as_ref()
-            .unwrap()
+        let up_to_n_times = take_from_mutex(&up_to_n_times);
+        let adapter = self.server_adapter.as_ref().unwrap();
+
+        let response = adapter
             .create_mock(&MockDefinition {
-                request: req.take(),
-                response: res.take(),
+                request: take_from_mutex(&req),
+                response: take_from_mutex(&res),
+                up_to_n_times,
             })
             .await
             .expect("Cannot deserialize mock server response");
 
-        Mock {
-            id: response.id,
-            server: self,
+        // Servers that predate `up_to_n_times` ignore the field and would serve the mock without
+        // a limit. Remove the mock again before failing.
+        if up_to_n_times.is_some() && response.up_to_n_times.is_none() {
+            let _ = adapter.delete_mock(response.id).await;
+            panic!("The mock server does not support up_to_n_times. Upgrade the mock server to use it.");
         }
+
+        Mock::new(response.id, self)
     }
 
     /// Resets the mock server. More specifically, it deletes all [Mock](struct.Mock.html) objects
-    /// from the mock server and clears its request history.
+    /// from the mock server and clears its request history. Static mocks loaded from YAML files
+    /// are kept, but their call counters are cleared.
     ///
     /// # Example
     /// ```rust
@@ -480,7 +393,8 @@ impl MockServer {
     }
 
     /// Resets the mock server. More specifically, it deletes all [Mock](struct.Mock.html) objects
-    /// from the mock server and clears its request history.
+    /// from the mock server and clears its request history. Static mocks loaded from YAML files
+    /// are kept, but their call counters are cleared.
     ///
     /// # Example
     /// ```rust
@@ -512,7 +426,99 @@ impl MockServer {
                 .expect("Cannot reset mock server (task: delete mocks).");
         }
     }
+}
 
+#[cfg(feature = "remote")]
+impl MockServer {
+    /// Asynchronously connects to a remote mock server running in standalone mode.
+    ///
+    /// # Arguments
+    /// * `address` - A string slice representing the address in the format `<host>:<port>`, e.g., "127.0.0.1:8080".
+    ///
+    /// # Returns
+    /// An instance of `Self` representing the connected mock server.
+    ///
+    /// # Panics
+    /// This method will panic if the address cannot be parsed, resolved to an IPv4 address, or if the mock server is unreachable.
+    ///
+    /// # Note
+    /// This method requires the `remote` feature to be enabled.
+    pub async fn connect_async(address: &str) -> Self {
+        use std::net::ToSocketAddrs;
+        let addr = address
+            .to_socket_addrs()
+            .expect("Cannot parse address")
+            .find(|addr| addr.is_ipv4())
+            .expect("Not able to resolve the provided host name to an IPv4 address");
+
+        let adapter = REMOTE_SERVER_POOL_REF
+            .take_or_create(|| ServerAdapter::Remote(RemoteMockServerAdapter::new(addr, REMOTE_SERVER_CLIENT.clone())))
+            .await;
+        Self::from(adapter, REMOTE_SERVER_POOL_REF.clone()).await
+    }
+
+    /// Synchronously connects to a remote mock server running in standalone mode.
+    ///
+    /// # Arguments
+    /// * `address` - A string slice representing the address in the format `<host>:<port>`, e.g., "127.0.0.1:8080".
+    ///
+    /// # Returns
+    /// An instance of `Self` representing the connected mock server.
+    ///
+    /// # Panics
+    /// This method will panic if the address cannot be parsed, resolved to an IPv4 address, or if the mock server is unreachable.
+    ///
+    /// # Note
+    /// This method requires the `remote` feature to be enabled.
+    pub fn connect(address: &str) -> Self {
+        Self::connect_async(address).join()
+    }
+
+    /// Asynchronously connects to a remote mock server running in standalone mode
+    /// using connection parameters stored in the `HTTPMOCK_HOST` and `HTTPMOCK_PORT`
+    /// environment variables.
+    ///
+    /// # Returns
+    /// An instance of `Self` representing the connected mock server.
+    ///
+    /// # Panics
+    /// This method will panic if the `HTTPMOCK_PORT` environment variable cannot be
+    /// parsed to an integer or if the connection fails.
+    ///
+    /// # Note
+    /// This method requires the `remote` feature to be enabled.
+    ///
+    /// # Environment Variables
+    /// * `HTTPMOCK_HOST` - The hostname or IP address of the mock server (default: "127.0.0.1").
+    /// * `HTTPMOCK_PORT` - The port number of the mock server (default: "5050").
+    pub async fn connect_from_env_async() -> Self {
+        let host = read_env("HTTPMOCK_HOST", "127.0.0.1");
+        let port = read_env("HTTPMOCK_PORT", "5050")
+            .parse::<u16>()
+            .expect("Cannot parse environment variable HTTPMOCK_PORT to an integer");
+        Self::connect_async(&format!("{}:{}", host, port)).await
+    }
+
+    /// Synchronously connects to a remote mock server running in standalone mode
+    /// using connection parameters stored in the `HTTPMOCK_HOST` and `HTTPMOCK_PORT`
+    /// environment variables.
+    ///
+    /// # Returns
+    /// An instance of `Self` representing the connected mock server.
+    ///
+    /// # Panics
+    /// This method will panic if the `HTTPMOCK_PORT` environment variable cannot be
+    /// parsed to an integer or if the connection fails.
+    ///
+    /// # Note
+    /// This method requires the `remote` feature to be enabled.
+    pub fn connect_from_env() -> Self {
+        Self::connect_from_env_async().join()
+    }
+}
+
+#[cfg(feature = "proxy")]
+impl MockServer {
     /// Configures the mock server to forward the request to the target host by replacing the host name,
     /// but only if the request expectations are met. If the request is recorded, the recording will
     /// **NOT** contain the host name as an expectation to allow the recording to be reused.
@@ -562,12 +568,11 @@ impl MockServer {
     ///
     /// # Feature
     /// This method is only available when the `proxy` feature is enabled.
-    #[cfg(feature = "proxy")]
     pub fn forward_to<IntoString, ForwardingRuleBuilderFn>(
         &self,
         to_base_url: IntoString,
         rule: ForwardingRuleBuilderFn,
-    ) -> ForwardingRule
+    ) -> ForwardingRule<'_>
     where
         ForwardingRuleBuilderFn: FnOnce(ForwardingRuleBuilder),
         IntoString: Into<String>,
@@ -626,7 +631,6 @@ impl MockServer {
     ///
     /// # Feature
     /// This method is only available when the `proxy` feature is enabled.
-    #[cfg(feature = "proxy")]
     pub async fn forward_to_async<'a, IntoString, ForwardingRuleBuilderFn>(
         &'a self,
         target_base_url: IntoString,
@@ -636,8 +640,8 @@ impl MockServer {
         ForwardingRuleBuilderFn: FnOnce(ForwardingRuleBuilder),
         IntoString: Into<String>,
     {
-        let mut headers = Rc::new(Cell::new(Vec::new()));
-        let mut req = Rc::new(Cell::new(RequestRequirements::new()));
+        let headers = Arc::new(Mutex::new(Vec::new()));
+        let req = Arc::new(Mutex::new(RequestRequirements::default()));
 
         rule(ForwardingRuleBuilder {
             headers: headers.clone(),
@@ -650,8 +654,8 @@ impl MockServer {
             .unwrap()
             .create_forwarding_rule(ForwardingRuleConfig {
                 target_base_url: target_base_url.into(),
-                request_requirements: req.take(),
-                request_header: headers.take(),
+                request_requirements: take_from_mutex(&req),
+                request_header: take_from_mutex(&headers),
             })
             .await
             .expect("Cannot deserialize mock server response");
@@ -719,8 +723,7 @@ impl MockServer {
     ///
     /// # Feature
     /// This method is only available when the `proxy` feature is enabled.
-    #[cfg(feature = "proxy")]
-    pub fn proxy<ProxyRuleBuilderFn>(&self, rule: ProxyRuleBuilderFn) -> ProxyRule
+    pub fn proxy<ProxyRuleBuilderFn>(&self, rule: ProxyRuleBuilderFn) -> ProxyRule<'_>
     where
         ProxyRuleBuilderFn: FnOnce(ProxyRuleBuilder),
     {
@@ -787,16 +790,12 @@ impl MockServer {
     ///
     /// # Feature
     /// This method is only available when the `proxy` feature is enabled.
-    #[cfg(feature = "proxy")]
-    pub async fn proxy_async<'a, ProxyRuleBuilderFn>(
-        &'a self,
-        rule: ProxyRuleBuilderFn,
-    ) -> ProxyRule<'a>
+    pub async fn proxy_async<'a, ProxyRuleBuilderFn>(&'a self, rule: ProxyRuleBuilderFn) -> ProxyRule<'a>
     where
         ProxyRuleBuilderFn: FnOnce(ProxyRuleBuilder),
     {
-        let mut headers = Rc::new(Cell::new(Vec::new()));
-        let mut req = Rc::new(Cell::new(RequestRequirements::new()));
+        let headers = Arc::new(Mutex::new(Vec::new()));
+        let req = Arc::new(Mutex::new(RequestRequirements::default()));
 
         rule(ProxyRuleBuilder {
             headers: headers.clone(),
@@ -808,8 +807,8 @@ impl MockServer {
             .as_ref()
             .unwrap()
             .create_proxy_rule(ProxyRuleConfig {
-                request_requirements: req.take(),
-                request_header: headers.take(),
+                request_requirements: take_from_mutex(&req),
+                request_header: take_from_mutex(&headers),
             })
             .await
             .expect("Cannot deserialize mock server response");
@@ -819,7 +818,10 @@ impl MockServer {
             server: self,
         }
     }
+}
 
+#[cfg(feature = "record")]
+impl MockServer {
     /// Records all requests matching a given rule and the corresponding responses
     /// sent back by the mock server. If requests are forwarded or proxied to another
     /// host, the original responses from those target hosts will also be recorded.
@@ -827,17 +829,17 @@ impl MockServer {
     /// # Parameters
     ///
     /// * `rule`: A closure that takes a `RecordingRuleBuilder` as an argument,
-    ///           which defines the conditions under which HTTP requests and
-    ///           their corresponding responses will be recorded.
+    ///   which defines the conditions under which HTTP requests and
+    ///   their corresponding responses will be recorded.
     ///
     /// # Returns
     ///
     /// * `Recording`: A reference to the recording object stored on the mock server,
-    ///                which can be used to manage the recording, such as downloading
-    ///                or deleting it. The `Recording` object provides functionality
-    ///                to download the recording and store it under a file. Users can
-    ///                use these files for later playback by calling the `playback`
-    ///                method of the mock server.
+    ///   which can be used to manage the recording, such as downloading
+    ///   or deleting it. The `Recording` object provides functionality
+    ///   to download the recording and store it under a file. Users can
+    ///   use these files for later playback by calling the `playback`
+    ///   method of the mock server.
     ///
     /// # Example
     ///
@@ -897,8 +899,7 @@ impl MockServer {
     /// # Feature
     ///
     /// This method is only available when the `record` feature is enabled.
-    #[cfg(feature = "record")]
-    pub fn record<RecordingRuleBuilderFn>(&self, rule: RecordingRuleBuilderFn) -> Recording
+    pub fn record<RecordingRuleBuilderFn>(&self, rule: RecordingRuleBuilderFn) -> Recording<'_>
     where
         RecordingRuleBuilderFn: FnOnce(RecordingRuleBuilder),
     {
@@ -912,16 +913,16 @@ impl MockServer {
     /// # Parameters
     ///
     /// * `rule`: A closure that takes a `RecordingRuleBuilder` as an argument,
-    ///           which defines the conditions under which requests will be recorded.
+    ///   which defines the conditions under which requests will be recorded.
     ///
     /// # Returns
     ///
     /// * `Recording`: A reference to the recording object stored on the mock server,
-    ///                which can be used to manage the recording, such as downloading
-    ///                or deleting it. The `Recording` object provides functionality
-    ///                to download the recording and store it under a file. Users can
-    ///                use these files for later playback by calling the `playback`
-    ///                method of the mock server.
+    ///   which can be used to manage the recording, such as downloading
+    ///   or deleting it. The `Recording` object provides functionality
+    ///   to download the recording and store it under a file. Users can
+    ///   use these files for later playback by calling the `playback`
+    ///   method of the mock server.
     ///
     /// # Example
     ///
@@ -986,30 +987,24 @@ impl MockServer {
     /// # Feature
     ///
     /// This method is only available when the `record` feature is enabled.
-    #[cfg(feature = "record")]
-    pub async fn record_async<'a, RecordingRuleBuilderFn>(
-        &'a self,
-        rule: RecordingRuleBuilderFn,
-    ) -> Recording<'a>
+    pub async fn record_async<'a, RecordingRuleBuilderFn>(&'a self, rule: RecordingRuleBuilderFn) -> Recording<'a>
     where
         RecordingRuleBuilderFn: FnOnce(RecordingRuleBuilder),
     {
-        let mut config = Rc::new(Cell::new(RecordingRuleConfig {
-            request_requirements: RequestRequirements::new(),
+        let config = Arc::new(Mutex::new(RecordingRuleConfig {
+            request_requirements: RequestRequirements::default(),
             record_headers: Vec::new(),
             record_response_delays: false,
             record_response_headers: Vec::new(),
         }));
 
-        rule(RecordingRuleBuilder {
-            config: config.clone(),
-        });
+        rule(RecordingRuleBuilder { config: config.clone() });
 
         let response = self
             .server_adapter
             .as_ref()
             .unwrap()
-            .create_recording(config.take())
+            .create_recording(take_from_mutex(&config))
             .await
             .expect("Cannot deserialize mock server response");
 
@@ -1027,7 +1022,7 @@ impl MockServer {
     /// # Parameters
     ///
     /// * `path`: A path to the file containing the recording. This can be any type
-    ///           that implements `Into<PathBuf>`, such as a `&str` or `String`.
+    ///   that implements `Into<PathBuf>`, such as a `&str` or `String`.
     ///
     /// # Returns
     ///
@@ -1092,8 +1087,7 @@ impl MockServer {
     /// # Feature
     ///
     /// This method is only available when the `record` feature is enabled.
-    #[cfg(feature = "record")]
-    pub fn playback<IntoPathBuf: Into<PathBuf>>(&self, path: IntoPathBuf) -> MockSet {
+    pub fn playback<IntoPathBuf: Into<PathBuf>>(&self, path: IntoPathBuf) -> MockSet<'_> {
         self.playback_async(path).join()
     }
 
@@ -1105,7 +1099,7 @@ impl MockServer {
     /// # Parameters
     ///
     /// * `path`: A path to the file containing the recorded interactions. This can be any type
-    ///           that implements `Into<PathBuf>`, such as a `&str` or `String`.
+    ///   that implements `Into<PathBuf>`, such as a `&str` or `String`.
     ///
     /// # Returns
     ///
@@ -1174,17 +1168,17 @@ impl MockServer {
     /// # Feature
     ///
     /// This method is only available when the `record` feature is enabled.
-    #[cfg(feature = "record")]
-    pub async fn playback_async<IntoPathBuf: Into<PathBuf>>(&self, path: IntoPathBuf) -> MockSet {
+    pub async fn playback_async<IntoPathBuf: Into<PathBuf>>(&self, path: IntoPathBuf) -> MockSet<'_> {
         use std::fs;
 
         let path = path.into();
-        let content = fs::read_to_string(&path).expect(&format!(
-            "could not read from file {}",
-            path.as_os_str()
-                .to_str()
-                .map_or(String::new(), |p| p.to_string())
-        ));
+        let content = fs::read_to_string(&path).unwrap_or_else(|error| {
+            panic!(
+                "could not read from file {}: {:?}",
+                path.as_os_str().to_str().map_or(String::new(), |p| p.to_string()),
+                error
+            )
+        });
 
         return self.playback_from_yaml_async(content).await;
     }
@@ -1196,7 +1190,7 @@ impl MockServer {
     /// # Parameters
     ///
     /// * `content`: A YAML string that represents the contents of the recording file.
-    ///              This can be any type that implements `AsRef<str>`, such as a `&str` or `String`.
+    ///   This can be any type that implements `AsRef<str>`, such as a `&str` or `String`.
     ///
     /// # Returns
     ///
@@ -1242,8 +1236,7 @@ impl MockServer {
     /// # Feature
     ///
     /// This method is only available when the `record` feature is enabled.
-    #[cfg(feature = "record")]
-    pub fn playback_from_yaml<AsStrRef: AsRef<str>>(&self, content: AsStrRef) -> MockSet {
+    pub fn playback_from_yaml<AsStrRef: AsRef<str>>(&self, content: AsStrRef) -> MockSet<'_> {
         self.playback_from_yaml_async(content).join()
     }
 
@@ -1254,7 +1247,7 @@ impl MockServer {
     /// # Parameters
     ///
     /// * `content`: A YAML string that represents the contents of the recording file.
-    ///              This can be any type that implements `AsRef<str>`, such as a `&str` or `String`.
+    ///   This can be any type that implements `AsRef<str>`, such as a `&str` or `String`.
     ///
     /// # Returns
     ///
@@ -1301,11 +1294,7 @@ impl MockServer {
     /// # Feature
     ///
     /// This method is only available when the `record` feature is enabled.
-    #[cfg(feature = "record")]
-    pub async fn playback_from_yaml_async<AsStrRef: AsRef<str>>(
-        &self,
-        content: AsStrRef,
-    ) -> MockSet {
+    pub async fn playback_from_yaml_async<AsStrRef: AsRef<str>>(&self, content: AsStrRef) -> MockSet<'_> {
         let response = self
             .server_adapter
             .as_ref()
@@ -1337,13 +1326,13 @@ impl Drop for MockServer {
     /// This behavior is part of the `MockServer` struct and does not require any additional features to be enabled.
     fn drop(&mut self) {
         let adapter = self.server_adapter.take().unwrap();
-        self.pool.put(adapter).join();
+        self.pool.put(adapter);
     }
 }
 
-const LOCAL_SERVER_ADAPTER_GENERATOR: fn() -> Arc<dyn MockServerAdapter + Send + Sync> = || {
+const LOCAL_SERVER_ADAPTER_GENERATOR: fn() -> ServerAdapter = || {
     let (addr_sender, addr_receiver) = channel::<SocketAddr>();
-    let state_manager = Arc::new(HttpMockStateManager::default());
+    let state_manager = Arc::new(state::HttpMockStateManager::default());
     let srv = HttpMockServerBuilder::new()
         .build_with_state(state_manager.clone())
         .expect("cannot build mock server");
@@ -1356,19 +1345,18 @@ const LOCAL_SERVER_ADAPTER_GENERATOR: fn() -> Arc<dyn MockServerAdapter + Send +
     });
 
     let addr = addr_receiver.join().expect("Cannot get server address");
-    Arc::new(LocalMockServerAdapter::new(addr, state_manager))
+    ServerAdapter::Local(LocalMockServerAdapter::new(addr, state_manager))
 };
 
-static LOCAL_SERVER_POOL_REF: LazyLock<Arc<Pool<Arc<dyn MockServerAdapter + Send + Sync>>>> =
-    LazyLock::new(|| {
-        let max_servers = read_env("HTTPMOCK_MAX_SERVERS", "25")
-            .parse::<usize>()
-            .expect("Cannot parse environment variable HTTPMOCK_MAX_SERVERS as an integer");
-        Arc::new(Pool::new(max_servers))
-    });
+static LOCAL_SERVER_POOL_REF: LazyLock<Arc<Pool<ServerAdapter>>> = LazyLock::new(|| {
+    let max_servers = read_env("HTTPMOCK_MAX_SERVERS", "25")
+        .parse::<usize>()
+        .expect("Cannot parse environment variable HTTPMOCK_MAX_SERVERS as an integer");
+    Arc::new(Pool::new(max_servers))
+});
 
-static REMOTE_SERVER_POOL_REF: LazyLock<Arc<Pool<Arc<dyn MockServerAdapter + Send + Sync>>>> =
-    LazyLock::new(|| Arc::new(Pool::new(1)));
+#[cfg(feature = "remote")]
+static REMOTE_SERVER_POOL_REF: LazyLock<Arc<Pool<ServerAdapter>>> = LazyLock::new(|| Arc::new(Pool::new(1)));
 
 #[cfg(feature = "remote")]
 // TODO: REFACTOR to use a runtime agnostic HTTP client for remote access.
@@ -1379,9 +1367,7 @@ static REMOTE_SERVER_POOL_REF: LazyLock<Arc<Pool<Arc<dyn MockServerAdapter + Sen
 static REMOTE_SERVER_CLIENT: LazyLock<Arc<HttpMockHttpClient>> = LazyLock::new(|| {
     let max_workers = read_env("HTTPMOCK_HTTP_CLIENT_WORKER_THREADS", "1")
         .parse::<usize>()
-        .expect(
-            "Cannot parse environment variable HTTPMOCK_HTTP_CLIENT_WORKER_THREADS as an integer",
-        );
+        .expect("Cannot parse environment variable HTTPMOCK_HTTP_CLIENT_WORKER_THREADS as an integer");
     let max_blocking_threads = read_env("HTTPMOCK_HTTP_CLIENT_MAX_BLOCKING_THREADS", "10")
         .parse::<usize>()
         .expect("Cannot parse environment variable HTTPMOCK_HTTP_CLIENT_MAX_BLOCKING_THREADS to an integer");

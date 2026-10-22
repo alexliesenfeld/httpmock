@@ -23,9 +23,10 @@ async fn test_http_get_request() {
 #[cfg(feature = "remote")]
 #[tokio::test]
 async fn https_test_reqwest() {
-    use httpmock::MockServer;
-    use reqwest::{tls::Certificate, Client};
     use std::{fs::read, path::PathBuf};
+
+    use httpmock::MockServer;
+    use reqwest::{Client, tls::Certificate};
 
     // This starts up a standalone server in the background running on port 5050
     crate::with_standalone_server();
@@ -48,17 +49,45 @@ async fn https_test_reqwest() {
     let cert = Certificate::from_pem(&read(cert_path).unwrap()).unwrap();
 
     // Build the client with the CA certificate
-    let client = Client::builder()
-        .add_root_certificate(cert)
-        .build()
-        .unwrap();
+    let client = Client::builder().add_root_certificate(cert).build().unwrap();
 
     let res = client.get(&base_url).send().await.unwrap();
 
     assert_eq!(res.status(), 200);
-    assert_eq!(
-        res.headers().get("X-Hello").unwrap().to_str().unwrap(),
-        "test"
-    );
+    assert_eq!(res.headers().get("X-Hello").unwrap().to_str().unwrap(), "test");
     assert!(base_url.starts_with("https://"));
+}
+
+#[tokio::test]
+async fn serves_http_and_https_on_the_same_port() {
+    use httpmock::{MockServer, server::DEFAULT_CA_CERTIFICATE};
+    use reqwest::{Client, tls::Certificate};
+
+    // Arrange
+    let server = MockServer::start_async().await;
+
+    let mock = server
+        .mock_async(|when, then| {
+            when.path("/hello");
+            then.status(200);
+        })
+        .await;
+
+    // Trust the CA the mock server signs its certificates with, so this test doesn't depend on the OS trust store
+    let cert = Certificate::from_pem(DEFAULT_CA_CERTIFICATE.as_bytes()).unwrap();
+    let client = Client::builder().add_root_certificate(cert).build().unwrap();
+
+    // Act: the server tells TLS and plain HTTP apart by the first byte the client sends
+    for scheme in ["http", "https"] {
+        let res = client
+            .get(format!("{}://{}/hello", scheme, server.address()))
+            .send()
+            .await
+            .unwrap();
+
+        // Assert
+        assert_eq!(res.status(), 200, "{} request should be served", scheme);
+    }
+
+    mock.assert_calls_async(2).await;
 }

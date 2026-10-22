@@ -1,0 +1,37 @@
+name: Crates.io Release
+run-name: "Crates.io ${{ inputs.dry_run && 'DRY RUN' || 'PUBLISH' }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Dry run (build and verify without publishing)
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crates-release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.repository == 'httpmock/httpmock' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions-rust-lang/setup-rust-toolchain@v2
+        with:
+          toolchain: stable
+          rustflags: ""
+      - name: Build and verify crate
+        run: cargo publish --dry-run --all-features
+      - name: Publish to crates.io
+        if: ${{ !inputs.dry_run }}
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: cargo publish --all-features

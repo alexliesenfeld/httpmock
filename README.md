@@ -10,10 +10,10 @@
 
 <div align="center">
 
-[![Build](https://github.com/httpmock/httpmock/actions/workflows/build.yml/badge.svg)](https://github.com/httpmock/httpmock/actions/workflows/build.yml)
+[![Build](https://github.com/httpmock/httpmock/actions/workflows/feature-matrix.yml/badge.svg)](https://github.com/httpmock/httpmock/actions/workflows/feature-matrix.yml)
 [![crates.io](https://img.shields.io/crates/d/httpmock.svg)](https://crates.io/crates/httpmock)
 [![Mentioned in Awesome](https://raw.githubusercontent.com/alexliesenfeld/docs-assets/refs/heads/main/ab.svg)](https://github.com/rust-unofficial/awesome-rust#testing)
-[![Rust](https://img.shields.io/badge/rust-1.85%2B-blue.svg?maxAge=3600)](https://github.com/rust-lang/rust/blob/main/RELEASES.md#version-1851-2025-03-18)
+[![Rust](https://img.shields.io/badge/rust-1.88%2B-blue.svg?maxAge=3600)](https://github.com/rust-lang/rust/blob/main/RELEASES.md#version-1880-2025-06-26)
 
 </div>
 
@@ -24,9 +24,7 @@
     ·
     <a href="https://crates.io/crates/httpmock">Crate</a>
     ·
-    <a href="https://discord.com/invite/7QzTfBUe">Chat on Discord</a>
-    ·
- <a href="https://github.com/httpmock/httpmock/discussions">Forum</a>
+    <a href="https://discord.gg/BMyywgTJWK">Chat on Discord</a>
     ·
     <a href="https://github.com/httpmock/httpmock/issues">Report Bug</a>
     ·
@@ -51,7 +49,7 @@
 * [Advanced verification and debugging support](https://alexliesenfeld.github.io/posts/mocking-http--services-in-rust/#creating-mocks) (including diff generation between actual and expected HTTP request values)
 * Parallel test execution.
 * Fully asynchronous core with synchronous and asynchronous APIs.
-* Support for [mock configuration using YAML files](https://github.com/httpmock/httpmock/tree/master#file-based-mock-specification).
+* Support for [mock configuration using YAML files](https://httpmock.rs/server/standalone/).
 
 ## Getting Started
 
@@ -59,7 +57,7 @@ Add `httpmock` to `Cargo.toml`:
 
 ```toml
 [dev-dependencies]
-httpmock = "0.8.2"
+httpmock = "0.9.0"
 ```
 
 You can then use `httpmock` as follows:
@@ -116,7 +114,7 @@ All received query parameter values:
     1. word=hello
 
 Matcher:  query_param
-Docs:     https://docs.rs/httpmock/0.8.2/httpmock/struct.When.html#method.query_param
+Docs:     https://docs.rs/httpmock/0.9.0/httpmock/struct.When.html#method.query_param
 ```
 
 # Usage

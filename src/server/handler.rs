@@ -1,76 +1,132 @@
-use crate::common::data::{
-    ActiveForwardingRule, ActiveProxyRule, Error as DataError, ErrorResponse, MockDefinition,
-    RequestRequirements,
-};
+//! The mock server's sans-IO core.
+//!
+//! [`Handler::handle`] takes a buffered request in absolute-form and returns an [`Action`]
+//! without doing any I/O; the transport carries it out. What happens to a request:
+//!
+//! | Request | Action | State change |
+//! | --- | --- | --- |
+//! | management route with a supported method | `Respond` | per route: mocks, rules, recordings, history |
+//! | a forwarding rule matches | `Serve` with `Reply::Forward` | none |
+//! | a proxy rule matches and no forwarding rule does | `Serve` with `Reply::Proxy` | none |
+//! | a mock matches and is not exhausted | `Serve` with `Reply::Mock` and the mock's delay | request appended to the history, call counter incremented |
+//! | nothing matches, including a management path with another method | `Serve` with a 404 `Reply::Mock` | request appended to the history |
+//!
+//! After an `Action::Serve` the transport passes the response and the time it took to
+//! [`Handler::finish`], which turns them into mock definitions for every recording whose rule
+//! matches the request.
 
-use crate::{
-    common::runtime,
-    server::{
-        handler::Error::{
-            InvalidHeader, ParamError, ParamFormatError, RequestBodyDeserializeError,
-            RequestConversionError, ResponseBodyConversionError, ResponseBodySerializeError,
-        },
-        state,
-        state::StateManager,
-    },
-};
-use std::convert::TryInto;
-
-#[cfg(any(feature = "remote", feature = "proxy"))]
-use crate::common::http::{Error as HttpClientError, HttpClient};
-
-use crate::common::data::{ForwardingRuleConfig, ProxyRuleConfig, RecordingRuleConfig};
-
-use crate::common::data;
-use crate::prelude::{HttpMockRequest, HttpMockResponse};
-use crate::server::handler::Error::ResponseDataConversionError;
-use async_trait::async_trait;
-use http::{HeaderMap, HeaderName, HeaderValue, StatusCode, Uri};
-use http_body_util::BodyExt;
-use hyper::{body::Bytes, Method, Request, Response};
-use path_tree::{Path, PathTree};
-use serde::{de::DeserializeOwned, Serialize};
 use std::{
     fmt::{Debug, Display},
     str::FromStr,
     sync::Arc,
-    thread,
     time::Duration,
 };
+
+use http::StatusCode;
+#[cfg(feature = "proxy")]
+use http::{HeaderValue, Uri};
+use hyper::{Method, Request, Response, body::Bytes};
+use path_tree::{Path, PathTree};
+use serde::{Serialize, de::DeserializeOwned};
 use thiserror::Error;
-use tokio::time::Instant;
+
+#[cfg(feature = "record")]
+use crate::common::data::RecordingRuleConfig;
+#[cfg(feature = "proxy")]
+use crate::{
+    common::data::{ActiveForwardingRule, ActiveProxyRule, ForwardingRuleConfig, ProxyRuleConfig},
+    server::handler::Error::InvalidHeader,
+};
+use crate::{
+    common::{
+        data,
+        data::{Error as DataError, ErrorResponse, MockDefinition, RequestRequirements, UpToNTimesConfig},
+    },
+    prelude::{HttpMockRequest, HttpMockResponse},
+    server::{
+        handler::Error::{
+            InvalidParamFormat, MissingParam, RequestBodyDeserialization, RequestConversion, ResponseBodyConstruction,
+            ResponseBodySerialization, ResponseDataConversion,
+        },
+        state,
+    },
+};
 
 #[derive(Error, Debug)]
 pub enum Error {
-    #[error("cannot parse regex: {0}")]
-    RegexError(#[from] regex::Error),
     #[error("cannot deserialize request body: {0}")]
-    RequestBodyDeserializeError(serde_json::Error),
-    #[error("cannot process request body: {0}")]
-    RequestBodyError(String),
+    RequestBodyDeserialization(#[source] serde_json::Error),
     #[error("cannot serialize response body: {0}")]
-    ResponseBodySerializeError(serde_json::Error),
+    ResponseBodySerialization(#[source] serde_json::Error),
+    #[error("cannot construct response: {0}")]
+    ResponseBodyConstruction(#[source] http::Error),
     #[error("cannot convert response body: {0}")]
-    ResponseBodyConversionError(http::Error),
-    #[error("cannot convert response body: {0}")]
-    ResponseDataConversionError(data::Error),
+    ResponseDataConversion(#[source] data::Error),
     #[error("expected URL parameters not found")]
-    ParamError,
+    MissingParam,
     #[error("URL parameter format is invalid: {0}")]
-    ParamFormatError(String),
-    #[error("cannot modify state: {0}")]
-    StateManagerError(#[from] state::Error),
-    #[error("invalid status code: {0}")]
-    InvalidStatusCode(#[from] http::status::InvalidStatusCode),
+    InvalidParamFormat(String),
+    #[error("state operation failed: {0}")]
+    State(#[from] state::Error),
     #[error("cannot convert request to internal data structure: {0}")]
-    RequestConversionError(String),
-    #[cfg(any(feature = "remote", feature = "proxy"))]
-    #[error("failed to send HTTP request: {0}")]
-    HttpClientError(#[from] HttpClientError),
+    RequestConversion(String),
     #[error("invalid header: {0}")]
     InvalidHeader(String),
-    #[error("unknown error")]
-    Unknown,
+}
+
+/// What the transport has to do for a request. The [`Handler`] decides this without doing any
+/// I/O, so the transport is the only place that sleeps or talks to upstream servers.
+///
+/// `Serve` is several times the size of `Respond` because of the request kept for recording. An
+/// action is built and consumed within one request, never stored, so that stack space is cheaper
+/// than boxing the variant on every served request.
+#[allow(clippy::large_enum_variant)]
+pub(crate) enum Action {
+    /// Send the response to a management API request. Management responses are not recorded.
+    Respond(Finished),
+    /// Serve a request that is not for the management API: mock it, forward it or proxy it, then
+    /// give `pending` back to [`Handler::finish`] together with the response that was sent.
+    Serve { reply: Reply, pending: Pending },
+}
+
+/// A served request whose outcome has not been reported yet. Its fields are private and
+/// [`Handler::finish`] is the only consumer.
+#[must_use = "pass it to Handler::finish with the response that was sent, or recordings miss it"]
+pub(crate) struct Pending {
+    /// The request as the matchers saw it.
+    #[cfg(feature = "record")]
+    request: HttpMockRequest,
+    #[cfg(feature = "record")]
+    is_proxied: bool,
+}
+
+/// A response that is ready to go out. The only ways to get one are [`Action::Respond`] and
+/// [`Handler::finish`], so a driver that returns `Finished` cannot send a served request's
+/// response without letting the recordings see it first. A driver that fails to produce a
+/// response, because the upstream request failed, answers with its own error response instead
+/// and drops the [`Pending`]; such failures are not recorded.
+pub(crate) struct Finished(Response<Bytes>);
+
+impl Finished {
+    pub(crate) fn into_response(self) -> Response<Bytes> {
+        self.0
+    }
+}
+
+/// How a served request is answered.
+pub(crate) enum Reply {
+    /// A mocked response, or a 404 when no mock matched, to be sent after `delay` has passed.
+    Mock {
+        delay: Option<Duration>,
+        response: Response<Bytes>,
+    },
+    /// The request rewritten for the target of a forwarding rule; its response is the reply.
+    #[cfg(feature = "proxy")]
+    Forward(Request<Bytes>),
+    /// The request rewritten for its own origin, as a proxy rule matched; its response is the
+    /// reply.
+    #[cfg(feature = "proxy")]
+    Proxy(Request<Bytes>),
 }
 
 enum RoutePath {
@@ -78,6 +134,7 @@ enum RoutePath {
     Reset,
     MockCollection,
     SingleMock,
+    SingleMockUpToNTimes,
     History,
     Verify,
     #[cfg(feature = "proxy")]
@@ -94,110 +151,19 @@ enum RoutePath {
     SingleRecording,
 }
 
-#[async_trait]
-pub(crate) trait Handler {
-    async fn handle(&self, req: Request<Bytes>) -> Result<Response<Bytes>, Error>;
-}
-
-pub struct HttpMockHandler<S>
-where
-    S: StateManager + Send + Sync + 'static,
-{
+/// Routes incoming requests either to the mock server's management API or to the
+/// mocking, forwarding and proxying logic.
+///
+/// The handler is the server's sans-IO core: it takes fully buffered requests in absolute-form
+/// and returns an [`Action`] for the transport to carry out. It never sleeps, keeps time or sends
+/// requests itself.
+pub(crate) struct Handler {
     path_tree: PathTree<RoutePath>,
-    state: Arc<S>,
-    #[cfg(feature = "proxy")]
-    http_client: Arc<dyn HttpClient + Send + Sync + 'static>,
+    state: Arc<state::HttpMockStateManager>,
 }
 
-#[async_trait]
-impl<H> Handler for HttpMockHandler<H>
-where
-    H: StateManager + Send + Sync + 'static,
-{
-    async fn handle(&self, req: Request<Bytes>) -> Result<Response<Bytes>, Error> {
-        tracing::trace!("Routing incoming request: {:?}", req);
-
-        let method = req.method().clone();
-        let path = req.uri().path().to_string();
-
-        if let Some((matched_path, params)) = self.path_tree.find(&path) {
-            match matched_path {
-                RoutePath::Ping => match method {
-                    Method::GET => return self.handle_ping(),
-                    _ => {}
-                },
-                RoutePath::Reset => match method {
-                    Method::DELETE => return self.handle_reset(),
-                    _ => {}
-                },
-                RoutePath::SingleMock => match method {
-                    Method::GET => return self.handle_read_mock(params),
-                    Method::DELETE => return self.handle_delete_mock(params),
-                    _ => {}
-                },
-                RoutePath::MockCollection => match method {
-                    Method::POST => return self.handle_add_mock(req),
-                    Method::DELETE => return self.handle_delete_all_mocks(),
-                    _ => {}
-                },
-                RoutePath::History => match method {
-                    Method::DELETE => return self.handle_delete_history(),
-                    _ => {}
-                },
-                RoutePath::Verify => match method {
-                    Method::POST => return self.handle_verify(req),
-                    _ => {}
-                },
-                #[cfg(feature = "proxy")]
-                RoutePath::ForwardingRuleCollection => match method {
-                    Method::POST => return self.handle_add_forwarding_rule(req),
-                    Method::DELETE => return self.handle_delete_all_forwarding_rules(),
-                    _ => {}
-                },
-                #[cfg(feature = "proxy")]
-                RoutePath::SingleForwardingRule => match method {
-                    Method::DELETE => return self.handle_delete_forwarding_rule(params),
-                    _ => {}
-                },
-                #[cfg(feature = "proxy")]
-                RoutePath::ProxyRuleCollection => match method {
-                    Method::POST => return self.handle_add_proxy_rule(req),
-                    Method::DELETE => return self.handle_delete_all_proxy_rules(),
-                    _ => {}
-                },
-                #[cfg(feature = "proxy")]
-                RoutePath::SingleProxyRule => match method {
-                    Method::DELETE => return self.handle_delete_proxy_rule(params),
-                    _ => {}
-                },
-                #[cfg(feature = "record")]
-                RoutePath::RecordingCollection => match method {
-                    Method::POST => return self.handle_add_recording_matcher(req),
-                    Method::DELETE => return self.handle_delete_all_recording_matchers(),
-                    _ => {}
-                },
-                #[cfg(feature = "record")]
-                RoutePath::SingleRecording => match method {
-                    Method::GET => return self.handle_read_recording(params),
-                    Method::DELETE => return self.handle_delete_recording(params),
-                    Method::POST => return self.handle_load_recording(req),
-                    _ => {}
-                },
-            }
-        }
-
-        return self.catch_all(req).await;
-    }
-}
-
-impl<H> HttpMockHandler<H>
-where
-    H: StateManager + Send + Sync + 'static,
-{
-    pub fn new(
-        state: Arc<H>,
-        #[cfg(feature = "proxy")] http_client: Arc<dyn HttpClient + Send + Sync + 'static>,
-    ) -> Self {
+impl Handler {
+    pub(crate) fn new(state: Arc<state::HttpMockStateManager>) -> Self {
         let mut path_tree: PathTree<RoutePath> = PathTree::new();
         #[allow(unused_must_use)]
         {
@@ -205,19 +171,14 @@ where
             path_tree.insert("/__httpmock__/state", RoutePath::Reset);
             path_tree.insert("/__httpmock__/mocks", RoutePath::MockCollection);
             path_tree.insert("/__httpmock__/mocks/:id", RoutePath::SingleMock);
+            path_tree.insert("/__httpmock__/mocks/:id/up_to_n_times", RoutePath::SingleMockUpToNTimes);
             path_tree.insert("/__httpmock__/verify", RoutePath::Verify);
             path_tree.insert("/__httpmock__/history", RoutePath::History);
 
             #[cfg(feature = "proxy")]
             {
-                path_tree.insert(
-                    "/__httpmock__/forwarding_rules",
-                    RoutePath::ForwardingRuleCollection,
-                );
-                path_tree.insert(
-                    "/__httpmock__/forwarding_rules/:id",
-                    RoutePath::SingleForwardingRule,
-                );
+                path_tree.insert("/__httpmock__/forwarding_rules", RoutePath::ForwardingRuleCollection);
+                path_tree.insert("/__httpmock__/forwarding_rules/:id", RoutePath::SingleForwardingRule);
                 path_tree.insert("/__httpmock__/proxy_rules", RoutePath::ProxyRuleCollection);
                 path_tree.insert("/__httpmock__/proxy_rules/:id", RoutePath::SingleProxyRule);
             }
@@ -229,35 +190,100 @@ where
             }
         }
 
-        Self {
-            path_tree,
-            state,
-            #[cfg(feature = "proxy")]
-            http_client,
+        Self { path_tree, state }
+    }
+
+    /// Decides what to do with a request. The request's URI must be in absolute-form, see
+    /// `transport::to_absolute_form_uri`.
+    pub(crate) fn handle(&self, req: Request<Bytes>) -> Result<Action, Error> {
+        tracing::trace!("Routing incoming request: {:?}", req);
+
+        if let Some((route, params)) = self.path_tree.find(req.uri().path())
+            && let Some(response) = self.manage(route, params, &req)
+        {
+            return response.map(|response| Action::Respond(Finished(response)));
         }
+
+        self.catch_all(req)
+    }
+
+    /// Answers a management API request, or returns `None` when the route does not support the
+    /// request's method, in which case the request is served like any other.
+    fn manage(&self, route: &RoutePath, params: Path, req: &Request<Bytes>) -> Option<Result<Response<Bytes>, Error>> {
+        let response = match (route, req.method()) {
+            (RoutePath::Ping, &Method::GET) => self.handle_ping(),
+            (RoutePath::Reset, &Method::DELETE) => self.handle_reset(),
+            (RoutePath::MockCollection, &Method::POST) => self.handle_add_mock(req),
+            (RoutePath::MockCollection, &Method::DELETE) => self.handle_delete_all_mocks(),
+            (RoutePath::SingleMock, &Method::GET) => self.handle_read_mock(params),
+            (RoutePath::SingleMock, &Method::DELETE) => self.handle_delete_mock(params),
+            (RoutePath::SingleMockUpToNTimes, &Method::PUT) => self.handle_set_up_to_n_times(params, req),
+            (RoutePath::History, &Method::DELETE) => self.handle_delete_history(),
+            (RoutePath::Verify, &Method::POST) => self.handle_verify(req),
+            #[cfg(feature = "proxy")]
+            (RoutePath::ForwardingRuleCollection, &Method::POST) => self.handle_add_forwarding_rule(req),
+            #[cfg(feature = "proxy")]
+            (RoutePath::ForwardingRuleCollection, &Method::DELETE) => self.handle_delete_all_forwarding_rules(),
+            #[cfg(feature = "proxy")]
+            (RoutePath::SingleForwardingRule, &Method::DELETE) => self.handle_delete_forwarding_rule(params),
+            #[cfg(feature = "proxy")]
+            (RoutePath::ProxyRuleCollection, &Method::POST) => self.handle_add_proxy_rule(req),
+            #[cfg(feature = "proxy")]
+            (RoutePath::ProxyRuleCollection, &Method::DELETE) => self.handle_delete_all_proxy_rules(),
+            #[cfg(feature = "proxy")]
+            (RoutePath::SingleProxyRule, &Method::DELETE) => self.handle_delete_proxy_rule(params),
+            #[cfg(feature = "record")]
+            (RoutePath::RecordingCollection, &Method::POST) => self.handle_add_recording_matcher(req),
+            #[cfg(feature = "record")]
+            (RoutePath::RecordingCollection, &Method::DELETE) => self.handle_delete_all_recording_matchers(),
+            #[cfg(feature = "record")]
+            (RoutePath::SingleRecording, &Method::GET) => self.handle_read_recording(params),
+            #[cfg(feature = "record")]
+            (RoutePath::SingleRecording, &Method::DELETE) => self.handle_delete_recording(params),
+            #[cfg(feature = "record")]
+            (RoutePath::SingleRecording, &Method::POST) => self.handle_load_recording(req),
+            _ => return None,
+        };
+
+        Some(response)
+    }
+
+    /// Completes an [`Action::Serve`]: records the response for every recording whose rule
+    /// matches the request and releases it for sending. `elapsed` is the time the driver took to
+    /// produce the response.
+    pub(crate) fn finish(
+        &self,
+        pending: Pending,
+        elapsed: Duration,
+        response: Response<Bytes>,
+    ) -> Result<Finished, Error> {
+        #[cfg(feature = "record")]
+        self.state
+            .record(pending.is_proxied, elapsed, pending.request, &response)?;
+        #[cfg(not(feature = "record"))]
+        let _ = (pending, elapsed);
+        Ok(Finished(response))
     }
 
     fn handle_ping(&self) -> Result<Response<Bytes>, Error> {
-        return response::<()>(StatusCode::OK, None);
+        response::<()>(StatusCode::OK, None)
     }
 
     fn handle_reset(&self) -> Result<Response<Bytes>, Error> {
         self.state.reset();
-        return response::<()>(StatusCode::NO_CONTENT, None);
+        response::<()>(StatusCode::NO_CONTENT, None)
     }
 
-    fn handle_add_mock(&self, req: Request<Bytes>) -> Result<Response<Bytes>, Error> {
+    fn handle_add_mock(&self, req: &Request<Bytes>) -> Result<Response<Bytes>, Error> {
         let definition: MockDefinition = parse_json_body(req)?;
         let active_mock = self.state.add_mock(definition, false)?;
-        return response(StatusCode::CREATED, Some(active_mock));
+        response(StatusCode::CREATED, Some(active_mock))
     }
 
     fn handle_read_mock(&self, params: Path) -> Result<Response<Bytes>, Error> {
         let active_mock = self.state.read_mock(param("id", params)?)?;
-        let status_code = active_mock
-            .as_ref()
-            .map_or(StatusCode::NOT_FOUND, |_| StatusCode::OK);
-        return response(status_code, active_mock);
+        let status_code = active_mock.as_ref().map_or(StatusCode::NOT_FOUND, |_| StatusCode::OK);
+        response(status_code, active_mock)
     }
 
     fn handle_delete_mock(&self, params: Path) -> Result<Response<Bytes>, Error> {
@@ -267,32 +293,102 @@ where
         } else {
             StatusCode::NOT_FOUND
         };
-        return response::<()>(status_code, None);
+        response::<()>(status_code, None)
+    }
+
+    fn handle_set_up_to_n_times(&self, params: Path, req: &Request<Bytes>) -> Result<Response<Bytes>, Error> {
+        let config: UpToNTimesConfig = parse_json_body(req)?;
+        let updated = self
+            .state
+            .set_up_to_n_times(param("id", params)?, config.up_to_n_times)?;
+        let status_code = if updated {
+            StatusCode::NO_CONTENT
+        } else {
+            StatusCode::NOT_FOUND
+        };
+        response::<()>(status_code, None)
     }
 
     fn handle_delete_all_mocks(&self) -> Result<Response<Bytes>, Error> {
         self.state.delete_all_mocks();
-        return response::<()>(StatusCode::NO_CONTENT, None);
+        response::<()>(StatusCode::NO_CONTENT, None)
     }
 
     fn handle_delete_history(&self) -> Result<Response<Bytes>, Error> {
         self.state.delete_history();
-        return response::<()>(StatusCode::NO_CONTENT, None);
+        response::<()>(StatusCode::NO_CONTENT, None)
     }
 
-    fn handle_verify(&self, req: Request<Bytes>) -> Result<Response<Bytes>, Error> {
+    fn handle_verify(&self, req: &Request<Bytes>) -> Result<Response<Bytes>, Error> {
         let requirements: RequestRequirements = parse_json_body(req)?;
         let closest_match = self.state.verify(&requirements)?;
-        let status_code = closest_match
-            .as_ref()
-            .map_or(StatusCode::NOT_FOUND, |_| StatusCode::OK);
-        return response(status_code, closest_match);
+        let status_code = closest_match.as_ref().map_or(StatusCode::NOT_FOUND, |_| StatusCode::OK);
+        response(status_code, closest_match)
     }
 
-    fn handle_add_forwarding_rule(&self, req: Request<Bytes>) -> Result<Response<Bytes>, Error> {
+    fn catch_all(&self, req: Request<Bytes>) -> Result<Action, Error> {
+        let request: HttpMockRequest = (&req)
+            .try_into()
+            .map_err(|err: DataError| RequestConversion(err.to_string()))?;
+
+        #[cfg(feature = "proxy")]
+        let reply = if let Some(rule) = self.state.find_forward_rule(&request)? {
+            Reply::Forward(forward_request(rule, req)?)
+        } else if let Some(rule) = self.state.find_proxy_rule(&request)? {
+            Reply::Proxy(proxy_request(rule, req)?)
+        } else {
+            self.mock_reply(&request)?
+        };
+
+        #[cfg(not(feature = "proxy"))]
+        let reply = self.mock_reply(&request)?;
+
+        let pending = Pending {
+            #[cfg(feature = "record")]
+            is_proxied: matches!(reply, Reply::Proxy(_)),
+            #[cfg(feature = "record")]
+            request,
+        };
+
+        Ok(Action::Serve { reply, pending })
+    }
+
+    /// Matches the request against the mocks and builds the reply, a 404 when none matched.
+    fn mock_reply(&self, req: &HttpMockRequest) -> Result<Reply, Error> {
+        let Some(definition) = self.state.serve_mock(req)? else {
+            return Ok(Reply::Mock {
+                delay: None,
+                response: response(
+                    StatusCode::NOT_FOUND,
+                    Some(ErrorResponse::new(&"Request did not match any route or mock")),
+                )?,
+            });
+        };
+
+        let delay = definition.delay.map(Duration::from_millis);
+
+        // Resolve dynamic vs. static response into HttpMockResponse
+        let resp_def: HttpMockResponse = definition
+            .respond_with
+            .map(|f| f(req))
+            .unwrap_or_else(|| HttpMockResponse {
+                status: definition.status.or(Some(StatusCode::OK.as_u16())),
+                headers: definition.headers,
+                body: definition.body,
+            });
+
+        let response: Response<Bytes> = resp_def.try_into().map_err(ResponseDataConversion)?;
+
+        Ok(Reply::Mock { delay, response })
+    }
+}
+
+#[cfg(feature = "proxy")]
+impl Handler {
+    fn handle_add_forwarding_rule(&self, req: &Request<Bytes>) -> Result<Response<Bytes>, Error> {
         let config: ForwardingRuleConfig = parse_json_body(req)?;
         let active_forwarding_rule = self.state.create_forwarding_rule(config);
-        return response(StatusCode::CREATED, Some(active_forwarding_rule));
+        response(StatusCode::CREATED, Some(active_forwarding_rule))
     }
 
     fn handle_delete_forwarding_rule(&self, params: Path) -> Result<Response<Bytes>, Error> {
@@ -302,18 +398,18 @@ where
         } else {
             StatusCode::NOT_FOUND
         };
-        return response::<()>(status_code, None);
+        response::<()>(status_code, None)
     }
 
     fn handle_delete_all_forwarding_rules(&self) -> Result<Response<Bytes>, Error> {
         self.state.delete_all_forwarding_rules();
-        return response::<()>(StatusCode::NO_CONTENT, None);
+        response::<()>(StatusCode::NO_CONTENT, None)
     }
 
-    fn handle_add_proxy_rule(&self, req: Request<Bytes>) -> Result<Response<Bytes>, Error> {
+    fn handle_add_proxy_rule(&self, req: &Request<Bytes>) -> Result<Response<Bytes>, Error> {
         let config: ProxyRuleConfig = parse_json_body(req)?;
         let active_proxy_rule = self.state.create_proxy_rule(config);
-        return response(StatusCode::CREATED, Some(active_proxy_rule));
+        response(StatusCode::CREATED, Some(active_proxy_rule))
     }
 
     fn handle_delete_proxy_rule(&self, params: Path) -> Result<Response<Bytes>, Error> {
@@ -323,201 +419,119 @@ where
         } else {
             StatusCode::NOT_FOUND
         };
-        return response::<()>(status_code, None);
+        response::<()>(status_code, None)
     }
 
     fn handle_delete_all_proxy_rules(&self) -> Result<Response<Bytes>, Error> {
         self.state.delete_all_proxy_rules();
-        return response::<()>(StatusCode::NO_CONTENT, None);
+        response::<()>(StatusCode::NO_CONTENT, None)
+    }
+}
+
+/// Rewrites a request for the target of the forwarding rule that matched it.
+#[cfg(feature = "proxy")]
+fn forward_request(rule: ActiveForwardingRule, req: Request<Bytes>) -> Result<Request<Bytes>, Error> {
+    let to_base_uri: Uri = rule.config.target_base_url.parse().unwrap();
+
+    let (mut req_parts, body) = req.into_parts();
+
+    // We need to remove the host header, because it contains the host of this mock server.
+    req_parts.headers.remove(http::header::HOST);
+
+    let mut uri_parts = req_parts.uri.into_parts();
+    uri_parts.authority = Some(to_base_uri.authority().unwrap().clone());
+    uri_parts.scheme = to_base_uri.scheme().cloned().or(uri_parts.scheme);
+    req_parts.uri = Uri::from_parts(uri_parts).unwrap();
+
+    // Record the upstream scheme (http/https) so the HttpClient can reconstruct
+    // an absolute target URI after converting to origin-form.
+    let upstream_scheme: &'static str = match to_base_uri.scheme_str() {
+        Some("https") => "https",
+        _ => "http",
+    };
+    req_parts
+        .extensions
+        .insert(crate::server::RequestMetadata::new(upstream_scheme));
+
+    if !rule.config.request_header.is_empty() {
+        for (key, value) in &rule.config.request_header {
+            let key =
+                http::HeaderName::from_str(key).map_err(|err| InvalidHeader(format!("invalid header key: {err}")))?;
+
+            let value =
+                HeaderValue::from_str(value).map_err(|err| InvalidHeader(format!("invalid header value: {err}")))?;
+
+            req_parts.headers.append(key, value);
+        }
     }
 
-    #[cfg(feature = "record")]
-    fn handle_add_recording_matcher(&self, req: Request<Bytes>) -> Result<Response<Bytes>, Error> {
+    let req = Request::from_parts(req_parts, body);
+    // Requests are normalized to absolute-form inside this server for internal uniformity
+    // (matchers/recorders can read scheme/host/port from req.uri()). Before talking to an
+    // upstream origin server we MUST convert to origin-form (path + query only) and provide
+    // the authority via the Host header, as expected by HTTP/1.1 and HTTP/2 origin servers.
+    to_origin_form(req)
+}
+
+/// Rewrites a request for its own origin, as a proxy rule matched it.
+#[cfg(feature = "proxy")]
+fn proxy_request(rule: ActiveProxyRule, mut req: Request<Bytes>) -> Result<Request<Bytes>, Error> {
+    if !rule.config.request_header.is_empty() {
+        let headers = req.headers_mut();
+
+        for (key, value) in &rule.config.request_header {
+            let key =
+                http::HeaderName::from_str(key).map_err(|err| InvalidHeader(format!("invalid header key: {err}")))?;
+
+            let value =
+                HeaderValue::from_str(value).map_err(|err| InvalidHeader(format!("invalid header value: {err}")))?;
+
+            headers.append(key, value);
+        }
+    }
+
+    // Requests are normalized to absolute-form inside this server for internal uniformity
+    // (matchers/recorders can read scheme/host/port from req.uri()). Before talking to an
+    // upstream origin server we MUST convert to origin-form (path + query only) and provide
+    // the authority via the Host header, as expected by HTTP/1.1 and HTTP/2 origin servers.
+    to_origin_form(req)
+}
+
+#[cfg(feature = "record")]
+impl Handler {
+    fn handle_add_recording_matcher(&self, req: &Request<Bytes>) -> Result<Response<Bytes>, Error> {
         let req_req: RecordingRuleConfig = parse_json_body(req)?;
         let active_recording = self.state.create_recording(req_req);
-        return response(StatusCode::CREATED, Some(active_recording));
+        response(StatusCode::CREATED, Some(active_recording))
     }
 
-    #[cfg(feature = "record")]
     fn handle_delete_recording(&self, params: Path) -> Result<Response<Bytes>, Error> {
-        let deleted = self.state.delete_proxy_rule(param("id", params)?);
+        let deleted = self.state.delete_recording(param("id", params)?);
         let status_code = if deleted.is_some() {
             StatusCode::NO_CONTENT
         } else {
             StatusCode::NOT_FOUND
         };
-        return response::<()>(status_code, None);
+        response::<()>(status_code, None)
     }
 
-    #[cfg(feature = "record")]
     fn handle_delete_all_recording_matchers(&self) -> Result<Response<Bytes>, Error> {
         self.state.delete_all_recordings();
-        return response::<()>(StatusCode::NO_CONTENT, None);
+        response::<()>(StatusCode::NO_CONTENT, None)
     }
 
-    #[cfg(feature = "record")]
     fn handle_read_recording(&self, params: Path) -> Result<Response<Bytes>, Error> {
         let rec = self.state.export_recording(param("id", params)?)?;
-        let status_code = rec
-            .as_ref()
-            .map_or(StatusCode::NOT_FOUND, |_| StatusCode::OK);
-        return response(status_code, rec);
+        let status_code = rec.as_ref().map_or(StatusCode::NOT_FOUND, |_| StatusCode::OK);
+        response(status_code, rec)
     }
 
-    #[cfg(feature = "record")]
-    fn handle_load_recording(&self, req: Request<Bytes>) -> Result<Response<Bytes>, Error> {
-        let recording_file_content = std::str::from_utf8(&req.body())
-            .map_err(|err| RequestConversionError(err.to_string()))?;
+    fn handle_load_recording(&self, req: &Request<Bytes>) -> Result<Response<Bytes>, Error> {
+        let recording_file_content =
+            std::str::from_utf8(req.body()).map_err(|err| RequestConversion(err.to_string()))?;
 
-        let rec = self
-            .state
-            .load_mocks_from_recording(recording_file_content)?;
-        return response(StatusCode::OK, Some(rec));
-    }
-
-    async fn catch_all(&self, req: Request<Bytes>) -> Result<Response<Bytes>, Error> {
-        let internal_request: HttpMockRequest = (&req)
-            .try_into()
-            .map_err(|err: DataError| RequestConversionError(err.to_string()))?;
-
-        let mut is_proxied = false;
-        let start = Instant::now();
-
-        #[cfg(feature = "proxy")]
-        let res = if let Some(rule) = self.state.find_forward_rule(&internal_request)? {
-            self.forward(rule, req).await?
-        } else if let Some(rule) = self.state.find_proxy_rule(&internal_request)? {
-            is_proxied = true;
-            self.proxy(rule, req).await?
-        } else {
-            self.serve_mock(&internal_request).await?
-        };
-
-        #[cfg(not(feature = "proxy"))]
-        let res = self.serve_mock(&internal_request).await?;
-
-        #[cfg(feature = "record")]
-        self.state
-            .record(is_proxied, start.elapsed(), internal_request, &res)?;
-
-        Ok(res)
-    }
-
-    #[cfg(feature = "proxy")]
-    async fn forward(
-        &self,
-        rule: ActiveForwardingRule,
-        req: Request<Bytes>,
-    ) -> Result<Response<Bytes>, Error> {
-        let to_base_uri: Uri = rule.config.target_base_url.parse().unwrap();
-
-        let (mut req_parts, body) = req.into_parts();
-
-        // We need to remove the host header, because it contains the host of this mock server.
-        req_parts.headers.remove(http::header::HOST);
-
-        let mut uri_parts = req_parts.uri.into_parts();
-        uri_parts.authority = Some(to_base_uri.authority().unwrap().clone());
-        uri_parts.scheme = to_base_uri.scheme().map(|s| s.clone()).or(uri_parts.scheme);
-        req_parts.uri = Uri::from_parts(uri_parts).unwrap();
-
-        // Record the upstream scheme (http/https) so the HttpClient can reconstruct
-        // an absolute target URI after converting to origin-form.
-        let upstream_scheme: &'static str = match to_base_uri.scheme_str() {
-            Some("https") => "https",
-            _ => "http",
-        };
-        req_parts
-            .extensions
-            .insert(crate::server::RequestMetadata::new(upstream_scheme));
-
-        if !rule.config.request_header.is_empty() {
-            for (key, value) in &rule.config.request_header {
-                let key = HeaderName::from_str(key).map_err(|err| {
-                    InvalidHeader(format!("invalid header key: {}", err.to_string()))
-                })?;
-
-                let value = HeaderValue::from_str(value).map_err(|err| {
-                    InvalidHeader(format!("invalid header value: {}", err.to_string()))
-                })?;
-
-                req_parts.headers.append(key, value);
-            }
-        }
-
-        let req = Request::from_parts(req_parts, body);
-        // Requests are normalized to absolute-form inside this server for internal uniformity
-        // (matchers/recorders can read scheme/host/port from req.uri()). Before talking to an
-        // upstream origin server we MUST convert to origin-form (path + query only) and provide
-        // the authority via the Host header, as expected by HTTP/1.1 and HTTP/2 origin servers.
-        let req = to_origin_form(req)?;
-        Ok(self.http_client.send(req).await?)
-    }
-
-    #[cfg(feature = "proxy")]
-    async fn proxy(
-        &self,
-        rule: ActiveProxyRule,
-        mut req: Request<Bytes>,
-    ) -> Result<Response<Bytes>, Error> {
-        if !rule.config.request_header.is_empty() {
-            let headers = req.headers_mut();
-
-            for (key, value) in &rule.config.request_header {
-                let key = HeaderName::from_str(key).map_err(|err| {
-                    InvalidHeader(format!("invalid header key: {}", err.to_string()))
-                })?;
-
-                let value = HeaderValue::from_str(value).map_err(|err| {
-                    InvalidHeader(format!("invalid header value: {}", err.to_string()))
-                })?;
-
-                headers.append(key, value);
-            }
-        }
-
-        // Requests are normalized to absolute-form inside this server for internal uniformity
-        // (matchers/recorders can read scheme/host/port from req.uri()). Before talking to an
-        // upstream origin server we MUST convert to origin-form (path + query only) and provide
-        // the authority via the Host header, as expected by HTTP/1.1 and HTTP/2 origin servers.
-        let req = to_origin_form(req)?;
-        Ok(self.http_client.send(req).await?)
-    }
-
-    async fn serve_mock(
-        &self,
-        req: &HttpMockRequest,
-    ) -> Result<http::Response<bytes::Bytes>, Error> {
-        let Some(definition) = self.state.serve_mock(req)? else {
-            return response(
-                http::StatusCode::NOT_FOUND,
-                Some(ErrorResponse::new(
-                    &"Request did not match any route or mock",
-                )),
-            );
-        };
-
-        if let Some(duration) = definition.delay {
-            runtime::sleep(std::time::Duration::from_millis(duration)).await;
-        }
-
-        // Resolve dynamic vs. static response into HttpMockResponse
-        let resp_def: HttpMockResponse =
-            definition
-                .respond_with
-                .map(|f| f(req))
-                .unwrap_or_else(|| HttpMockResponse {
-                    status: definition.status.or(Some(StatusCode::OK.as_u16())),
-                    headers: definition.headers,
-                    body: definition.body,
-                });
-
-        // Convert via your TryFrom<HttpMockResponse> impl
-        let http_resp: http::Response<bytes::Bytes> = resp_def
-            .try_into()
-            .map_err(|e| ResponseDataConversionError(e))?;
-
-        Ok(http_resp)
+        let rec = self.state.load_mocks_from_recording(recording_file_content)?;
+        response(StatusCode::OK, Some(rec))
     }
 }
 
@@ -529,12 +543,12 @@ where
     for (n, v) in tree_path.params() {
         if n.eq(name) {
             let parse_result: Result<T, T::Err> = v.parse::<T>();
-            let parsed_value = parse_result.map_err(|e| ParamFormatError(format!("{:?}", e)))?;
+            let parsed_value = parse_result.map_err(|e| InvalidParamFormat(format!("{:?}", e)))?;
             return Ok(parsed_value);
         }
     }
 
-    Err(ParamError)
+    Err(MissingParam)
 }
 
 fn response<T>(status: StatusCode, body: Option<T>) -> Result<Response<Bytes>, Error>
@@ -546,25 +560,19 @@ where
     if let Some(body_obj) = body {
         builder = builder.header("content-type", "application/json");
 
-        let body_bytes =
-            serde_json::to_vec(&body_obj).map_err(|e| ResponseBodySerializeError(e))?;
+        let body_bytes = serde_json::to_vec(&body_obj).map_err(ResponseBodySerialization)?;
 
-        return Ok(builder
-            .body(Bytes::from(body_bytes))
-            .map_err(|e| ResponseBodyConversionError(e))?);
+        return builder.body(Bytes::from(body_bytes)).map_err(ResponseBodyConstruction);
     }
 
-    return Ok(builder
-        .body(Bytes::new())
-        .map_err(|e| ResponseBodyConversionError(e))?);
+    builder.body(Bytes::new()).map_err(ResponseBodyConstruction)
 }
 
-fn parse_json_body<T>(req: Request<Bytes>) -> Result<T, Error>
+fn parse_json_body<T>(req: &Request<Bytes>) -> Result<T, Error>
 where
     T: DeserializeOwned,
 {
-    let body: T =
-        serde_json::from_slice(req.body().as_ref()).map_err(|e| RequestBodyDeserializeError(e))?;
+    let body: T = serde_json::from_slice(req.body().as_ref()).map_err(RequestBodyDeserialization)?;
     Ok(body)
 }
 
@@ -579,15 +587,15 @@ where
 ///   set `Host` to that authority, and strip scheme/authority from the URI to yield origin-form.
 /// - Requests lacking either part are already in origin- or asterisk-form and are left untouched.
 ///   CONNECT (authority-form) is handled separately.
+#[cfg(feature = "proxy")]
 pub fn to_origin_form(mut req: Request<Bytes>) -> Result<Request<Bytes>, Error> {
     let uri = req.uri().clone();
 
     if uri.scheme().is_some() && uri.authority().is_some() {
         // Ensure Host header matches the authority
         if let Some(auth) = uri.authority() {
-            let host_val = HeaderValue::from_str(auth.as_str()).map_err(|err| {
-                InvalidHeader(format!("invalid header value: {}", err.to_string()))
-            })?;
+            let host_val = HeaderValue::from_str(auth.as_str())
+                .map_err(|err| InvalidHeader(format!("invalid header value: {err}")))?;
             req.headers_mut().insert(http::header::HOST, host_val);
         }
 
@@ -596,9 +604,306 @@ pub fn to_origin_form(mut req: Request<Bytes>) -> Result<Request<Bytes>, Error> 
         let new_uri = Uri::builder()
             .path_and_query(path_and_query)
             .build()
-            .map_err(|e| RequestConversionError(e.to_string()))?;
+            .map_err(|e| RequestConversion(e.to_string()))?;
         *req.uri_mut() = new_uri;
     }
 
     Ok(req)
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{sync::Arc, time::Duration};
+
+    use hyper::{Request, Response, body::Bytes};
+
+    use super::{Action, Handler, Reply};
+    use crate::{
+        common::data::{MockDefinition, MockServerHttpResponse, RequestRequirements},
+        server::{RequestMetadata, state::HttpMockStateManager},
+    };
+
+    fn handler() -> Handler {
+        Handler::new(Arc::new(HttpMockStateManager::default()))
+    }
+
+    fn request(method: &str, uri: &str) -> Request<Bytes> {
+        let mut req = Request::builder().method(method).uri(uri).body(Bytes::new()).unwrap();
+        req.extensions_mut().insert(RequestMetadata::new("http"));
+        req
+    }
+
+    fn mock(path: &str, status: u16, delay: Option<u64>) -> MockDefinition {
+        MockDefinition {
+            request: RequestRequirements {
+                path: Some(path.to_string()),
+                ..Default::default()
+            },
+            response: MockServerHttpResponse {
+                status: Some(status),
+                delay,
+                ..Default::default()
+            },
+            up_to_n_times: None,
+        }
+    }
+
+    fn expect_mock_reply(action: Action) -> (Option<Duration>, Response<Bytes>) {
+        match action {
+            Action::Serve { reply, .. } => match reply {
+                Reply::Mock { delay, response } => (delay, response),
+                #[cfg(feature = "proxy")]
+                _ => panic!("expected a mock reply"),
+            },
+            Action::Respond(_) => panic!("expected a served request, got a management response"),
+        }
+    }
+
+    #[test]
+    fn management_route_is_answered_directly() {
+        let Action::Respond(finished) = handler()
+            .handle(request("GET", "http://localhost/__httpmock__/ping"))
+            .unwrap()
+        else {
+            panic!("expected a management response");
+        };
+
+        assert_eq!(finished.into_response().status(), 200);
+    }
+
+    #[test]
+    fn management_path_with_other_method_falls_through_to_mocks() {
+        let (_, response) = expect_mock_reply(
+            handler()
+                .handle(request("POST", "http://localhost/__httpmock__/ping"))
+                .unwrap(),
+        );
+
+        assert_eq!(response.status(), 404);
+    }
+
+    #[test]
+    fn unmatched_request_is_a_404_without_delay() {
+        let (delay, response) = expect_mock_reply(handler().handle(request("GET", "http://localhost/nope")).unwrap());
+
+        assert_eq!(delay, None);
+        assert_eq!(response.status(), 404);
+    }
+
+    #[test]
+    fn matched_mock_is_served_with_its_delay() {
+        let handler = handler();
+        handler.state.add_mock(mock("/hello", 202, Some(150)), false).unwrap();
+
+        let (delay, response) = expect_mock_reply(handler.handle(request("GET", "http://localhost/hello")).unwrap());
+
+        assert_eq!(delay, Some(Duration::from_millis(150)));
+        assert_eq!(response.status(), 202);
+    }
+
+    #[test]
+    fn serving_a_mock_counts_the_call_and_appends_the_request_to_the_history() {
+        let handler = handler();
+        let id = handler.state.add_mock(mock("/hello", 200, None), false).unwrap().id;
+
+        handler.handle(request("GET", "http://localhost/hello")).unwrap();
+
+        assert_eq!(handler.state.read_mock(id).unwrap().unwrap().call_counter, 1);
+        let unmatched = RequestRequirements {
+            path: Some("/other".to_string()),
+            ..Default::default()
+        };
+        let closest = handler
+            .state
+            .verify(&unmatched)
+            .unwrap()
+            .expect("the history holds the request");
+        assert_eq!(closest.request.uri().path(), "/hello");
+    }
+
+    #[test]
+    fn exhausted_mock_falls_through_to_404() {
+        let handler = handler();
+        let mut definition = mock("/once", 200, None);
+        definition.up_to_n_times = Some(1);
+        handler.state.add_mock(definition, false).unwrap();
+
+        let first = expect_mock_reply(handler.handle(request("GET", "http://localhost/once")).unwrap());
+        let second = expect_mock_reply(handler.handle(request("GET", "http://localhost/once")).unwrap());
+
+        assert_eq!(first.1.status(), 200);
+        assert_eq!(second.1.status(), 404);
+    }
+
+    #[cfg(feature = "proxy")]
+    mod proxy {
+        use super::*;
+        use crate::common::data::{ForwardingRuleConfig, ProxyRuleConfig};
+
+        fn upstream_request(action: Action) -> (bool, Request<Bytes>) {
+            match action {
+                Action::Serve { reply, .. } => match reply {
+                    Reply::Forward(req) => (false, req),
+                    Reply::Proxy(req) => (true, req),
+                    Reply::Mock { .. } => panic!("expected an upstream request"),
+                },
+                Action::Respond(_) => panic!("expected a served request"),
+            }
+        }
+
+        #[test]
+        fn forwarding_rule_rewrites_the_request_for_its_target() {
+            let handler = handler();
+            handler.state.create_forwarding_rule(ForwardingRuleConfig {
+                target_base_url: "https://upstream.test:8443".to_string(),
+                request_header: vec![("x-forwarded-by".to_string(), "httpmock".to_string())],
+                ..Default::default()
+            });
+
+            let (proxied, upstream) =
+                upstream_request(handler.handle(request("GET", "http://localhost:1234/api?x=1")).unwrap());
+
+            assert!(!proxied);
+            assert_eq!(upstream.uri(), "/api?x=1");
+            assert_eq!(upstream.headers()["host"], "upstream.test:8443");
+            assert_eq!(upstream.headers()["x-forwarded-by"], "httpmock");
+            assert_eq!(upstream.extensions().get::<RequestMetadata>().unwrap().scheme, "https");
+        }
+
+        #[test]
+        fn proxy_rule_keeps_the_origin_and_adds_headers() {
+            let handler = handler();
+            handler.state.create_proxy_rule(ProxyRuleConfig {
+                request_header: vec![("x-added".to_string(), "1".to_string())],
+                ..Default::default()
+            });
+
+            let (proxied, upstream) =
+                upstream_request(handler.handle(request("GET", "http://origin.test/path")).unwrap());
+
+            assert!(proxied);
+            assert_eq!(upstream.uri(), "/path");
+            assert_eq!(upstream.headers()["host"], "origin.test");
+            assert_eq!(upstream.headers()["x-added"], "1");
+        }
+
+        #[test]
+        fn forwarding_rule_takes_precedence_over_proxy_rule() {
+            let handler = handler();
+            handler.state.create_proxy_rule(ProxyRuleConfig::default());
+            handler.state.create_forwarding_rule(ForwardingRuleConfig {
+                target_base_url: "http://upstream.test".to_string(),
+                ..Default::default()
+            });
+
+            let (proxied, _) = upstream_request(handler.handle(request("GET", "http://origin.test/")).unwrap());
+
+            assert!(!proxied);
+        }
+
+        #[test]
+        fn invalid_rule_header_is_an_error() {
+            let handler = handler();
+            handler.state.create_proxy_rule(ProxyRuleConfig {
+                request_header: vec![("not a header name".to_string(), "1".to_string())],
+                ..Default::default()
+            });
+
+            let result = handler.handle(request("GET", "http://origin.test/path"));
+
+            assert!(matches!(result, Err(super::super::Error::InvalidHeader(_))));
+        }
+    }
+
+    #[cfg(feature = "record")]
+    mod record {
+        use super::*;
+        use crate::common::data::RecordingRuleConfig;
+
+        #[test]
+        fn recorded_outcome_becomes_a_mock_with_the_measured_delay() {
+            let handler = handler();
+            let recording = handler.state.create_recording(RecordingRuleConfig {
+                request_requirements: RequestRequirements::default(),
+                record_headers: Vec::new(),
+                record_response_delays: true,
+                record_response_headers: Vec::new(),
+            });
+            handler.state.add_mock(mock("/recorded", 201, None), false).unwrap();
+
+            let Action::Serve { reply, pending } = handler.handle(request("GET", "http://localhost/recorded")).unwrap()
+            else {
+                panic!("expected a served request");
+            };
+            let Reply::Mock { response, .. } = reply else {
+                panic!("expected a mock reply");
+            };
+            let finished = handler.finish(pending, Duration::from_millis(40), response).unwrap();
+            assert_eq!(finished.into_response().status(), 201);
+
+            let yaml = handler.state.export_recording(recording.id).unwrap().unwrap();
+            let yaml = std::str::from_utf8(&yaml).unwrap();
+            assert!(yaml.contains("path: /recorded"), "{yaml}");
+            assert!(yaml.contains("status: 201"), "{yaml}");
+            assert!(yaml.contains("delay: 40"), "{yaml}");
+        }
+
+        #[test]
+        fn recorded_response_keeps_only_listed_headers() {
+            let handler = handler();
+            let recording = handler.state.create_recording(RecordingRuleConfig {
+                request_requirements: RequestRequirements::default(),
+                record_headers: Vec::new(),
+                record_response_delays: false,
+                record_response_headers: vec!["Content-Type".to_string()],
+            });
+            let mut mock = mock("/recorded", 200, None);
+            mock.response.headers = Some(vec![
+                ("content-type".to_string(), "text/plain".to_string()),
+                ("set-cookie".to_string(), "session=secret".to_string()),
+            ]);
+            handler.state.add_mock(mock, false).unwrap();
+
+            let Action::Serve { reply, pending } = handler.handle(request("GET", "http://localhost/recorded")).unwrap()
+            else {
+                panic!("expected a served request");
+            };
+            let Reply::Mock { response, .. } = reply else {
+                panic!("expected a mock reply");
+            };
+            handler.finish(pending, Duration::ZERO, response).unwrap();
+
+            let yaml = handler.state.export_recording(recording.id).unwrap().unwrap();
+            let yaml = std::str::from_utf8(&yaml).unwrap();
+            assert!(yaml.contains("text/plain"), "{yaml}");
+            assert!(!yaml.contains("set-cookie"), "{yaml}");
+        }
+
+        #[test]
+        fn outcome_is_not_recorded_when_no_recording_rule_matches() {
+            let handler = handler();
+            let recording = handler.state.create_recording(RecordingRuleConfig {
+                request_requirements: RequestRequirements {
+                    path: Some("/other".to_string()),
+                    ..Default::default()
+                },
+                record_headers: Vec::new(),
+                record_response_delays: false,
+                record_response_headers: Vec::new(),
+            });
+
+            let Action::Serve { reply, pending } =
+                handler.handle(request("GET", "http://localhost/unrecorded")).unwrap()
+            else {
+                panic!("expected a served request");
+            };
+            let Reply::Mock { response, .. } = reply else {
+                panic!("expected a mock reply");
+            };
+            handler.finish(pending, Duration::ZERO, response).unwrap();
+
+            let yaml = handler.state.export_recording(recording.id).unwrap().unwrap();
+            assert!(yaml.is_empty(), "{}", std::str::from_utf8(&yaml).unwrap());
+        }
+    }
 }

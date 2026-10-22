@@ -30,6 +30,10 @@
     },
     {
       "group": "Miscellaneous",
+      "method": "up_to_n_times"
+    },
+    {
+      "group": "Miscellaneous",
       "method": "and"
     },
     {

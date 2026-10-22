@@ -1,23 +1,22 @@
-use rustls::pki_types::{CertificateDer, PrivateKeyDer};
-use rustls_pki_types::pem::PemObject;
-
-use crate::server::tls::Error::{CaCertificateError, GenerateCertificateError};
-use async_trait::async_trait;
-use rcgen::{Certificate, CertificateParams, KeyPair, SanType};
-use rustls::{
-    crypto::ring::sign::any_supported_type,
-    server::{ClientHello, ResolvesServerCert},
-    sign::CertifiedKey,
-};
 use std::{
     collections::HashMap,
     fmt::Debug,
     io::Cursor,
-    net::SocketAddr,
     sync::{Arc, Mutex, RwLock},
 };
 
+use rcgen::{CertificateParams, Issuer, KeyPair, SanType};
+use rustls::{
+    ContentType,
+    crypto::ring::sign::any_supported_type,
+    pki_types::{CertificateDer, PrivateKeyDer},
+    server::{ClientHello, ResolvesServerCert},
+    sign::CertifiedKey,
+};
+use rustls_pki_types::pem::PemObject;
 use thiserror::Error;
+
+use crate::server::tls::Error::{CaCertificateError, GenerateCertificateError};
 
 #[derive(Error, Debug)]
 pub enum Error {
@@ -54,11 +53,8 @@ pub struct GeneratingCertificateResolverFactory {
     state: Arc<SharedState>,
 }
 
-impl<'a> GeneratingCertificateResolverFactory {
-    pub fn new<IntoString: Into<String>>(
-        ca_cert: IntoString,
-        ca_key: IntoString,
-    ) -> Result<Self, Error> {
+impl GeneratingCertificateResolverFactory {
+    pub fn new<IntoString: Into<String>>(ca_cert: IntoString, ca_key: IntoString) -> Result<Self, Error> {
         Ok(Self {
             state: Arc::new(SharedState {
                 certificates: RwLock::new(HashMap::new()),
@@ -87,13 +83,12 @@ pub struct GeneratingCertificateResolver {
 
 impl<'a> GeneratingCertificateResolver {
     fn load_certificates(cert_pem: String) -> Result<Vec<CertificateDer<'a>>, Error> {
-        let mut cert_pem_reader = Cursor::new(cert_pem.into_bytes());
+        let cert_pem_reader = Cursor::new(cert_pem.into_bytes());
         let mut certificates = Vec::new();
         let certs_iterator = CertificateDer::pem_reader_iter(cert_pem_reader);
         for cert_result in certs_iterator {
-            let cert = cert_result.map_err(|err| {
-                GenerateCertificateError(format!("cannot use generated certificate: {:?}", err))
-            })?; // Propagate error if any
+            let cert = cert_result
+                .map_err(|err| GenerateCertificateError(format!("cannot use generated certificate: {:?}", err)))?; // Propagate error if any
             certificates.push(cert);
         }
 
@@ -101,10 +96,9 @@ impl<'a> GeneratingCertificateResolver {
     }
 
     fn load_private_key(key_pem: String) -> Result<PrivateKeyDer<'a>, Error> {
-        let mut cert_pem_reader = Cursor::new(key_pem.into_bytes());
-        let private_key = PrivateKeyDer::from_pem_reader(cert_pem_reader).map_err(|err| {
-            GenerateCertificateError(format!("cannot use generated private key: {:?}", err))
-        })?;
+        let cert_pem_reader = Cursor::new(key_pem.into_bytes());
+        let private_key = PrivateKeyDer::from_pem_reader(cert_pem_reader)
+            .map_err(|err| GenerateCertificateError(format!("cannot use generated private key: {:?}", err)))?;
         Ok(private_key)
     }
 
@@ -117,17 +111,17 @@ impl<'a> GeneratingCertificateResolver {
         }
 
         // 2) Bracketed IPv6 without port: "[::1]"
-        if let Some(inner) = auth.strip_prefix('[').and_then(|s| s.strip_suffix(']')) {
-            if let Ok(ip) = inner.parse::<std::net::IpAddr>() {
-                return Some(ip);
-            }
+        if let Some(inner) = auth.strip_prefix('[').and_then(|s| s.strip_suffix(']'))
+            && let Ok(ip) = inner.parse::<std::net::IpAddr>()
+        {
+            return Some(ip);
         }
 
         // 3) Parse as HTTP authority and take the host (handles bracketed IPv6 and ports)
-        if let Ok(a) = auth.parse::<http::uri::Authority>() {
-            if let Ok(ip) = a.host().parse::<std::net::IpAddr>() {
-                return Some(ip);
-            }
+        if let Ok(a) = auth.parse::<http::uri::Authority>()
+            && let Ok(ip) = a.host().parse::<std::net::IpAddr>()
+        {
+            return Some(ip);
         }
 
         // 4) Plain IP literal (v4 or v6)
@@ -136,12 +130,11 @@ impl<'a> GeneratingCertificateResolver {
         }
 
         // 5) Conservative host:port split only if there's exactly one ':' (avoids mangling IPv6)
-        if auth.matches(':').count() == 1 {
-            if let Some((host, _)) = auth.rsplit_once(':') {
-                if let Ok(ip) = host.parse::<std::net::IpAddr>() {
-                    return Some(ip);
-                }
-            }
+        if auth.matches(':').count() == 1
+            && let Some((host, _)) = auth.rsplit_once(':')
+            && let Ok(ip) = host.parse::<std::net::IpAddr>()
+        {
+            return Some(ip);
         }
 
         None
@@ -150,11 +143,14 @@ impl<'a> GeneratingCertificateResolver {
     pub fn generate_host_certificate(&'a self, hostname: &str) -> Result<Arc<CertifiedKey>, Error> {
         // Create a key pair for the CA from the provided PEM
         let ca_key = KeyPair::from_pem(&self.state.ca_key_str).map_err(|err| {
-            CaCertificateError(format!("Expected CA key to be provided in PEM format but failed to parse it (host: {}: error: {:?})", hostname, err))
+            CaCertificateError(format!(
+                "Expected CA key to be provided in PEM format but failed to parse it (host: {}: error: {:?})",
+                hostname, err
+            ))
         })?;
 
         // Set up certificate parameters for the new certificate
-        let mut params = if let Ok(ip) = hostname.parse::<std::net::IpAddr>() {
+        let params = if let Ok(ip) = hostname.parse::<std::net::IpAddr>() {
             // If the hostname is an IP address, place it into IP SANs unless it's unspecified (0.0.0.0 / ::)
             let mut p = CertificateParams::default();
             if !ip.is_unspecified() {
@@ -164,10 +160,10 @@ impl<'a> GeneratingCertificateResolver {
             // If this call originated from a no-SNI fallback, hostname equals the
             // local TCP address of this resolver. In that case, enrich the cert
             // with local-friendly SANs and any extras from HTTPMOCK_EXTRA_SANS.
-            if self.authority.is_none() || self.authority_ip().map(|a| a == ip).unwrap_or(false) {
+            if self.authority.is_none() || self.authority_ip().is_some_and(|a| a == ip) {
                 // No-SNI fallback or no authority: add localhost variants, all local IPs, and extras from env
                 if let Ok(localhost_dns) =
-                    <rcgen::Ia5String as std::convert::TryFrom<&str>>::try_from("localhost")
+                    <rcgen::string::Ia5String as std::convert::TryFrom<&str>>::try_from("localhost")
                 {
                     p.subject_alt_names.push(SanType::DnsName(localhost_dns));
                 }
@@ -188,18 +184,16 @@ impl<'a> GeneratingCertificateResolver {
             p
         } else {
             // Otherwise, treat it as a DNS name
-            let mut p = CertificateParams::new(vec![hostname.to_owned()]).map_err(|err| {
-                GenerateCertificateError(format!(
-                    "Cannot generate Certificate (host: {}: error: {:?})",
-                    hostname, err
-                ))
-            })?;
-
             // When SNI is provided (DNS case), we intentionally do NOT add extra
             // SANs like localhost/loopbacks by default. If users need more SANs
             // here, they can still set HTTPMOCK_EXTRA_SANS explicitly; however the
             // requirement is to only add extras when there is no hostname.
-            p
+            CertificateParams::new(vec![hostname.to_owned()]).map_err(|err| {
+                GenerateCertificateError(format!(
+                    "Cannot generate Certificate (host: {}: error: {:?})",
+                    hostname, err
+                ))
+            })?
         };
 
         let key_pair = KeyPair::generate_for(&rcgen::PKCS_ECDSA_P256_SHA256).map_err(|err| {
@@ -211,23 +205,20 @@ impl<'a> GeneratingCertificateResolver {
 
         let serialized_key_pair = key_pair.serialize_pem();
 
-        // Serialize the new certificate, signing it with the CA's private key
-        let new_host_cert_params = CertificateParams::from_ca_cert_pem(&self.state.ca_cert_str).map_err(|err| {
-            GenerateCertificateError(format!("Cannot create new host certificate parameters from CA certificate (host: {}: error: {:?})", hostname, err))
+        // Build an issuer from the CA certificate, signing new certificates with the CA's private key
+        let issuer = Issuer::from_ca_cert_pem(&self.state.ca_cert_str, &ca_key).map_err(|err| {
+            GenerateCertificateError(format!(
+                "Cannot create issuer from CA certificate (host: {}: error: {:?})",
+                hostname, err
+            ))
         })?;
 
-        let ca_cert = new_host_cert_params.self_signed(&ca_key).map_err(|err| {
-            GenerateCertificateError(format!("Cannot create new host certificate parameters from CA certificate (host: {}: error: {:?})", hostname, err))
+        let new_host_cert = params.signed_by(&key_pair, &issuer).map_err(|err| {
+            GenerateCertificateError(format!(
+                "Cannot generate new host certificate (host: {}: error: {:?})",
+                hostname, err
+            ))
         })?;
-
-        let new_host_cert = params
-            .signed_by(&key_pair, &ca_cert, &ca_key)
-            .map_err(|err| {
-                GenerateCertificateError(format!(
-                    "Cannot generate new host certificate (host: {}: error: {:?})",
-                    hostname, err
-                ))
-            })?;
 
         let cert_pem = new_host_cert.pem();
 
@@ -240,7 +231,10 @@ impl<'a> GeneratingCertificateResolver {
         })?;
 
         let certificates = Self::load_certificates(cert_pem).map_err(|err| {
-            GenerateCertificateError(format!("Cannot convert generated generated cert PEN to list of certificates (host: {}: error: {:?})", hostname, err))
+            GenerateCertificateError(format!(
+                "Cannot convert generated generated cert PEN to list of certificates (host: {}: error: {:?})",
+                hostname, err
+            ))
         })?;
 
         let signing_key = any_supported_type(&private_key).map_err(|err| {
@@ -298,7 +292,7 @@ fn parse_extra_sans_from_env() -> Vec<SanType> {
     for item in raw.split(',').map(|s| s.trim()).filter(|s| !s.is_empty()) {
         if let Ok(ip) = item.parse::<std::net::IpAddr>() {
             out.push(SanType::IpAddress(ip));
-        } else if let Ok(dns) = <rcgen::Ia5String as std::convert::TryFrom<&str>>::try_from(item) {
+        } else if let Ok(dns) = <rcgen::string::Ia5String as std::convert::TryFrom<&str>>::try_from(item) {
             out.push(SanType::DnsName(dns));
         }
     }
@@ -331,10 +325,10 @@ impl ResolvesServerCert for GeneratingCertificateResolver {
         if let Some(hostname) = client_hello.server_name() {
             tracing::info!("have hostname: {}", hostname);
 
-            return Some(self.generate(hostname).expect(&format!(
-                "Cannot generate certificate for host {}",
-                hostname
-            )));
+            return Some(
+                self.generate(hostname)
+                    .unwrap_or_else(|error| panic!("Cannot generate certificate for host {}: {:?}", hostname, error)),
+            );
         }
 
         // According to https://datatracker.ietf.org/doc/html/rfc6066#section-3
@@ -346,80 +340,23 @@ impl ResolvesServerCert for GeneratingCertificateResolver {
             .map(|ip| ip.to_string())
             .unwrap_or_else(|| "0.0.0.0".to_string());
         tracing::debug!("no hostname using: {}", hostname);
-        return Some(
-            self.generate(&hostname)
-                .expect(&format!("Cannot generate fallback certificate")),
-        );
+        Some(self.generate(&hostname).expect("Cannot generate fallback certificate"))
     }
 }
 
-pub struct TcpStreamPeekBuffer<'a> {
-    stream: &'a tokio::net::TcpStream,
-    buffer: Vec<u8>,
-}
-
-impl<'a> TcpStreamPeekBuffer<'a> {
-    pub fn new(stream: &'a tokio::net::TcpStream) -> Self {
-        TcpStreamPeekBuffer {
-            stream,
-            buffer: Vec::new(),
-        }
-    }
-
-    pub fn buffer(&self) -> &[u8] {
-        return &self.buffer;
-    }
-
-    pub async fn advance(&mut self, offset: usize) -> std::io::Result<()> {
-        if self.buffer.len() > offset {
-            return Ok(());
-        }
-
-        let required_size = offset + 1;
-        if required_size > self.buffer.len() {
-            self.buffer.resize(required_size, 0);
-        }
-
-        let mut total_peeked = 0;
-        while total_peeked < required_size {
-            let peeked_now = self.stream.peek(&mut self.buffer[total_peeked..]).await?;
-            if peeked_now == 0 {
-                return Err(std::io::Error::new(
-                    std::io::ErrorKind::UnexpectedEof,
-                    "EOF reached before offset",
-                ));
-            }
-            total_peeked += peeked_now;
-        }
-
-        Ok(())
-    }
-}
-
-#[async_trait]
-impl<'a> tls_detect::Read<'a> for TcpStreamPeekBuffer<'a> {
-    async fn read_byte(&mut self, from_offset: usize) -> std::io::Result<u8> {
-        self.advance(from_offset).await?;
-        Ok(self.buffer[from_offset])
-    }
-
-    async fn read_bytes(
-        &mut self,
-        from_offset: usize,
-        to_offset: usize,
-    ) -> std::io::Result<Vec<u8>> {
-        self.advance(to_offset).await?;
-        Ok(self.buffer[from_offset..to_offset].to_vec())
-    }
-
-    async fn read_u16_from_be(&mut self, offset: usize) -> std::io::Result<u16> {
-        let u16_bytes = self.read_bytes(offset, offset + 2).await?;
-        Ok(u16::from_be_bytes([u16_bytes[0], u16_bytes[1]]))
-    }
-
-    async fn buffer_to(&mut self, limit: usize) -> std::io::Result<()> {
-        self.advance(limit).await
-    }
+/// Tells whether the client opened `stream` with a TLS handshake, without consuming anything.
+///
+/// A TLS client always starts with a `ClientHello` in a handshake record, while HTTP/1 requests
+/// and the HTTP/2 connection preface start with ASCII text, so the first byte is enough to tell
+/// them apart; rustls validates the rest during the handshake. Peeking a single byte also can't
+/// spin on a partially received prefix: `peek` only returns once data is available, and then it
+/// either fills the one-byte buffer or reports EOF.
+pub async fn starts_with_tls_handshake(stream: &tokio::net::TcpStream) -> std::io::Result<bool> {
+    let mut first_byte = [0];
+    stream
+        .peek(&mut first_byte)
+        .await
+        .map(|peeked| peeked == 1 && ContentType::from(first_byte[0]) == ContentType::Handshake)
 }
 
 // Collect all local interface IP addresses (IPv4 and IPv6), excluding unspecified.
@@ -434,4 +371,111 @@ fn collect_local_ips() -> Vec<std::net::IpAddr> {
         }
     }
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{sync::Arc, time::Duration};
+
+    use rustls::{
+        ClientConfig, ClientConnection, RootCertStore, crypto::ring::default_provider, pki_types::ServerName,
+    };
+    use tokio::{
+        io::{AsyncReadExt, AsyncWriteExt},
+        net::{TcpListener, TcpStream},
+        time::timeout,
+    };
+
+    use super::starts_with_tls_handshake;
+
+    // The first flight a real rustls client sends, i.e. a handshake record carrying the ClientHello.
+    fn client_hello() -> Vec<u8> {
+        let config = ClientConfig::builder_with_provider(Arc::new(default_provider()))
+            .with_safe_default_protocol_versions()
+            .unwrap()
+            .with_root_certificates(RootCertStore::empty())
+            .with_no_client_auth();
+        let mut connection =
+            ClientConnection::new(Arc::new(config), ServerName::try_from("localhost").unwrap()).unwrap();
+        let mut hello = Vec::new();
+        connection.write_tls(&mut hello).unwrap();
+        hello
+    }
+
+    async fn connected_pair() -> (TcpStream, TcpStream) {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let client = TcpStream::connect(listener.local_addr().unwrap()).await.unwrap();
+        client.set_nodelay(true).unwrap();
+        let (server, _) = listener.accept().await.unwrap();
+        (client, server)
+    }
+
+    // Sends `first`, runs the detection, then sends `rest` and checks that the server still reads
+    // everything the client sent, which proves that the detection didn't consume any bytes.
+    async fn detect(first: &[u8], rest: &[u8]) -> bool {
+        let (mut client, mut server) = connected_pair().await;
+        client.write_all(first).await.unwrap();
+        let is_tls = timeout(Duration::from_secs(5), starts_with_tls_handshake(&server))
+            .await
+            .expect("detection should not wait for more than the first byte")
+            .unwrap();
+
+        client.write_all(rest).await.unwrap();
+        let mut received = vec![0; first.len() + rest.len()];
+        timeout(Duration::from_secs(5), server.read_exact(&mut received))
+            .await
+            .expect("all bytes sent by the client should still be readable")
+            .unwrap();
+        assert_eq!(received, [first, rest].concat());
+
+        is_tls
+    }
+
+    #[tokio::test]
+    async fn detects_rustls_client_hello() {
+        assert!(detect(&client_hello(), &[]).await);
+    }
+
+    #[tokio::test]
+    async fn detects_client_hello_from_first_byte() {
+        let hello = client_hello();
+        assert!(detect(&hello[..1], &hello[1..]).await);
+    }
+
+    #[tokio::test]
+    async fn http1_request_is_not_tls() {
+        assert!(!detect(b"GET / HTTP/1.1\r\nHost: localhost\r\n\r\n", b"").await);
+        assert!(!detect(b"G", b"ET / HTTP/1.1\r\nHost: localhost\r\n\r\n").await);
+    }
+
+    #[tokio::test]
+    async fn http1_request_with_leading_crlf_is_not_tls() {
+        assert!(!detect(b"\r\nGET / HTTP/1.1\r\nHost: localhost\r\n\r\n", b"").await);
+    }
+
+    #[tokio::test]
+    async fn h2_preface_is_not_tls() {
+        assert!(!detect(b"PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n", b"").await);
+    }
+
+    #[tokio::test]
+    async fn closed_connection_is_not_tls() {
+        let (client, server) = connected_pair().await;
+        drop(client);
+        let is_tls = timeout(Duration::from_secs(5), starts_with_tls_handshake(&server))
+            .await
+            .expect("detection should finish once the client closed the connection")
+            .unwrap();
+        assert!(!is_tls);
+    }
+
+    #[tokio::test]
+    async fn waits_for_first_byte() {
+        let (_client, server) = connected_pair().await;
+        assert!(
+            timeout(Duration::from_millis(50), starts_with_tls_handshake(&server))
+                .await
+                .is_err()
+        );
+    }
 }

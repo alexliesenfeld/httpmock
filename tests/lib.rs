@@ -1,5 +1,6 @@
-use httpmock::server::{HttpMockServer, HttpMockServerBuilder};
 use std::{sync::Mutex, thread};
+
+use httpmock::server::{HttpMockServer, HttpMockServerBuilder};
 use tokio::task::LocalSet;
 mod examples;
 mod matchers;
@@ -9,8 +10,8 @@ mod utils;
 /// The rest of this file is only required to simulate that a standalone mock server is
 /// running somewhere else.
 pub fn with_standalone_server() {
-    let disable_server = std::env::var("HTTPMOCK_TESTS_DISABLE_SIMULATED_STANDALONE_SERVER")
-        .unwrap_or_else(|_| "0".to_string());
+    let disable_server =
+        std::env::var("HTTPMOCK_TESTS_DISABLE_SIMULATED_STANDALONE_SERVER").unwrap_or_else(|_| "0".to_string());
 
     if disable_server == "1" {
         tracing::info!("Skipping creating a simulated mock server.");

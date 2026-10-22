@@ -1,46 +1,49 @@
 use std::{
     borrow::Cow,
     env,
-    fs::{create_dir_all, File},
-    future::Future,
-    io::{Read, Write},
+    fs::File,
+    io::Read,
     path::{Path, PathBuf},
-    sync::Arc,
-    task::{Context, Poll},
+    sync::{Arc, Mutex, MutexGuard},
+    task::{Context, Poll, Wake, Waker},
+    thread::{self, Thread},
+    time::Duration,
 };
 
+#[cfg(feature = "record")]
+use std::{fs::create_dir_all, io::Write};
+
+use base64::{Engine, engine::general_purpose::STANDARD as BASE64};
 use bytes::Bytes;
-/// Extension trait for efficiently blocking on a future.
-use crossbeam_utils::sync::{Parker, Unparker};
 use futures_timer::Delay;
-use futures_util::{pin_mut, task::ArcWake};
-use serde::{Deserialize, Serialize, Serializer};
-use std::{cell::Cell, time::Duration};
+use serde::{Deserialize, Serialize};
 
 // ===============================================================================================
 // Misc
 // ===============================================================================================
-pub(crate) fn update_cell<T: Sized + Default, F: FnOnce(&mut T)>(v: &Cell<T>, f: F) {
-    let mut vv = v.take();
-    f(&mut vv);
-    v.set(vv);
+pub(crate) fn lock_mutex<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
+    mutex.lock().expect("builder configuration mutex poisoned")
+}
+
+pub(crate) fn update_mutex<T, F: FnOnce(&mut T)>(mutex: &Mutex<T>, update_value: F) {
+    update_value(&mut lock_mutex(mutex));
+}
+
+pub(crate) fn take_from_mutex<T: Default>(mutex: &Mutex<T>) -> T {
+    std::mem::take(&mut *lock_mutex(mutex))
 }
 
 // ===============================================================================================
 // Retry
 // ===============================================================================================
 #[doc(hidden)]
-pub(crate) async fn with_retry<T, U, F, Fut>(retries: usize, f: F) -> Result<T, U>
-where
-    F: Fn() -> Fut,
-    Fut: Future<Output = Result<T, U>>,
-{
+pub(crate) async fn with_retry<T, U>(retries: usize, f: impl AsyncFn() -> Result<T, U>) -> Result<T, U> {
     let mut result = (f)().await;
     for i in 1..=retries {
         if result.is_ok() {
             return result;
         } else {
-            Delay::new(Duration::from_secs(1 * i as u64)).await;
+            Delay::new(Duration::from_secs(i as u64)).await;
         }
         result = (f)().await;
     }
@@ -68,25 +71,32 @@ pub trait Join: Future {
 
 impl<F: Future> Join for F {
     fn join(self) -> <Self as Future>::Output {
-        struct ThreadWaker(Unparker);
+        /// Waker that unparks the blocked thread when the future is ready to
+        /// make progress. `unpark` before `park` leaves a token that makes the
+        /// next `park` return immediately, so no wakeups are lost.
+        struct ThreadWaker(Thread);
 
-        impl ArcWake for ThreadWaker {
-            fn wake_by_ref(arc_self: &Arc<Self>) {
-                arc_self.0.unpark();
+        impl Wake for ThreadWaker {
+            fn wake(self: Arc<Self>) {
+                self.0.unpark();
+            }
+
+            fn wake_by_ref(self: &Arc<Self>) {
+                self.0.unpark();
             }
         }
 
-        let parker = Parker::new();
-        let waker = futures_util::task::waker(Arc::new(ThreadWaker(parker.unparker().clone())));
+        let waker = Waker::from(Arc::new(ThreadWaker(thread::current())));
         let mut context = Context::from_waker(&waker);
 
-        let future = self;
-        pin_mut!(future);
+        let mut future = std::pin::pin!(self);
 
         loop {
             match future.as_mut().poll(&mut context) {
                 Poll::Ready(output) => return output,
-                Poll::Pending => parker.park(),
+                // `park` may wake spuriously, so we loop and re-poll rather
+                // than assuming one park corresponds to exactly one wake.
+                Poll::Pending => thread::park(),
             }
         }
     }
@@ -102,6 +112,7 @@ pub fn get_test_resource_file_path(relative_resource_path: &str) -> Result<PathB
     }
 }
 
+#[cfg(feature = "record")]
 pub async fn write_file<P: AsRef<Path>>(
     resource_path: P,
     content: &Bytes,
@@ -114,35 +125,15 @@ pub async fn write_file<P: AsRef<Path>>(
         path = current_dir.join(path);
     }
 
-    if create_dir {
-        if let Some(parent) = path.parent() {
-            create_dir_all(parent)?;
-        }
+    if create_dir && let Some(parent) = path.parent() {
+        create_dir_all(parent)?;
     }
 
-    let mut file = File::create(&path)?;
+    let mut file = File::create_new(&path)?;
     file.write_all(content)?;
     file.flush()?;
 
     Ok(path)
-}
-
-// Checks if the executing thread is running in a Tokio runtime.
-
-#[cfg(test)]
-mod test {
-    use crate::common::util::{with_retry, Join};
-
-    #[test]
-    fn with_retry_error_test() {
-        let result: Result<(), &str> = with_retry(1, || async {
-            return Err("test error");
-        })
-        .join();
-
-        assert_eq!(result.is_err(), true);
-        assert_eq!(result.err().unwrap(), "test error")
-    }
 }
 
 /// A wrapper around `bytes::Bytes` providing utility methods for common operations.
@@ -175,60 +166,6 @@ impl HttpMockBytes {
         self.0.is_empty()
     }
 
-    /// Checks if the byte slice is blank (empty or only contains ASCII whitespace).
-    ///
-    /// # Returns
-    /// `true` if the byte slice is blank, otherwise `false`.
-    pub fn is_blank(&self) -> bool {
-        self.is_empty() || self.0.iter().all(|&b| b.is_ascii_whitespace())
-    }
-
-    /// Checks if the byte slice contains the specified substring.
-    ///
-    /// # Arguments
-    /// * `substring` - The substring to search for.
-    ///
-    /// # Returns
-    /// `true` if the substring is found, otherwise `false`.
-    pub fn contains_str(&self, substring: &str) -> bool {
-        if substring.is_empty() {
-            return true;
-        }
-
-        self.0
-            .as_ref()
-            .windows(substring.as_bytes().len())
-            .any(|window| window == substring.as_bytes())
-    }
-
-    /// Checks if the byte slice contains the specified byte slice.
-    ///
-    /// # Arguments
-    /// * `slice` - The byte slice to search for.
-    ///
-    /// # Returns
-    /// `true` if the byte slice is found, otherwise `false`.
-    pub fn contains_slice(&self, slice: &[u8]) -> bool {
-        self.0
-            .as_ref()
-            .windows(slice.len())
-            .any(|window| window == slice)
-    }
-
-    /// Checks if the byte slice contains the specified `Vec<u8>`.
-    ///
-    /// # Arguments
-    /// * `vec` - The vector to search for.
-    ///
-    /// # Returns
-    /// `true` if the vector is found, otherwise `false`.
-    pub fn contains_vec(&self, vec: &Vec<u8>) -> bool {
-        self.0
-            .as_ref()
-            .windows(vec.len())
-            .any(|window| window == vec.as_slice())
-    }
-
     /// Converts the bytes to a UTF-8 string, potentially lossy.
     /// Tries to parse input as a UTF-8 string first to avoid copying and creating an owned instance.
     /// If the bytes are not valid UTF-8, it creates a lossy string by replacing invalid characters
@@ -236,11 +173,11 @@ impl HttpMockBytes {
     ///
     /// # Returns
     /// A `Cow<str>` which is either borrowed if the bytes are valid UTF-8 or owned if conversion was required.
-    pub fn to_maybe_lossy_str(&self) -> Cow<str> {
-        return match std::str::from_utf8(&self.0) {
+    pub fn to_maybe_lossy_str(&self) -> Cow<'_, str> {
+        match std::str::from_utf8(&self.0) {
             Ok(valid_str) => Cow::Borrowed(valid_str),
             Err(_) => Cow::Owned(String::from_utf8_lossy(&self.0).to_string()),
-        };
+        }
     }
 }
 
@@ -262,10 +199,22 @@ impl From<bytes::BytesMut> for HttpMockBytes {
     }
 }
 
-// Copying conversions
+// Owned conversions
 impl From<Vec<u8>> for HttpMockBytes {
     fn from(value: Vec<u8>) -> Self {
         Self(Bytes::from(value))
+    }
+}
+
+impl From<Box<[u8]>> for HttpMockBytes {
+    fn from(value: Box<[u8]>) -> Self {
+        Self(Bytes::from(value))
+    }
+}
+
+impl From<()> for HttpMockBytes {
+    fn from(_: ()) -> Self {
+        Self(Bytes::new())
     }
 }
 
@@ -348,7 +297,7 @@ impl PartialEq<Vec<u8>> for HttpMockBytes {
 
 impl PartialEq<Bytes> for HttpMockBytes {
     fn eq(&self, other: &Bytes) -> bool {
-        &self.0 == other
+        self.0 == other
     }
 }
 
@@ -370,7 +319,7 @@ impl std::fmt::Display for HttpMockBytes {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match std::str::from_utf8(&self.0) {
             Ok(s) => write!(f, "{s}"),
-            Err(_) => write!(f, "{}", base64::encode(&self.0)),
+            Err(_) => write!(f, "{}", BASE64.encode(&self.0)),
         }
     }
 }
@@ -382,11 +331,7 @@ impl std::fmt::Debug for HttpMockBytes {
             Ok(s) => f.debug_tuple("HttpMockBytes").field(&s).finish(),
             Err(_) => f
                 .debug_tuple("HttpMockBytes")
-                .field(&format!(
-                    "<{} bytes, b64:{}>",
-                    self.0.len(),
-                    base64::encode(&self.0)
-                ))
+                .field(&format!("<{} bytes, b64:{}>", self.0.len(), BASE64.encode(&self.0)))
                 .finish(),
         }
     }
@@ -419,23 +364,34 @@ pub fn is_none_or_empty<T>(option: &Option<Vec<T>>) -> bool {
 }
 
 pub fn read_file<P: AsRef<Path>>(absolute_resource_path: P) -> Result<Vec<u8>, String> {
-    let mut f = match File::open(&absolute_resource_path) {
-        Ok(mut opened_file) => opened_file,
-        Err(e) => return Err(e.to_string()),
-    };
     let mut buffer = Vec::new();
-    match f.read_to_end(&mut buffer) {
-        Ok(len) => tracing::trace!(
-            "Read {} bytes from file {:?}",
-            &len,
-            &absolute_resource_path
-                .as_ref()
-                .as_os_str()
-                .to_str()
-                .expect("Invalid file path")
-        ),
-        Err(e) => return Err(e.to_string()),
-    }
+
+    let len = File::open(&absolute_resource_path)
+        .and_then(|mut f| f.read_to_end(&mut buffer))
+        .map_err(|e| e.to_string())?;
+
+    tracing::trace!(
+        "Read {} bytes from file {:?}",
+        &len,
+        &absolute_resource_path
+            .as_ref()
+            .as_os_str()
+            .to_str()
+            .expect("Invalid file path")
+    );
 
     Ok(buffer)
+}
+
+#[cfg(test)]
+mod test {
+    use crate::common::util::{Join, with_retry};
+
+    #[test]
+    fn with_retry_error_test() {
+        let result: Result<(), &str> = with_retry(1, || async { Err("test error") }).join();
+
+        assert!(result.is_err());
+        assert_eq!(result.err().unwrap(), "test error")
+    }
 }

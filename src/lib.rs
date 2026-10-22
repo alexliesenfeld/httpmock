@@ -1,4 +1,3 @@
-#![allow(warnings)]
 //! HTTP mocking library that allows you to simulate responses from HTTP-based services.
 //!
 //! # Features
@@ -12,17 +11,17 @@
 //! * Custom request matchers.
 //! * Standalone mode with an accompanying [Docker image](https://hub.docker.com/r/httpmock/httpmock).
 //! * Helpful error messages
-//! * [Advanced verification and debugging support](https://httpmock.github.io/posts/mocking-http--services-in-rust/#creating-mocks) (including diff generation between actual and expected HTTP request values)
+//! * [Advanced verification and debugging support](https://httpmock.rs/server/debugging/) (including diff generation between actual and expected HTTP request values)
 //! * Parallel test execution.
 //! * Fully asynchronous core with synchronous and asynchronous APIs.
-//! * Support for [mock configuration using YAML files](https://github.com/httpmock/httpmock/tree/master#file-based-mock-specification).
+//! * Support for [mock configuration using YAML files](https://httpmock.rs/server/standalone/).
 //!
 //! # Getting Started
 //! Add `httpmock` to `Cargo.toml`:
 //!
 //! ```toml
 //! [dev-dependencies]
-//! httpmock = "0.8.2"
+//! httpmock = "0.9.0"
 //! ```
 //!
 //! You can then use `httpmock` as follows:
@@ -73,20 +72,32 @@
 //!     1. word=hello
 //!
 //! Matcher:  query_param
-//! Docs:     https://docs.rs/httpmock/0.8.2/httpmock/struct.When.html#method.query_param
+//! Docs:     https://docs.rs/httpmock/latest/httpmock/struct.When.html#method.query_param
 //! ```
 //!
 //! # Usage
 //!
-//! See the [official website](http://httpmock.rs) a for detailed
-//! API documentation.
+//! These pages are the API reference: every [`When`] and [`Then`] method documents itself with an
+//! example, and [`MockServer`], [`Mock`], [`HttpMockRequest`] and [`HttpMockResponse`] cover the
+//! rest. The guide lives on the [official website](https://httpmock.rs), which explains how the
+//! pieces fit together:
+//!
+//! * [Fundamentals](https://httpmock.rs/getting_started/fundamentals/): how mocks, matchers and
+//!   the server pool work.
+//! * [Standalone server and Docker](https://httpmock.rs/server/standalone/): running the server
+//!   outside your tests, including YAML mock files.
+//! * [HTTPS](https://httpmock.rs/server/https/): TLS support and certificates.
+//! * [Recording](https://httpmock.rs/record-and-playback/recording/) and
+//!   [playback](https://httpmock.rs/record-and-playback/playback/): capturing real traffic and
+//!   replaying it.
+//! * [Debugging](https://httpmock.rs/server/debugging/): reading assertion output and logs.
+//! * [FAQ](https://httpmock.rs/miscellaneous/faq/).
 //!
 //! ## Examples
 //!
 //! You can find examples in the
 //! [`httpmock` test directory](https://github.com/httpmock/httpmock/blob/master/tests/).
-//! The [official website](http://httpmock.rs) and [reference docs](https://docs.rs/httpmock/)
-//! also contain _**a lot**_ of examples.
+//! The [official website](https://httpmock.rs) and the item docs here also contain a lot of examples.
 //!
 //! ## License
 //!
@@ -94,35 +105,25 @@
 //!
 //! This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
 //! warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the MIT Public License for more details.
-
-use std::{borrow::BorrowMut, net::ToSocketAddrs};
-
-use std::str::FromStr;
-
-use serde::{Deserialize, Serialize};
-
-use api::MockServerAdapter;
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 mod common;
-use common::util::Join;
 
-pub use api::{Method, Mock, MockExt, MockServer, Regex, Then, When};
+pub use api::{Method, Mock, MockServer, Regex, Then, When};
 pub use common::data::{HttpMockRequest, HttpMockResponse};
-
 mod api;
 pub mod server;
 
-#[cfg(feature = "record")]
-pub use api::{Recording, RecordingRuleBuilder};
-
 #[cfg(feature = "proxy")]
 pub use api::{ForwardingRule, ForwardingRuleBuilder, ProxyRule, ProxyRuleBuilder};
+#[cfg(feature = "record")]
+pub use api::{Recording, RecordingRuleBuilder};
 
 pub mod prelude {
     #[doc(no_inline)]
     pub use crate::{
+        Method, Method::DELETE, Method::GET, Method::OPTIONS, Method::PATCH, Method::POST, Method::PUT, Regex,
         api::MockServer, common::data::HttpMockRequest, common::data::HttpMockResponse,
-        common::data::MockServerHttpResponse, Method, Method::DELETE, Method::GET, Method::OPTIONS,
-        Method::PATCH, Method::POST, Method::PUT, Regex,
+        common::data::MockServerHttpResponse,
     };
 }

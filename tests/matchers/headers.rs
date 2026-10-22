@@ -1,5 +1,6 @@
-use crate::matchers::{expect_fails_with2, MultiValueMatcherTestSet};
 use httpmock::{MockServer, When};
+
+use crate::matchers::{MultiValueMatcherTestSet, expect_fails_with2};
 
 #[test]
 fn header() {

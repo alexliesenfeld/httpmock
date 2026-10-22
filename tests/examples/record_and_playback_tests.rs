@@ -1,6 +1,5 @@
 #[cfg(feature = "record")]
 use httpmock::prelude::*;
-
 #[cfg(feature = "record")]
 use reqwest::blocking::Client;
 
@@ -49,6 +48,7 @@ fn record_with_forwarding_test() {
     assert_eq!(response.text().unwrap(), "Hi from fake GitHub!");
 }
 
+#[ignore = "hits the live https://httpmock.rs; run with `cargo test -- --ignored`"]
 // @example-start: record-proxy-website
 #[cfg(all(feature = "proxy", feature = "https", feature = "record"))]
 #[test]
@@ -86,10 +86,12 @@ fn record_with_proxy_example_test() {
 
     // Since the request was forwarded, we should see a GitHub API response.
     assert_eq!(response.status().as_u16(), 200);
-    assert!(response
-        .text()
-        .unwrap()
-        .contains("Simple yet powerful HTTP mocking library for Rust"));
+    assert!(
+        response
+            .text()
+            .unwrap()
+            .contains("Simple yet powerful HTTP mocking library for Rust")
+    );
 
     // Save the recording to
     // "target/httpmock/recordings/website-via-proxy_<timestamp>.yaml".
@@ -117,13 +119,16 @@ fn record_with_proxy_example_test() {
     // matches the recorded data
     let response = client.get("https://httpmock.rs").send().unwrap();
     assert_eq!(response.status().as_u16(), 200);
-    assert!(response
-        .text()
-        .unwrap()
-        .contains("Simple yet powerful HTTP mocking library for Rust"));
+    assert!(
+        response
+            .text()
+            .unwrap()
+            .contains("Simple yet powerful HTTP mocking library for Rust")
+    );
 }
 // @example-end
 
+#[ignore = "hits the live https://httpmock.rs; run with `cargo test -- --ignored`"]
 // @example-start: record-forwarding-website
 #[cfg(feature = "record")]
 #[test]
@@ -155,10 +160,12 @@ fn record_with_forwarding_example_test() {
 
     // Since the request was forwarded, we should see a GitHub API response.
     assert_eq!(response.status().as_u16(), 200);
-    assert!(response
-        .text()
-        .unwrap()
-        .contains("Simple yet powerful HTTP mocking library for Rust"));
+    assert!(
+        response
+            .text()
+            .unwrap()
+            .contains("Simple yet powerful HTTP mocking library for Rust")
+    );
 
     // Save the recording to
     // "target/httpmock/recordings/website-via-forwarding_<timestamp>.yaml".
@@ -176,13 +183,16 @@ fn record_with_forwarding_example_test() {
     // matches the recorded data
     let response = client.get(playback_server.base_url()).send().unwrap();
     assert_eq!(response.status().as_u16(), 200);
-    assert!(response
-        .text()
-        .unwrap()
-        .contains("Simple yet powerful HTTP mocking library for Rust"));
+    assert!(
+        response
+            .text()
+            .unwrap()
+            .contains("Simple yet powerful HTTP mocking library for Rust")
+    );
 }
 // @example-end
 
+#[ignore = "hits the live https://httpmock.rs; run with `cargo test -- --ignored`"]
 // @example-start: playback-forwarding-website
 #[cfg(feature = "record")]
 #[test]
@@ -214,10 +224,12 @@ fn playback_github_api() {
 
     // Assert that the response from the forwarded request is as expected
     assert_eq!(response.status().as_u16(), 200);
-    assert!(response
-        .text()
-        .unwrap()
-        .contains("Simple yet powerful HTTP mocking library for Rust"));
+    assert!(
+        response
+            .text()
+            .unwrap()
+            .contains("Simple yet powerful HTTP mocking library for Rust")
+    );
 
     // Save the recorded interactions to a file
     let target_path = recording
@@ -235,13 +247,16 @@ fn playback_github_api() {
     // matches the recorded data
     let response = client.get(playback_server.base_url()).send().unwrap();
     assert_eq!(response.status().as_u16(), 200);
-    assert!(response
-        .text()
-        .unwrap()
-        .contains("Simple yet powerful HTTP mocking library for Rust"));
+    assert!(
+        response
+            .text()
+            .unwrap()
+            .contains("Simple yet powerful HTTP mocking library for Rust")
+    );
 }
 // @example-end
 
+#[ignore = "hits the live https://httpmock.rs; run with `cargo test -- --ignored`"]
 #[cfg(feature = "record")]
 #[test]
 fn record_with_forwarding_all_request_parts_test() {
@@ -254,13 +269,10 @@ fn record_with_forwarding_all_request_parts_test() {
     });
 
     let recording = server.record(|rule| {
-        rule.record_request_headers(vec![
-            String::from("X-Auth-Token"),
-            String::from("Accept-Language"),
-        ])
-        .filter(|when| {
-            when.any_request(); // Ensure all requests are recorded.
-        });
+        rule.record_request_headers(vec![String::from("X-Auth-Token"), String::from("Accept-Language")])
+            .filter(|when| {
+                when.any_request(); // Ensure all requests are recorded.
+            });
     });
 
     let client = Client::new();
@@ -285,10 +297,12 @@ fn record_with_forwarding_all_request_parts_test() {
 
     // Send "original" request
     assert_eq!(response.status().as_u16(), 200);
-    assert!(response
-        .text()
-        .unwrap()
-        .contains("Simple yet powerful HTTP mocking library for Rust"));
+    assert!(
+        response
+            .text()
+            .unwrap()
+            .contains("Simple yet powerful HTTP mocking library for Rust")
+    );
 
     let recording_file_path = recording
         .save("website-via-forwarding")
@@ -307,8 +321,43 @@ fn record_with_forwarding_all_request_parts_test() {
         .unwrap();
 
     assert_eq!(response.status().as_u16(), 200);
-    assert!(response
-        .text()
-        .unwrap()
-        .contains("Simple yet powerful HTTP mocking library for Rust"));
+    assert!(
+        response
+            .text()
+            .unwrap()
+            .contains("Simple yet powerful HTTP mocking library for Rust")
+    );
+}
+
+/// Regression test: `DELETE /__httpmock__/recordings/:id` used to delete a
+/// proxy rule instead of the recording, so deleting a recording through the
+/// admin API of a remote server returned 404 and left the recording in place.
+#[cfg(all(feature = "remote", feature = "record"))]
+#[test]
+fn delete_recording_on_remote_server_test() {
+    use httpmock::MockServer;
+
+    use crate::with_standalone_server;
+
+    // Arrange: connect to a standalone server so the deletion goes through
+    // the HTTP admin API rather than the in-process state manager.
+    with_standalone_server();
+    let server = MockServer::connect("localhost:5050");
+
+    let mut recording = server.record(|rule| {
+        rule.filter(|when| {
+            when.any_request();
+        });
+    });
+
+    // Act + Assert: panics if the server does not respond with 204.
+    let id = recording.id;
+    recording.delete();
+
+    // Deleting it again must return 404 — the recording no longer exists.
+    let response = Client::new()
+        .delete(format!("{}/__httpmock__/recordings/{}", server.base_url(), id))
+        .send()
+        .unwrap();
+    assert_eq!(response.status().as_u16(), 404);
 }

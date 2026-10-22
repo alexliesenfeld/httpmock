@@ -12,9 +12,12 @@ export default defineConfig({
                 dark: './src/assets/logo-dark.svg',
                 replacesTitle: true,
             },
-            social: {
-                github: 'https://github.com/httpmock/httpmock',
-                discord: 'https://discord.com/invite/7QzTfBUe',
+            social: [
+              { icon: 'github', label: 'GitHub', href: 'https://github.com/httpmock/httpmock' },
+              { icon: 'discord', label: 'Discord', href: 'https://discord.gg/BMyywgTJWK' }
+            ],
+            components: {
+                SocialIcons: './src/components/SocialIcons.astro',
             },
             sidebar: [
                 {
