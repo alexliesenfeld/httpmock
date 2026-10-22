@@ -34,8 +34,8 @@ use thiserror::Error;
 use crate::common::data::RecordingRuleConfig;
 #[cfg(feature = "proxy")]
 use crate::{
-    common::data::{ActiveForwardingRule, ActiveProxyRule, ForwardingRuleConfig, ProxyRuleConfig},
-    server::handler::Error::InvalidHeader,
+    common::data::{ActiveProxyRule, ForwardingRuleConfig, ProxyRuleConfig},
+    server::{handler::Error::InvalidHeader, state::ForwardingRule},
 };
 use crate::{
     common::{
@@ -387,7 +387,7 @@ impl Handler {
 impl Handler {
     fn handle_add_forwarding_rule(&self, req: &Request<Bytes>) -> Result<Response<Bytes>, Error> {
         let config: ForwardingRuleConfig = parse_json_body(req)?;
-        let active_forwarding_rule = self.state.create_forwarding_rule(config);
+        let active_forwarding_rule = self.state.create_forwarding_rule(config)?;
         response(StatusCode::CREATED, Some(active_forwarding_rule))
     }
 
@@ -430,40 +430,30 @@ impl Handler {
 
 /// Rewrites a request for the target of the forwarding rule that matched it.
 #[cfg(feature = "proxy")]
-fn forward_request(rule: ActiveForwardingRule, req: Request<Bytes>) -> Result<Request<Bytes>, Error> {
-    let to_base_uri: Uri = rule.config.target_base_url.parse().unwrap();
+fn forward_request(rule: ForwardingRule, req: Request<Bytes>) -> Result<Request<Bytes>, Error> {
+    let ForwardingRule {
+        active: _,
+        target,
+        request_headers,
+    } = rule;
+    let (target_scheme_name, target_scheme, target_authority) = target.into_parts();
 
     let (mut req_parts, body) = req.into_parts();
 
-    // We need to remove the host header, because it contains the host of this mock server.
+    // The forwarding target replaces the mock server host.
     req_parts.headers.remove(http::header::HOST);
 
     let mut uri_parts = req_parts.uri.into_parts();
-    uri_parts.authority = Some(to_base_uri.authority().unwrap().clone());
-    uri_parts.scheme = to_base_uri.scheme().cloned().or(uri_parts.scheme);
-    req_parts.uri = Uri::from_parts(uri_parts).unwrap();
+    uri_parts.authority = Some(target_authority);
+    uri_parts.scheme = Some(target_scheme);
+    req_parts.uri = Uri::from_parts(uri_parts).map_err(|err| Error::RequestConversion(err.to_string()))?;
 
-    // Record the upstream scheme (http/https) so the HttpClient can reconstruct
-    // an absolute target URI after converting to origin-form.
-    let upstream_scheme: &'static str = match to_base_uri.scheme_str() {
-        Some("https") => "https",
-        _ => "http",
-    };
+    // The client uses this scheme when reconstructing the absolute upstream URI.
     req_parts
         .extensions
-        .insert(crate::server::RequestMetadata::new(upstream_scheme));
+        .insert(crate::server::RequestMetadata::new(target_scheme_name));
 
-    if !rule.config.request_header.is_empty() {
-        for (key, value) in &rule.config.request_header {
-            let key =
-                http::HeaderName::from_str(key).map_err(|err| InvalidHeader(format!("invalid header key: {err}")))?;
-
-            let value =
-                HeaderValue::from_str(value).map_err(|err| InvalidHeader(format!("invalid header value: {err}")))?;
-
-            req_parts.headers.append(key, value);
-        }
-    }
+    req_parts.headers.extend(request_headers);
 
     let req = Request::from_parts(req_parts, body);
     // Requests are normalized to absolute-form inside this server for internal uniformity
@@ -754,11 +744,14 @@ mod tests {
         #[test]
         fn forwarding_rule_rewrites_the_request_for_its_target() {
             let handler = handler();
-            handler.state.create_forwarding_rule(ForwardingRuleConfig {
-                target_base_url: "https://upstream.test:8443".to_string(),
-                request_header: vec![("x-forwarded-by".to_string(), "httpmock".to_string())],
-                ..Default::default()
-            });
+            handler
+                .state
+                .create_forwarding_rule(ForwardingRuleConfig {
+                    target_base_url: "https://upstream.test:8443".to_string(),
+                    request_header: vec![("x-forwarded-by".to_string(), "httpmock".to_string())],
+                    ..Default::default()
+                })
+                .unwrap();
 
             let (proxied, upstream) =
                 upstream_request(handler.handle(request("GET", "http://localhost:1234/api?x=1")).unwrap());
@@ -788,13 +781,31 @@ mod tests {
         }
 
         #[test]
+        fn valid_forwarding_rule_can_be_added() {
+            let config = ForwardingRuleConfig {
+                target_base_url: "http://example.com".to_string(),
+                ..Default::default()
+            };
+            let request = Request::post("/__httpmock__/forwarding_rules")
+                .body(Bytes::from(serde_json::to_vec(&config).unwrap()))
+                .unwrap();
+
+            let response = handler().handle_add_forwarding_rule(&request).unwrap();
+
+            assert_eq!(response.status(), 201);
+        }
+
+        #[test]
         fn forwarding_rule_takes_precedence_over_proxy_rule() {
             let handler = handler();
             handler.state.create_proxy_rule(ProxyRuleConfig::default());
-            handler.state.create_forwarding_rule(ForwardingRuleConfig {
-                target_base_url: "http://upstream.test".to_string(),
-                ..Default::default()
-            });
+            handler
+                .state
+                .create_forwarding_rule(ForwardingRuleConfig {
+                    target_base_url: "http://upstream.test".to_string(),
+                    ..Default::default()
+                })
+                .unwrap();
 
             let (proxied, _) = upstream_request(handler.handle(request("GET", "http://origin.test/")).unwrap());
 

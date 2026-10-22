@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Breaking changes
+
+- `MockServer::forward_to` and `MockServer::forward_to_async` now return `Result` and reject
+  invalid forwarding targets when the rule is created
+  ([#260](https://github.com/httpmock/httpmock/pull/260)).
+
 ### Changes
 
 - The server's request handling is now sans-IO: the handler decides what to do with a request

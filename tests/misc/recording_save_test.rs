@@ -10,11 +10,13 @@ fn saving_the_same_scenario_twice_keeps_both_files() {
     });
 
     let recording_server = MockServer::start();
-    recording_server.forward_to(target_server.base_url(), |rule| {
-        rule.filter(|when| {
-            when.any_request();
-        });
-    });
+    recording_server
+        .forward_to(target_server.base_url(), |rule| {
+            rule.filter(|when| {
+                when.any_request();
+            });
+        })
+        .unwrap();
     let recording = recording_server.record(|rule| {
         rule.filter(|when| {
             when.any_request();

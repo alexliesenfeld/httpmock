@@ -96,7 +96,8 @@ async fn forwarding_and_proxy_setup_can_run_in_a_send_task() {
                     when.path("/forwarded");
                 });
             })
-            .await;
+            .await
+            .unwrap();
         forwarding.delete_async().await;
 
         // A matching /proxied request would use the destination supplied by the proxy client.
@@ -147,15 +148,17 @@ fn forwarding_filter_can_be_staged_inside_the_outer_callback() {
     });
 
     let gateway = MockServer::start();
-    gateway.forward_to(target.base_url(), |rule| {
-        // Save the owned When and let the inner callback return without configuring a path yet.
-        let mut pending_filter = None;
-        rule.filter(|when| pending_filter = Some(when));
+    gateway
+        .forward_to(target.base_url(), |rule| {
+            // Save the owned When and let the inner callback return without configuring a path yet.
+            let mut pending_filter = None;
+            rule.filter(|when| pending_filter = Some(when));
 
-        // This later change must still reach the rule before the outer setup callback returns.
-        // Extracting the filter's state when the inner callback ends would lose the /wanted matcher.
-        pending_filter.unwrap().path("/wanted");
-    });
+            // This later change must still reach the rule before the outer setup callback returns.
+            // Extracting the filter's state when the inner callback ends would lose the /wanted matcher.
+            pending_filter.unwrap().path("/wanted");
+        })
+        .unwrap();
 
     // /wanted reaches the target; /other must receive the gateway's unmatched-request response.
     let client = Client::new();
