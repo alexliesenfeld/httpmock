@@ -218,6 +218,17 @@ fn build_mock_definition(
         response.delay = Some(time_taken.as_millis() as u64)
     }
 
+    if !config.record_response_headers.is_empty()
+        && let Some(headers) = &mut response.headers
+    {
+        headers.retain(|(name, _)| {
+            config
+                .record_response_headers
+                .iter()
+                .any(|keep| keep.eq_ignore_ascii_case(name))
+        });
+    }
+
     Ok(MockDefinition {
         request,
         response,

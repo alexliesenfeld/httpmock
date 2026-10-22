@@ -4,6 +4,12 @@
 
 ### Changes
 
+- Recording rules can limit which response headers end up in recorded mocks with
+  `record_response_header` and `record_response_headers`
+  ([#207](https://github.com/httpmock/httpmock/pull/207)). Without them, all response headers
+  are kept as before. A remote server older than this release ignores the setting and keeps
+  all headers.
+
 - The server's request handling is now sans-IO: the handler decides what to do with a request
   and returns it as an action, and only the transport sleeps, sends forwarded and proxied
   requests upstream and records the outcome. The one observable difference is that a

@@ -48,6 +48,49 @@ fn record_with_forwarding_test() {
     assert_eq!(response.text().unwrap(), "Hi from fake GitHub!");
 }
 
+#[cfg(feature = "record")]
+#[test]
+fn record_only_listed_response_headers_test() {
+    let target_server = MockServer::start();
+    target_server.mock(|when, then| {
+        when.any_request();
+        then.status(200)
+            .header("content-type", "text/plain")
+            .header("x-request-id", "42")
+            .header("set-cookie", "session=secret")
+            .body("ok");
+    });
+
+    let recording_server = MockServer::start();
+    recording_server.forward_to(target_server.base_url(), |rule| {
+        rule.filter(|when| {
+            when.any_request();
+        });
+    });
+
+    let recording = recording_server.record(|rule| {
+        rule.record_response_header("Content-Type")
+            .record_response_headers(vec!["X-Request-Id"])
+            .filter(|when| {
+                when.any_request();
+            });
+    });
+
+    let client = Client::new();
+    let response = client.get(recording_server.url("/hello")).send().unwrap();
+    assert!(response.headers().contains_key("set-cookie"));
+
+    let target_path = recording.save("response_header_filter").unwrap();
+
+    let playback_server = MockServer::start();
+    playback_server.playback(target_path);
+
+    let response = client.get(playback_server.url("/hello")).send().unwrap();
+    assert_eq!(response.headers()["content-type"], "text/plain");
+    assert_eq!(response.headers()["x-request-id"], "42");
+    assert!(!response.headers().contains_key("set-cookie"));
+}
+
 #[ignore = "hits the live https://httpmock.rs; run with `cargo test -- --ignored`"]
 // @example-start: record-proxy-website
 #[cfg(all(feature = "proxy", feature = "https", feature = "record"))]

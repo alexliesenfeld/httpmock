@@ -214,6 +214,26 @@ impl RecordingRuleBuilder {
         self
     }
 
+    /// Keeps only the listed response headers in recorded mocks. If none are listed, all
+    /// response headers are kept.
+    pub fn record_response_header<IntoString: Into<String>>(self, header: IntoString) -> Self {
+        update_mutex(&self.config, |config| {
+            config.record_response_headers.push(header.into())
+        });
+        self
+    }
+
+    /// Keeps only the listed response headers in recorded mocks. If none are listed, all
+    /// response headers are kept.
+    pub fn record_response_headers<IntoString: Into<String>>(self, headers: Vec<IntoString>) -> Self {
+        update_mutex(&self.config, |config| {
+            config
+                .record_response_headers
+                .extend(headers.into_iter().map(Into::into))
+        });
+        self
+    }
+
     pub fn filter<WhenSpecFn>(self, when: WhenSpecFn) -> Self
     where
         WhenSpecFn: FnOnce(When),

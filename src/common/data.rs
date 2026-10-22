@@ -1058,6 +1058,9 @@ pub struct RecordingRuleConfig {
     pub request_requirements: RequestRequirements,
     pub record_headers: Vec<String>,
     pub record_response_delays: bool,
+    // If empty (the default), all response headers are kept.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub record_response_headers: Vec<String>,
 }
 
 #[cfg(feature = "proxy")]

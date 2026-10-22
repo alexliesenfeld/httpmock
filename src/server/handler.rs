@@ -827,6 +827,7 @@ mod tests {
                 request_requirements: RequestRequirements::default(),
                 record_headers: Vec::new(),
                 record_response_delays: true,
+                record_response_headers: Vec::new(),
             });
             handler.state.add_mock(mock("/recorded", 201, None), false).unwrap();
 
@@ -848,6 +849,37 @@ mod tests {
         }
 
         #[test]
+        fn recorded_response_keeps_only_listed_headers() {
+            let handler = handler();
+            let recording = handler.state.create_recording(RecordingRuleConfig {
+                request_requirements: RequestRequirements::default(),
+                record_headers: Vec::new(),
+                record_response_delays: false,
+                record_response_headers: vec!["Content-Type".to_string()],
+            });
+            let mut mock = mock("/recorded", 200, None);
+            mock.response.headers = Some(vec![
+                ("content-type".to_string(), "text/plain".to_string()),
+                ("set-cookie".to_string(), "session=secret".to_string()),
+            ]);
+            handler.state.add_mock(mock, false).unwrap();
+
+            let Action::Serve { reply, pending } = handler.handle(request("GET", "http://localhost/recorded")).unwrap()
+            else {
+                panic!("expected a served request");
+            };
+            let Reply::Mock { response, .. } = reply else {
+                panic!("expected a mock reply");
+            };
+            handler.finish(pending, Duration::ZERO, response).unwrap();
+
+            let yaml = handler.state.export_recording(recording.id).unwrap().unwrap();
+            let yaml = std::str::from_utf8(&yaml).unwrap();
+            assert!(yaml.contains("text/plain"), "{yaml}");
+            assert!(!yaml.contains("set-cookie"), "{yaml}");
+        }
+
+        #[test]
         fn outcome_is_not_recorded_when_no_recording_rule_matches() {
             let handler = handler();
             let recording = handler.state.create_recording(RecordingRuleConfig {
@@ -857,6 +889,7 @@ mod tests {
                 },
                 record_headers: Vec::new(),
                 record_response_delays: false,
+                record_response_headers: Vec::new(),
             });
 
             let Action::Serve { reply, pending } =
